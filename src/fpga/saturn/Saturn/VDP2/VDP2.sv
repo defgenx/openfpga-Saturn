@@ -669,7 +669,24 @@ module VDP2 (
 	assign RSxREG = RSxRegs(REGS);
 	assign RPxREG = RPxRegs(REGS);
 	
-		bit [3:0] VCPA0; 
+		//Cycle pattern registers: block RAM, one 2-word table per bank (words: T0-T3, T4-T7)
+	wire [ 2: 0] CYT = CELLX[2:0] & {~HRES[1],2'b11};
+	wire         CY_WR = REG_SEL && !WE_N && !DTEN_N && !REQ_N;
+	wire [ 8: 0] CY_A = {A[8:1],1'b0};
+	wire [15: 0] CYA0, CYA1, CYB0, CYB1;
+	VDP2_REGRAM #(1,16) cy_a0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h010 || CY_A == 9'h012), A[1], DI, CYT[2], CYA0);
+	VDP2_REGRAM #(1,16) cy_a1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h014 || CY_A == 9'h016), A[1], DI, CYT[2], CYA1);
+	VDP2_REGRAM #(1,16) cy_b0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h018 || CY_A == 9'h01A), A[1], DI, CYT[2], CYB0);
+	VDP2_REGRAM #(1,16) cy_b1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h01C || CY_A == 9'h01E), A[1], DI, CYT[2], CYB1);
+	function bit [3:0] CyNib(input bit [15:0] W, input bit [2:0] T);
+		case (T[1:0])
+			2'd0: return W[15:12];
+			2'd1: return W[11: 8];
+			2'd2: return W[ 7: 4];
+			default: return W[ 3: 0];
+		endcase
+	endfunction
+	bit [3:0] VCPA0; 
 		bit [3:0] VCPA1; 
 		bit [3:0] VCPB0; 
 		bit [3:0] VCPB1;
@@ -679,24 +696,10 @@ module VDP2 (
 	bit [1:0] RDBSB1;
 	always_comb begin
 		
-		case (CELLX[2:0] & {~HRES[1],2'b11})
-			T0: begin VCPA0 = REGS.CYCA0L[15:12]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1L[15:12] : REGS.CYCA0L[15:12]; 
-			          VCPB0 = REGS.CYCB0L[15:12]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1L[15:12] : REGS.CYCB0L[15:12]; end
-			T1: begin VCPA0 = REGS.CYCA0L[11: 8]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1L[11: 8] : REGS.CYCA0L[11: 8]; 
-			          VCPB0 = REGS.CYCB0L[11: 8]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1L[11: 8] : REGS.CYCB0L[11: 8]; end
-			T2: begin VCPA0 = REGS.CYCA0L[ 7: 4]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1L[ 7: 4] : REGS.CYCA0L[ 7: 4]; 
-			          VCPB0 = REGS.CYCB0L[ 7: 4]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1L[ 7: 4] : REGS.CYCB0L[ 7: 4]; end
-			T3: begin VCPA0 = REGS.CYCA0L[ 3: 0]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1L[ 3: 0] : REGS.CYCA0L[ 3: 0]; 
-			          VCPB0 = REGS.CYCB0L[ 3: 0]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1L[ 3: 0] : REGS.CYCB0L[ 3: 0]; end
-			T4: begin VCPA0 = REGS.CYCA0U[15:12]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1U[15:12] : REGS.CYCA0U[15:12]; 
-			          VCPB0 = REGS.CYCB0U[15:12]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1U[15:12] : REGS.CYCB0U[15:12]; end
-			T5: begin VCPA0 = REGS.CYCA0U[11: 8]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1U[11: 8] : REGS.CYCA0U[11: 8]; 
-			          VCPB0 = REGS.CYCB0U[11: 8]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1U[11: 8] : REGS.CYCB0U[11: 8]; end
-			T6: begin VCPA0 = REGS.CYCA0U[ 7: 4]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1U[ 7: 4] : REGS.CYCA0U[ 7: 4]; 
-			          VCPB0 = REGS.CYCB0U[ 7: 4]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1U[ 7: 4] : REGS.CYCB0U[ 7: 4]; end
-			T7: begin VCPA0 = REGS.CYCA0U[ 3: 0]; VCPA1 = REGS.RAMCTL.VRAMD ? REGS.CYCA1U[ 3: 0] : REGS.CYCA0U[ 3: 0]; 
-			          VCPB0 = REGS.CYCB0U[ 3: 0]; VCPB1 = REGS.RAMCTL.VRBMD ? REGS.CYCB1U[ 3: 0] : REGS.CYCB0U[ 3: 0]; end
-		endcase
+		VCPA0 = CyNib(CYA0, CYT);
+		VCPA1 = REGS.RAMCTL.VRAMD ? CyNib(CYA1, CYT) : CyNib(CYA0, CYT);
+		VCPB0 = CyNib(CYB0, CYT);
+		VCPB1 = REGS.RAMCTL.VRBMD ? CyNib(CYB1, CYT) : CyNib(CYB0, CYT);
 		
 		RDBSA0 = REGS.RAMCTL.RDBSA0;
 		RDBSA1 = REGS.RAMCTL.VRAMD ? REGS.RAMCTL.RDBSA1 : REGS.RAMCTL.RDBSA0;
@@ -960,12 +963,20 @@ module VDP2 (
 	wire [ 1: 0] NBG_MPI3 = NxPNMapIdx(2'b00, VA_PIPE[0].NxX[3], VA_PIPE[0].NxY[3], NSxREG[3].PLSZ, 1'b0, 1'b0);
 	wire [ 3: 0] RBG_MPI0 = RxPNMapIdx(VA_PIPE[0].RxX[R0RPm][11:0], VA_PIPE[0].RxY[R0RPm][11:0], RPxREG[R0RPm].PLSZ);
 	wire [ 3: 0] RBG_MPI1 = RxPNMapIdx(VA_PIPE[0].RxX[    1][11:0], VA_PIPE[0].RxY[    1][11:0], RPxREG[1    ].PLSZ);
-	VDP2_MPRD #(1) nmp0(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd0, A[1], DI & 16'h3F3F, NBG_MPI0[1], NBG_MPI0[0], NBG_MPE[0]);
-	VDP2_MPRD #(1) nmp1(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd1, A[1], DI & 16'h3F3F, NBG_MPI1[1], NBG_MPI1[0], NBG_MPE[1]);
-	VDP2_MPRD #(1) nmp2(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd2, A[1], DI & 16'h3F3F, NBG_MPI2[1], NBG_MPI2[0], NBG_MPE[2]);
-	VDP2_MPRD #(1) nmp3(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd3, A[1], DI & 16'h3F3F, NBG_MPI3[1], NBG_MPI3[0], NBG_MPE[3]);
-	VDP2_MPRD #(4) rmp0(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R0RPm,RBG_MPI0[3:1]}, RBG_MPI0[0], RBG_MPE[0]);
-	VDP2_MPRD #(4) rmp1(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {1'b1,RBG_MPI1[3:1]},  RBG_MPI1[0], RBG_MPE[1]);
+	wire [15: 0] NBG_MPW[4];
+	wire [15: 0] RBG_MPW[2];
+	VDP2_REGRAM #(1,16) nmp0(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd0, A[1], DI & 16'h3F3F, NBG_MPI0[1], NBG_MPW[0]);
+	VDP2_REGRAM #(1,16) nmp1(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd1, A[1], DI & 16'h3F3F, NBG_MPI1[1], NBG_MPW[1]);
+	VDP2_REGRAM #(1,16) nmp2(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd2, A[1], DI & 16'h3F3F, NBG_MPI2[1], NBG_MPW[2]);
+	VDP2_REGRAM #(1,16) nmp3(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd3, A[1], DI & 16'h3F3F, NBG_MPI3[1], NBG_MPW[3]);
+	VDP2_REGRAM #(4,16) rmp0(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R0RPm,RBG_MPI0[3:1]}, RBG_MPW[0]);
+	VDP2_REGRAM #(4,16) rmp1(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {1'b1,RBG_MPI1[3:1]},  RBG_MPW[1]);
+	assign NBG_MPE[0] = NBG_MPI0[0] ? NBG_MPW[0][13:8] : NBG_MPW[0][5:0];
+	assign NBG_MPE[1] = NBG_MPI1[0] ? NBG_MPW[1][13:8] : NBG_MPW[1][5:0];
+	assign NBG_MPE[2] = NBG_MPI2[0] ? NBG_MPW[2][13:8] : NBG_MPW[2][5:0];
+	assign NBG_MPE[3] = NBG_MPI3[0] ? NBG_MPW[3][13:8] : NBG_MPW[3][5:0];
+	assign RBG_MPE[0] = RBG_MPI0[0] ? RBG_MPW[0][13:8] : RBG_MPW[0][5:0];
+	assign RBG_MPE[1] = RBG_MPI1[0] ? RBG_MPW[1][13:8] : RBG_MPW[1][5:0];
 	bit  [19: 1] NxPN_ADDR[4];
 	bit  [19: 1] RxPN_ADDR[2];
 	bit  [19: 1] NxCH_ADDR[4];

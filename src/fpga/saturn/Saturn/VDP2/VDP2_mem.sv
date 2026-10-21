@@ -246,25 +246,25 @@ module VDP2_SDP #(
 	assign Q = q;
 endmodule
 
-// Plane map offset table: 2**AW registers of two 6-bit entries ({.,MPy,.,MPx} = DI & 3F3F), held in block RAM.
+// Register words held in block RAM: 2**AW words of DW bits written by the CPU register decode.
 // The registers clear on reset, so each word carries a valid flag (flip-flops) that masks stale RAM contents.
-// The RAM address is sampled on the falling edge so the entry appears within the clock, like a register read.
-module VDP2_MPRD #(
-	parameter AW = 1
+// The RAM address is sampled on the falling edge so the word appears within the clock, like a register read.
+module VDP2_REGRAM #(
+	parameter AW = 1,
+	parameter DW = 16
 ) (
 	input           CLK,
 	input           RST_N,
 	input           RES_N,
 	input           WE,
 	input  [AW-1:0] WA,
-	input    [15:0] WD,
+	input  [DW-1:0] WD,
 	input  [AW-1:0] RA,
-	input           HSEL,
-	output   [ 5:0] Q
+	output [DW-1:0] Q
 );
-	(* ramstyle = "M10K, no_rw_check" *) reg [15:0] mem [0:(1<<AW)-1];
+	(* ramstyle = "M10K, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
 	reg [(1<<AW)-1:0] vld = '0;
-	reg [15:0] q = '0;
+	reg [DW-1:0] q = '0;
 	always @(posedge CLK) if (WE) mem[WA] <= WD;
 	always @(negedge CLK) q <= mem[RA];
 	always @(posedge CLK or negedge RST_N) begin
@@ -272,5 +272,5 @@ module VDP2_MPRD #(
 		else if (!RES_N) vld <= '0;
 		else if (WE) vld[WA] <= 1'b1;
 	end
-	assign Q = !vld[RA] ? 6'd0 : HSEL ? q[13:8] : q[5:0];
+	assign Q = vld[RA] ? q : '0;
 endmodule
