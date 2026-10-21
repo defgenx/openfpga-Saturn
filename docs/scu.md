@@ -101,3 +101,37 @@ Result: all 24 seeds x (2 SCU + 1 DSP) x 3M cycles pass (see the commit log for 
 - CE_R and CE_F never coincide (true for `Saturn.sv`).
 - RST_N low resets everything that has a reset; the MLAB queues are not cleared, which is only observable through
   the FILL-gated reads.
+
+## Optional cuts (macros; off by default = exact design above)
+
+Without any macro the design is the exact version above and the differential sim passes. Savings are against that
+version (3,388 ALUTs, 2,319 ALMs, 1,468 registers, 5 M10K, 3 DSP; area profile, `quartus_map`, `SCU` alone).
+`docs/game-impact.md` was not available when this was written, so the game impact below is from the Saturn
+documentation and unverified against a game census; check it before deciding.
+
+| Macro | ALUTs | ALMs (est.) | Registers | M10K / DSP | Result with it |
+|---|---|---|---|---|---|
+| `POCKET_CUT_SCU_DSP` | 2,053 (-1,335) | 1,495 (-824) | 1,064 (-404) | 0 / 0 (-5 / -3) | 61 % ALUTs of the 3,388 |
+| `POCKET_CUT_SCU_INDIRECT` | 3,174 (-214) | 2,184 (-135) | 1,423 (-45) | unchanged | |
+| `POCKET_CUT_SCU_T1SYNC` | 3,367 (-21) | 2,312 (-7) | 1,466 (-2) | unchanged | |
+| all three | 1,828 (-1,560) | 1,341 (-978) | 1,016 | 0 / 0 | 39.5 % of the 4,633 baseline |
+
+### POCKET_CUT_SCU_DSP
+`SCU_DSP` is not instantiated (`DSP.sv` is then unused). Registers 25FE0080-8F: reads return 0 (PPAF reads 0 =
+stopped, no flags, PC 0; data RAM port reads 0), writes are ignored, the program never runs, no DSP DMA is ever
+requested, and no DSP end interrupt is raised. A game that probes the DSP therefore sees an idle DSP whose
+program/data memory reads as 0; a game that uploads a program and waits for it to finish (polling PPAF.EX/T0 or
+waiting for the DSP end interrupt, IST bit 5) will not hang on the status poll but gets no results.
+Impact: games that use the DSP for vertex/matrix work or effects lose that function (wrong geometry or missing
+effects); games that never use it are unaffected. This is the largest single cut available in the SCU.
+
+### POCKET_CUT_SCU_INDIRECT
+Mode bit MOD of D0MD/D1MD/D2MD reads back 0 and is ignored, so every DMA is direct. A game that programs indirect
+(table-driven) DMA gets a single direct transfer from the table address instead of the listed transfers.
+Impact: games using indirect DMA for display-list/texture uploads break; direct DMA (the common case) is unaffected.
+
+### POCKET_CUT_SCU_T1SYNC
+Bit MD of T1MD (timer 1 "once per line with timer 0 match" mode) reads back 0: timer 1 always runs in its
+every-line mode. Saves only 21 ALUTs; not recommended unless a census shows nothing uses the sync mode.
+
+The cut builds do not match the golden by design; only the macro-less build is compared in `make -C sim scu`.
