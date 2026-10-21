@@ -1799,77 +1799,77 @@ module VDP2 (
 	wire         RPN = ~VA2.RP_POS[7];
 	wire [31: 0] RPW_WD = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
 	wire         RPW_WE = DOT_CE_R && (VA2.RPA || VA2.RPB) && RPP <= 5'd23;
-	wire [ 5: 0] RPW_WA = RPP == 5'd19 ? {4'b1000,1'b0,RPN} : RPP == 5'd20 ? {4'b1000,1'b1,RPN} : RPP == 5'd23 ? {4'b1001,1'b0,RPN} : {1'b0,RPP};
-	bit  [ 5: 0] RPA_A, RPB_A, RPM_A, RPN_A, RPK_A, RPFR_A, RPFF_A;
+	wire [ 4: 0] RPW_WA = RPP == 5'd19 ? {4'b1100,RPN} : RPP == 5'd20 ? {4'b1101,RPN} : RPP == 5'd23 ? {4'b1110,RPN} : RPP;
+	bit  [ 4: 0] RPA_A, RPB_A, RPM_A, RPN_A, RPK_A, RPFR_A, RPFF_A;
 	bit  [ 6: 0] HPOS_PIPE;
 	wire [31: 0] PA_Q, PB_Q, PM_Q, PN_Q, PK_Q, DK0_Q, DK1_Q, PFR_Q, PFF_Q;
 	always_comb begin
 		case (RPP)
-			5'd04:   RPA_A = 6'd3;
-			5'd05:   RPA_A = 6'd4;
-			5'd12:   RPA_A = 6'd5;
-			5'd13:   RPA_A = 6'd6;
-			5'd16:   RPA_A = 6'd2;
-			5'd17:   RPA_A = 6'd13;
-			5'd18:   RPA_A = 6'd13;
-			5'd19:   RPA_A = 6'd14;
-			5'd23:   RPA_A = 6'd22;
-			default: RPA_A = 6'd0;
+			5'd04:   RPA_A = 5'd3;
+			5'd05:   RPA_A = 5'd4;
+			5'd12:   RPA_A = 5'd5;
+			5'd13:   RPA_A = 5'd6;
+			5'd16:   RPA_A = 5'd2;
+			5'd17:   RPA_A = 5'd13;
+			5'd18:   RPA_A = 5'd13;
+			5'd19:   RPA_A = 5'd14;
+			5'd23:   RPA_A = 5'd22;
+			default: RPA_A = 5'd0;
 		endcase
 		case (RPP)
-			5'd04:   RPB_A = 6'd0;
-			5'd05:   RPB_A = 6'd1;
-			5'd14:   RPB_A = 6'd13;
-			5'd15:   RPB_A = 6'd13;
-			5'd16:   RPB_A = 6'd14;
-			5'd17:   RPB_A = 6'd15;
-			5'd18:   RPB_A = 6'd15;
-			5'd19:   RPB_A = 6'd16;
-			5'd23:   RPB_A = 6'd21;
-			default: RPB_A = 6'd0;
+			5'd04:   RPB_A = 5'd0;
+			5'd05:   RPB_A = 5'd1;
+			5'd14:   RPB_A = 5'd13;
+			5'd15:   RPB_A = 5'd13;
+			5'd16:   RPB_A = 5'd14;
+			5'd17:   RPB_A = 5'd15;
+			5'd18:   RPB_A = 5'd15;
+			5'd19:   RPB_A = 5'd16;
+			5'd23:   RPB_A = 5'd21;
+			default: RPB_A = 5'd0;
 		endcase
 		case (RPP)
-			5'd12,5'd14,5'd17: RPM_A = 6'd7;
-			5'd13,5'd15,5'd18: RPM_A = 6'd8;
-			5'd16,5'd19:       RPM_A = 6'd9;
-			5'd20:             RPM_A = 6'd17;
-			default:           RPM_A = 6'd0;
+			5'd12,5'd14,5'd17: RPM_A = 5'd7;
+			5'd13,5'd15,5'd18: RPM_A = 5'd8;
+			5'd16,5'd19:       RPM_A = 5'd9;
+			5'd20:             RPM_A = 5'd17;
+			default:           RPM_A = 5'd0;
 		endcase
 		case (RPP)
-			5'd12,5'd14,5'd17: RPN_A = 6'd10;
-			5'd13,5'd15,5'd18: RPN_A = 6'd11;
-			5'd16,5'd19:       RPN_A = 6'd12;
-			5'd20:             RPN_A = 6'd18;
-			default:           RPN_A = 6'd0;
+			5'd12,5'd14,5'd17: RPN_A = 5'd10;
+			5'd13,5'd15,5'd18: RPN_A = 5'd11;
+			5'd16,5'd19:       RPN_A = 5'd12;
+			5'd20:             RPN_A = 5'd18;
+			default:           RPN_A = 5'd0;
 		endcase
 		case (DOTCLK_DIV)
-			2'd0: RPK_A = 6'd32;
-			2'd1: RPK_A = 6'd34;
-			2'd2: RPK_A = 6'd33;
-			2'd3: RPK_A = 6'd35;
+			2'd0: RPK_A = 5'd24;
+			2'd1: RPK_A = 5'd26;
+			2'd2: RPK_A = 5'd25;
+			2'd3: RPK_A = 5'd27;
 		endcase
-		if      (HPOS_PIPE[0]) RPFR_A = 6'd0;
-		else if (HPOS_PIPE[1]) RPFR_A = 6'd1;
-		else if (HPOS_PIPE[2]) RPFR_A = 6'd3;
-		else if (HPOS_PIPE[3]) RPFR_A = 6'd4;
-		else if (HPOS_PIPE[4]) RPFR_A = 6'd5;
-		else                   RPFR_A = 6'd6;
-		if      (HPOS_PIPE[1]) RPFF_A = 6'd0;
-		else if (HPOS_PIPE[2]) RPFF_A = 6'd1;
-		else if (HPOS_PIPE[3]) RPFF_A = 6'd3;
-		else if (HPOS_PIPE[4]) RPFF_A = 6'd4;
-		else if (HPOS_PIPE[5]) RPFF_A = 6'd5;
-		else                   RPFF_A = 6'd6;
+		if      (HPOS_PIPE[0]) RPFR_A = 5'd0;
+		else if (HPOS_PIPE[1]) RPFR_A = 5'd1;
+		else if (HPOS_PIPE[2]) RPFR_A = 5'd3;
+		else if (HPOS_PIPE[3]) RPFR_A = 5'd4;
+		else if (HPOS_PIPE[4]) RPFR_A = 5'd5;
+		else                   RPFR_A = 5'd6;
+		if      (HPOS_PIPE[1]) RPFF_A = 5'd0;
+		else if (HPOS_PIPE[2]) RPFF_A = 5'd1;
+		else if (HPOS_PIPE[3]) RPFF_A = 5'd3;
+		else if (HPOS_PIPE[4]) RPFF_A = 5'd4;
+		else if (HPOS_PIPE[5]) RPFF_A = 5'd5;
+		else                   RPFF_A = 5'd6;
 	end
-	VDP2_RPRAM rp_a (CLK, RPW_WE, RPW_WA, RPW_WD, RPA_A,  PA_Q);
-	VDP2_RPRAM rp_b (CLK, RPW_WE, RPW_WA, RPW_WD, RPB_A,  PB_Q);
-	VDP2_RPRAM rp_m (CLK, RPW_WE, RPW_WA, RPW_WD, RPM_A,  PM_Q);
-	VDP2_RPRAM rp_n (CLK, RPW_WE, RPW_WA, RPW_WD, RPN_A,  PN_Q);
-	VDP2_RPRAM rp_k (CLK, RPW_WE, RPW_WA, RPW_WD, RPK_A,  PK_Q);
-	VDP2_RPRAM rp_d0(CLK, RPW_WE, RPW_WA, RPW_WD, 6'd36,  DK0_Q);
-	VDP2_RPRAM rp_d1(CLK, RPW_WE, RPW_WA, RPW_WD, 6'd37,  DK1_Q);
-	VDP2_RPRAM rp_fr(CLK, RPW_WE, RPW_WA, RPW_WD, RPFR_A, PFR_Q);
-	VDP2_RPRAM rp_ff(CLK, RPW_WE, RPW_WA, RPW_WD, RPFF_A, PFF_Q);
+	VDP2_SDP #(5,32) rp_a (CLK, RPW_WE, RPW_WA, RPW_WD, RPA_A,  PA_Q);
+	VDP2_SDP #(5,32) rp_b (CLK, RPW_WE, RPW_WA, RPW_WD, RPB_A,  PB_Q);
+	VDP2_SDP #(5,32) rp_m (CLK, RPW_WE, RPW_WA, RPW_WD, RPM_A,  PM_Q);
+	VDP2_SDP #(5,32) rp_n (CLK, RPW_WE, RPW_WA, RPW_WD, RPN_A,  PN_Q);
+	VDP2_SDP #(5,32) rp_k (CLK, RPW_WE, RPW_WA, RPW_WD, RPK_A,  PK_Q);
+	VDP2_SDP #(5,32) rp_d0(CLK, RPW_WE, RPW_WA, RPW_WD, 5'd28,  DK0_Q);
+	VDP2_SDP #(5,32) rp_d1(CLK, RPW_WE, RPW_WA, RPW_WD, 5'd29,  DK1_Q);
+	VDP2_SDP #(5,32) rp_fr(CLK, RPW_WE, RPW_WA, RPW_WD, RPFR_A, PFR_Q);
+	VDP2_SDP #(5,32) rp_ff(CLK, RPW_WE, RPW_WA, RPW_WD, RPFF_A, PFF_Q);
 	RotAddr_t    KAx[2],KAy[2];
 	RotCoord_t   SUBXA,SUBXB;
 	RotCoord_t   SUBYA,SUBYB;
@@ -3048,9 +3048,9 @@ module VDP2 (
 			TAP4_D.pn[i].PR = PN_PIPE[0][i].PR;  TAP4_D.pn[i].CC = PN_PIPE[0][i].CC;
 		end
 	end
-	VDP2_DTAP #(.W($bits(Tap2_t)),.K(2),.AW(3)) tap2(CLK, DOT_CE_R, TAP2_D, TAP2_Q);
-	VDP2_DTAP #(.W($bits(Tap3_t)),.K(3),.AW(3)) tap3(CLK, DOT_CE_R, TAP3_D, TAP3_Q);
-	VDP2_DTAP #(.W($bits(Tap4_t)),.K(4),.AW(3)) tap4(CLK, DOT_CE_R, TAP4_D, TAP4_Q);
+	VDP2_DTAP #(.W($bits(Tap2_t)),.K(2),.AW(3),.ML(0)) tap2(CLK, DOT_CE_R, TAP2_D, TAP2_Q);
+	VDP2_DTAP #(.W($bits(Tap3_t)),.K(3),.AW(3),.ML(0)) tap3(CLK, DOT_CE_R, TAP3_D, TAP3_Q);
+	VDP2_DTAP #(.W($bits(Tap4_t)),.K(4),.AW(3),.ML(0)) tap4(CLK, DOT_CE_R, TAP4_D, TAP4_Q);
 	assign VA2 = TAP2_Q.va;  assign BG2 = TAP2_Q.bg;  assign RB2 = TAP2_Q.rb;
 	assign VA3 = TAP3_Q.va;  assign BG3 = TAP3_Q.bg;  assign RB3 = TAP3_Q.rb;
 	always_comb begin
