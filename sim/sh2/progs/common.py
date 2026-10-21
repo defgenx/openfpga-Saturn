@@ -58,6 +58,10 @@ class Prog:
             if t is not None:
                 put32(n * 4, t)
         write_hex(mem, path, 0, 0x10000)
+        with open(path + '.map', 'w') as f:
+            for k, v in sorted(lab.items(), key=lambda kv: kv[1]):
+                if isinstance(k, str) and not k.startswith('_li'):
+                    f.write('%08x %s\n' % (v, k))
 
 
     def bsc_init(self, cfg):
@@ -66,15 +70,16 @@ class Prog:
         if cfg == 'default':
             return
         key = 0xA55A0000
-        a.li(1, WCR); a.li(2, key | (0x0000 if cfg in ('fast', 'sdram') else 0x5555)); a.movl_st(2, 1)
-        if cfg == 'sdram':
-            a.li(1, BCR1); a.li(2, key | 0x03F1); a.movl_st(2, 1)
-            a.li(1, MCR); a.li(2, key | 0x485C); a.movl_st(2, 1)
+        wcr = {'fast': 0x0000, 'saturn': 0x0A55, 'slow': 0x5555}[cfg]
+        a.li(1, WCR); a.li(2, key | wcr); a.movl_st(2, 1)
+        if cfg == 'saturn':
+            # normal-space WRAM-H with the refresh request output enabled (what the SDRAM controller outside the SH-2 uses)
+            a.li(1, MCR); a.li(2, key | 0x0008); a.movl_st(2, 1)
             a.li(1, RTCOR); a.li(2, key | 0x40); a.movl_st(2, 1)
             a.li(1, RTCNT); a.li(2, key | 0x00); a.movl_st(2, 1)
             a.li(1, RTCSR); a.li(2, key | 0x08); a.movl_st(2, 1)
 
-    def prologue(self, release_ssh=True, ssh_label='ssh_main', msh_label='msh_main', bsc='fast'):
+    def prologue(self, release_ssh=True, ssh_label='ssh_main', msh_label='msh_main', bsc='fast', cache=True):
         """Common entry: split MSH/SSH by TB CPU id, give each its own stack, optionally release the SSH."""
         a = self.a
         a.label('start')
@@ -85,6 +90,8 @@ class Prog:
         a.nop()
         a.li(15, MSH_SP)
         self.bsc_init(bsc)
+        if cache:
+            a.li(1, CCR); a.movi(2, 1); a.movb_st(2, 1)
         if release_ssh:
             a.li(1, TB_SSHREL)
             a.movi(0, 1)
@@ -93,6 +100,8 @@ class Prog:
         a.label('_is_ssh')
         a.li(15, SSH_SP)
         self.bsc_init(bsc)
+        if cache:
+            a.li(1, CCR); a.movi(2, 1); a.movb_st(2, 1)
         a.jmp_far(ssh_label)
 
     def idle(self, name):
@@ -116,3 +125,68 @@ class Prog:
         a.movl_post(15, 0)
         a.rte()
         a.nop()
+        # per-vector counters for the CPU exceptions: WRAM-H + 0x3E800 + 4*vector
+        for n in range(4, 0x40):
+            if n in self.vec:
+                continue
+            a.align4()
+            a.label('vstub_%d' % n)
+            a.movl_pre(0, 15)
+            a.movl_pre(1, 15)
+            a.li(1, WRAMH + 0x3E800 + 4 * n)
+            a.movl_ld(1, 0)
+            a.addi(0, 1)
+            a.movl_st(0, 1)
+            a.movl_post(15, 1)
+            a.movl_post(15, 0)
+            a.rte()
+            a.nop()
+            self.vec[n] = 'vstub_%d' % n
+
+
+def wr32(a, addr, val, ra=1, rb=2):
+    a.li(ra, addr)
+    a.li(rb, val)
+    a.movl_st(rb, ra)
+
+
+def wr16(a, addr, val, ra=1, rb=2):
+    a.li(ra, addr)
+    a.li(rb, val)
+    a.movw_st(rb, ra)
+
+
+def wr8(a, addr, val, ra=1, rb=2):
+    a.li(ra, addr)
+    a.li(rb, val)
+    a.movb_st(rb, ra)
+
+
+def rd32(a, addr, rd, ra=1):
+    a.li(ra, addr)
+    a.movl_ld(ra, rd)
+
+
+def set_sr(a, val, rt=3):
+    a.li(rt, val)
+    a.ldc_sr(rt)
+
+
+def forever(a, name):
+    a.label(name)
+    a.bra(name)
+    a.nop()
+
+
+def ssh_idle_main(P):
+    """SSH main that simply spins."""
+    P.a.label('ssh_main')
+    forever(P.a, 'ssh_spin')
+
+
+_uid = [0]
+
+
+def uniq(prefix='L'):
+    _uid[0] += 1
+    return '%s_%d' % (prefix, _uid[0])

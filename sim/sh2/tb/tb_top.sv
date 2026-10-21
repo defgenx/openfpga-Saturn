@@ -16,11 +16,17 @@ module tb_top;
 	int verbose;
 	reg [31:0] chk_r, chk_d;
 	int nz;
+	reg [31:0] watch_lo, watch_hi;
+	reg watch_hit = 0, watch_hit_s = 0;
+	reg ack_prev = 0; int n_ack = 0;
+	reg [31:0] peek;
 
 	initial begin
 		if (!$value$plusargs("cycles=%d", ncycles)) ncycles = 200000;
 		if (!$value$plusargs("name=%s", name)) name = "test";
 		if (!$value$plusargs("verbose=%d", verbose)) verbose = 0;
+		if (!$value$plusargs("watchlo=%h", watch_lo)) watch_lo = 0;
+		if (!$value$plusargs("watchhi=%h", watch_hi)) watch_hi = 0;
 		cyc = 0; nbus_m = 0; nbus_s = 0; nvec = 0; nirq = 0; nown_s = 0; nwrite = 0;
 		#42 RST_N = 1;
 	end
@@ -41,7 +47,20 @@ module tb_top;
 				$display("FAIL %s", name);
 				$finish;
 			end
-			if (verbose && cyc < verbose) $display("%0d MSH A=%07h BS=%b CS=%b%b%b%b RW=%b RD=%b DQM=%b DO=%08h DI=%08h WAIT=%b | PC=%08h  SSHres=%b BGR=%b", cyc, ref0.MSHA, ref0.MSHBS_N, ref0.MSHCS0_N, ref0.MSHCS1_N, ref0.MSHCS2_N, ref0.MSHCS3_N, ref0.MSHRD_WR_N, ref0.MSHRD_N, ref0.MSHDQM_N, ref0.MSHDO, ref0.MSHDI, ref0.MSHWAIT_N, ref0.MSH.core.PC, ref0.SSHRES_N, ref0.MSHBGR_N);
+			if (verbose && cyc < verbose) $display("%0d MSH A=%07h BS=%b CS=%b%b%b%b RW=%b RD=%b DQM=%b DO=%08h DI=%08h WAIT=%b | PC=%08h  SSHres=%b BGR=%b ST=%0d RFS=%b BREQ=%b SPC=%08h", cyc, ref0.MSHA, ref0.MSHBS_N, ref0.MSHCS0_N, ref0.MSHCS1_N, ref0.MSHCS2_N, ref0.MSHCS3_N, ref0.MSHRD_WR_N, ref0.MSHRD_N, ref0.MSHDQM_N, ref0.MSHDO, ref0.MSHDI, ref0.MSHWAIT_N, ref0.MSH.core.PC, ref0.SSHRES_N, ref0.MSHBGR_N, ref0.MSH.bsc.BUS_STATE, ref0.MSRFS, ref0.SSHBREQ_N, ref0.SSH.core.PC);
+			if (watch_hi != 0 && !watch_hit && ref0.MSH.core.PC >= watch_lo && ref0.MSH.core.PC < watch_hi) begin
+				watch_hit <= 1;
+				$display("WATCH hit at clk %0d: MSH PC=%08h SR=%08h (SSH PC=%08h)", cyc, ref0.MSH.core.PC, ref0.MSH.core.SR, ref0.SSH.core.PC);
+			end
+			if (watch_hi != 0 && !watch_hit_s && ref0.SSH.core.PC >= watch_lo && ref0.SSH.core.PC < watch_hi) begin
+				watch_hit_s <= 1;
+				$display("WATCH hit at clk %0d: SSH PC=%08h SR=%08h SP=%08h stacked PC=%08h SR=%08h", cyc, ref0.SSH.core.PC, ref0.SSH.core.SR, ref0.wramh[0], ref0.wramh[16'hEFFC], ref0.wramh[16'hF000]);
+			end
+			if ($test$plusargs("intdbg") && ref0.SSH.INT_ACK && !ack_prev && n_ack < 8) begin
+				n_ack <= n_ack + 1;
+				$display("INT_ACK clk %0d: SSH LVL=%0d VEC=%02h PC=%08h", cyc, ref0.SSH.INT_LVL, ref0.SSH.INT_VEC, ref0.SSH.core.PC);
+			end
+			ack_prev <= ref0.SSH.INT_ACK;
 			// coverage counters on the golden side
 			if (ref0.MSHBS_N == 1'b0 && prev_ref[0] !== 1'b0) begin end
 			if (!ref0.MSHBS_N) begin
@@ -60,6 +79,10 @@ module tb_top;
 					chk_d = chk_d * 33 + dut.wraml[i] + dut.scr[i] + dut.abus[i];
 				end
 				if (chk_r != chk_d) begin $display("MISMATCH memory contents %s", name); $display("FAIL %s", name); $finish; end
+				if ($value$plusargs("peek=%h", peek)) $display("  peek wramh[%08h]=%08h", peek, ref0.wramh[peek[17:2]]);
+				if ($value$plusargs("peek2=%h", peek)) $display("  peek wramh[%08h]=%08h", peek, ref0.wramh[peek[17:2]]);
+				if ($test$plusargs("frtdbg")) $display("  MSH frt: FRC=%h OCRA=%h OCRB=%h TIER=%h FTCSR=%h TCR=%h TOCR=%h | IPRB=%h VCRC=%h SR=%h", ref0.MSH.frt.FRC, ref0.MSH.frt.OCRA, ref0.MSH.frt.OCRB, ref0.MSH.frt.TIER, ref0.MSH.frt.FTCSR, ref0.MSH.frt.TCR, ref0.MSH.frt.TOCR, ref0.MSH.intc.IPRB, ref0.MSH.intc.VCRC, ref0.MSH.core.SR);
+				if ($test$plusargs("frtdbg")) $display("  SSH frt: FRC=%h OCRA=%h OCRB=%h TIER=%h FTCSR=%h TCR=%h TOCR=%h ICR=%h | IPRB=%h VCRC=%h SR=%h", ref0.SSH.frt.FRC, ref0.SSH.frt.OCRA, ref0.SSH.frt.OCRB, ref0.SSH.frt.TIER, ref0.SSH.frt.FTCSR, ref0.SSH.frt.TCR, ref0.SSH.frt.TOCR, ref0.SSH.frt.ICR, ref0.SSH.intc.IPRB, ref0.SSH.intc.VCRC, ref0.SSH.core.SR);
 				$display("  PC msh=%08h ssh=%08h  wramh nonzero words=%0d  mem-checksum=%08h", ref0.MSH.core.PC, ref0.SSH.core.PC, nz, chk_r);
 				$display("PASS %s: %0d clk compared; bus-active clk: total-ssh-own=%0d, writes=%0d, vector-fetch clk=%0d, SSH released=%0d", name, cyc, nown_s, nwrite, nvec, ref0.SSHRES_N);
 				$finish;

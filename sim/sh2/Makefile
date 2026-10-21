@@ -40,14 +40,15 @@ $(BUILD)/Vtb_top: $(BUILD)/ref/.stamp $(BUILD)/env_dut.sv $(BUILD)/env_ref.sv $(
 $(BUILD)/prog_%.hex: progs/%.py tools/sh2asm.py progs/common.py
 	mkdir -p $(BUILD) && python3 progs/$*.py $@
 
-CYCLES ?= 60000
+CYCLES ?= 1500000
+CFGS ?= "0 0 0" "1 3 0" "3 8 1" "2 0 1"
 test: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
-	@fail=0; for t in $(TESTS); do for cfg in "0 0" "1 0" "3 0" "2 2"; do set -- $$cfg; \
-	  $(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$t.hex +name=$$t/w$$1i$$2 +wait=$$1 +irq=$$2 +cycles=$(CYCLES) | grep -E "PASS|FAIL|MISMATCH" || fail=1; done; done; \
+	@fail=0; for t in $(TESTS); do for cfg in $(CFGS); do set -- $$cfg; \
+	  $(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$t.hex +name=$$t/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) | grep -E "^(PASS|FAIL|MISMATCH)" || fail=1; done; done; \
 	  [ $$fail = 0 ] && echo "ALL PASS" || { echo "SOME FAILED"; exit 1; }
 
 one: $(BUILD)/Vtb_top $(BUILD)/prog_$(T).hex
-	$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$(T).hex +name=$(T) +wait=$(or $(WAIT),0) +irq=$(or $(IRQ),0) +cycles=$(CYCLES)
+	$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$(T).hex +name=$(T) +wait=$(or $(WAIT),0) +irq=$(or $(IRQ),0) +fast=$(or $(FAST),0) +cycles=$(CYCLES)
 
 clean:
 	rm -rf $(BUILD)
