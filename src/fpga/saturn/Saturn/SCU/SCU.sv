@@ -88,6 +88,20 @@ module SCU
 );
 	import SCU_PKG::*;
 	
+	//Optional feature cuts (area): without the macros the module is unchanged.
+	//POCKET_CUT_SCU_INDIRECT: DMA mode bit MOD reads as 0, indirect (table) DMA is never started.
+	//POCKET_CUT_SCU_T1SYNC:   timer 1 mode bit MD reads as 0 (timer 1 always counts every line).
+`ifdef POCKET_CUT_SCU_INDIRECT
+	localparam bit [31:0] DMD_WM = DxMD_WMASK & ~32'h01000000;
+`else
+	localparam bit [31:0] DMD_WM = DxMD_WMASK;
+`endif
+`ifdef POCKET_CUT_SCU_T1SYNC
+	localparam bit [31:0] T1MD_WM = T1MD_WMASK & ~32'h00000100;
+`else
+	localparam bit [31:0] T1MD_WM = T1MD_WMASK;
+`endif
+	
 	DxR_t       DR[3];
 	DxW_t       DW[3];
 	DxC_t       DC[3];
@@ -2333,10 +2347,10 @@ module SCU
 							if (!CDQM_N[0]) DEN[0][ 7: 0] <= REG_WDI[ 7: 0] & DxEN_WMASK[ 7: 0];
 						end
 						8'h14: if (!DMA_RUN[0]) begin
-							if (!CDQM_N[3]) DMD[0][31:24] <= REG_WDI[31:24] & DxMD_WMASK[31:24];
-							if (!CDQM_N[2]) DMD[0][23:16] <= REG_WDI[23:16] & DxMD_WMASK[23:16];
-							if (!CDQM_N[1]) DMD[0][15: 8] <= REG_WDI[15: 8] & DxMD_WMASK[15: 8];
-							if (!CDQM_N[0]) DMD[0][ 7: 0] <= REG_WDI[ 7: 0] & DxMD_WMASK[ 7: 0];
+							if (!CDQM_N[3]) DMD[0][31:24] <= REG_WDI[31:24] & DMD_WM[31:24];
+							if (!CDQM_N[2]) DMD[0][23:16] <= REG_WDI[23:16] & DMD_WM[23:16];
+							if (!CDQM_N[1]) DMD[0][15: 8] <= REG_WDI[15: 8] & DMD_WM[15: 8];
+							if (!CDQM_N[0]) DMD[0][ 7: 0] <= REG_WDI[ 7: 0] & DMD_WM[ 7: 0];
 						end
 						8'h20: begin
 							if (!CDQM_N[3]) DR[1][31:24] <= REG_WDI[31:24] & DxR_WMASK[31:24];
@@ -2375,10 +2389,10 @@ module SCU
 							if (!CDQM_N[0]) DEN[1][ 7: 0] <= REG_WDI[ 7: 0] & DxEN_WMASK[ 7: 0];
 						end
 						8'h34: if (!DMA_RUN[1]) begin
-							if (!CDQM_N[3]) DMD[1][31:24] <= REG_WDI[31:24] & DxMD_WMASK[31:24];
-							if (!CDQM_N[2]) DMD[1][23:16] <= REG_WDI[23:16] & DxMD_WMASK[23:16];
-							if (!CDQM_N[1]) DMD[1][15: 8] <= REG_WDI[15: 8] & DxMD_WMASK[15: 8];
-							if (!CDQM_N[0]) DMD[1][ 7: 0] <= REG_WDI[ 7: 0] & DxMD_WMASK[ 7: 0];
+							if (!CDQM_N[3]) DMD[1][31:24] <= REG_WDI[31:24] & DMD_WM[31:24];
+							if (!CDQM_N[2]) DMD[1][23:16] <= REG_WDI[23:16] & DMD_WM[23:16];
+							if (!CDQM_N[1]) DMD[1][15: 8] <= REG_WDI[15: 8] & DMD_WM[15: 8];
+							if (!CDQM_N[0]) DMD[1][ 7: 0] <= REG_WDI[ 7: 0] & DMD_WM[ 7: 0];
 						end
 						8'h40: begin
 							if (!CDQM_N[3]) DR[2][31:24] <= REG_WDI[31:24] & DxR_WMASK[31:24];
@@ -2417,10 +2431,10 @@ module SCU
 							if (!CDQM_N[0]) DEN[2][ 7: 0] <= REG_WDI[ 7: 0] & DxEN_WMASK[ 7: 0];
 						end
 						8'h54: if (!DMA_RUN[2]) begin
-							if (!CDQM_N[3]) DMD[2][31:24] <= REG_WDI[31:24] & DxMD_WMASK[31:24];
-							if (!CDQM_N[2]) DMD[2][23:16] <= REG_WDI[23:16] & DxMD_WMASK[23:16];
-							if (!CDQM_N[1]) DMD[2][15: 8] <= REG_WDI[15: 8] & DxMD_WMASK[15: 8];
-							if (!CDQM_N[0]) DMD[2][ 7: 0] <= REG_WDI[ 7: 0] & DxMD_WMASK[ 7: 0];
+							if (!CDQM_N[3]) DMD[2][31:24] <= REG_WDI[31:24] & DMD_WM[31:24];
+							if (!CDQM_N[2]) DMD[2][23:16] <= REG_WDI[23:16] & DMD_WM[23:16];
+							if (!CDQM_N[1]) DMD[2][15: 8] <= REG_WDI[15: 8] & DMD_WM[15: 8];
+							if (!CDQM_N[0]) DMD[2][ 7: 0] <= REG_WDI[ 7: 0] & DMD_WM[ 7: 0];
 						end
 					
 						8'h60: begin
@@ -2507,6 +2521,21 @@ module SCU
 	bit        DSP_WA0_SET;
 	bit        DSP_DMA_SET;
 	bit [31:0] DSP_DO;
+`ifdef POCKET_CUT_SCU_DSP
+	//SCU DSP removed: registers 25FE0080-8F read 0 and ignore writes, the program never runs
+	//(PPAF reads 0: stopped, no flags), no DSP DMA or interrupt is ever requested.
+	assign DSP_DO = '0;
+	assign DSP_DSO = '0;
+	assign DSP_RA0_SET = 0;
+	assign DSP_WA0_SET = 0;
+	assign DSP_DMA_SET = 0;
+	assign DSP_DMA_DO = '0;
+	assign DSP_DMA_WE = 0;
+	assign DSP_DMA_REQ = 0;
+	assign DSP_DMA_RUN = 0;
+	assign DSP_DMA_LAST = 0;
+	assign DSP_IRQ = 0;
+`else
 	SCU_DSP dsp(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -2538,6 +2567,7 @@ module SCU
 		
 		.IRQ(DSP_IRQ)
 	);
+`endif
 	assign DSP_DMA_DI = {DMA_BUF[0],DMA_BUF[1],DMA_BUF[2],DMA_BUF[3]};
 
 	
@@ -2955,10 +2985,10 @@ module SCU
 						if (REG_WREN[0]) T1S[ 7: 0] <= REG_WDI[ 7: 0] & T1S_WMASK[ 7: 0];
 					end
 					8'h98: begin
-						if (REG_WREN[3]) T1MD[31:24] <= REG_WDI[31:24] & T1MD_WMASK[31:24];
-						if (REG_WREN[2]) T1MD[23:16] <= REG_WDI[23:16] & T1MD_WMASK[23:16];
-						if (REG_WREN[1]) T1MD[15: 8] <= REG_WDI[15: 8] & T1MD_WMASK[15: 8];
-						if (REG_WREN[0]) T1MD[ 7: 0] <= REG_WDI[ 7: 0] & T1MD_WMASK[ 7: 0];
+						if (REG_WREN[3]) T1MD[31:24] <= REG_WDI[31:24] & T1MD_WM[31:24];
+						if (REG_WREN[2]) T1MD[23:16] <= REG_WDI[23:16] & T1MD_WM[23:16];
+						if (REG_WREN[1]) T1MD[15: 8] <= REG_WDI[15: 8] & T1MD_WM[15: 8];
+						if (REG_WREN[0]) T1MD[ 7: 0] <= REG_WDI[ 7: 0] & T1MD_WM[ 7: 0];
 					end
 					8'hB0: ASR0 <= REG_WDI & ASR0_WMASK;
 					8'hB4: ASR1 <= REG_WDI & ASR1_WMASK;

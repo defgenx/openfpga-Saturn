@@ -6,6 +6,8 @@ set -e
 W=$(cd "$(dirname "$0")/../.." && pwd)
 N=$1; S=$2
 D=$W/sizing/scu
+MACROLINES=""; for m in $MACROS; do MACROLINES="$MACROLINES
+set_global_assignment -name VERILOG_MACRO \"$m=1\""; done; MACROLINES=$(printf "$MACROLINES")
 cat > "$D/scu_$N.qsf" <<Q
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CEBA4F23C8
@@ -21,6 +23,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../../$S/DSP_PKG.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../$S/RAM.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../$S/DSP.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../$S/SCU.sv
+$MACROLINES
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 Q
 echo "PROJECT_REVISION = \"scu_$N\"" > "$D/scu_$N.qpf"
