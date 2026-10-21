@@ -38,8 +38,8 @@ create_generated_clock -name dram_clk_pin -source [get_pins $clk_ram] -invert [g
 set sdram_out [get_ports {dram_a[*] dram_ba[*] dram_dq[*] dram_dqm[*] dram_ras_n dram_cas_n dram_we_n dram_cke}]
 set_output_delay -clock dram_clk_pin -max 1.5  $sdram_out
 set_output_delay -clock dram_clk_pin -min -1.0 $sdram_out
-set_input_delay  -clock dram_clk_pin -max 5.5 [get_ports {dram_dq[*]}]
-set_input_delay  -clock dram_clk_pin -min 2.5 [get_ports {dram_dq[*]}]
+set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
+set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
 # read data is captured at READ+5 / READ+6 clk_ram edges (sdram_pocket CAP_NEG = 0), not at the next edge
 set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 5
 set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 4
@@ -52,8 +52,8 @@ foreach n {0 1} {
 	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_ce0_n cram${n}_ce1_n cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
 	set_output_delay -clock cram${n}_clk_pin -max 3.0 $cram_out
 	set_output_delay -clock cram${n}_clk_pin -min -2.0 $cram_out
-	set_input_delay  -clock cram${n}_clk_pin -max 9.0 [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
-	set_input_delay  -clock cram${n}_clk_pin -min 2.0 [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	set_input_delay  -clock cram${n}_clk_pin -max 9.0 -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	set_input_delay  -clock cram${n}_clk_pin -min 2.0 -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
 	# read words are shifted in on the following clk_ram edges
 	set_multicycle_path -setup -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 2
 	set_multicycle_path -hold  -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 1
@@ -65,8 +65,8 @@ foreach n {0 1} {
 set sram_out [get_ports {sram_a[*] sram_dq[*] sram_oe_n sram_we_n sram_ub_n sram_lb_n}]
 set_output_delay -clock [get_clocks $clk_ram] -max 2.0  $sram_out
 set_output_delay -clock [get_clocks $clk_ram] -min -1.0 $sram_out
-set_input_delay  -clock [get_clocks $clk_ram] -max 12.0 [get_ports {sram_dq[*]}]
-set_input_delay  -clock [get_clocks $clk_ram] -min 0.0  [get_ports {sram_dq[*]}]
+set_input_delay  -clock [get_clocks $clk_ram] -max 12.0 -add_delay [get_ports {sram_dq[*]}]
+set_input_delay  -clock [get_clocks $clk_ram] -min 0.0 -add_delay [get_ports {sram_dq[*]}]
 set_multicycle_path -setup -end -from [get_ports {sram_dq[*]}] -to [get_clocks $clk_ram] 3
 set_multicycle_path -hold  -end -from [get_ports {sram_dq[*]}] -to [get_clocks $clk_ram] 2
 # the CD ring FSM (cd_stream) runs on clk_sys and drives the same pins through sram_pocket: clk_sys and clk_ram are

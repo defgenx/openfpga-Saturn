@@ -1,8 +1,9 @@
 # Integration: Saturn on the Pocket top
 
-Status: the whole design elaborates and synthesises in Quartus 21.1 (`quartus_map`), the glue is simulated
-(`make -C sim platform`), nothing has run on hardware. The fitter does not fit it yet (section 7); the point of
-this top is a complete netlist to measure and to cut against.
+Status: the whole design synthesises in Quartus 21.1 (`quartus_sh --flow compile ap_core`, about 8 minutes on an idle
+host, Docker `raetro/quartus:21.1`), the glue is simulated (`make -C sim platform`), nothing has run on hardware. The
+fitter stops with "design contains 46343 combinational nodes, the device has 36960" (section 7); the point of this top
+is a complete netlist to measure and to cut against.
 
 Files (all under `src/fpga/core/` unless noted):
 
@@ -87,8 +88,9 @@ The default (NTSC 352) K is the value `ip-generate` computed for `pll_sys` (1100
 register model; the reconfiguration itself, and VCO lock at 640 MHz on the -C8 part, are untested. The reference is
 `clk_74a` for both the PLL and the audio side, so the 44.1 and 48 kHz rates stay locked to each other.
 
-No fixed-clock fallback was needed; had reconfiguration failed, 57.27 MHz would run PAL and NTSC 320 content 6.5 %
-(NTSC 320: 53.75 vs 57.27) and 0.7 % (PAL 352) too fast.
+No fixed-clock fallback was taken. Had reconfiguration been dropped, a fixed 57.27 MHz would run NTSC 320 content
+6.5 %, PAL 320 7.3 % and PAL 352 0.7 % too fast (and PAL at 60 Hz timing); the PLL-reconfiguration block costs
+737 ALMs in the fitter (section 7), the one cost of keeping it.
 
 `pll_sys.v` was generated, not hand-written: `tools/gen_pll_sys.sh` runs `ip-generate` from the Quartus Docker image
 (`altera_pll` with `gui_en_reconf`, `altera_pll_reconfig`).
@@ -134,6 +136,10 @@ multiplier, shared by both channels.
   family. The crossings are synchronisers, the gray FIFO of `load_pocket` and held payloads (cd_stream request registers).
 * SH_core: setup 2 / hold 1 multicycle from and to `*|MSH|core|*` and `*|SSH|core|*` (docs/sh2.md: 19.6 ns path, advances
   on `CE_R` only).
+* The PLL clock names the fitter derives are `ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[N].output_counter|divclk`
+  (not the `general[N].gpll~...` names of the template); all clocks and generated clocks resolve (checked with
+  `quartus_sta` post-map). The template reads `core_constraints.sdc` twice, which makes the timing analyzer warn
+  about replaced delays; the values are identical.
 * SDRAM: `dram_clk` generated (inverted `clk_ram`), output delays from the AS4C32M16MSA datasheet numbers in
   docs/memory.md, input delay 2.5 to 5.5 ns, 5-cycle multicycle for the READ+5/+6 capture. PSRAM: generated `clk_ram`/2 on the chip
   clock, 2 cycle multicycle for the read shift. SRAM: asynchronous, 3-cycle multicycle on the read data. All of these are
@@ -143,16 +149,92 @@ multiplier, shared by both channels.
 
 | Check | Result |
 |---|---|
-| `make -C sim platform` | audio and four video modes pass |
-| `make -C sim mem`, `cd`, `sh1`, `scsp`, `vdp1`, `sh2` | unchanged by this branch |
-| `quartus_map ap_core` (21.1, 5CEBA4F23C8) | passes, see section 7 |
+| `make -C sim platform` | audio (1 kHz, -65 dB residual) and four video modes pass |
+| `make -C sim mem` | passes with the two `vdp1_fb_pocket` changes of this branch (section 7) |
+| `quartus_sh --flow compile ap_core` (21.1, 5CEBA4F23C8) | analysis and synthesis succeed, 159 warnings, no error; the fitter fails on capacity |
+| `quartus_sta` post-map with the SDC | PLL clocks, generated clocks and groups resolve |
 
-TBD
+The Verilator lint of the glue modules (`verilator --lint-only -Wall`) is clean apart from unused-bit notes. The full
+tree is checked by Quartus, not Verilator (it needs the Altera RAM/PLL primitives).
+
+Two fixes were needed to synthesise at all, both in `mem/vdp1_fb_pocket.sv`: the FB1 array (90112 x 16) did not infer
+as RAM and became registers (an internal error in `opt_op_decsel` after 2.5 hours, or "registers exceed the device"), so it is
+now an `altsyncram` (M10K, byte enables) with a behavioural copy for simulation; and the FB0 write FIFO had an
+asynchronous read (8960 registers), now a synchronous read plus a one-clock-late `wptr` so that it maps to one M10K.
 
 ## 7. Fit demand
 
-TBD
+Run: `quartus_sh --flow compile ap_core`, area profile of `ap_core.qsf` (`OPTIMIZATION_TECHNIQUE AREA`,
+`ALM_REGISTER_PACKING_EFFORT HIGH`, seed 13, one processor), reports kept in `sizing/integrate/`
+(`ap_core.fit.rpt`, `.fit.summary`, `.map.rpt`, `entities.txt`; per-entity table from `tools/fit_entities.py`).
+
+The fitter aborts before placement ("Error 170011: Design contains 46343 blocks of type combinational node. However,
+the device contains only 36960", and "Error 170039: cannot place 830 RAM cells", M10K 309 of 308). It does not print
+"Fitter requires N LABs"; the demand below is the fitter's own plan-stage report (all LABs show 1,848 / 1,848, which is
+saturation, not demand).
+
+| Resource | Demand | Device | |
+|---|---|---|---|
+| ALMs needed (fit summary) | 30,723 | 18,480 | 166 % (about 3,070 LABs of 1,848) |
+| ALMs needed (per-entity table, top node) | 29,575 | 18,480 | 160 % |
+| Combinational ALUTs | 46,343 | 36,960 (2 per ALM) | 125 %; 7-input 633, 6-input 12,619 |
+| Dedicated registers | 28,483 | | |
+| M10K blocks | 309 | 308 | 100 %; 2.27 Mbit of 3.15 Mbit |
+| MLAB memory | 17,696 bit (741 memory ALUTs) | | |
+| DSP blocks | 29 | 66 | 44 % |
+| PLLs | 1 | 4 | |
+
+Per block, the fitter's cumulative "ALMs needed" (this is the demand of the entity inside the whole design; the
+rows do not add up to the top because of glue and packing):
+
+| Block | ALMs | ALUT | Registers | Memory (Kbit) | DSP |
+|---|---|---|---|---|---|
+| `Saturn` system | 25,071 | 40,098 | 23,021 | 715 | 28 |
+| - VDP2 | 6,667 | 8,933 | 7,751 | 32 | 12 |
+| - SH7604 MSH / SSH (each) | 3,475 / 3,451 | 5,746 / 5,715 | 2,951 / 2,941 | 32 | 3 |
+| - - of which `SH_core` | 1,274 / 1,278 | 2,066 | 862 | | |
+| - SCU (incl. DSP 580) | 2,378 | 4,564 | 1,608 | 16 | 3 |
+| - SH1 (CD block CPU) | 2,251 | 3,661 | 1,903 | 512 | 1 |
+| - VDP1 | 2,045 | 3,482 | 1,884 | 0 | 1 |
+| - SCSP | 1,955 | 3,226 | 1,633 | 33 | 5 |
+| - fx68k (68000) | 1,654 | 2,846 | 1,390 | 39 | 0 |
+| - SMPC | 552 | 909 | 384 | 20 | 0 |
+| - YGR019 | 334 | 470 | 446 | 0 | 0 |
+| `mem_pocket` | 1,788 | 2,298 | 2,411 | 1,473 | 0 |
+| - `ddram_pocket` | 748 | 911 | 1,051 | 42 | 0 |
+| - `sdram_pocket` | 392 | 441 | 582 | 0 | 0 |
+| - `psram_sync` x2 | 184 + 176 | 500 | 441 | 0 | 0 |
+| - `vdp1_fb_pocket` | 168 | 300 | 141 | 1,417 (FB1 M10K + FIFO) | 0 |
+| `cdd_pocket` (+ `cd_stream` 407, `cdd_ctl` 440) | 889 | 1,404 | 941 | 16 | 0 |
+| `pll_sys_cfg` (altera_pll_reconfig) | 737 | 1,226 | 459 | 0 | 0 |
+| `pocket_audio` | 122 | 193 | 190 | 0 | 1 |
+| APF (`core_bridge_cmd`, `io_pad_controller`, rest) | about 600 | | | 8 | 0 |
+
+Reading it: the Saturn system alone is 136 % of the device before any Pocket logic; the Pocket side (memory, CD, PLL,
+glue) adds 3.5 K ALMs (the estimates in docs/memory.md and docs/cd.md were 2.3 K and 1.2 K). M10K is
+at the limit before the cuts. `pll_sys_cfg` at 737 ALMs is the Altera reconfiguration core (scan-chain state machine
+with all counter registers); a purpose-built writer for the four fixed (M, K) pairs is the obvious saving (a few hundred
+ALMs) but changes the generated IP to hand-written scan-chain control, not done here. `ddram_pocket` registers include the
+cache RAMs as logic (`ddp_cache_ram` shows 100 to 220 ALMs each); the MLAB conversion was left to Quartus.
+
+The figures predate the cuts: the sibling branches (VDP2, VDP1, SCSP, SCU, SH-1, SH-2) are not merged here.
 
 ## 8. Remaining gaps
 
-TBD
+* Does not fit (section 7), so there is no timing report. The SDC I/O values are starting points; the SDRAM capture
+  edge, PSRAM `READ_ADJ`/`WRITE_ADJ` and the SRAM cycle counts need hardware.
+* Backup RAM and backup cartridge: loaded from the bridge, but the read-back for saving (`bk_rd_data` at `0x4xxxxxxx` /
+  `0x5xxxxxxx`) is still zero, so nothing is saved. Cartridge ROM has no data slot.
+* Pads: Digital only. No 3D/analog pad, mouse, or six-button remap beyond core_top's `pad2saturn`; player 2 uses `cont2`.
+* `cfg_cart` Backup selects the backup cart type, but its save file cannot be written (above). No "CD speed" setting:
+  the drive speed follows the BIOS command (the old interact entry was replaced by Cartridge).
+* Video: field-per-frame for interlaced content; the slot word position and 90 degree clock handling are untested on a scaler.
+  PAL 256-line modes are mapped to the 640x256/704x256 slots; the scaler's PAL refresh handling is unchecked.
+* PLL reconfiguration, lock behaviour at 640 MHz VCO, and that `clk_ram` stays aligned after reconfiguration are
+  untested; the Saturn is not reset on a relock (as MiSTer).
+* No resource arbitration for a second `target_dataslot_*` client.
+* Interact reset action and `bios_loaded` start/stop sequencing (including `dataslot_allcomplete` with deferred disc
+  slots) are unchanged from the template and untested.
+* The `POCKET_CUT_CD` / `POCKET_CUT_SMPC` switches only compile things out; the replacement blocks belong to the cuts.
+* Quartus `AUTO_SHIFT_REGISTER_RECOGNITION` is not turned off on the 2-flop synchronisers (PSX did); check the
+  synchroniser chains in the netlist once it fits.
