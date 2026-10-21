@@ -2468,4 +2468,64 @@ package VDP2_PKG;
 		return LOG ? log_and : log_or;
 	endfunction
 	
+
+	//Pipeline tap words: the fields read at stage 2/3/4 of the VRAM access, background and rotation pipelines
+	typedef struct packed {
+		bit         BS, LN, LS;
+		bit [ 2: 0] LS_POS;
+		bit         LW, LW_POS;
+		bit [ 3: 0] NxPN_FETCH;
+		bit         R0RP, RCTA, RCTB, RPA, RPB;
+		bit [ 7: 2] RP_POS;
+	} VATap2_t;
+	typedef struct packed { bit LS; } VATap3_t;
+	typedef struct packed {
+		bit [3:0][10:0] NxX;
+		bit [3:0][10:0] NxY;
+		bit [1:0][11:0] RxX;
+		bit [1:0][11:0] RxY;
+		bit             R0RP;
+	} VATap4_t;
+	typedef struct packed {
+		bit [3:0]       NxPN;
+		bit [3:0][1:0]  NxPNS;
+		bit [1:0][1:0]  NxPN_CNT;
+		bit [1:0]       NxVS;
+		bit [1:0][1:0]  NxVSS;
+		bit [3:0]       NxCH;
+		bit [3:0][1:0]  NxCHS;
+		bit [3:0]       NxCH_EN;
+	} BGTap2_t;
+	typedef struct packed {
+		bit [3:0]       NxPN;
+		bit [3:0]       NxCH;
+		bit [3:0][2:0]  NxCH_CNT;
+	} BGTap3_t;
+	typedef struct packed {
+		bit [1:0]       RxCT;
+		bit [1:0]       RxCRCT;
+		bit [1:0][1:0]  RxCTS;
+		bit [1:0]       RxPN;
+		bit [1:0][1:0]  RxPNS;
+		bit [1:0]       RxOVR;
+		bit [1:0]       RxCTTP;
+		bit [1:0]       RxCH;
+		bit [1:0][1:0]  RxCHS;
+	} RBGTap2_t;
+	typedef struct packed {
+		bit [1:0]       RxCH;
+		bit [1:0][2:0]  RxCELLX;
+	} RBGTap3_t;
+	typedef struct packed {
+		bit         VF, HF;
+		bit [14: 0] CHRN;
+	} PNTap3_t;
+	typedef struct packed {
+		bit [ 6: 0] PALN;
+		bit         HF, PR, CC;
+	} PNTap4_t;
+	typedef struct packed { VATap2_t va; BGTap2_t bg; RBGTap2_t rb; } Tap2_t;
+	typedef struct packed { VATap3_t va; BGTap3_t bg; RBGTap3_t rb; PNTap3_t pn; } Tap3_t;
+	typedef struct packed { VATap4_t va; PNTap4_t [7:0] pn; PNTap4_t [1:0] rpn; bit [1:0] rtp; } Tap4_t;
+
 endpackage

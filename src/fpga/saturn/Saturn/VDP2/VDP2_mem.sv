@@ -155,3 +155,32 @@ module VDP2_WRITE_FIFO (
 	assign Q = sub_wire0;
 
 endmodule
+
+// K-clock-enable delay of D (K >= 2) held in block RAM instead of K shift stages.
+// Q equals the output of a K-stage shift register that shifts when EN is high and takes D
+// as stage 0 input. The read address is the post-edge write pointer, so Q is registered in
+// the RAM and never reads the word written on the same edge. 2**AW must exceed K.
+module VDP2_DTAP #(
+	parameter W  = 8,
+	parameter K  = 2,
+	parameter AW = 3
+) (
+	input          CLK,
+	input          EN,
+	input  [W-1:0] D,
+	output [W-1:0] Q
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [W-1:0] mem [0:(1<<AW)-1];
+	reg  [AW-1:0] wp = '0;
+	reg  [W-1:0]  q = '0;
+	localparam [AW-1:0] KK = K;
+	wire [AW-1:0] wpn = EN ? wp + 1'd1 : wp;
+	always @(posedge CLK) begin
+		if (EN) begin
+			mem[wp] <= D;
+			wp <= wpn;
+		end
+		q <= mem[wpn - KK];
+	end
+	assign Q = q;
+endmodule
