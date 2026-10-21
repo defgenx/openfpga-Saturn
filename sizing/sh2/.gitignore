@@ -1,0 +1,6 @@
+db/
+incremental_db/
+out_*/
+*.rpt
+*.smsg
+*.summary.tmp
