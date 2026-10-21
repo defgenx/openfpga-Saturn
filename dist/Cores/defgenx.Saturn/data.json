@@ -12,22 +12,21 @@
         "address": "0x20000000"
       },
       {
-        "name": "CD image",
+        "name": "Disc",
         "id": 1,
         "required": true,
-        "parameters": "0x1",
-        "deferload": true,
-        "extensions": ["cue"],
-        "size_maximum": 65536
+        "parameters": "0x11",
+        "extensions": [
+          "json"
+        ]
       },
       {
-        "name": "CD track",
+        "name": "CD TOC",
         "id": 2,
         "required": false,
-        "parameters": "0x1",
-        "deferload": true,
-        "extensions": ["bin"],
-        "size_maximum": "0xFFFFFE00"
+        "parameters": "0x0",
+        "size_exact": 2048,
+        "address": "0x60000000"
       },
       {
         "name": "Backup RAM",
@@ -46,6 +45,294 @@
         "filename": "saturn_cart.sav",
         "size_exact": 524288,
         "address": "0x50000000"
+      },
+      {
+        "name": "CD file 00",
+        "id": 16,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 01",
+        "id": 17,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 02",
+        "id": 18,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 03",
+        "id": 19,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 04",
+        "id": 20,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 05",
+        "id": 21,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 06",
+        "id": 22,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 07",
+        "id": 23,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 08",
+        "id": 24,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 09",
+        "id": 25,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 10",
+        "id": 26,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 11",
+        "id": 27,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 12",
+        "id": 28,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 13",
+        "id": 29,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 14",
+        "id": 30,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 15",
+        "id": 31,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 16",
+        "id": 32,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 17",
+        "id": 33,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 18",
+        "id": 34,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 19",
+        "id": 35,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 20",
+        "id": 36,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 21",
+        "id": 37,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 22",
+        "id": 38,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "CD file 23",
+        "id": 39,
+        "required": false,
+        "parameters": "0x0",
+        "deferload": true,
+        "extensions": [
+          "bin",
+          "img"
+        ],
+        "size_maximum": "0xFFFFFE00"
       }
     ]
   }
