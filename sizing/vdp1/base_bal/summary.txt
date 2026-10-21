@@ -1,0 +1,2 @@
+VDP1 top: ALUTs  4025 (3939)          regs  2367 (2266)                blockbits  0                  DSP  1          
+; Total registers                 ; 2367                                        ;

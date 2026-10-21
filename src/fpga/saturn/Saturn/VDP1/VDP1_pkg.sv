@@ -358,36 +358,22 @@ package VDP1_PKG;
 		return CR;
 	endfunction
 	
+	// Colour calculation. A is the source (original or gouraud-shaded, optionally halved), B the background.
+	//  CCB[1:0]: 0 replace, 1 shadow (background only), 2 half luminance, 3 half transparent; CCB[2] selects gouraud.
 	function bit [15:0] ColorCalc(input bit [15:0] ORIG, input bit [15:0] BACK, input bit [14:0] CG, input bit [2:0] CCB);
-		RGB_t      GOUR;
-		RGB_t      ORIG_HALF,ORIG_ONE;
-		RGB_t      GOUR_HALF,GOUR_ONE;
-		RGB_t      BACK_HALF,BACK_ONE;
-		RGB_t      A,B,S;
-		bit        MSB;
+		RGB_t      GOUR,BASE,A,B,S;
+		bit        H,Z,BH,BZ,BFULL;
 		
 		GOUR = GouraudAdd(ORIG[14:0],CG);
-		
-		ORIG_HALF = ColorHalf(ORIG[14:0]);
-		ORIG_ONE = ORIG[14:0];
-		GOUR_HALF = ColorHalf(GOUR);
-		GOUR_ONE = GOUR;
-		BACK_HALF = ColorHalf(BACK[14:0]);
-		BACK_ONE = BACK[14:0];
-		
-		case (CCB)
-			3'b000: begin A = ORIG_ONE;                        B = '0;                              MSB =            ORIG[15]; end
-			3'b001: begin A = '0;                              B = BACK[15] ? BACK_HALF : BACK_ONE; MSB = BACK[15];            end
-			3'b010: begin A = ORIG_HALF;                       B = '0;                              MSB =            ORIG[15]; end
-			3'b011: begin A = BACK[15] ? ORIG_HALF : ORIG_ONE; B = BACK[15] ? BACK_HALF : '0;       MSB = BACK[15] | ORIG[15]; end
-			3'b100: begin A = GOUR_ONE;                        B = '0;                              MSB =            ORIG[15]; end
-			3'b101: begin A = '0;                              B = BACK_ONE;                        MSB = BACK[15];            end
-			3'b110: begin A = GOUR_HALF;                       B = '0;                              MSB =            ORIG[15]; end
-			3'b111: begin A = BACK[15] ? GOUR_HALF : GOUR_ONE; B = BACK[15] ? BACK_HALF : '0;       MSB = BACK[15] | ORIG[15]; end
-		endcase
+		BASE = CCB[2] ? GOUR : ORIG[14:0];
+		H = CCB[1] & (~CCB[0] | BACK[15]);
+		Z = ~CCB[1] & CCB[0];
+		BZ = ~CCB[0] | (CCB[1] & ~BACK[15]);
+		BH = BACK[15] & (CCB[1] | ~CCB[2]);
+		A = Z ? '0 : H ? ColorHalf(BASE) : BASE;
+		B = BZ ? '0 : BH ? ColorHalf(BACK[14:0]) : BACK[14:0];
 		S = ColorAdd(A,B);
-		
-		return {MSB,S};
+		return {CCB[0] & ~CCB[1] ? BACK[15] : CCB[1] & CCB[0] ? (BACK[15] | ORIG[15]) : ORIG[15], S};
 	endfunction
 
 	function bit [12:0] SDiv2(input bit [12:0] C);
@@ -397,7 +383,7 @@ package VDP1_PKG;
 	function bit [11:0] Abs(input bit [12:0] C);
 		bit [12:0] abs; 
 		
-		abs = $signed(C) >= 0 ? $signed(C) : -$signed(C);
+		abs = (C ^ {13{C[12]}}) + {12'h000,C[12]};
 		return abs[11:0];
 	endfunction
 	
