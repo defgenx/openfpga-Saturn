@@ -22,3 +22,4 @@ sizing/vdp1/ramtest/
 sim/vdp1/cov/
 sim/vdp1/cov_build.log
 sizing/sh2/gen/
+sizing/**/out_*/
