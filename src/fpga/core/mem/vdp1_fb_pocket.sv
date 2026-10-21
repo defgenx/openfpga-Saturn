@@ -66,16 +66,32 @@ wire        in0 = i0 < WORDS;
 wire        in1 = i1 < WORDS;
 
 // ---------------------------------------------------------------- FB1 (M10K)
-// synchronous read with byte enables, so that Quartus infers it as M10K (16 bit words, 141 blocks)
-(* ramstyle = "M10K, no_rw_check" *) reg [15:0] m1 [0:WORDS-1];
+// 90112 x 16 simple dual port M10K, byte enables, address registered (read data one clock after the address)
 reg [15:0] m1_q;
 reg        in1_q;
+`ifdef ALTERA_RESERVED_QIS
+altsyncram #(
+	.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+	.width_a(16), .widthad_a(17), .numwords_a(90112), .width_byteena_a(2),
+	.width_b(16), .widthad_b(17), .numwords_b(90112),
+	.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
+	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
+) fb1_ram (
+	.clock0(clk_sys), .address_a(i1), .data_a(FB1_D), .wren_a(|FB1_WE && in1), .byteena_a(FB1_WE),
+	.address_b(i1), .q_b(m1_q), .rden_b(1'b1),
+	.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_b(1'b1),
+	.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+	.data_b({16{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
+);
+`else
+reg [15:0] m1 [0:WORDS-1];
 always @(posedge clk_sys) begin
 	if (FB1_WE[0] && in1) m1[i1][7:0]  <= FB1_D[7:0];
 	if (FB1_WE[1] && in1) m1[i1][15:8] <= FB1_D[15:8];
-	m1_q  <= m1[i1];
-	in1_q <= in1;
+	m1_q <= m1[i1];
 end
+`endif
+always @(posedge clk_sys) in1_q <= in1;
 assign FB1_Q = in1_q ? m1_q : 16'h0000;
 
 // ---------------------------------------------------------------- FB0 write FIFO (clk_sys -> clk_ram), 256 entries: a VBlank erase pushes one write per two clk_sys, the
