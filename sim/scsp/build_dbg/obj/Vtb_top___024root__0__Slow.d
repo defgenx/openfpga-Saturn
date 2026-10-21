@@ -1,0 +1,14 @@
+Vtb_top___024root__0__Slow.o: \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/SDKSettings.json \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top__pch.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_config.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilatedos.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_types.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_funcs.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top__Syms.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top___024root.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top_SCSP_PKG.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/scsp-shrink/sim/scsp/build_dbg/obj/Vtb_top_REF_SCSP_PKG.h \
+  Vtb_top___024root__0__Slow.cpp Vtb_top__pch.h

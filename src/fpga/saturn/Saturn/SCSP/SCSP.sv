@@ -997,10 +997,13 @@ module SCSP (
 	
 	//DSP
 	MPRO_t       MPRO0_Q,MPRO1_Q;
+	//The DSP reads dedicated copies of its RAMs, so the values latched at CYCLE0_CE
+	//are read straight from them at the CYCLE1_CE edge that uses them.
+	assign MPRO1_Q = MPRO0_Q;
 	bit          MPRO_OK;
 	wire         MPRO_SET_Q;
 	EFREG_t      EFREG_Q;
-	assign MPRO0_Q = MPRO_RAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
+	assign MPRO0_Q = MPRO_DRAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
 	
 	
 
@@ -1107,14 +1110,23 @@ module SCSP (
 	bit          DSP_READ_NOFL1,DSP_READ_NOFL2;
 	
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
+	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
+	
+	wire [12:0] COEF_Q = COEF_DRAM_Q[15:3];
+	wire [16:1] MADRS_Q = MADRS_DRAM_Q;
+	//INPUTS keeps its previous value when no source is selected, so the input
+	//select and the MEMS/EXTS data stay latched as before.
+	bit [5:0]  MPRO1_IRA;
+	bit [23:0] MEMS_Q;
+	bit [15:0] EXTS_Q;
 	
 	always @(posedge CLK or negedge RST_N) begin
-		TEMP_t       TEMP_Q;
-		MEMS_t       MEMS_Q;
-		COEF_t       COEF_Q;
-		MADRS_t      MADRS_Q;
+		
+		
+		
+		
 		MIXS_t       MIXS_Q;
-		bit  [15: 0] EXTS_Q;
+		
 		bit  [23: 0] INPUTS;
 		bit  [23: 0] X;
 		bit  [12: 0] Y;
@@ -1138,16 +1150,17 @@ module SCSP (
 			DSP_OUT_REG <= '0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
-			MPRO1_Q <= '0;
+			
 			MDEC_CT <= '0;
+			MPRO1_IRA <= '0;
 			DSP_READ <= 0;
 			DSP_WRITE <= 0;
 		end else begin
-			if (!MPRO1_Q.IRA[5])
+			if (!MPRO1_IRA[5])
 				INPUTS = MEMS_Q;
-			else if (!MPRO1_Q.IRA[4])
+			else if (!MPRO1_IRA[4])
 				INPUTS = {MIXS_Q,4'h0};
-			else if (!MPRO1_Q.IRA[3:1])
+			else if (!MPRO1_IRA[3:1])
 				INPUTS = {EXTS_Q,8'h00};
 			
 			case (MPRO1_Q.XSEL)
@@ -1174,13 +1187,16 @@ module SCSP (
 			ADDR = MADRS_Q + (!MPRO1_Q.TABLE ? MDEC_CT : 16'h0000) + (MPRO1_Q.ADREB ? {{4{ADRS_REG[11]}},ADRS_REG} : 16'h0000) + (MPRO1_Q.NXADR ? 16'h0001 : 16'h0000);
 			
 			if (CYCLE0_CE) begin
-				MPRO1_Q <= MPRO0_Q;
-				MEMS_Q <= {MEMS_RAM_Q[15:0],MEMS_RAM_Q[23:16]};
+				
+				
 				MIXS_Q <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16]};
+				MPRO1_IRA <= MPRO0_Q.IRA;
+				MEMS_Q <= {MEMS_DRAM_Q[15:0],MEMS_DRAM_Q[23:16]};
 				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
-				TEMP_Q <= {TEMP_RAM_Q[15:0],TEMP_RAM_Q[23:16]};
-				COEF_Q <= COEF_RAM_Q[15:3];
-				MADRS_Q <= MADRS_RAM_Q;
+				
+				
+				
+				
 			end
 			if (CYCLE1_CE) begin
 				if (OP7.SLOT == 5'd31 && SLOT1_CE) 
@@ -2091,12 +2107,16 @@ module SCSP (
 	//COEF,100700-10077F
 	wire       COEF_SEL = REG_A[11:7] == 5'b01110;
 	bit [15:0] COEF_RAM_Q;
-	SCSP_RAM_8X2 #(6) COEF_RAM (CLK, OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[6:1] : DSP_COEF_RA), COEF_RAM_Q);
+	bit [15:0] COEF_DRAM_Q;
+	SCSP_RAM_8X2 #(6) COEF_RAM (CLK, OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}}), REG_A[6:1], COEF_RAM_Q);
+	SCSP_RAM_8X2 #(6) COEF_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}}), DSP_COEF_RA, COEF_DRAM_Q);
 	
 	//MADRS,100780-1007BF
 	wire       MADRS_SEL = REG_A[11:6] == 6'b011110;
 	bit [15:0] MADRS_RAM_Q;
-	SCSP_RAM_8X2 #(5) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, (REG_RD ? REG_A[5:1] : DSP_MADRS_RA), MADRS_RAM_Q);
+	bit [15:0] MADRS_DRAM_Q;
+	SCSP_RAM_8X2 #(5) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, REG_A[5:1], MADRS_RAM_Q);
+	SCSP_RAM_8X2 #(5) MADRS_DRAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, DSP_MADRS_RA, MADRS_DRAM_Q);
 	
 	//MPRO,100800-100BFF
 	wire       MPRO_SEL = REG_A[11:10] == 2'b10;
@@ -2105,21 +2125,28 @@ module SCSP (
 	wire       MPRO2_SEL = MPRO_SEL & (REG_A[2:1] == 3'h4>>1);
 	wire       MPRO3_SEL = MPRO_SEL & (REG_A[2:1] == 3'h6>>1);
 	bit [63:0] MPRO_RAM_Q;
-	SCSP_MPRO_RAM MPRO_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}}), (REG_RD ? REG_A[9:3] : DSP_MPRO_STEP), MPRO_RAM_Q);
+	bit [63:0] MPRO_DRAM_Q;
+	SCSP_MPRO_RAM MPRO_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}}), REG_A[9:3], MPRO_RAM_Q);
+	//Written at CYCLE1_CE only, so an entry changes between DSP steps, not under the step in flight.
+	SCSP_MPRO_RAM MPRO_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}} & {8{CYCLE1_CE}}), DSP_MPRO_STEP, MPRO_DRAM_Q);
 	
 	//TEMP,100C00-100DFF
 	wire       TEMP_SEL = REG_A[11:9] == 3'b110;
 	wire       TEMP0_SEL = TEMP_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       TEMP1_SEL = TEMP_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] TEMP_RAM_Q;
-	SCSP_RAM_8X4 #(7) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, (REG_RD ? REG_A[8:2] : DSP_TEMP_RA), TEMP_RAM_Q);
+	bit [31:0] TEMP_DRAM_Q;
+	SCSP_RAM_8X4 #(7) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, REG_A[8:2], TEMP_RAM_Q);
+	SCSP_RAM_8X4 #(7) TEMP_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, DSP_TEMP_RA, TEMP_DRAM_Q);
 	
 	//MEMS,100E00-100E7F
 	wire       MEMS_SEL = REG_A[11:7] == 5'b11100;
 	wire       MEMS0_SEL = MEMS_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       MEMS1_SEL = MEMS_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] MEMS_RAM_Q;
-	SCSP_RAM_8X4 #(5) MEMS_RAM (CLK, OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]), OP7.RST ? '0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}}, (REG_RD ? REG_A[6:2] : DSP_MEMS_RA), MEMS_RAM_Q);
+	bit [31:0] MEMS_DRAM_Q;
+	SCSP_RAM_8X4 #(5) MEMS_RAM (CLK, OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]), OP7.RST ? '0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}}, REG_A[6:2], MEMS_RAM_Q);
+	SCSP_RAM_8X4 #(5) MEMS_DRAM (CLK, OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]), OP7.RST ? '0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}}, DSP_MEMS_RA, MEMS_DRAM_Q);
 	
 	//MIXS,100E80-100EBF
 	wire       MIXS_SEL = REG_A[11:6] == 12'hE80>>6;

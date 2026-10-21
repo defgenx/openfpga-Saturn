@@ -303,7 +303,7 @@ module REF_SCSP (
 				OP2.RST <= RST;
 				OP2.KON <= KEY_RAM_Q[0];
 				OP2.KOFF <= KEY_RAM_Q[1];
-				OP2.PHASE = PHASE;
+				OP2.PHASE <= PHASE;
 				OP2.MSK <= OP1_SCR5.MSK;
 				OP2.ND <= NOISE[7:0];
 
