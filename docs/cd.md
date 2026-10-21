@@ -54,7 +54,7 @@ CD_COMREQ_N, CD_COMSYNC_N, CD_DATA[17:0], CD_CK, CD_AUDIO`). The ARM-facing port
 | Feed FIFO | none: the feed reads the SRAM one word per `CDD_CE` | 0 |
 
 SRAM, not M10K, for the ring: 4 sectors of 2352 B are 75 Kbit = 8-12 M10K depending on aspect ratio, more than the
-whole budget. The SRAM is dedicated to this block (the backup RAM image has to live elsewhere).
+whole budget. The SRAM is shared with VDP1 framebuffer 0 (docs/memory.md): `cd_stream` has `sram_req`/`sram_gnt`, `sram_pocket` multiplexes the pins, the ring stays at words 0-0x3FFF. The backup RAM image lives in PSRAM0.
 The SRAM port arbiter serves bridge writes first (2 half-words, 6 clocks per 32-bit bridge word) and feed reads
 second (3 clocks); one word every 2 `CDD_CE` at 1x and every `CDD_CE` at 2x is far below that.
 

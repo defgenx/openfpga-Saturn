@@ -16,8 +16,8 @@
 //   write     replaces the read of its half: bank 0/2 ACT 2/6 WRITE 9, bank 1/3 ACT 4/8 WRITE 11
 //   14 / 0    ACT bank 2 / bank 3 for SCSP, READ or WRITE at ACT+3 (cycle 1 / 3 of the next frame)
 // Every bank is re-activated exactly 8 cycles after its previous ACT (tRC 60 ns = 7 cycles), ACTs
-// are 2 cycles apart (tRRD 12 ns), all 16 command cycles are distinct, and the DQ bus has no
-// read/write overlap in any frame-to-frame sequence (checked by sim/mem/tb_sdram and the tables
+// are 2 cycles apart (tRRD 12 ns), no command cycle is used twice (12 of 16 are used), and the DQ bus
+// has no read/write overlap in any frame-to-frame sequence (checked by sim/mem/tb_sdram and the tables
 // in docs/memory.md). There is no AUTO REFRESH: a VDP2 group that does not read in a frame, or a
 // SCSP slot with no request, issues a dummy read of the next row of its bank (row scrub), which
 // restores that row. VDP2 stops fetching for several dots per line (REFRESH/NOACCESS windows).

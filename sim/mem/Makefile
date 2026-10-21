@@ -4,7 +4,7 @@ VVP ?= vvp
 SRC := ../../src/fpga/core/mem
 FLAGS := -g2012 -Wall -Wno-timescale
 
-all: sdram psram ddram fb load
+all: elab sdram psram ddram fb load
 
 build:
 	mkdir -p build
@@ -47,3 +47,30 @@ sdram: build/tb_sdram
 
 clean:
 	rm -rf build
+
+# the whole subsystem elaborates (no stimulus)
+elab:
+	$(IVL) $(FLAGS) -o /dev/null $(SRC)/mem_pocket.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv $(SRC)/psram_sync.sv \
+	  $(SRC)/ddram_pocket.sv $(SRC)/load_pocket.sv $(SRC)/sram_pocket.sv $(SRC)/vdp1_fb_pocket.sv 2>&1 | grep -v sorry; test $${PIPESTATUS[0]} -eq 0
+
+# 64 ms of VDP2/SCSP traffic against the 64 ms retention limit (about 10 minutes)
+long: build/tb_sdram
+	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000
+
+# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 30 ns SRAM; a sector burst during VBlank erase
+negative: build/tb_sdram build/tb_fb build/tb_fb_slow
+	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 | tail -3
+	-$(VVP) build/tb_fb_slow +N=100 | tail -3
+	-$(VVP) build/tb_fb +N=100 +CDBURST | tail -3
+
+.PHONY: all elab long negative sdram psram ddram fb load clean
+
+# data-eye sweep: extra delay on the SDRAM clock path (ps), rising-edge capture and falling-edge capture
+build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv | build
+	$(IVL) $(FLAGS) -DCAPNEG -o $@ tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv
+
+skew: build/tb_sdram build/tb_sdram_neg
+	@for sk in -4000 -3000 -2000 -1500 -1000 -500 0 500 1000 2000 3000 3500 4000; do \
+	  printf "rising-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done
+	@for sk in -4000 -3000 -2000 -1000 0 1000 2000 3000 4000; do \
+	  printf "falling-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram_neg +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done

@@ -50,7 +50,7 @@ module sram_pocket #(
 	input  wire  [1:0] fb_be,
 	output wire        fb_ready,
 	output reg  [15:0] fb_q,
-	output reg         fb_done              // pulse, fb_q valid for a read
+	output reg         fb_done              // pulse at the end of a read, fb_q valid (writes are posted: no pulse)
 );
 
 assign cd_dq_i = sram_dq_i;
@@ -87,7 +87,7 @@ always @(posedge clk) begin
 			// cycle 0 address/data set up, then WE# low until the last cycle but one
 			if (cnt == 0) e_we_n <= 1'b0;
 			if (cnt == WR_CYC - 2) e_we_n <= 1'b1;
-			if (cnt == WR_CYC - 1) begin busy <= 1'b0; e_dq_oe <= 1'b0; fb_done <= 1'b1; end
+			if (cnt == WR_CYC - 1) begin busy <= 1'b0; e_dq_oe <= 1'b0; end
 		end else begin
 			if (cnt == RD_CYC - 2) fb_q <= sram_dq_i;
 			if (cnt == RD_CYC - 1) begin busy <= 1'b0; e_oe_n <= 1'b1; fb_done <= 1'b1; end

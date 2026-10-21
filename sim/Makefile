@@ -1,11 +1,19 @@
 # Simulation targets. Needs iverilog (>= 12) and python3. No Quartus.
 #   make -C sim cd         CD drive: synthetic discs, SH-1 host model, APF bridge model (about 5 minutes)
+#   make -C sim mem        memory subsystem (sdram, psram, ddram_pocket, framebuffer, loader), several minutes
+#   make -C sim mem-long   64 ms SDRAM retention run (about 10 minutes)
 #   make -C sim cd-real    300 ms bridge stall at the real CDD_CE spacing (324 clk per CE; slow)
 
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: cd cd-real clean
+.PHONY: cd cd-real mem mem-long clean
+
+mem:
+	$(MAKE) -C mem all
+
+mem-long:
+	$(MAKE) -C mem long
 
 cd: $(CD)/build/tb_cdd.vvp
 	cd $(CD) && python3 gen_disc.py
@@ -24,3 +32,4 @@ $(CD)/build/tb_cdd.vvp: $(CD)/tb_cdd.sv $(CDRTL)
 
 clean:
 	rm -rf $(CD)/build
+	$(MAKE) -C mem clean
