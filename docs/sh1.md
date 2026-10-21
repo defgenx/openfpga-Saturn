@@ -92,8 +92,7 @@ SH1 (SH7034 + 64 KB SH1_MEM):
 
 M10K stays at 56 (same RAM). Per block (ALUT/regs): ITU 640/465 to 158/124, INTC 181/174 to 63/47, MULT
 109/77 to 7/76, PFC 130/164 to 100/97, DMAC 670/451 to 632/407, BSC 157/215 to 145/201, SCI0 161/112 to 162/95,
-SH_core unchanged (1,890/853; owned by the SH_core rewrite). With the BALANCED profile quoted in sizing.md
-(4,581 ALUTs) the saving is larger in ALUTs because the area profile already shrinks the baseline.
+SH_core unchanged (1,890/853; owned by the SH_core rewrite).
 
 ## 6. Verification
 
@@ -114,7 +113,7 @@ static census. The simulation also logs which on-chip registers the CPU touched 
   RAM-structure accesses in every simulated path, but could in principle address ITU/INTC registers. If one
   started ITU0-3 (TSTR) or enabled IRQ0-5, the pruned core would differ. `--check-fw` reports resolved sites only.
 * Six unresolved indirect jumps/calls (`jsr @r0` at 0x1AC6/0x1B3C/0x1B42, `jmp @r13` at 0x5668, `jsr @r5` at
-  0xBA04, `jmp @r0` at 0xF926 via a RAM table) are not followed.
+  0xBB04, `jmp @r0` at 0xF926 via a RAM table) are not followed.
 * Unknown-valued writes remain for TDR, GRA4/GRB4, DAR0, SAR1/DAR1, DMATCR1; their registers are not masked.
 * Input capture on ITU0-2 is disabled on the assumption that `Saturn.sv` ties TIOCA0/A1/A2/B2 to constants (it does).
 * SAR/DAR bits 31:28 are assumed never set (28-bit bus).
