@@ -185,10 +185,8 @@ module VDP1 (
 	bit          SPR_READ;
 	bit  [15: 0] SPR_DATA;
 	bit          SPR_DATA_READY;
-	bit  [18: 1] CLT_ADDR;
 	bit          CLT_READ;
 	bit          CLT_READ_DONE;
-	bit  [18: 1] GRD_ADDR;
 	bit          GRD_READ;
 	bit          GRD_READ_DONE;
 	bit  [15: 0] GRD_TBL[4];
@@ -1609,9 +1607,18 @@ module VDP1 (
 	assign DBG_PENALTY_OVER = (PENALTY_CNT >= 10'd256);
 `endif
 
-	assign SPR_ADDR = CMD.CMDCTRL.COMM >= 4'h4 ? '1 : SprAddr(SPR_OFFSY, CMD.CMDSRCA, CMD.CMDPMOD.CM);
-	assign CLT_ADDR = {CMD.CMDCOLR[15:2],2'b00,2'b00};
-	assign GRD_ADDR = {CMD.CMDGRDA,2'b00};
+	// Pattern read address. SPR_READ is never set for COMM >= 4, so no line/polygon special case is needed.
+	// CM 0,1: texel addresses advance every 4 pixels; CM 2-4: every 2; others: every pixel.
+	wire [ 1: 0] PAT_SH = (CMD.CMDPMOD.CM[2:1] == 2'b00) ? 2'd2 : (CMD.CMDPMOD.CM[2:1] == 2'b01 || CMD.CMDPMOD.CM == 3'b100) ? 2'd1 : 2'd0;
+	wire [ 8: 0] PAT_W = PAT_SH == 2'd2 ? {2'b00,ORIG_WIDTH[8:2]} : PAT_SH == 2'd1 ? {1'b0,ORIG_WIDTH[8:1]} : ORIG_WIDTH;
+	wire [ 8: 0] PAT_P = PAT_SH == 2'd2 ? {2'b00,PAT_CNT[8:2]}    : PAT_SH == 2'd1 ? {1'b0,PAT_CNT[8:1]}    : PAT_CNT;
+	wire [ 9: 0] PAT_REV = {1'b0,PAT_W} - {1'b0,PAT_P} - 10'd1;   // may go negative: sign-extended below
+	wire [17: 0] PAT_OFF = PAT_PREREAD ? 18'd0 : !TEXT_DIRX ? {9'd0,PAT_P} : {{8{PAT_REV[9]}},PAT_REV};
+	wire [17: 0] PAT_BASE = (CMD.CMDPMOD.CM[2:1] == 2'b00) ? {CMD.CMDSRCA,2'b00} + {3'b000,SPR_OFFSY,1'b0} :
+	                        (CMD.CMDPMOD.CM[2:1] == 2'b01 || CMD.CMDPMOD.CM == 3'b100) ? {CMD.CMDSRCA,2'b00} + {2'b00,SPR_OFFSY,2'b00} :
+	                                                                                      {CMD.CMDSRCA[15:1],3'b000} + {1'b0,SPR_OFFSY,3'b000};
+	wire [18: 1] PAT_VRAM_A = PAT_BASE + PAT_OFF;
+	assign SPR_ADDR = PAT_BASE;
 	
 	bit  [15: 0] FB_DRAW_D;
 	bit          FB_DRAW_WE;
@@ -2052,46 +2059,27 @@ module VDP1 (
 //						VRAM_ST <= VS_RAS;
 					end else if (CMD_READ_PEND && !FRAME_START && !BURST && !VRAM_SEL) begin
 						if (VRAM_READ_POS == 4'd15) CMD_READ_PEND <= 0;
-						VRAM_A <= CMD_ADDR + VRAM_READ_POS;
+						VRAM_A <= {CMD_ADDR_H,VRAM_READ_POS};
 						VRAM_WE <= '0;
 						VRAM_RD <= 1;
 						VRAM_BLEN <= '0;
 						VRAM_ST <= VS_CMD_READ;
 					end else if (SPR_READ && !PAT_FIFO_FULL && PAT_CNT < ORIG_WIDTH && !FRAME_START && !BURST && !VRAM_SEL) begin
-						if (PAT_PREREAD) begin
-							VRAM_A <= SPR_ADDR;
-							case (CMD.CMDPMOD.CM)
-								3'b000,
-								3'b001: VRAM_BLEN <= {2'b00,ORIG_WIDTH[8:2]};
-								3'b010,
-								3'b011,
-								3'b100: VRAM_BLEN <= {1'b0,ORIG_WIDTH[8:1]};
-								default: VRAM_BLEN <= ORIG_WIDTH[8:0];
-							endcase
-						end else begin
-							case (CMD.CMDPMOD.CM)
-								3'b000,
-								3'b001: VRAM_A <= !TEXT_DIRX ? SPR_ADDR + {2'b00,PAT_CNT[8:2]} : SPR_ADDR + ({2'b00,ORIG_WIDTH[8:2]} - {2'b00,PAT_CNT[8:2]} - 9'd1);
-								3'b010,
-								3'b011,
-								3'b100: VRAM_A <= !TEXT_DIRX ? SPR_ADDR + {1'b0,PAT_CNT[8:1]} : SPR_ADDR + ({1'b0,ORIG_WIDTH[8:1]} - {1'b0,PAT_CNT[8:1]} - 9'd1);
-								default: VRAM_A <= !TEXT_DIRX ? SPR_ADDR + PAT_CNT[8:0] : SPR_ADDR + (ORIG_WIDTH[8:0] - PAT_CNT[8:0] - 9'd1);
-							endcase
-							VRAM_BLEN <= '0;
-						end
+						VRAM_A <= PAT_VRAM_A;
+						VRAM_BLEN <= PAT_PREREAD ? PAT_W : '0;
 						VRAM_WE <= '0;
 						VRAM_RD <= 1;
 						VRAM_ST <= VS_PAT_READ;
 					end else if (CLT_READ_PEND && !FRAME_START && !BURST && !VRAM_SEL) begin
 						if (VRAM_READ_POS == 4'd15) CLT_READ_PEND <= 0;
-						VRAM_A <= CLT_ADDR + VRAM_READ_POS;
+						VRAM_A <= {CMD.CMDCOLR[15:2],VRAM_READ_POS};
 						VRAM_WE <= '0;
 						VRAM_RD <= 1;
 						VRAM_BLEN <= '0;
 						VRAM_ST <= VS_CLT_READ;
 					end else if (GRD_READ_PEND && !FRAME_START && !BURST && !VRAM_SEL) begin
 						if (VRAM_READ_POS == 4'd3) GRD_READ_PEND <= 0;
-						VRAM_A <= GRD_ADDR + VRAM_READ_POS;
+						VRAM_A <= {CMD.CMDGRDA,VRAM_READ_POS[1:0]};
 						VRAM_WE <= '0;
 						VRAM_RD <= 1;
 						VRAM_BLEN <= '0;
