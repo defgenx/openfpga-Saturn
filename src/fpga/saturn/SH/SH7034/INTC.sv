@@ -1,4 +1,8 @@
-module SH7034_INTC (
+module SH7034_INTC
+#(
+	parameter bit PRUNE=0
+)
+(
 	input             CLK,
 	input             RST_N,
 	input             CE_R,
@@ -51,6 +55,14 @@ module SH7034_INTC (
 );
 
 	import SH7034_PKG::*;
+
+	//Write masks of the CD-block firmware (PRUNE=1, see SH7034_fw.sv)
+	localparam bit [15:0] IPRA_FWM = PRUNE ? IPRA_WMASK & SH7034_FW::IPRA : IPRA_WMASK;
+	localparam bit [15:0] IPRB_FWM = PRUNE ? IPRB_WMASK & SH7034_FW::IPRB : IPRB_WMASK;
+	localparam bit [15:0] IPRC_FWM = PRUNE ? IPRC_WMASK & SH7034_FW::IPRC : IPRC_WMASK;
+	localparam bit [15:0] IPRD_FWM = PRUNE ? IPRD_WMASK & SH7034_FW::IPRD : IPRD_WMASK;
+	localparam bit [15:0] IPRE_FWM = PRUNE ? IPRE_WMASK & SH7034_FW::IPRE : IPRE_WMASK;
+	localparam bit [15:0] ICR_FWM  = PRUNE ? ICR_WMASK  & SH7034_FW::ICR  : ICR_WMASK;
 	
 	const integer NMI_INT       = 0;
 	const integer UBC_INT       = 1;
@@ -283,22 +295,22 @@ module SH7034_INTC (
 			else if (REG_SEL && IBUS_WE && IBUS_REQ) begin
 				case ({IBUS_A[3:2],2'b00})
 					4'h4: begin
-						if (IBUS_BA[3]) IPRA[15: 8] = IBUS_DI[31:24] & IPRA_WMASK[15:8];
-						if (IBUS_BA[2]) IPRA[ 7: 0] = IBUS_DI[23:16] & IPRA_WMASK[ 7:0];
-						if (IBUS_BA[1]) IPRB[15: 8] = IBUS_DI[15: 8] & IPRB_WMASK[15:8];
-						if (IBUS_BA[0]) IPRB[ 7: 0] = IBUS_DI[ 7: 0] & IPRB_WMASK[ 7:0];
+						if (IBUS_BA[3]) IPRA[15: 8] = IBUS_DI[31:24] & IPRA_FWM[15:8];
+						if (IBUS_BA[2]) IPRA[ 7: 0] = IBUS_DI[23:16] & IPRA_FWM[ 7:0];
+						if (IBUS_BA[1]) IPRB[15: 8] = IBUS_DI[15: 8] & IPRB_FWM[15:8];
+						if (IBUS_BA[0]) IPRB[ 7: 0] = IBUS_DI[ 7: 0] & IPRB_FWM[ 7:0];
 					end
 					4'h8: begin
-						if (IBUS_BA[3]) IPRC[15: 8] = IBUS_DI[31:24] & IPRC_WMASK[15:8];
-						if (IBUS_BA[2]) IPRC[ 7: 0] = IBUS_DI[23:16] & IPRC_WMASK[ 7:0];
-						if (IBUS_BA[1]) IPRD[15: 8] = IBUS_DI[15: 8] & IPRD_WMASK[15:8];
-						if (IBUS_BA[0]) IPRD[ 7: 0] = IBUS_DI[ 7: 0] & IPRD_WMASK[ 7:0];
+						if (IBUS_BA[3]) IPRC[15: 8] = IBUS_DI[31:24] & IPRC_FWM[15:8];
+						if (IBUS_BA[2]) IPRC[ 7: 0] = IBUS_DI[23:16] & IPRC_FWM[ 7:0];
+						if (IBUS_BA[1]) IPRD[15: 8] = IBUS_DI[15: 8] & IPRD_FWM[15:8];
+						if (IBUS_BA[0]) IPRD[ 7: 0] = IBUS_DI[ 7: 0] & IPRD_FWM[ 7:0];
 					end
 					4'hC: begin
-						if (IBUS_BA[3]) IPRE[15:8] = IBUS_DI[31:24] & IPRE_WMASK[15:8];
-						if (IBUS_BA[2]) IPRE[ 7:0] = IBUS_DI[23:16] & IPRE_WMASK[ 7:0];
-						if (IBUS_BA[1]) ICR[15:8]  = IBUS_DI[15: 8] & ICR_WMASK[15:8];
-						if (IBUS_BA[0]) ICR[ 7:0]  = IBUS_DI[ 7: 0] & ICR_WMASK[ 7:0];
+						if (IBUS_BA[3]) IPRE[15:8] = IBUS_DI[31:24] & IPRE_FWM[15:8];
+						if (IBUS_BA[2]) IPRE[ 7:0] = IBUS_DI[23:16] & IPRE_FWM[ 7:0];
+						if (IBUS_BA[1]) ICR[15:8]  = IBUS_DI[15: 8] & ICR_FWM[15:8];
+						if (IBUS_BA[0]) ICR[ 7:0]  = IBUS_DI[ 7: 0] & ICR_FWM[ 7:0];
 					end
 					default:;
 				endcase
