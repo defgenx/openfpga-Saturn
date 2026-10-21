@@ -32,3 +32,4 @@ sizing/sh2/gen/
 sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
+sim/sh2/build_*/
