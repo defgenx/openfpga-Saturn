@@ -11,6 +11,8 @@ rm -rf $S; mkdir -p $S/sizing
 cp -R $R/src $S/src
 cp -R $R/sizing/$B $S/sizing/$B
 cp $R/sizing/area_profile.qsf $S/sizing/ 2>/dev/null || true
+# ref/ files a block needs at map time (e.g. firmware .mif) are copied into its snapshot, never committed
+[ -f $R/sizing/$B/ref_files.txt ] && while read f; do cp $R/$f $S/sizing/$B/; done < $R/sizing/$B/ref_files.txt
 for m in "$@"; do echo "set_global_assignment -name VERILOG_MACRO \"$m=1\"" >> $S/sizing/$B/$P.qsf; done
 docker run --rm --platform linux/amd64 --name cuts-low-$N -v $S:/build -w /build/sizing/$B raetro/quartus:21.1 quartus_map $P > $OUT/$N.log 2>&1 || true
 f=$(ls $S/sizing/$B/out_*/$P.map.rpt 2>/dev/null | head -1)
