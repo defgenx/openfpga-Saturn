@@ -118,7 +118,7 @@ module SCU
 	//Indirect table word source: B-bus buffer or C-bus data
 	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
 	
-	bit  [26:0] DSP_DR;
+	bit  [26:2] DSP_DR;	//bits 1:0 are always 0
 	bit  [26:0] DSP_DW;
 	bit  [ 2:0] DSP_ADD;
 	bit         DSP_HOLD;
@@ -492,6 +492,7 @@ module SCU
 		bit         CBUS_READ_DONE;
 		bit  [31:0] RD_DATA;
 		bit  [31:0] PUSH_DATA;
+		bit  [ 1:0] DMA_IDX;
 		bit         DSP_PUSH;
 		bit         PUSH_RD;
 		bit         PUSH_RDD;
@@ -1797,7 +1798,7 @@ module SCU
 					DSTA.DDMV <= 0;//?
 					if (DMA_PEND[3]) begin
 						DMA_PEND[3] <= 0;
-						DMA_RA <= DSP_DR;
+						DMA_RA <= {DSP_DR,2'b00};
 						DMA_WA <= DSP_DW;
 						DMA_RADD <= DSP_ADD[0];
 						DMA_WADD <= DSP_ADD;
@@ -1808,66 +1809,30 @@ module SCU
 						DMA_ST <= DMA_SELECT;
 						DSTA.DDWT <= 0;
 						DSTA.DDMV <= 1;
-					end else if (DMA_PEND[0]) begin
-						DMA_PEND[0] <= 0;
-						if (!DMD[0].MOD) begin
-							DMA_RA <= DR[0][26:0];
-							DMA_WA <= DW[0][26:0];
-							DMA_RTN <= DC[0][19:0];
-							DMA_WTN <= DC[0][19:0];
-							DMA_RADD <= DAD[0].DRA;
-							DMA_WADD <= DAD[0].DWA;
+					end else if (DMA_PEND[0] || DMA_PEND[1] || DMA_PEND[2]) begin
+						DMA_IDX = DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;
+						DMA_PEND[DMA_IDX] <= 0;
+						if (!DMD[DMA_IDX].MOD) begin
+							DMA_RA <= DR[DMA_IDX][26:0];
+							DMA_WA <= DW[DMA_IDX][26:0];
+							DMA_RTN <= DC[DMA_IDX][19:0];
+							DMA_WTN <= DC[DMA_IDX][19:0];
+							DMA_RADD <= DAD[DMA_IDX].DRA;
+							DMA_WADD <= DAD[DMA_IDX].DWA;
 							DMA_IND <= 0;
 							DMA_ST <= DMA_SELECT;
 						end else begin
-							DMA_IA <= {DW[0][26:2],2'b00};
+							DMA_IA <= {DW[DMA_IDX][26:2],2'b00};
 							DMA_IND <= 1;
 							DMA_ST <= DMA_IND_START;
 						end
-						DMA_CH <= 2'd0;
-						DMA_RUN[0] <= 1;
-						DSTA.D0WT <= 0;
-						DSTA.D0MV <= 1;
-					end else if (DMA_PEND[1]) begin
-						DMA_PEND[1] <= 0;
-						if (!DMD[1].MOD) begin
-							DMA_RA <= DR[1][26:0];
-							DMA_WA <= DW[1][26:0];
-							DMA_RTN <= DC[1][19:0];
-							DMA_WTN <= DC[1][19:0];
-							DMA_RADD <= DAD[1].DRA;
-							DMA_WADD <= DAD[1].DWA;
-							DMA_IND <= 0;
-							DMA_ST <= DMA_SELECT;
-						end else begin
-							DMA_IA <= {DW[1][26:2],2'b00};
-							DMA_IND <= 1;
-							DMA_ST <= DMA_IND_START;
-						end
-						DMA_CH <= 2'd1;
-						DMA_RUN[1] <= 1;
-						DSTA.D1WT <= 0;
-						DSTA.D1MV <= 1;
-					end else if (DMA_PEND[2]) begin
-						DMA_PEND[2] <= 0;
-						if (!DMD[2].MOD) begin
-							DMA_RA <= DR[2][26:0];
-							DMA_WA <= DW[2][26:0];
-							DMA_RTN <= DC[2][19:0];
-							DMA_WTN <= DC[2][19:0];
-							DMA_RADD <= DAD[2].DRA;
-							DMA_WADD <= DAD[2].DWA;
-							DMA_IND <= 0;
-							DMA_ST <= DMA_SELECT;
-						end else begin
-							DMA_IA <= {DW[2][26:2],2'b00};
-							DMA_IND <= 1;
-							DMA_ST <= DMA_IND_START;
-						end
-						DMA_CH <= 2'd2;
-						DMA_RUN[2] <= 1;
-						DSTA.D2WT <= 0;
-						DSTA.D2MV <= 1;
+						DMA_CH <= DMA_IDX;
+						DMA_RUN[DMA_IDX] <= 1;
+						case (DMA_IDX)
+							2'd0: begin DSTA.D0WT <= 0; DSTA.D0MV <= 1; end
+							2'd1: begin DSTA.D1WT <= 0; DSTA.D1MV <= 1; end
+							default: begin DSTA.D2WT <= 0; DSTA.D2MV <= 1; end
+						endcase
 					end
 `ifdef DEBUG
 					DBG_WAIT_CNT <= '0;
@@ -2276,7 +2241,7 @@ module SCU
 						if (DMD[DMA_CH].RUP && !DMD[DMA_CH].MOD) DR[DMA_CH] <= {5'b0000_0,DMA_RA_NEW};
 					end else begin
 						if (DMA_WADD) DMA_RA <= DMA_RA_NEW;
-						if (DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DMA_RA_NEW;
+						if (DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DMA_RA_NEW[26:2];
 					end 
 				end
 				
@@ -2299,7 +2264,7 @@ module SCU
 					DW[DMA_CH] <= {5'b0000_0,((BBUS_IND_DONE || CBUS_IND_DONE) && DMD[DMA_CH].WUP && DMD[DMA_CH].MOD) ? DMA_IA_NEW : DMA_WA_NEW};
 				
 				if (DMA_END && DMA_DSP) begin
-					if (!DSP_DMA_WE && !DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DSP_DR + 27'd4;
+					if (!DSP_DMA_WE && !DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DSP_DR + 25'd1;
 					if ( DSP_DMA_WE                 && !DSP_HOLD) DSP_DW <= DSP_DW + 27'd4;
 				end
 			end
@@ -2457,7 +2422,7 @@ module SCU
 				end
 			
 				if (DSP_RA0_SET) begin
-					DSP_DR <= {DSP_DSO[24:0],2'b00};
+					DSP_DR <= DSP_DSO[24:0];
 				end
 				if (DSP_WA0_SET) begin
 					DSP_DW <= {DSP_DSO[24:0],2'b00};
