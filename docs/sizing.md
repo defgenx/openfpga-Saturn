@@ -154,3 +154,60 @@ headroom, a realistic target would be roughly 90% of the device (~16,500 ALMs), 
   `saturn_min.qpf/.qsf`, `saturn_files.qip`, `saturn_min_wrap.sv`, symlinks `rtl`, `microrom.mem`, `nanorom.mem`.
 - Copies of the qpf/qsf/qip/wrapper, the two `.map.summary` files and the per-entity report sections:
   `openfpga-Saturn/sizing/`.
+
+## Area profile
+
+Re-run of the "min" map project with the area settings the shipped PSX Pocket core uses (`sizing/area_profile.qsf`: `OPTIMIZATION_TECHNIQUE AREA`, `STATE_MACHINE_PROCESSING "MINIMAL BITS"`, `AUTO_RESOURCE_SHARING ON`, `MUX_RESTRUCTURE ON`, retiming / WYSIWYG remap / pre-mapping resynthesis / physical synthesis off, `ALM_REGISTER_PACKING_EFFORT HIGH`, fitter STANDARD, max router effort, seed 13). `OPTIMIZATION_MODE` stays BALANCED, as in the PSX qsf. Project: `Saturn_MiSTer/sizing/saturn_min_area.qpf/.qsf` (saturn_min + profile). Same Quartus 21.1.1 / Docker / `NUM_PARALLEL_PROCESSORS 1`. The same profile is now in `src/fpga/ap_core.qsf`.
+
+### Map stage (BALANCED -> AREA)
+
+| Metric | BALANCED | AREA | Delta |
+|---|---|---|---|
+| ALMs (Quartus map estimate) | 28,746 | **28,399** | -347 (-1.2%) |
+| Combinational ALUTs | 41,864 | 41,595 | -269 (-0.6%) |
+| Registers | 24,792 | 24,678 | -114 |
+| Block memory bits / DSP | 720,960 / 29 | 720,960 / 29 | 0 |
+
+| Block | ALUTs BALANCED | ALUTs AREA | Delta | Regs BALANCED | Regs AREA |
+|---|---|---|---|---|---|
+| SH7604 MSH (master SH-2) | 5,860 | 5,811 | -49 | 3,026 | 3,017 |
+| SH7604 SSH (slave SH-2) | 5,825 | 5,805 | -20 | 3,014 | 3,005 |
+| SH7034 / SH-1 (incl. SH1_MEM) | 4,581 | 4,553 | -28 | 2,518 | 2,517 |
+| FX68K | 2,861 | 2,851 | -10 | 1,394 | 1,388 |
+| SCU (incl. DSP) | 4,361 | 4,537 | +176 | 1,708 | 1,642 |
+| - of which SCU DSP | 1,110 | 1,105 | -5 | 321 | 321 |
+| SCSP | 3,585 | 3,554 | -31 | 2,022 | 2,020 |
+| VDP1 | 4,023 | 3,973 | -50 | 2,369 | 2,345 |
+| VDP2 | 8,985 | 8,794 | -191 | 7,822 | 7,825 |
+| SMPC | 938 | 877 | -61 | 384 | 384 |
+| CD / YGR019 | 473 | 475 | +2 | 446 | 446 |
+| CART | 14 | 14 | +0 | 20 | 20 |
+| DCC | 59 | 56 | -3 | 25 | 25 |
+
+The map-stage gain is small: the area profile is a synthesis-time lever, and the RTL here is already mostly
+register- and RAM-bound. VDP2 (-191 ALUTs), SMPC (-61) and the SH-2s gain most. SCU grows by 176 ALUTs (and loses
+66 registers): resource sharing / mux restructuring shifted logic there, net still negative overall. Registers (24.7K)
+still force at least 12.3K ALMs, so synthesis settings alone cannot close a 28.4K vs 18.5K gap.
+
+### Fit stage (`quartus_fit`, same project)
+
+The fitter cannot place the design; it stopped after about 1 h under emulation (not the 4 h limit) at placement
+preparation with `Error (170011): Design contains 42,721 blocks of type combinational node. However, the device
+contains only 36,960` (18,480 ALMs x 2). Before aborting it reported, after packing with
+`ALM_REGISTER_PACKING_EFFORT HIGH`:
+
+| Fit-stage figure | Value |
+|---|---|
+| Logic utilization (ALMs) | **27,639 / 18,480 (150%)** |
+| ALMs containing virtual pins | 501 (the 1,000 virtual pins of the wrapper count here; real figure is about 27,100) |
+| Registers | 24,566 |
+| Combinational nodes | 42,721 vs 36,960 available |
+
+The fitter did not print a "requires N LABs" line (it failed before LAB placement), so the ALM figure above is the
+demand. Packing took ~1,100 ALMs off the map estimate (28,399 -> 27,639, -2.7%), about 27,100 once the virtual-pin
+ALMs are discounted. Total from the BALANCED map estimate: 28,746 -> ~27,100-27,640 (-4% to -6%), far from the
+10-20% projected in `shrink-techniques.md` rank 1. The compile profile is therefore worth a few hundred to ~1,600
+ALMs here, not 3-6K; the ~10K ALMs to remove must come from the architectural cuts in the previous section.
+
+Files: `sizing/saturn_min_area.{qpf,qsf}`, `sizing/area_profile.qsf`, `sizing/saturn_min_area.map.summary`,
+`sizing/saturn_min_area.entity.txt`, `sizing/saturn_min_area.fit.summary`.
