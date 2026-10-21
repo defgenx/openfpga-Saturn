@@ -223,3 +223,25 @@ module VDP2_RPRAM (
 	end
 	assign Q = q;
 endmodule
+
+// Small simple-dual-port RAM with a registered read. Used for per-table state where the read address
+// is stable for at least two clocks before the value is consumed.
+module VDP2_SDP #(
+	parameter AW = 1,
+	parameter DW = 32
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) begin
+		if (WE) mem[WA] <= WD;
+		q <= mem[RA];
+	end
+	assign Q = q;
+endmodule
