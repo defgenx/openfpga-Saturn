@@ -269,6 +269,11 @@ int main(int argc, char** argv) {
 		if ((t & 0x3FFF) == 0x1000 && rng.chance(25)) exlat = 0; else if ((t & 0x3FFF) == 0x1010) exlat = 1;
 		top->EXLAT_N = exlat;
 
+		// after a mid-run soft reset only part of the registers are programmed again
+		if (t == 700100 && (seed & 7) == 5) {
+			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && rng.chance(50)) W(0x180000 + a, cfg.r[a / 2], rng.below(3));
+			W(0x180000, cfg.r[0]);
+		}
 		// CPU traffic once the initial programming is done
 		if (bus.idle() && t > 100000 && rng.chance(8)) {
 			int k = rng.below(100);
