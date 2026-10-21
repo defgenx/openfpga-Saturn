@@ -35,7 +35,7 @@ module vdp1_fb_pocket #(
 	input  wire [15:0] FB1_D,
 	input  wire  [1:0] FB1_WE,
 	input  wire        FB1_RD,
-	output reg  [15:0] FB1_Q,
+	output wire [15:0] FB1_Q,
 	output wire        FB_RDY,
 	output wire  [7:0] dbg_drop,           // FB0 writes lost to a full FIFO (saturating)
 
@@ -66,13 +66,17 @@ wire        in0 = i0 < WORDS;
 wire        in1 = i1 < WORDS;
 
 // ---------------------------------------------------------------- FB1 (M10K)
-reg [7:0] m1l [0:WORDS-1];
-reg [7:0] m1h [0:WORDS-1];
+// synchronous read with byte enables, so that Quartus infers it as M10K (16 bit words, 141 blocks)
+(* ramstyle = "M10K, no_rw_check" *) reg [15:0] m1 [0:WORDS-1];
+reg [15:0] m1_q;
+reg        in1_q;
 always @(posedge clk_sys) begin
-	if (FB1_WE[0] && in1) m1l[i1] <= FB1_D[7:0];
-	if (FB1_WE[1] && in1) m1h[i1] <= FB1_D[15:8];
-	FB1_Q <= in1 ? {m1h[i1], m1l[i1]} : 16'h0000;
+	if (FB1_WE[0] && in1) m1[i1][7:0]  <= FB1_D[7:0];
+	if (FB1_WE[1] && in1) m1[i1][15:8] <= FB1_D[15:8];
+	m1_q  <= m1[i1];
+	in1_q <= in1;
 end
+assign FB1_Q = in1_q ? m1_q : 16'h0000;
 
 // ---------------------------------------------------------------- FB0 write FIFO (clk_sys -> clk_ram), 256 entries: a VBlank erase pushes one write per two clk_sys, the
 // SRAM takes one per SRAM_CYC clk_ram, and the CD ring can hold the bus for a few writes at a time
