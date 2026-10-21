@@ -2218,6 +2218,15 @@ module VDP1 (
 	assign FB_DRAW_WAIT = (FB_ST != FS_IDLE) || CPU_FB_WPEND || CPU_FB_RPEND;
 	wire PAT_PREREAD_WAIT = (VRAM_ST == VS_PAT_READ) && PAT_PREREAD && !VRAM_RDY;
 	
+	// Vertex set-up arithmetic for the scaled-sprite zoom points and the normal-sprite far corner. X words
+	// (even CMD_POS) and Y words (odd) never meet in one cycle, so one set of adders serves both axes.
+	wire         LD_Y     = CMD_POS[0];
+	wire [12: 0] LD_D     = CMD_DAT[12:0];
+	wire [ 1: 0] LD_Z     = LD_Y ? CMD.CMDCTRL.ZP[3:2] : CMD.CMDCTRL.ZP[1:0];
+	wire [12: 0] LD_ABASE = LD_Y ? VERTA.Y : VERTA.X;
+	wire [12: 0] LD_PLUS  = LD_ABASE + (LD_Z == 2'b01 ? LD_D : SDiv2(LD_D + 13'd1));
+	wire [12: 0] LD_MINUS = LD_ABASE - (LD_Z == 2'b10 ? SDiv2(LD_D) : LD_D);
+	wire [12: 0] LD_TEMP  = LD_D + (LD_Y ? {5'b00000,ORIG_HEIGHT} : {4'b0000,ORIG_WIDTH}) - 13'd1;
 	bit [ 3: 0] CMD_POS;
 	bit [15: 0] CMD_DAT;
 	bit         CMD_WE,CLT_WE,GRD_WE;
@@ -2264,7 +2273,7 @@ module VDP1 (
 					4'h6: begin
 						case (CMD.CMDCTRL.COMM)
 							4'h0: begin
-								TEMP = CMD_DAT[12:0] + ORIG_WIDTH - 13'd1;
+								TEMP = LD_TEMP;
 								VERTA.X <= CMD_DAT[12:0];
 								VERTB.X <= TEMP;
 								VERTC.X <= TEMP;
@@ -2298,7 +2307,7 @@ module VDP1 (
 					4'h7: begin
 						case (CMD.CMDCTRL.COMM)
 							4'h0: begin
-								TEMP = CMD_DAT[12:0] + ORIG_HEIGHT - 13'd1;
+								TEMP = LD_TEMP;
 								VERTA.Y <= CMD_DAT[12:0];
 								VERTB.Y <= CMD_DAT[12:0];
 								VERTC.Y <= TEMP;
@@ -2336,18 +2345,18 @@ module VDP1 (
 									2'b00: begin 
 									end
 									2'b01: begin 
-										VERTB.X <= VERTA.X + CMD_DAT[12:0];
-										VERTC.X <= VERTA.X + CMD_DAT[12:0];
+										VERTB.X <= LD_PLUS;
+										VERTC.X <= LD_PLUS;
 									end
 									2'b10: begin 
-										VERTA.X <= VERTA.X - SDiv2(CMD_DAT[12:0]);
-										VERTB.X <= VERTA.X + SDiv2(CMD_DAT[12:0] + 13'd1);
-										VERTC.X <= VERTA.X + SDiv2(CMD_DAT[12:0] + 13'd1);
-										VERTD.X <= VERTA.X - SDiv2(CMD_DAT[12:0]);
+										VERTA.X <= LD_MINUS;
+										VERTB.X <= LD_PLUS;
+										VERTC.X <= LD_PLUS;
+										VERTD.X <= LD_MINUS;
 									end
 									2'b11: begin 
-										VERTA.X <= VERTA.X - CMD_DAT[12:0];
-										VERTD.X <= VERTA.X - CMD_DAT[12:0];
+										VERTA.X <= LD_MINUS;
+										VERTD.X <= LD_MINUS;
 									end
 								endcase
 							end							
@@ -2368,18 +2377,18 @@ module VDP1 (
 									2'b00: begin 
 									end
 									2'b01: begin 
-										VERTC.Y <= VERTA.Y + CMD_DAT[12:0];
-										VERTD.Y <= VERTA.Y + CMD_DAT[12:0];
+										VERTC.Y <= LD_PLUS;
+										VERTD.Y <= LD_PLUS;
 									end
 									2'b10: begin 
-										VERTA.Y <= VERTA.Y - SDiv2(CMD_DAT[12:0]);
-										VERTB.Y <= VERTA.Y - SDiv2(CMD_DAT[12:0]);
-										VERTC.Y <= VERTA.Y + SDiv2(CMD_DAT[12:0] + 13'd1);
-										VERTD.Y <= VERTA.Y + SDiv2(CMD_DAT[12:0] + 13'd1);
+										VERTA.Y <= LD_MINUS;
+										VERTB.Y <= LD_MINUS;
+										VERTC.Y <= LD_PLUS;
+										VERTD.Y <= LD_PLUS;
 									end
 									2'b11: begin 
-										VERTA.Y <= VERTA.Y - CMD_DAT[12:0];
-										VERTB.Y <= VERTA.Y - CMD_DAT[12:0];
+										VERTA.Y <= LD_MINUS;
+										VERTB.Y <= LD_MINUS;
 									end
 								endcase
 							end							
