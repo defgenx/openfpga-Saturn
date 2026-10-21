@@ -1611,7 +1611,6 @@ module VDP1 (
 		bit         CS_N_OLD;
 		bit         READY2,READY3;
 //		bit         VRAM_PAGE_BREAK;
-		bit [18: 1] CPU_RA;
 		// One write buffer (current + saved beat) serves both VRAM and framebuffer writes: the bus master does not
 		// start a new transaction's data beats before READY, and READY needs both pending flags clear, so only one
 		// region can hold pending write data at a time.
@@ -1700,7 +1699,7 @@ module VDP1 (
 			if (!SPR_READ) begin PAT_CNT <= {8'b00000000,HSS_EN&(FBCR.EOS^TEXT_DIRX)}; PAT_PREREAD <= 1; end
 			
 			if ((CPU_VRAM_REQ || CPU_FB_REQ) && WE_N && DTEN_N) begin 
-				CPU_RA <= A[18:1];
+				CPU_WA <= A[18:1];   // read and write beats never overlap (RDY_N), so one address register serves both
 				if (CPU_VRAM_REQ) begin
 					CPU_VRAM_RPEND <= 1;
 					CPU_VRAM_RRDY <= 0;
@@ -1795,7 +1794,7 @@ module VDP1 (
 					end else if (CPU_VRAM_RPEND) begin
 						CPU_VRAM_ACCESS <= 1;
 						if (!CPU_ACCESS_WAIT) begin
-							VRAM_A <= CPU_RA;
+							VRAM_A <= CPU_WA;
 							VRAM_WE <= '0;
 							VRAM_RD <= 1;
 							VRAM_BLEN <= '0;
@@ -1939,7 +1938,7 @@ module VDP1 (
 						end
 					end else if (CPU_FB_RPEND && !FB_RD) begin
 						if (FB_RDY) begin
-							FB_A <= CPU_RA[17:1];
+							FB_A <= CPU_WA[17:1];
 							FB_RD <= 1;
 							CPU_FB_RPEND <= 0;
 							FB_ST <= FS_CPU_WAIT;
