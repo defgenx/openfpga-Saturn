@@ -2528,4 +2528,76 @@ package VDP2_PKG;
 	typedef struct packed { VATap3_t va; BGTap3_t bg; RBGTap3_t rb; PNTap3_t pn; } Tap3_t;
 	typedef struct packed { VATap4_t va; PNTap4_t [7:0] pn; PNTap4_t [1:0] rpn; bit [1:0] rtp; } Tap4_t;
 
+
+	//Plane map entry index and address with the entry supplied (the map offset table is held in block RAM)
+	function bit [1:0] NxPNMapIdx(input bit [1:0] NxPN_CNT, input bit [10:0] NxOFFX, input bit [10:0] NxOFFY,
+	                              input bit [1:0] NxPLSZ, input bit NxZMHF, input bit NxZMQT);
+		bit  [ 1: 0] ZM_MASK;
+		bit  [10: 0] OFFX;
+		
+		ZM_MASK = {NxZMQT,NxZMQT|NxZMHF};
+		OFFX = NxOFFX + {NxPN_CNT&ZM_MASK,3'b000};
+		case (NxPLSZ)
+			2'b00:   return {NxOFFY[ 9],OFFX[ 9]};
+			2'b01:   return {NxOFFY[ 9],OFFX[10]};
+			default: return {NxOFFY[10],OFFX[10]};
+		endcase
+	endfunction
+	
+	function bit [19:1] NxPNAddr2(input bit [1:0] NxPN_CNT, input bit [10:0] NxOFFX, input bit [10:0] NxOFFY,
+	                              input bit [8:6] NxMP, input bit [5:0] NxMPe, 
+	                              input bit [1:0] NxPLSZ, input bit NxCHSZ, input bit NxPNB, input bit NxZMHF, input bit NxZMQT);
+		bit  [19: 1] addr;
+		bit  [ 1: 0] ZM_MASK;
+		bit  [10: 0] OFFX;
+		bit  [ 8: 0] map_addr;
+		
+		ZM_MASK = {NxZMQT,NxZMQT|NxZMHF};
+		OFFX = NxOFFX + {NxPN_CNT&ZM_MASK,3'b000};
+		case (NxPLSZ)
+			2'b00: map_addr = {NxMP,NxMPe[5:0]};
+			2'b01: map_addr = {NxMP,NxMPe[5:1],OFFX[9]};
+			2'b10,
+			2'b11: map_addr = {NxMP,NxMPe[5:2],NxOFFY[9],OFFX[9]};
+		endcase
+		case ({NxPNB,NxCHSZ})
+			2'b00: addr = {map_addr[5:0],NxOFFY[8:3],OFFX[8:3],1'b0};
+			2'b01: addr = {map_addr[7:0],NxOFFY[8:4],OFFX[8:4],1'b0};
+			2'b10: addr = {map_addr[6:0],NxOFFY[8:3],OFFX[8:3]};
+			2'b11: addr = {map_addr[8:0],NxOFFY[8:4],OFFX[8:4]};
+		endcase
+	
+		return addr;
+	endfunction
+	
+	function bit [3:0] RxPNMapIdx(input bit [11:0] RxOFFX, input bit [11:0] RxOFFY, input bit [1:0] RxPLSZ);
+		case (RxPLSZ)
+			2'b00:   return {RxOFFY[10: 9],RxOFFX[10: 9]};
+			2'b01:   return {RxOFFY[10: 9],RxOFFX[11:10]};
+			default: return {RxOFFY[11:10],RxOFFX[11:10]};
+		endcase
+	endfunction
+	
+	function bit [19:1] RxPNAddr2(input bit [11:0] RxOFFX, input bit [11:0] RxOFFY,
+	                              input bit [8:6] RxMP, input bit [5:0] RxMPe, 
+	                              input bit [1:0] RxPLSZ, input bit RxCHSZ, input bit RxPNB);
+		bit [19: 1] addr;
+		bit [ 8: 0] map_addr;
+		
+		case (RxPLSZ)
+			2'b00: map_addr = {RxMP,RxMPe[5:0]};
+			2'b01: map_addr = {RxMP,RxMPe[5:1],RxOFFX[9]};
+			2'b10,
+			2'b11: map_addr = {RxMP,RxMPe[5:2],RxOFFY[9],RxOFFX[9]};
+		endcase
+		case ({RxPNB,RxCHSZ})
+			2'b00: addr = {map_addr[5:0],RxOFFY[8:3],RxOFFX[8:3],1'b0};
+			2'b01: addr = {map_addr[7:0],RxOFFY[8:4],RxOFFX[8:4],1'b0};
+			2'b10: addr = {map_addr[6:0],RxOFFY[8:3],RxOFFX[8:3]};
+			2'b11: addr = {map_addr[8:0],RxOFFY[8:4],RxOFFX[8:4]};
+		endcase
+	
+		return addr;
+	endfunction
+
 endpackage

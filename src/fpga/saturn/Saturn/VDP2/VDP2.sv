@@ -949,6 +949,23 @@ module VDP2 (
 	PN_t            NBG2_PN_PIPE[2];
 	PN_t            NBG3_PN_PIPE[2];
 	
+	//Plane map offset tables: block RAM, written by the CPU register decode, read back by plane index
+	wire [ 5: 0] NBG_MPE[4];
+	wire [ 5: 0] RBG_MPE[2];
+	wire         MP_WR = REG_SEL && !WE_N && !DTEN_N && !REQ_N;
+	wire         R0RPm = VA_PIPE[0].R0RP;
+	wire [ 1: 0] NBG_MPI0 = NxPNMapIdx(NBG_PN_CNT[0], VA_PIPE[0].NxX[0], VA_PIPE[0].NxY[0], NSxREG[0].PLSZ, NSxREG[0].ZMHF, NSxREG[0].ZMQT);
+	wire [ 1: 0] NBG_MPI1 = NxPNMapIdx(NBG_PN_CNT[1], VA_PIPE[0].NxX[1], VA_PIPE[0].NxY[1], NSxREG[1].PLSZ, NSxREG[1].ZMHF, NSxREG[1].ZMQT);
+	wire [ 1: 0] NBG_MPI2 = NxPNMapIdx(2'b00, VA_PIPE[0].NxX[2], VA_PIPE[0].NxY[2], NSxREG[2].PLSZ, 1'b0, 1'b0);
+	wire [ 1: 0] NBG_MPI3 = NxPNMapIdx(2'b00, VA_PIPE[0].NxX[3], VA_PIPE[0].NxY[3], NSxREG[3].PLSZ, 1'b0, 1'b0);
+	wire [ 3: 0] RBG_MPI0 = RxPNMapIdx(VA_PIPE[0].RxX[R0RPm][11:0], VA_PIPE[0].RxY[R0RPm][11:0], RPxREG[R0RPm].PLSZ);
+	wire [ 3: 0] RBG_MPI1 = RxPNMapIdx(VA_PIPE[0].RxX[    1][11:0], VA_PIPE[0].RxY[    1][11:0], RPxREG[1    ].PLSZ);
+	VDP2_MPRD #(1) nmp0(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd0, A[1], DI & 16'h3F3F, NBG_MPI0[1], NBG_MPI0[0], NBG_MPE[0]);
+	VDP2_MPRD #(1) nmp1(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd1, A[1], DI & 16'h3F3F, NBG_MPI1[1], NBG_MPI1[0], NBG_MPE[1]);
+	VDP2_MPRD #(1) nmp2(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd2, A[1], DI & 16'h3F3F, NBG_MPI2[1], NBG_MPI2[0], NBG_MPE[2]);
+	VDP2_MPRD #(1) nmp3(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100 && A[3:2] == 2'd3, A[1], DI & 16'h3F3F, NBG_MPI3[1], NBG_MPI3[0], NBG_MPE[3]);
+	VDP2_MPRD #(4) rmp0(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R0RPm,RBG_MPI0[3:1]}, RBG_MPI0[0], RBG_MPE[0]);
+	VDP2_MPRD #(4) rmp1(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {1'b1,RBG_MPI1[3:1]},  RBG_MPI1[0], RBG_MPE[1]);
 	bit  [19: 1] NxPN_ADDR[4];
 	bit  [19: 1] RxPN_ADDR[2];
 	bit  [19: 1] NxCH_ADDR[4];
@@ -970,12 +987,12 @@ module VDP2 (
 		CH_RP = VA4.R0RP;
 		CT_RP = R0_RP;
 		
-		NxPN_ADDR[0] = NxPNAddr(NBG_PN_CNT[0], VA_PIPE[0].NxX[0], VA_PIPE[0].NxY[0], NSxREG[0].MP, NSxREG[0].MPn, NSxREG[0].PLSZ, NSxREG[0].CHSZ, NSxREG[0].PNC.NxPNB, NSxREG[0].ZMHF, NSxREG[0].ZMQT);
-		NxPN_ADDR[1] = NxPNAddr(NBG_PN_CNT[1], VA_PIPE[0].NxX[1], VA_PIPE[0].NxY[1], NSxREG[1].MP, NSxREG[1].MPn, NSxREG[1].PLSZ, NSxREG[1].CHSZ, NSxREG[1].PNC.NxPNB, NSxREG[1].ZMHF, NSxREG[1].ZMQT);
-		NxPN_ADDR[2] = NxPNAddr(2'b00        , VA_PIPE[0].NxX[2], VA_PIPE[0].NxY[2], NSxREG[2].MP, NSxREG[2].MPn, NSxREG[2].PLSZ, NSxREG[2].CHSZ, NSxREG[2].PNC.NxPNB, 1'b0          , 1'b0);
-		NxPN_ADDR[3] = NxPNAddr(2'b00        , VA_PIPE[0].NxX[3], VA_PIPE[0].NxY[3], NSxREG[3].MP, NSxREG[3].MPn, NSxREG[3].PLSZ, NSxREG[3].CHSZ, NSxREG[3].PNC.NxPNB, 1'b0          , 1'b0);
-		RxPN_ADDR[0] = RxPNAddr(VA_PIPE[0].RxX[PN_RP][11:0], VA_PIPE[0].RxY[PN_RP][11:0],    RPxREG[PN_RP].MP, RPxREG[PN_RP].MPn, RPxREG[PN_RP].PLSZ, RSxREG[0].CHSZ, RSxREG[0].PNC.NxPNB);
-		RxPN_ADDR[1] = RxPNAddr(VA_PIPE[0].RxX[    1][11:0], VA_PIPE[0].RxY[    1][11:0],    RPxREG[1    ].MP, RPxREG[1    ].MPn, RPxREG[1    ].PLSZ, RSxREG[1].CHSZ, RSxREG[1].PNC.NxPNB);
+		NxPN_ADDR[0] = NxPNAddr2(NBG_PN_CNT[0], VA_PIPE[0].NxX[0], VA_PIPE[0].NxY[0], NSxREG[0].MP, NBG_MPE[0], NSxREG[0].PLSZ, NSxREG[0].CHSZ, NSxREG[0].PNC.NxPNB, NSxREG[0].ZMHF, NSxREG[0].ZMQT);
+		NxPN_ADDR[1] = NxPNAddr2(NBG_PN_CNT[1], VA_PIPE[0].NxX[1], VA_PIPE[0].NxY[1], NSxREG[1].MP, NBG_MPE[1], NSxREG[1].PLSZ, NSxREG[1].CHSZ, NSxREG[1].PNC.NxPNB, NSxREG[1].ZMHF, NSxREG[1].ZMQT);
+		NxPN_ADDR[2] = NxPNAddr2(2'b00        , VA_PIPE[0].NxX[2], VA_PIPE[0].NxY[2], NSxREG[2].MP, NBG_MPE[2], NSxREG[2].PLSZ, NSxREG[2].CHSZ, NSxREG[2].PNC.NxPNB, 1'b0          , 1'b0);
+		NxPN_ADDR[3] = NxPNAddr2(2'b00        , VA_PIPE[0].NxX[3], VA_PIPE[0].NxY[3], NSxREG[3].MP, NBG_MPE[3], NSxREG[3].PLSZ, NSxREG[3].CHSZ, NSxREG[3].PNC.NxPNB, 1'b0          , 1'b0);
+		RxPN_ADDR[0] = RxPNAddr2(VA_PIPE[0].RxX[PN_RP][11:0], VA_PIPE[0].RxY[PN_RP][11:0], RPxREG[PN_RP].MP, RBG_MPE[0], RPxREG[PN_RP].PLSZ, RSxREG[0].CHSZ, RSxREG[0].PNC.NxPNB);
+		RxPN_ADDR[1] = RxPNAddr2(VA_PIPE[0].RxX[    1][11:0], VA_PIPE[0].RxY[    1][11:0], RPxREG[1    ].MP, RBG_MPE[1], RPxREG[1    ].PLSZ, RSxREG[1].CHSZ, RSxREG[1].PNC.NxPNB);
 		
 		NxCH_ADDR[0] = !NSxREG[0].BMEN ? NxCHAddr('{PN_PIPE[1][0],PN_PIPE[1][4],PN_PIPE[1][2],PN_PIPE[1][6]}, NBG_CH_CNT[0], VA4.NxX[0], VA4.NxY[0], NSxREG[0].CHCN, NSxREG[0].CHSZ, NSxREG[0].ZMHF, NSxREG[0].ZMQT) :
 													NxBMAddr(NSxREG[0].MP,                                               NBG_CH_CNT[0], NBG_BM_CNT[0], VA4.NxX[0], VA4.NxY[0], NSxREG[0].CHCN, NSxREG[0].BMSZ, NSxREG[0].ZMHF, NSxREG[0].ZMQT);
