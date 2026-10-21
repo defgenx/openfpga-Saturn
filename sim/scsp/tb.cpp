@@ -51,6 +51,9 @@ struct Op68 { uint32_t addr; uint16_t data; bool wr; uint8_t be; };
 struct OpScu { bool wr; uint32_t a; std::vector<uint16_t> d; uint8_t dqm; };
 
 static Rng *R;
+// Register accesses are not started within this many sample periods after RES_N
+// rises: the slot RAMs are still being cleared (docs/scsp.md).
+static const int RESET_QUIET = 3;
 static bool nomidi = false;  // MIDI buffer registers (0x404, 0x406) are not read back
 static T *top;
 static SoundRam ram_r, ram_n;
@@ -386,7 +389,7 @@ static void rand_reg_write() {
 	default: off = R->below(0x7F0) & ~1; break;
 	}
 	if (off >= 0x400 && off < 0x430) {
-		if (off >= 0x412 && off <= 0x416) return;  // keep DMA under directed control
+		if (off >= 0x400 && off < 0x600 && (off & 0x3E) >= 0x12 && (off & 0x3E) <= 0x16) return;  // DMA registers (and mirrors) stay under directed control
 	}
 	if (R->chance(10)) wr_reg_bytes(off, R->next());
 	else wr_reg(off, R->next());
@@ -535,10 +538,11 @@ int main(int argc, char **argv) {
 			// reset pulse mid-run
 			drain();
 			fprintf(stderr,"[reset pulse at clk %llu]\n",(unsigned long long)clk_count); top->RES_N = 0; run_clks(R->range(1, 40)); top->RES_N = 1;
-			if (R->chance(50)) { for (int i = 0, n = R->range(1, 30); i < n; i++) rand_reg_write(); }
+			run_samples(RESET_QUIET);
 		}
 		else if (act < 92 && R->chance(15)) {
 			fprintf(stderr,"[hard reset at clk %llu]\n",(unsigned long long)clk_count); drain(); top->RES_N = 0; run_clks(2); top->RST_N = 0; run_clks(R->range(2, 20)); top->RST_N = 1; run_clks(R->range(2, 20)); top->RES_N = 1;
+			run_samples(RESET_QUIET);
 		}
 		if (R->chance(30)) { top->SCFC = 7; run_clks(R->range(2, 10)); top->SCFC = 5; }
 		run_samples(R->range(0, 6));

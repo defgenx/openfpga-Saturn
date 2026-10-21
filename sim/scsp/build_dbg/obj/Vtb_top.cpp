@@ -12,8 +12,8 @@ Vtb_top::Vtb_top(VerilatedContext* _vcontextp__, const char* _vcname__)
     , m_evalLoop{*this, /*convergeLimit:*/ 10000}
     , CLK{vlSymsp->TOP.CLK}
     , RST_N{vlSymsp->TOP.RST_N}
-    , CE{vlSymsp->TOP.CE}
     , RES_N{vlSymsp->TOP.RES_N}
+    , CE{vlSymsp->TOP.CE}
     , CE_R{vlSymsp->TOP.CE_R}
     , CE_F{vlSymsp->TOP.CE_F}
     , CS_N{vlSymsp->TOP.CS_N}

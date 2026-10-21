@@ -18,6 +18,10 @@ all: run
 
 $(B)/REF_SCSP.sv: $(GOLD)/SCSP.sv | $(B)
 	$(FILTER) $< | perl -pe 's/\bSCSP_PKG\b/REF_SCSP_PKG/g; s/\b(SCSP(_[A-Za-z0-9_]+)?)\b/REF_$$1/g; s/REF_REF_/REF_/g' > $@
+# Golden with the two MIDI buffer registers (CR2, CR3) removed: what the default
+# (MIDI_REGS=0) shrunk SCSP is compared against.
+$(B)/REF_SCSP_nm.sv: $(B)/REF_SCSP.sv
+	perl -pe 's/if \(REG_WE\[\d\]\) CR[23]\[[0-9: ]+\] <= [^;]*;//' $< > $@
 $(B)/REF_SCSP_pkg.sv: $(GOLD)/SCSP_pkg.sv | $(B)
 	perl -pe 's/\bSCSP_PKG\b/REF_SCSP_PKG/g' $< > $@
 $(B)/NEW_SCSP.sv: $(NEW)/SCSP.sv | $(B)
@@ -27,22 +31,22 @@ $(B)/NEW_SCSP_pkg.sv: $(NEW)/SCSP_pkg.sv | $(B)
 $(B):
 	mkdir -p $(B)
 
-$(B)/obj/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
-	verilator --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style \
-	  --top-module tb_top -Mdir $(B)/obj \
-	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+VFLAGS = --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style --top-module tb_top
+
+# Default build: MIDI_REGS=0 against the golden without CR2/CR3.
+$(B)/obj/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator $(VFLAGS) -Mdir $(B)/obj \
+	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_nm.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
 	@test -x $@
 
-# Default build: MIDI registers read as 0 (tb avoids reading them back).
-# The MIDI=1 build checks full register read-back.
+# MIDI_REGS=1 against the unmodified golden: full register read-back.
 $(B)/objm/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
-	verilator --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style -GMIDI=1 \
-	  --top-module tb_top -Mdir $(B)/objm \
+	verilator $(VFLAGS) -GMIDI=1 -Mdir $(B)/objm \
 	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
 	@test -x $@
 
 run: $(B)/obj/Vtb_top $(B)/objm/Vtb_top
-	@set -e; for s in $(SEEDS); do $(B)/obj/Vtb_top +nomidi +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seed$$s; done
+	@set -e; for s in $(SEEDS); do $(B)/obj/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seed$$s; done
 	@set -e; for s in $(SEEDS); do $(B)/objm/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedm$$s; done
 	@cmp $(B)/seed1_ref.wav $(B)/seed1_new.wav && echo "WAV files identical"
 

@@ -1671,7 +1671,8 @@ module REF_SCSP (
 		end
 	end
 	
-	always @(posedge CLK) if (REG_ST!=MS_IDLE && REG_RD && CYCLE1_CE) $display("RDREG a=%h q=%h st=%0d dma=%b", REG_A, REG_Q, REG_ST, DMA_EXEC);
+	always @(posedge CLK) begin if (CR7.DEXE && !DEXE_OLD_D) $display("DMASTART cr5=%h cr6=%h cr7=%h", CR5, CR6, CR7); end
+	bit DEXE_OLD_D; always @(posedge CLK) DEXE_OLD_D <= CR7.DEXE;
 	assign RAM_A = MEM_A;
 	assign RAM_D = MEM_D;
 	assign RAM_WE = MEM_WE;
