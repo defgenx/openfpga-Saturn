@@ -317,6 +317,18 @@ module SCU
 	wire        ACACHE_CCS1N = ACACHE_Q[1], BCACHE_CCS1N = BCACHE_Q[1];
 	wire        ACACHE_CCS2N = ACACHE_Q[0], BCACHE_CCS2N = BCACHE_Q[0];
 	
+	//Bytes at the buffer head. CBUS_DN is the C-bus write word: in CBUS_START a write that starts at
+	//byte offset DMA_WA[1:0] repeats byte 0 into the leading lanes.
+	wire [7:0] DMA_P0 = DMA_BUF[DMA_BUF_RPOS];
+	wire [7:0] DMA_P1 = DMA_BUF[DMA_BUF_RPOS+3'd1];
+	wire [7:0] DMA_P2 = DMA_BUF[DMA_BUF_RPOS+3'd2];
+	wire [7:0] DMA_P3 = DMA_BUF[DMA_BUF_RPOS+3'd3];
+	wire [1:0] CBUS_SH = (CBUS_ST == CBUS_START && !DMA_DSP) ? DMA_WA[1:0] : 2'd0;
+	wire [31:0] CBUS_DN = {DMA_P0,
+	                       CBUS_SH == 2'd0 ? DMA_P1 : DMA_P0,
+	                       CBUS_SH == 2'd0 ? DMA_P2 : CBUS_SH == 2'd1 ? DMA_P1 : DMA_P0,
+	                       CBUS_SH == 2'd0 ? DMA_P3 : CBUS_SH == 2'd1 ? DMA_P2 : CBUS_SH == 2'd2 ? DMA_P1 : DMA_P0};
+	
 	bit          ECWAIT_N_FF;
 	always @(posedge CLK) 
 		ECWAIT_N_FF <= ECWAIT_N;
@@ -385,6 +397,7 @@ module SCU
 	bit  [ 3:0] DMA_WBE;
 	bit         DMA_BUF_RDY;
 	bit         DMA_IND;
+	bit         DMA_DSP;
 	
 	//A push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS; byte i takes
 	//source byte DMA_PUSH_K[i] when DMA_PUSH_V[i]. DMA_RBA and DMA_BUF_WPOS are 0 for DSP transfers.
@@ -451,7 +464,6 @@ module SCU
 		bit  [19:0] DMA_WTN_NEXT;
 		bit  [ 1:0] DMA_IND_REG;
 		bit         DMA_LAST;
-		bit         DMA_DSP;
 		bit         DMA_END;
 		bit         DSP_DMA_RUN_OLD;
 		bit         DMA_RA_ERR;
@@ -982,7 +994,7 @@ module SCU
 							default: ACS2_N <= 0;
 						endcase
 						AA <= DMA_WA[25:0];
-						ADO <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1]};
+						ADO <= {DMA_P0,DMA_P1};
 						AAS_N <= 0;
 						AWRL_N <= 0;
 						AWRU_N <= 0;
@@ -1462,8 +1474,8 @@ module SCU
 					if (BBUS_RDY) begin
 						if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2:1] || DMA_WA[0] || (DMA_WTN_LESS2 && DMA_WTN[0]))) begin
 							case (DMA_WA[0])
-								1'b0: BDO <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1]};
-								1'b1: BDO <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0]};
+								1'b0: BDO <= {DMA_P0,DMA_P1};
+								1'b1: BDO <= {DMA_P0,DMA_P0};
 							endcase
 							BDTEN_N <= 0;
 							BREQ_N <= 0;
@@ -1502,8 +1514,8 @@ module SCU
 							BBUS_ST <= BBUS_DMA_PAGE;
 						end else if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2:1] || (DMA_WTN_LESS2 && DMA_WTN[0]))) begin
 							case (DMA_WA[0])
-								1'b0: BDO <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1]};
-								1'b1: BDO <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0]};
+								1'b0: BDO <= {DMA_P0,DMA_P1};
+								1'b1: BDO <= {DMA_P0,DMA_P0};
 							endcase
 							BDTEN_N <= 0;
 							BREQ_N <= 0;
@@ -1587,15 +1599,10 @@ module SCU
 					else if (DMA_WRITE_C && DMA_BUF_SIZE && (DMA_BUF_SIZE[2] || DMA_WA[1:0] || (DMA_WTN_LESS4 && DMA_WTN[1:0]))) begin
 						CBUS_A <= {DMA_WA[26:2],2'b00};
 						if (DMA_DSP) begin
-							CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1],DMA_BUF[DMA_BUF_RPOS+2],DMA_BUF[DMA_BUF_RPOS+3]};
+							CBUS_D <= CBUS_DN;
 							CBUS_WR <= 4'b1111;
 						end else begin
-							case (DMA_WA[1:0])
-								2'b00: CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1],DMA_BUF[DMA_BUF_RPOS+2],DMA_BUF[DMA_BUF_RPOS+3]};
-								2'b01: CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1],DMA_BUF[DMA_BUF_RPOS+2]};
-								2'b10: CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1]};
-								2'b11: CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+0]};
-							endcase
+							CBUS_D <= CBUS_DN;
 							if (DMA_WTN_LESS4)
 								case (DMA_WA[1:0])
 									2'b00: case (DMA_WTN[1:0])
@@ -1732,7 +1739,7 @@ module SCU
 							end
 						end else if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2] || (DMA_WTN_LESS4 && DMA_WTN[1:0] && DMA_BUF_SIZE >= {1'b0,DMA_WTN[1:0]}))) begin
 							CBUS_A <= {DMA_WA[26:2],2'b00};
-							CBUS_D <= {DMA_BUF[DMA_BUF_RPOS+0],DMA_BUF[DMA_BUF_RPOS+1],DMA_BUF[DMA_BUF_RPOS+2],DMA_BUF[DMA_BUF_RPOS+3]};
+							CBUS_D <= CBUS_DN;
 							if (DMA_DSP)
 								CBUS_WR <= 4'b1111;
 							else if (DMA_WTN_LESS4)
