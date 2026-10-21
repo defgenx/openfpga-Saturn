@@ -10,15 +10,18 @@
 #include <vector>
 #include "tb_dsp_names.h"
 #include "tb_common.h"
+static const int DMA_DO_BIT = 5;   // index of DMA_DO in tb_dsp_names.h
 
 Rng rng(1);
 static Vtb_dsp* d;
 static uint64_t cyc = 0;
 
 static void check(const char* w) {
-	if (!d->MM) return;
+	uint32_t mm = d->MM;
+	if (!d->CE_F) mm &= ~(1u << DMA_DO_BIT);   // DMA_DO is only sampled in CE_F cycles
+	if (!mm) return;
 	printf("MISMATCH cycle %llu (%s):", (unsigned long long)cyc, w);
-	for (int i = 0; i < 32; i++) if (d->MM >> i & 1) printf(" %s", OUT_NAMES[i]);
+	for (int i = 0; i < 32; i++) if (mm >> i & 1) printf(" %s", OUT_NAMES[i]);
 	printf("\nFAIL\n");
 	exit(1);
 }

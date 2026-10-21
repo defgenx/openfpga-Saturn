@@ -200,10 +200,12 @@ module SCU_DSP (
 	bit  [31: 0] XBUS;
 	bit  [31: 0] YBUS;
 	//The Y bank mux also serves the control-port data read (RE and CE are never in the same cycle).
+	//The X bank mux also serves DMA_DO: DMA_DO is sampled only in CE_F cycles, X only with CE (a CE_R cycle).
+	wire [31:0] XQ = DATA_RAM_Q[CE_F ? DMAI.RAMS : DECI.XBUS.RAMS];
 	wire        YQ_TR = RE && A == 2'b11;
 	wire [31:0] YQ = DATA_RAM_Q[YQ_TR ? DATA_TRANS_ADDR[7:6] : DECI.YBUS.RAMS];
 	always_comb begin
-		XBUS = DATA_RAM_Q[DECI.XBUS.RAMS];
+		XBUS = XQ;
 		YBUS = YQ;
 		
 		if (DECI.D1BUS.IMMS) begin
@@ -219,7 +221,7 @@ module SCU_DSP (
 			D1BUS = '1;
 		end
 		
-		D0BUSO = DATA_RAM_Q[DMAI.RAMS];
+		D0BUSO = DATA_RAM_Q[DMAI.RAMS];	//debug taps only
 	end
 	
 	always @(posedge CLK or negedge RST_N) begin
@@ -490,7 +492,7 @@ module SCU_DSP (
 		end
 	end
 	
-	assign DMA_DO = D0BUSO;
+	assign DMA_DO = XQ;
 	assign DMA_WE = DMAI.DIR;
 	assign DMA_RUN = T0;
 	assign DMA_LAST = (TN0_NEXT == 8'd0);
