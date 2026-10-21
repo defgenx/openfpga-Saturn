@@ -1020,7 +1020,12 @@ module SCSP #(
 	bit          MPRO_OK;
 	wire         MPRO_SET_Q;
 	EFREG_t      EFREG_Q;
+`ifdef POCKET_CUT_SCSP_DSP
+	//DSP removed: an all-zero program issues no RAM write, no sound-RAM access and no EFREG/TEMP/MEMS update.
+	assign MPRO0_Q = '0;
+`else
 	assign MPRO0_Q = MPRO_DRAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
+`endif
 	
 	
 
@@ -1083,7 +1088,11 @@ module SCSP #(
 	assign MIXSB_RA = !MIXS_GEN ? MPRO0_Q.IRA[3:0] : OP7_SCR7.ISEL;
 	
 	assign PCM_MIXS_Q = !MIXS_GEN ? MIXSA_RAM_Q : MIXSB_RAM_Q;
+`ifdef POCKET_CUT_SCSP_DSP
+	assign DSP_MIXS_Q = '0;
+`else
 	assign DSP_MIXS_Q = !MIXS_GEN ? MIXSB_RAM_Q : MIXSA_RAM_Q;
+`endif
 	
 	//DSP execute
 `ifndef DEBUG
@@ -1300,7 +1309,11 @@ module SCSP #(
 			
 			TEMP = '0;
 			if (S <= 5'd15) begin
+`ifdef POCKET_CUT_SCSP_DSP
+				TEMP = '0;
+`else
 				TEMP = LevelCalc(EFREG_Q,OP7_SCR8.EFSDL);
+`endif
 			end else if (S == 5'd16) begin
 				TEMP = !SND_EN[2] ? 16'h0000 : LevelCalc(ESL,OP7_SCR8.EFSDL);
 			end else if (S == 5'd17) begin
