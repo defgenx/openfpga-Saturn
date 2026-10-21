@@ -106,6 +106,18 @@ module SCU
 	AREF_t      AREF;
 	RSEL_t      RSEL;
 	
+	//A-bus wait-state field select: 0 A0NW, 1 A1NW, 2 A3NW
+	function bit [5:0] AW_NW(input bit [1:0] sel);
+		case (sel)
+			2'd0: AW_NW = {2'b00,ASR0.A0NW};
+			2'd1: AW_NW = {2'b00,ASR0.A1NW};
+			default: AW_NW = {2'b00,ASR1.A3NW};
+		endcase
+	endfunction
+	
+	//Indirect table word source: B-bus buffer or C-bus data
+	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
+	
 	bit  [26:0] DSP_DR;
 	bit  [26:0] DSP_DW;
 	bit  [ 2:0] DSP_ADD;
@@ -853,9 +865,8 @@ module SCU
 							AWRU_N <= ABUS_CDQMN_INNER[1];
 							ABUS_LONG <= 0;
 						end
-						ABUS_WAIT_CNT <= !ABUS_CCS1N_INNER  ? ASR0.A0NW + 6'd3 + (ABUS_RFS ? AREF.ARWT + 6'd2 : 6'd0) : 
-						                 !ABUS_CA_INNER[24] ? ASR0.A1NW + (ABUS_RFS ? AREF.ARWT + 6'd2 : 6'd0) + 6'd3 : 
-											  !ABUS_CA_INNER[23] ? ASR1.A3NW + (ABUS_RFS ? AREF.ARWT + 6'd2 : 6'd0) + 6'd3 : '0;
+						ABUS_WAIT_CNT <= (!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24] | !ABUS_CA_INNER[23]) ?
+						                 AW_NW(!ABUS_CCS1N_INNER ? 2'd0 : !ABUS_CA_INNER[24] ? 2'd1 : 2'd2) + (ABUS_RFS ? {2'b00,AREF.ARWT} + 6'd5 : 6'd3) : '0;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_WAIT;
 					end
@@ -892,9 +903,8 @@ module SCU
 					AWRL_N <= ABUS_CDQMN_INNER[0];
 					AWRU_N <= ABUS_CDQMN_INNER[1];
 					ABUS_LONG <= 0;
-					ABUS_WAIT_CNT <= !ABUS_CCS1N_INNER  ? ASR0.A0NW + 6'd3 + (ABUS_RFS ? AREF.ARWT : 6'd0) : 
-					                 !ABUS_CA_INNER[24] ? ASR0.A1NW + 6'd3 + (ABUS_RFS ? AREF.ARWT : 6'd0) : 
-										  !ABUS_CA_INNER[23] ? ASR1.A3NW + (ABUS_RFS ? AREF.ARWT + 6'd2 : 6'd0) + 6'd3 : '0;
+					ABUS_WAIT_CNT <= (!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24] | !ABUS_CA_INNER[23]) ?
+					                 AW_NW(!ABUS_CCS1N_INNER ? 2'd0 : !ABUS_CA_INNER[24] ? 2'd1 : 2'd2) + (ABUS_RFS ? {2'b00,AREF.ARWT} + ((!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24]) ? 6'd3 : 6'd5) : 6'd3) : '0;
 					ABUS_RFS <= 0;
 					ABUS_ST <= ABUS_WAIT;
 				end
@@ -944,7 +954,7 @@ module SCU
 						AAS_N <= 0;
 						ARD_N <= 0;
 						ABUS_READ_ACK = ABUS_A1;
-						ABUS_WAIT_CNT <= !DMA_RA[26] ? ASR0.A0NW + 5'd2 : !DMA_RA[24] ? ASR0.A1NW + 5'd2 : !DMA_RA[23] ? ASR1.A3NW + 5'd2 : '0;
+						ABUS_WAIT_CNT <= (!DMA_RA[26] | !DMA_RA[24] | !DMA_RA[23]) ? AW_NW(!DMA_RA[26] ? 2'd0 : !DMA_RA[24] ? 2'd1 : 2'd2) + 6'd2 : '0;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_DMA_READ_WAIT;
 					end
@@ -1000,7 +1010,7 @@ module SCU
 						AWRU_N <= 0;
 						ABUS_DATA_ACK = 1;
 						ABUS_WRITE_PROCESS <= 1;
-						ABUS_WAIT_CNT <= !DMA_WA[26] ? ASR0.A0NW + 5'd2 : !DMA_WA[25:24] ? ASR0.A1NW + 5'd2 : !DMA_WA[23] ? ASR1.A3NW + 5'd2 : '0;
+						ABUS_WAIT_CNT <= (!DMA_WA[26] | !DMA_WA[25:24] | !DMA_WA[23]) ? AW_NW(!DMA_WA[26] ? 2'd0 : !DMA_WA[25:24] ? 2'd1 : 2'd2) + 6'd2 : '0;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_DMA_WRITE_WAIT;
 					end
@@ -1916,37 +1926,21 @@ module SCU
 					end
 				end
 				
-				DMA_IND_READ_BBUS: if (CE_R) begin
-					if (BBUS_IND_DONE) begin
-						case (DMA_IND_REG)
-							2'd0: {DMA_RTN,DMA_WTN} <= {2{BBUS_BUF[19:0]}};
-							2'd1: DMA_WA <= BBUS_BUF[26:0];
-							2'd2: {DMA_EC,DMA_RA} <= {BBUS_BUF[31],BBUS_BUF[26:0]};
-						endcase
-						
-						DMA_IND_REG <= DMA_IND_REG + 2'd1;
-						if (DMA_IND_REG == 2'd2) begin
-							DMA_RADD <= DAD[DMA_CH].DRA;
-							DMA_WADD <= DAD[DMA_CH].DWA;
-							DMA_READ_B <= 0;
-							DMA_ST <= DMA_IND_END;
-						end
-					end
-				end
-				
+				DMA_IND_READ_BBUS,
 				DMA_IND_READ_CBUS: if (CE_R) begin
-					if (CBUS_IND_DONE) begin
+					if (DMA_ST == DMA_IND_READ_BBUS ? BBUS_IND_DONE : CBUS_IND_DONE) begin
 						case (DMA_IND_REG)
-							2'd0: {DMA_RTN,DMA_WTN} <= {2{ECDI[19:0]}};
-							2'd1: DMA_WA <= ECDI[26:0];
-							2'd2: {DMA_EC,DMA_RA} <= {ECDI[31],ECDI[26:0]};
+							2'd0: {DMA_RTN,DMA_WTN} <= {2{IND_D[19:0]}};
+							2'd1: DMA_WA <= IND_D[26:0];
+							2'd2: {DMA_EC,DMA_RA} <= {IND_D[31],IND_D[26:0]};
 						endcase
 						
 						DMA_IND_REG <= DMA_IND_REG + 2'd1;
 						if (DMA_IND_REG == 2'd2) begin
 							DMA_RADD <= DAD[DMA_CH].DRA;
 							DMA_WADD <= DAD[DMA_CH].DWA;
-							DMA_READ_C <= 0;
+							if (DMA_ST == DMA_IND_READ_BBUS) DMA_READ_B <= 0;
+							else                             DMA_READ_C <= 0;
 							DMA_ST <= DMA_IND_END;
 						end
 					end
@@ -2322,7 +2316,6 @@ module SCU
 				if (ABUS_DATA_ACK || BBUS_DATA_ACK || CBUS_DATA_ACK) begin
 					if (!DMA_DSP) begin
 						if (DMA_WADD) DMA_WA <= DMA_WA_NEW;
-						if (DMA_WADD && DMD[DMA_CH].WUP && !DMD[DMA_CH].MOD) DW[DMA_CH] <= {5'b0000_0,DMA_WA_NEW};
 					end else begin
 						if (DMA_WADD) DMA_WA <= DMA_WA_NEW;
 						if (DMA_WADD && !DSP_HOLD) DSP_DW <= DSP_DMA_END ? DSP_DW : DMA_WA_NEW;
@@ -2331,8 +2324,12 @@ module SCU
 				
 				if (BBUS_IND_DONE || CBUS_IND_DONE) begin
 					DMA_IA <= DMA_IA_NEW;
-					if (DMD[DMA_CH].WUP && DMD[DMA_CH].MOD) DW[DMA_CH] <= {5'b0000_0,DMA_IA_NEW};
 				end
+				
+				//DW write-back: one shared value, the table pointer wins over the write address
+				if (((BBUS_IND_DONE || CBUS_IND_DONE) && DMD[DMA_CH].WUP && DMD[DMA_CH].MOD) ||
+				    ((ABUS_DATA_ACK || BBUS_DATA_ACK || CBUS_DATA_ACK) && !DMA_DSP && DMA_WADD && DMD[DMA_CH].WUP && !DMD[DMA_CH].MOD))
+					DW[DMA_CH] <= {5'b0000_0,((BBUS_IND_DONE || CBUS_IND_DONE) && DMD[DMA_CH].WUP && DMD[DMA_CH].MOD) ? DMA_IA_NEW : DMA_WA_NEW};
 				
 				if (DMA_END && DMA_DSP) begin
 					if (!DSP_DMA_WE && !DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DSP_DR + 27'd4;
