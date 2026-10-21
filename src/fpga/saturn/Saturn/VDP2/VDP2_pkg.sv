@@ -1,4 +1,147 @@
 package VDP2_PKG;
+	//Optional feature cuts: with POCKET_CUT_VDP2_<NAME> defined the register bits selecting that feature read back as 0.
+	parameter bit [15:0] CUT_TVMD = 16'h0000 
+`ifdef POCKET_CUT_VDP2_HIRES
+ | 16'h0002
+`endif
+;
+	parameter bit [15:0] CUT_BGON = 16'h0000 
+`ifdef POCKET_CUT_VDP2_RBG1
+ | 16'h0020
+`endif
+ 
+`ifdef POCKET_CUT_VDP2_RPARAMB
+ | 16'h0020
+`endif
+;
+	parameter bit [15:0] CUT_MZCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_MOSAIC
+ | 16'h001F
+`endif
+;
+	parameter bit [15:0] CUT_CHCTLA = 16'h0000 
+`ifdef POCKET_CUT_VDP2_BITMAP
+ | 16'h0E0E
+`endif
+ 
+`ifdef POCKET_CUT_VDP2_RGB32
+ | 16'h0040
+`endif
+;
+	parameter bit [15:0] CUT_CHCTLB = 16'h0000 
+`ifdef POCKET_CUT_VDP2_BITMAP
+ | 16'h0600
+`endif
+ 
+`ifdef POCKET_CUT_VDP2_RGB32
+ | 16'h4000
+`endif
+;
+	parameter bit [15:0] CUT_ZMCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_ZOOM
+ | 16'h0303
+`endif
+;
+	parameter bit [15:0] CUT_SCRCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_LINESCROLL
+ | 16'h3F3F
+`endif
+;
+	parameter bit [15:0] CUT_BKTAU = 16'h0000 
+`ifdef POCKET_CUT_VDP2_BACKLINE
+ | 16'h8000
+`endif
+;
+	parameter bit [15:0] CUT_RPMD = 16'h0000 
+`ifdef POCKET_CUT_VDP2_RPARAMB
+ | 16'h0003
+`endif
+;
+	parameter bit [15:0] CUT_KTCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_COEF
+ | 16'h1F1F
+`endif
+ 
+`ifdef POCKET_CUT_VDP2_LNCOL
+ | 16'h1010
+`endif
+;
+	parameter bit [15:0] CUT_RAMCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_COEF
+ | 16'h8000
+`endif
+;
+	parameter bit [15:0] CUT_WCTLA = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPRWIN
+ | 16'h2020
+`endif
+;
+	parameter bit [15:0] CUT_WCTLB = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPRWIN
+ | 16'h2020
+`endif
+;
+	parameter bit [15:0] CUT_WCTLC = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPRWIN
+ | 16'h2020
+`endif
+;
+	parameter bit [15:0] CUT_WCTLD = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPRWIN
+ | 16'h2000
+`endif
+;
+	parameter bit [15:0] CUT_LWTAxU = 16'h0000 
+`ifdef POCKET_CUT_VDP2_LINEWIN
+ | 16'h8000
+`endif
+;
+	parameter bit [15:0] CUT_SPCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPRWIN
+ | 16'h0010
+`endif
+;
+	parameter bit [15:0] CUT_SDCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SHADOW
+ | 16'h003F
+`endif
+;
+	parameter bit [15:0] CUT_LNCLEN = 16'h0000 
+`ifdef POCKET_CUT_VDP2_LNCOL
+ | 16'h003F
+`endif
+;
+	parameter bit [15:0] CUT_SFPRMD = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPECIAL
+ | 16'h03FF
+`endif
+;
+	parameter bit [15:0] CUT_CCCTL = 16'h0000 
+`ifdef POCKET_CUT_VDP2_LNCOL
+ | 16'h0020
+`endif
+ 
+`ifdef POCKET_CUT_VDP2_EXTCC
+ | 16'h0400
+`endif
+;
+	parameter bit [15:0] CUT_SFCCMD = 16'h0000 
+`ifdef POCKET_CUT_VDP2_SPECIAL
+ | 16'h03FF
+`endif
+;
+	//Feature enables used outside the register masks (1 = present)
+	parameter bit EN_COEF   = 1'b1
+`ifdef POCKET_CUT_VDP2_COEF
+	& 1'b0
+`endif
+	;
+	parameter bit EN_SHADOW = 1'b1
+`ifdef POCKET_CUT_VDP2_SHADOW
+	& 1'b0
+`endif
+	;
+
 
 	typedef struct packed	//RW,180000
 	{
@@ -11,9 +154,9 @@ package VDP2_PKG;
 		bit [ 2: 0] HRESO;
 	} TVMD_t;
 `ifdef LIGHT_SATURN
-	parameter bit [15:0] TVMD_MASK = 16'h81F3;
+	parameter bit [15:0] TVMD_MASK = 16'h81F3 & ~CUT_TVMD;
 `else
-	parameter bit [15:0] TVMD_MASK = 16'h81F7;
+	parameter bit [15:0] TVMD_MASK = 16'h81F7 & ~CUT_TVMD;
 `endif
 	
 	typedef struct packed	//RW,180002
@@ -75,7 +218,7 @@ package VDP2_PKG;
 		bit [ 1: 0] RDBSA1;
 		bit [ 1: 0] RDBSA0;
 	} RAMCTL_t;
-	parameter bit [15:0] RAMCTL_MASK = 16'hB3FF;
+	parameter bit [15:0] RAMCTL_MASK = 16'hB3FF & ~CUT_RAMCTL;
 	
 	typedef struct packed	//RW,180010,180018
 	{
@@ -129,7 +272,7 @@ package VDP2_PKG;
 		bit         N1ON;
 		bit         N0ON;
 	} BGON_t;
-	parameter bit [15:0] BGON_MASK = 16'h1F3F;
+	parameter bit [15:0] BGON_MASK = 16'h1F3F & ~CUT_BGON;
 	
 	typedef struct packed	//RW,180022
 	{
@@ -142,7 +285,7 @@ package VDP2_PKG;
 		bit         N1MZE;
 		bit         N0MZE;
 	} MZCTL_t;
-	parameter bit [15:0] MZCTL_MASK = 16'hFF1F;
+	parameter bit [15:0] MZCTL_MASK = 16'hFF1F & ~CUT_MZCTL;
 	
 	typedef struct packed	//RW,180024
 	{
@@ -175,7 +318,7 @@ package VDP2_PKG;
 		bit         N0BMEN;
 		bit         N0CHSZ;
 	} CHCTLA_t;
-	parameter bit [15:0] CHCTLA_MASK = 16'h3F7F;
+	parameter bit [15:0] CHCTLA_MASK = 16'h3F7F & ~CUT_CHCTLA;
 	
 	typedef struct packed	//RW,18002A
 	{
@@ -192,7 +335,7 @@ package VDP2_PKG;
 		bit         N2CHCN;
 		bit         N2CHSZ;
 	} CHCTLB_t;
-	parameter bit [15:0] CHCTLB_MASK = 16'h7733;
+	parameter bit [15:0] CHCTLB_MASK = 16'h7733 & ~CUT_CHCTLB;
 	
 	typedef struct packed	//RW,18002C
 	{
@@ -447,7 +590,7 @@ package VDP2_PKG;
 		bit         N0ZMQT;
 		bit         N0ZMHF;
 	} ZMCTL_t;
-	parameter bit [15:0] ZMCTL_MASK = 16'h0303;
+	parameter bit [15:0] ZMCTL_MASK = 16'h0303 & ~CUT_ZMCTL;
 	
 	typedef struct packed	//RW,18009A
 	{
@@ -464,7 +607,7 @@ package VDP2_PKG;
 		bit         N0LSCX;
 		bit         N0VCSC;
 	} SCRCTL_t;
-	parameter bit [15:0] SCRCTL_MASK = 16'h3F3F;
+	parameter bit [15:0] SCRCTL_MASK = 16'h3F3F & ~CUT_SCRCTL;
 	
 	typedef struct packed	//RW,18009C
 	{
@@ -514,7 +657,7 @@ package VDP2_PKG;
 		bit [11: 0] UNUSED;
 		bit [18:16] BKTA;
 	} BKTAU_t;
-	parameter bit [15:0] BKTAU_MASK = 16'h8007;
+	parameter bit [15:0] BKTAU_MASK = 16'h8007 & ~CUT_BKTAU;
 	
 	typedef struct packed	//RW,1800AE
 	{
@@ -527,7 +670,7 @@ package VDP2_PKG;
 		bit [13: 0] UNUSED;
 		bit [ 1: 0] RPMD;
 	} RPMD_t;
-	parameter bit [15:0] RPMD_MASK = 16'h0003;
+	parameter bit [15:0] RPMD_MASK = 16'h0003 & ~CUT_RPMD;
 	
 	typedef struct packed	//RW,1800B2
 	{
@@ -555,7 +698,7 @@ package VDP2_PKG;
 		bit         RAKDBS;
 		bit         RAKTE;
 	} KTCTL_t;
-	parameter bit [15:0] KTCTL_MASK = 16'h1F1F;
+	parameter bit [15:0] KTCTL_MASK = 16'h1F1F & ~CUT_KTCTL;
 	
 	typedef struct packed	//RW,1800B6
 	{
@@ -633,7 +776,7 @@ package VDP2_PKG;
 		bit         N0W0E;
 		bit         N0W0A;
 	} WCTLA_t;
-	parameter bit [15:0] WCTLA_MASK = 16'hBFBF;
+	parameter bit [15:0] WCTLA_MASK = 16'hBFBF & ~CUT_WCTLA;
 	
 	typedef struct packed	//RW,1800D2
 	{
@@ -654,7 +797,7 @@ package VDP2_PKG;
 		bit         N2W0E;
 		bit         N2W0A;
 	} WCTLB_t;
-	parameter bit [15:0] WCTLB_MASK = 16'hBFBF;
+	parameter bit [15:0] WCTLB_MASK = 16'hBFBF & ~CUT_WCTLB;
 	
 	typedef struct packed	//RW,1800D4
 	{
@@ -675,7 +818,7 @@ package VDP2_PKG;
 		bit         R0W0E;
 		bit         R0W0A;
 	} WCTLC_t;
-	parameter bit [15:0] WCTLC_MASK = 16'hBFBF;
+	parameter bit [15:0] WCTLC_MASK = 16'hBFBF & ~CUT_WCTLC;
 	
 	typedef struct packed	//RW,1800D6
 	{
@@ -694,7 +837,7 @@ package VDP2_PKG;
 		bit         RPW0E;
 		bit         RPW0A;
 	} WCTLD_t;
-	parameter bit [15:0] WCTLD_MASK = 16'hBF8F;
+	parameter bit [15:0] WCTLD_MASK = 16'hBF8F & ~CUT_WCTLD;
 	
 	typedef struct packed	//RW,1800D8,1800DC
 	{
@@ -702,7 +845,7 @@ package VDP2_PKG;
 		bit [11: 0] UNUSED;
 		bit [18:16] WxLWTA;
 	} LWTAxU_t;
-	parameter bit [15:0] LWTAxU_MASK = 16'h8007;
+	parameter bit [15:0] LWTAxU_MASK = 16'h8007 & ~CUT_LWTAxU;
 	
 	typedef struct packed	//RW,1800DA,1800DE
 	{
@@ -722,7 +865,7 @@ package VDP2_PKG;
 		bit         SPWINEN;
 		bit [ 3: 0] SPTYPE;
 	} SPCTL_t;
-	parameter bit [15:0] SPCTL_MASK = 16'h373F;
+	parameter bit [15:0] SPCTL_MASK = 16'h373F & ~CUT_SPCTL;
 	
 	typedef struct packed	//RW,1800E2
 	{
@@ -736,7 +879,7 @@ package VDP2_PKG;
 		bit         N1SDEN;
 		bit         N0SDEN;
 	} SDCTL_t;
-	parameter bit [15:0] SDCTL_MASK = 16'h013F;
+	parameter bit [15:0] SDCTL_MASK = 16'h013F & ~CUT_SDCTL;
 	
 	typedef struct packed	//RW,1800E4
 	{
@@ -770,7 +913,7 @@ package VDP2_PKG;
 		bit         N1LCEN;
 		bit         N0LCEN;
 	} LNCLEN_t;
-	parameter bit [15:0] LNCLEN_MASK = 16'h003F;
+	parameter bit [15:0] LNCLEN_MASK = 16'h003F & ~CUT_LNCLEN;
 	
 	typedef struct packed	//RW,1800EA
 	{
@@ -781,7 +924,7 @@ package VDP2_PKG;
 		bit [ 1: 0] N1SPRM;
 		bit [ 1: 0] N0SPRM;
 	} SFPRMD_t;
-	parameter bit [15:0] SFPRMD_MASK = 16'h03FF;
+	parameter bit [15:0] SFPRMD_MASK = 16'h03FF & ~CUT_SFPRMD;
 	
 	typedef struct packed	//RW,1800EC
 	{
@@ -800,7 +943,7 @@ package VDP2_PKG;
 		bit         N1CCEN;
 		bit         N0CCEN;
 	} CCCTL_t;
-	parameter bit [15:0] CCCTL_MASK = 16'hF77F;
+	parameter bit [15:0] CCCTL_MASK = 16'hF77F & ~CUT_CCCTL;
 	
 	typedef struct packed	//RW,1800EE
 	{
@@ -811,7 +954,7 @@ package VDP2_PKG;
 		bit [ 1: 0] N1SCCM;
 		bit [ 1: 0] N0SCCM;
 	} SFCCMD_t;
-	parameter bit [15:0] SFCCMD_MASK = 16'h03FF;
+	parameter bit [15:0] SFCCMD_MASK = 16'h03FF & ~CUT_SFCCMD;
 	
 	typedef struct packed	//RW,1800F0
 	{

@@ -210,12 +210,14 @@ int main(int argc, char** argv) {
 	Verilated::commandArgs(argc, argv);
 	uint64_t seed = 1; long nclk = 1500000; int ppm_frames = 0; std::string ppm_prefix;
 	int scene_arg = -1;
+	bool cutmode = false;   // feature-cut build: compare video only, no CPU VRAM traffic
 	for (int i = 1; i < argc; i++) {
 		if (!strncmp(argv[i], "+seed=", 6)) seed = strtoull(argv[i] + 6, 0, 0);
 		else if (!strncmp(argv[i], "+clks=", 6)) nclk = atol(argv[i] + 6);
 		else if (!strncmp(argv[i], "+ppm=", 5)) ppm_prefix = argv[i] + 5;
 		else if (!strncmp(argv[i], "+frames=", 8)) ppm_frames = atoi(argv[i] + 8);
 		else if (!strncmp(argv[i], "+scene=", 7)) scene_arg = atoi(argv[i] + 7);
+		else if (!strcmp(argv[i], "+cut")) cutmode = true;
 	}
 	Rng rng(seed);
 	int scene = scene_arg >= 0 ? scene_arg : (int)(seed % N_SCENES);
@@ -290,7 +292,9 @@ int main(int argc, char** argv) {
 		// CPU traffic once the initial programming is done
 		if (bus.idle() && t > 100000 && rng.chance(8)) {
 			int k = rng.below(100);
-			if (k < 35) {            // read
+			if (cutmode && !(k >= 35 && k < 55)) k = 100;
+			if (k >= 100) {}
+			else if (k < 35) {            // read
 				int sp = rng.below(3);
 				uint32_t a = sp == 0 ? 0x180000 + 2 * rng.below(8) : sp == 1 ? 0x100000 + 2 * rng.below(2048) : 2 * rng.below(0x40000);
 				bus.q.push_back({1, a, {}, 0, (int)rng.below(4)});
@@ -338,11 +342,11 @@ int main(int argc, char** argv) {
 		top->eval();
 
 		const VlWide<3>& rm = top->r_misc; const VlWide<3>& dm = top->d_misc;
-		bool diff = memcmp(&rm, &dm, sizeof(rm)) != 0 ||
+		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rm, &dm, sizeof(rm)) != 0 ||
 			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || top->r_RA_D != top->d_RA_D ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
 			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || top->r_RB_D != top->d_RB_D ||
-			top->r_RB_WE != top->d_RB_WE || top->r_RB_RD != top->d_RB_RD;
+			top->r_RB_WE != top->d_RB_WE || top->r_RB_RD != top->d_RB_RD);
 		if (diff) {
 			static const struct { const char* n; int lo, w; } f[] = {
 				{"VRES",0,2},{"HRES",2,3},{"INTERLACE",5,1},{"FIELD",6,1},{"VBL_N",7,1},{"HBL_N",8,1},{"VS_N",9,1},{"HS_N",10,1},
