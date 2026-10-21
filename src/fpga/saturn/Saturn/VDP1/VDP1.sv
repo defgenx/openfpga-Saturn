@@ -269,6 +269,27 @@ module VDP1 (
 	wire [13: 0] COL_D_ERROR_ADJ       = -{1'b0,COL_HEIGHT,1'b0};
 	bit          LEFT_D_ERROR_CMP, RIGHT_D_ERROR_CMP, LEFT_COL_ERROR_X_CMP, LEFT_COL_ERROR_Y_CMP, RIGHT_COL_ERROR_X_CMP, RIGHT_COL_ERROR_Y_CMP;
 					 
+	// Texture error set-up shared by the scaled-sprite and line row set-up states.
+	// W = texture width, R = row width in pixels; HSS half-size mode only applies below the texture width.
+	wire        TX_F    = TEXT_DIRX && ORIG_WIDTH != 9'd1;
+	wire        TX_HSS  = ROW_WIDTH < {3'b000,ORIG_WIDTH} && CMD.CMDPMOD.HSS && !CMD.CMDCTRL.COMM[2];
+	wire [ 8: 0] TX_X   = TX_HSS ? {1'b0,ORIG_WIDTH[8:1]} : ORIG_WIDTH;
+	wire        TX_SMALL = ROW_WIDTH < {3'b000,TX_X};
+	wire [13: 0] TX_R2  = {1'b0,ROW_WIDTH,1'b0};
+	wire [13: 0] TX_RM1 = {2'b00,ROW_WIDTH} - 14'd1;
+	wire [ 8: 0] TX_XM1 = TX_HSS ? {1'b0,ORIG_WIDTH[8:1] - 8'd1} : ORIG_WIDTH - 9'd1;
+	wire [13: 0] TX_INC = TX_SMALL ? (TX_HSS ? {5'b00000,ORIG_WIDTH} : {4'b0000,ORIG_WIDTH,1'b0}) : {4'b0000,TX_XM1,1'b0};
+	wire [13: 0] TX_ADJ = TX_SMALL ? TX_R2 : {TX_RM1[12:0],1'b0};
+	wire [13: 0] TX_ERR = TX_SMALL ? {5'b00000,TX_X} - TX_R2 - {13'd0,TX_F} : {13'd0,TX_F} - {2'b00,ROW_WIDTH};
+
+	// Row texture error set-up (polygon set-up state): H = rows in the polygon, OH = texture height.
+	wire [13: 0] TY_H1    = {2'b00,COL_HEIGHT} + 14'd1;
+	wire        TY_F     = TEXT_DIRY && ORIG_HEIGHT != 8'd1;
+	wire        TY_SMALL = TY_H1 <= {6'b000000,ORIG_HEIGHT - 8'd1};
+	wire [13: 0] TY_INC   = TY_SMALL ? {5'b00000,ORIG_HEIGHT,1'b0} : {5'b00000,ORIG_HEIGHT - 8'd1,1'b0};
+	wire [13: 0] TY_ADJ   = TY_SMALL ? {TY_H1[12:0],1'b0} : {1'b0,COL_HEIGHT,1'b0};
+	wire [13: 0] TY_ERR   = TY_SMALL ? {6'b000000,ORIG_HEIGHT} - {TY_H1[12:0],1'b0} - {13'd0,TY_F} : {13'd0,TY_F} - TY_H1;
+
 	bit  [13: 0] NEXT_LINE_ERROR, LINE_ERROR, LINE_ERROR_INC, LINE_ERROR_ADJ;
 	bit  [13: 0] NEXT_TEXT_ERROR, TEXT_ERROR, TEXT_ERROR_INC, TEXT_ERROR_ADJ;
 	bit  [13: 0] NEXT_TEXT_Y_ERROR, TEXT_Y_ERROR, TEXT_Y_ERROR_INC, TEXT_Y_ERROR_ADJ;
@@ -477,6 +498,8 @@ module VDP1 (
 		bit         LINE_VERTA_X_OVR,LINE_VERTA_Y_OVR;
 		bit         AA_DRAW;
 		bit         LINE_SWAP;
+		bit         LN_Y_MAJOR;
+		bit [11: 0] LN_MAJ,LN_MIN;
 		bit [16: 3] SPR_OFFSY_NEXT;
 		bit         CLIP_H;
 		bit [ 1: 0] SYS_CLIP_STATE;
@@ -862,15 +885,9 @@ module VDP1 (
 				end
 				
 				CMDS_POLYGON_CALCTY: begin
-					if ((COL_HEIGHT + 13'd1) <= {5'b00000,ORIG_HEIGHT - 8'd1}) begin
-						TEXT_Y_ERROR_INC <= ({5'b00000,ORIG_HEIGHT} << 1);
-						TEXT_Y_ERROR_ADJ <= (COL_HEIGHT + 13'd1) << 1;
-						TEXT_Y_ERROR <= {5'b00000,ORIG_HEIGHT} - (((COL_HEIGHT + 13'd1) << 1) + (!TEXT_DIRY || ORIG_HEIGHT == 8'd1 ? 13'd0 : 13'd1 ));
-					end else begin
-						TEXT_Y_ERROR_INC <= ({5'b00000,ORIG_HEIGHT - 8'd1} << 1);
-						TEXT_Y_ERROR_ADJ <= (((COL_HEIGHT + 13'd1) - 13'd1) << 1);
-						TEXT_Y_ERROR <= (COL_HEIGHT + 13'd1) - (((COL_HEIGHT + 13'd1) << 1) - (!TEXT_DIRY || ORIG_HEIGHT == 8'd1 ? 13'd0 : 13'd1 ));
-					end
+					TEXT_Y_ERROR_INC <= TY_INC;
+					TEXT_Y_ERROR_ADJ <= TY_ADJ;
+					TEXT_Y_ERROR <= TY_ERR;
 					
 					LEFT_COL_ERROR_X <= ~LEFT_HEIGHT;
 					LEFT_COL_ERROR_Y <= ~LEFT_HEIGHT;
@@ -1057,35 +1074,21 @@ module VDP1 (
 					CMD_ST <= CMDS_SSPR_CALCTX;
 				end
 				
-				CMDS_SSPR_CALCTX: begin
-					if (ROW_WIDTH < {4'b0000,ORIG_WIDTH} && CMD.CMDPMOD.HSS) begin
-						if (ROW_WIDTH < {5'b00000,ORIG_WIDTH[8:1]}) begin
-							TEXT_ERROR_INC <= {5'b00000,ORIG_WIDTH};
-							TEXT_ERROR_ADJ <= (ROW_WIDTH << 1);
-							TEXT_ERROR <= {6'b000000,ORIG_WIDTH[8:1]} - (ROW_WIDTH << 1) - (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end else begin
-							TEXT_ERROR_INC <= ({6'b000000,ORIG_WIDTH[8:1] - 8'd1} << 1);
-							TEXT_ERROR_ADJ <= ((ROW_WIDTH - 13'd1) << 1);
-							TEXT_ERROR <= (-ROW_WIDTH) + (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end
-						HSS_EN <= 1;
-					end else begin
-						if (ROW_WIDTH < {5'b00000,ORIG_WIDTH}) begin
-							TEXT_ERROR_INC <= ({5'b00000,ORIG_WIDTH} << 1);
-							TEXT_ERROR_ADJ <= (ROW_WIDTH << 1);
-							TEXT_ERROR <= {5'b00000,ORIG_WIDTH} - (ROW_WIDTH << 1) - (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end else begin
-							TEXT_ERROR_INC <= ({5'b00000,ORIG_WIDTH - 9'd1} << 1);
-							TEXT_ERROR_ADJ <= ((ROW_WIDTH - 13'd1) << 1);
-							TEXT_ERROR <= (-ROW_WIDTH) + (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end
-						HSS_EN <= 0;
+				CMDS_SSPR_CALCTX,
+				CMDS_LINE_CALCTX: begin
+					TEXT_ERROR_INC <= TX_INC;
+					TEXT_ERROR_ADJ <= TX_ADJ;
+					TEXT_ERROR <= TX_ERR;
+					HSS_EN <= TX_HSS;
+					if (CMD_ST == CMDS_LINE_CALCTX) begin
+						EC_FIND <= 0;
+						AA <= 0;
 					end
 
 					if ((LINE_LEFT_OVER || LINE_RIGHT_OVER || LINE_TOP_OVER || LINE_BOTTOM_OVER) && !CMD.CMDPMOD.PCLP) begin
 						CMD_ST <= CMDS_LINE_NEXT;
 					end else begin
-						SPR_READ <= 1;
+						SPR_READ <= CMD_ST == CMDS_SSPR_CALCTX ? 1'b1 : ~CMD.CMDCTRL.COMM[2];
 						CMD_ST <= CMDS_PRE_DRAW;
 					end
 				end
@@ -1163,63 +1166,24 @@ module VDP1 (
 						DIR[0] <= 0;
 					end
 					
-					if (NEW_LINE_ASY > NEW_LINE_ASX) begin
-						LINE_ERROR_INC <= (NEW_LINE_ASX << 1);
-						LINE_ERROR_ADJ <= -(NEW_LINE_ASY << 1);
-						LINE_ERROR <= (NEW_LINE_ASY - (NEW_LINE_ASY << 1)) - (NEW_LINE_ASX << 1);
-						LINE_S <= 1;
+					LN_Y_MAJOR = NEW_LINE_ASY > NEW_LINE_ASX;
+					LN_MAJ = LN_Y_MAJOR ? NEW_LINE_ASY : NEW_LINE_ASX;
+					LN_MIN = LN_Y_MAJOR ? NEW_LINE_ASX : NEW_LINE_ASY;
+					// maj/min: the longer axis steps every pixel, the shorter one by error accumulation
+					LINE_ERROR_INC <= {1'b0,LN_MIN,1'b0};
+					LINE_ERROR_ADJ <= -{1'b0,LN_MAJ,1'b0};
+					LINE_ERROR <= -{2'b00,LN_MAJ} - {1'b0,LN_MIN,1'b0};
+					LINE_S <= LN_Y_MAJOR;
+					if (LN_Y_MAJOR) begin
 						AA_X_INC <= (NEW_LINE_SY[12]^LINE_SWAP) ? {12{(NEW_LINE_SX[12]^LINE_SWAP)}} : {{11{1'b0}},~(NEW_LINE_SX[12]^LINE_SWAP)};
 						AA_Y_INC <= (NEW_LINE_SY[12]^LINE_SWAP) ? {{11{1'b0}},(NEW_LINE_SX[12]^LINE_SWAP)} : {12{~(NEW_LINE_SX[12]^LINE_SWAP)}};
-						
-						ROW_WIDTH <= NEW_LINE_ASY + 12'd1;
 					end else begin
-						LINE_ERROR_INC <= (NEW_LINE_ASY << 1);
-						LINE_ERROR_ADJ <= -(NEW_LINE_ASX << 1);
-						LINE_ERROR <= (NEW_LINE_ASX - (NEW_LINE_ASX << 1)) - (NEW_LINE_ASY << 1);
-						LINE_S <= 0;
 						AA_X_INC <= (NEW_LINE_SX[12]^LINE_SWAP) ? {{11{1'b0}},~(NEW_LINE_SY[12]^LINE_SWAP)} : {12{(NEW_LINE_SY[12]^LINE_SWAP)}};
 						AA_Y_INC <= (NEW_LINE_SX[12]^LINE_SWAP) ? {{11{1'b0}},~(NEW_LINE_SY[12]^LINE_SWAP)} : {12{(NEW_LINE_SY[12]^LINE_SWAP)}};
-						
-						ROW_WIDTH <= NEW_LINE_ASX + 12'd1;
 					end
+					ROW_WIDTH <= LN_MAJ + 12'd1;
 					
 					CMD_ST <= CMDS_LINE_CALCTX;
-				end
-				
-				CMDS_LINE_CALCTX: begin
-					if (ROW_WIDTH <= {4'b0000,ORIG_WIDTH - 9'd1} && CMD.CMDPMOD.HSS && !CMD.CMDCTRL.COMM[2]) begin
-						if (ROW_WIDTH < {5'b00000,ORIG_WIDTH[8:1]}) begin
-							TEXT_ERROR_INC <= {5'b00000,ORIG_WIDTH};
-							TEXT_ERROR_ADJ <= (ROW_WIDTH << 1);
-							TEXT_ERROR <= {6'b000000,ORIG_WIDTH[8:1]} - (ROW_WIDTH << 1) - (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end else begin
-							TEXT_ERROR_INC <= ({6'b000000,ORIG_WIDTH[8:1] - 8'd1} << 1);
-							TEXT_ERROR_ADJ <= ((ROW_WIDTH - 13'd1) << 1);
-							TEXT_ERROR <= ROW_WIDTH - (ROW_WIDTH << 1) + (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end
-						HSS_EN <= 1;
-					end else begin
-						if (ROW_WIDTH < {4'b0000,ORIG_WIDTH}) begin
-							TEXT_ERROR_INC <= ({5'b00000,ORIG_WIDTH} << 1);
-							TEXT_ERROR_ADJ <= (ROW_WIDTH << 1);
-							TEXT_ERROR <= {5'b00000,ORIG_WIDTH} - (ROW_WIDTH << 1) - (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end else begin
-							TEXT_ERROR_INC <= ({5'b00000,ORIG_WIDTH - 9'd1} << 1);
-							TEXT_ERROR_ADJ <= ((ROW_WIDTH - 13'd1) << 1);
-							TEXT_ERROR <= ROW_WIDTH - (ROW_WIDTH << 1) + (!TEXT_DIRX || ORIG_WIDTH == 8'd1 ? 14'd0 : 14'd1);
-						end
-						HSS_EN <= 0;
-					end
-					
-					EC_FIND <= 0;
-					AA <= 0;
-				
-					if ((LINE_LEFT_OVER || LINE_RIGHT_OVER || LINE_TOP_OVER || LINE_BOTTOM_OVER) && !CMD.CMDPMOD.PCLP) begin
-						CMD_ST <= CMDS_LINE_NEXT;
-					end else begin
-						SPR_READ <= ~CMD.CMDCTRL.COMM[2];
-						CMD_ST <= CMDS_PRE_DRAW;
-					end
 				end
 				
 				CMDS_PRE_DRAW: begin
