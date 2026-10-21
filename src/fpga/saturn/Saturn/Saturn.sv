@@ -1,3 +1,9 @@
+`ifdef POCKET_SH2P
+`define SH2_CPU SH7604P
+`else
+`define SH2_CPU SH7604
+`endif
+
 module Saturn
 #(parameter bit RAMH_SLOW=0)
 (
@@ -50,6 +56,8 @@ module Saturn
 	
 	input              VDP1_FB_RDY,
 	output             VDP1_FB_MODE3,
+	output             VDP1_FB_DRAW0,
+	output             VDP1_FB_DISP_SOON,
 	
 	output     [18: 1] VDP2_RA0_A,
 	output     [16: 1] VDP2_RA1_A,
@@ -108,6 +116,39 @@ module Saturn
 	output             CD_RAM_CS,
 	input      [15: 0] CD_RAM_Q,
 	input              CD_RAM_RDY,
+`ifdef POCKET_CUT_CDB_LLE
+	// HLE CD block: 176.4 kHz word clock and the cd_stream client ports (docs/cdb-hle.md)
+	input              CDD_CE,
+	input              DISC_OK,
+	input              DISC_NEW,
+	input      [ 6: 0] TOC_NTRACKS,
+	input      [ 7: 0] TOC_NTBCD,
+	input      [23: 0] TOC_END,
+	output             LK_GO,
+	output             LK_BYIDX,
+	output     [23: 0] LK_X,
+	output     [ 6: 0] LK_IDX,
+	output             LK_HOLD,
+	input              LK_BUSY,
+	input              LK_ENG_IDLE,
+	input      [ 6: 0] LK_TRACK,
+	input      [ 7: 0] LK_TBCD,
+	input      [23: 0] LK_START,
+	input      [ 7: 0] LK_IDX1,
+	input              LK_DATA,
+	input              LK_S2048,
+	output             PF_FLUSH,
+	output     [23: 0] PF_FAD,
+	output             PF_EN,
+	input              PF_READY,
+	output             SD_GO,
+	output     [ 1: 0] SD_KIND,
+	output             SD_SYNTH,
+	output             SD_SPD2,
+	output     [23: 0] SD_HDR,
+	input              FD_BUSY,
+	input      [17: 0] CD_DATA18,
+`endif
 `endif
 	
 `ifndef STV_BUILD
@@ -167,6 +208,18 @@ module Saturn
 	input              DBG_BREAK,
 	input              DBG_RUN,
 	input      [ 7: 0] DBG_EXT
+`ifdef POCKET_DEBUG_OVERLAY
+	,
+	output     [ 6: 0] DBG_TAP,    // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
+	output     [28: 0] DBG_DA,
+	output     [33: 0] DBG_SND,    // {wr_ev, BDO, rd_ev, SCSP_DO}
+	output     [29: 0] DBG_SERV,   // {MRES_N, DBG_SMPC}
+	output     [26: 0] DBG_68K,    // {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA[23:1]}
+	output     [99: 0] DBG_TXT     // {MSH PC, COMREG, SF, IRL, TVMD, IST, IMS, SMPC irq}, docs/debug-overlay.md
+`endif
+`ifdef POCKET_DEBUG_EXCROW
+	,output    [31: 0] DBG_VEC     // MSH SH2P_core DBG_VEC
+`endif
 );
 
 	bit BREAK;
@@ -200,6 +253,14 @@ module Saturn
 	bit  [26:0] MSHA;
 	bit  [31:0] MSHDO;
 	bit  [31:0] MSHDI;
+`ifdef POCKET_DEBUG_OVERLAY
+	wire        DBG_DISP;
+	wire [15:0] DBG_TVMD;
+	wire [31:0] DBG_PC, DBG_SCU;
+	wire [28:0] DBG_DA_W;
+	wire [28:0] DBG_SMPC;
+	wire [ 1:0] DBG_SND_EV;
+`endif
 	bit         MSHBS_N;
 	bit         MSHCS0_N;
 	bit         MSHCS1_N;
@@ -339,7 +400,13 @@ module Saturn
 	bit  [15:0] CD_SL;
 	bit  [15:0] CD_SR;
 	
-	SH7604 #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({RAMH_SLOW,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) MSH
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	wire [65:0] DVS0_O, DVS1_O;
+	wire [140:0] DVS0_I, DVS1_I;
+	SH7604_DIVU_SHR dvshr(.CLK(CLK), .RST_N(RST_N), .CE_R(SYS_CE_R), .EN(EN), .C0_O(DVS0_O), .C1_O(DVS1_O), .C0_I(DVS0_I), .C1_I(DVS1_I));
+`endif
+
+	`SH2_CPU #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({RAMH_SLOW,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) MSH
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -382,7 +449,6 @@ module Saturn
 		.EIVECF_N(1'b1),
 		
 		.WAIT_N(MSHWAIT_N),
-		.IVECF_N(),
 		.BRLS_N(MSHBRLS_N),
 		.BGR_N(MSHBGR_N),
 		
@@ -400,6 +466,15 @@ module Saturn
 		.MD(6'b001000),
 		
 		.FAST(FAST)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_PC(DBG_PC), .DBG_DA(DBG_DA_W)
+`endif
+`ifdef POCKET_DEBUG_EXCROW
+		,.DBG_VEC(DBG_VEC)
+`endif
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS0_I), .DVS_O(DVS0_O)
+`endif
 `ifdef DEBUG
 		,
 		.DBG_REGN('0),
@@ -409,7 +484,7 @@ module Saturn
 `endif
 	);
 	
-	SH7604 #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({RAMH_SLOW,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) SSH
+	`SH2_CPU #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({RAMH_SLOW,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) SSH
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -468,6 +543,9 @@ module Saturn
 		.MD(6'b101000),
 		
 		.FAST(FAST)
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS1_I), .DVS_O(DVS1_O)
+`endif
 `ifdef DEBUG
 		,
 		.DBG_REGN('0),
@@ -549,7 +627,13 @@ module Saturn
 							!BCSS_N ? SCSP_DO : 16'h0000;
 
 	bit DBG_ABUS_END;
+`ifdef POCKET_SCUP2
+	SCUP2 #(RAMH_SLOW) SCU
+`elsif POCKET_SCUP
+	SCUP #(RAMH_SLOW) SCU
+`else
 	SCU #(RAMH_SLOW) SCU
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -621,6 +705,9 @@ module Saturn
 		.MIREQ_N(MIRQ_N),
 		
 		.FAST(FAST)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_SCU(DBG_SCU)
+`endif
 	);
 	
 	
@@ -689,7 +776,16 @@ module Saturn
 `endif
 	
 	
-`ifndef STV_BUILD
+`ifdef STV_BUILD
+`define SMPC_IS_HLE
+`endif
+`ifdef POCKET_CUT_SMPC_HLE
+`define SMPC_IS_HLE
+`endif
+`ifdef POCKET_SMPC_SERV
+`define SMPC_IS_HLE
+`endif
+`ifndef SMPC_IS_HLE
 	bit MRES_N;
 	bit CE32K;
 	always @(posedge CLK or negedge RST_N) begin
@@ -787,7 +883,11 @@ module Saturn
 		end
 	end
 	
+`ifdef POCKET_SMPC_SERV
+	SMPC_SERV SMPC
+`else
 	SMPC_HLE SMPC
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -828,10 +928,17 @@ module Saturn
 		.PDR2I(SMPC_PDR2I),
 		.PDR2O(SMPC_PDR2O),
 		.DDR2(SMPC_DDR2)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_SMPC(DBG_SMPC)
+`endif
 	);
 `endif
 	
+`ifdef POCKET_VDP1P
+	VDP1P VDP1
+`else
 	VDP1 VDP1
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -879,6 +986,10 @@ module Saturn
 		.FB1_Q(VDP1_FB1_Q),
 		.FB_RDY(VDP1_FB_RDY),
 		.FB_MODE3(VDP1_FB_MODE3),
+`ifdef POCKET_VDP1P
+		.FB_DRAW0(VDP1_FB_DRAW0),
+		.FB_DISP_SOON(VDP1_FB_DISP_SOON),
+`endif
 		
 		.FAST(FAST),
 		.BLUR_MESH(BLUR_MESH),
@@ -892,7 +1003,13 @@ module Saturn
 `endif
 	);
 	
+`ifdef POCKET_VDP2P2
+	VDP2P2 VDP2
+`elsif POCKET_VDP2P
+	VDP2P VDP2
+`else
 	VDP2 VDP2
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -955,6 +1072,11 @@ module Saturn
 		
 		.SCRN_EN(SCRN_EN),
 		
+`ifdef POCKET_DEBUG_OVERLAY
+`ifdef POCKET_VDP2P
+		.DBG_DISP(DBG_DISP), .DBG_TVMD(DBG_TVMD),
+`endif
+`endif
 		.DBG_EXT(DBG_EXT)
 	);
 
@@ -986,7 +1108,11 @@ module Saturn
 	wire SCSP_RES_N = STV_SCSP_RES_N;
 	wire SCPU_RES_N = STV_SCPU_RES_N;
 `endif
+`ifdef POCKET_SCSPP
+	SCSPP SCSP
+`else
 	SCSP SCSP
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -999,6 +1125,9 @@ module Saturn
 		.DI(BDO),
 		.DO(SCSP_DO),
 		.CS_N(BCSS_N),
+`ifdef POCKET_DEBUG_OVERLAY
+		.DBG_EV(DBG_SND_EV),
+`endif
 		.AD_N(BADDT_N),
 		.DTEN_N(BDTEN_N),
 		.REQ_N(BREQ_N),
@@ -1042,7 +1171,11 @@ module Saturn
 	);
 	
 	bit M68K_RESO_N;
+`ifdef POCKET_M68KP
+	m68kp M68K
+`else
 	fx68k M68K
+`endif
 	(
 		.clk(CLK),
 		.extReset(~SCPU_RES_N | ~M68K_RESO_N),
@@ -1083,6 +1216,27 @@ module Saturn
 	
 	//CD
 `ifndef STV_BUILD
+`ifdef POCKET_CUT_CDB_LLE
+	cdb_hle cdb (
+		.CLK(CLK), .RST_N(RST_N), .RES_N(CDRES_N),
+		.CE_R(SYS_CE_R), .CE_F(SYS_CE_F), .CD_CE(CD_CE), .CDD_CE(CDD_CE),
+		.AA(AA[14:1]), .ADI(ADO), .ADO(CD_DO), .ACS2_N(ACS2_N), .ARD_N(ARD_N), .AWRL_N(AWRL_N), .AWRU_N(AWRU_N),
+		.AWAIT_N(YGR019_AWAIT_N), .ARQT_N(ARQT_N),
+		.RAM_A(CD_RAM_A), .RAM_D(CD_RAM_D), .RAM_WE(CD_RAM_WE), .RAM_RD(CD_RAM_RD), .RAM_CS(CD_RAM_CS),
+		.RAM_Q(CD_RAM_Q), .RAM_RDY(CD_RAM_RDY),
+		.CD_SL(CD_SL), .CD_SR(CD_SR), .FAST(FAST),
+		.disc_ok(DISC_OK), .disc_new(DISC_NEW), .ntracks(TOC_NTRACKS), .ntbcd(TOC_NTBCD), .toc_end(TOC_END),
+		.lk_go(LK_GO), .lk_byidx(LK_BYIDX), .lk_x(LK_X), .lk_idx(LK_IDX), .lk_hold(LK_HOLD), .lk_busy(LK_BUSY),
+		.eng_idle(LK_ENG_IDLE), .lk_track(LK_TRACK), .lk_tbcd(LK_TBCD), .lk_start(LK_START), .lk_idx1(LK_IDX1),
+		.lk_data(LK_DATA), .lk_s2048(LK_S2048),
+		.pf_flush(PF_FLUSH), .pf_fad(PF_FAD), .pf_en(PF_EN), .pf_ready(PF_READY),
+		.sd_go(SD_GO), .sd_kind(SD_KIND), .sd_synth(SD_SYNTH), .sd_spd2(SD_SPD2), .sd_hdr(SD_HDR), .fd_busy(FD_BUSY),
+		.cd_data(CD_DATA18), .cd_ck(CD_CK));
+	bit YGR019_AWAIT_N;
+	assign CD_HDATA = 1'b0;
+	assign CD_COMCLK = 1'b1;
+	assign CD_DEMP = 1'b0;
+`else
 	bit [21:0] SA;
 	bit [15:0] SDI;
 	bit [15:0] SDO;
@@ -1216,6 +1370,7 @@ module Saturn
 	assign CD_RAM_CS = ~SCS1_N;
 	assign CD_RAM_WE = ~{SWRH_N,SWRL_N};
 	assign CD_RAM_RD = ~SRD_N;
+`endif
 `else
 	assign ARQT_N = 1;
 	assign {CD_SL,CD_SR} = '0;
@@ -1280,4 +1435,17 @@ module Saturn
 `endif
 	);
 	
+`ifdef POCKET_DEBUG_OVERLAY
+`ifndef POCKET_VDP2P
+	assign DBG_DISP = 1'b0;
+	assign DBG_TVMD = 16'h0;
+`endif
+	assign DBG_DA = DBG_DA_W;
+	assign DBG_SND = {DBG_SND_EV[1], BDO, DBG_SND_EV[0], SCSP_DO};
+	assign DBG_SERV = {MRES_N, DBG_SMPC};
+	assign DBG_68K = {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA};
+	assign DBG_TXT = {DBG_PC, DBG_SMPC[16:9], 3'b000, DBG_SMPC[17], ~CIRL_N, DBG_TVMD, DBG_SCU[31:16], DBG_SCU[15:0], 3'b000, ~MIRQ_N};
+	assign DBG_TAP = {DBG_DISP, MSHRES_N, ACS2_N, &MSHIRL_N, SSHBS_N, MSHBS_N, 1'b0};
+`endif
+
 endmodule

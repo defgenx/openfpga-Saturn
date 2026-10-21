@@ -1,4 +1,8 @@
-module SH7034_MULT (
+module SH7034_MULT
+#(
+	parameter bit PRUNE=0
+)
+(
 	input             CLK,
 	input             RST_N,
 	input             CE_R,
@@ -27,15 +31,20 @@ module SH7034_MULT (
 	bit [15:0] MA;
 	bit [15:0] MB;
 	
-	wire [31:0] SRES =   $signed(MA) *   $signed(MB);
-	wire [31:0] URES = $unsigned(MA) * $unsigned(MB);
+	//PRUNE: the firmware only uses MULU.W/MULS.W with STS MACL and saves/restores MACH.
+	//One 17x17 multiplier gives the low 32 bits of both products; MAC.W/MAC.L/MUL.L/CLRMAC are dropped.
+	bit        SIGNED;
+	wire signed [16:0] MAX = {SIGNED & MA[15], MA};
+	wire signed [16:0] MBX = {SIGNED & MB[15], MB};
+	wire        [33:0] PROD = MAX * MBX;
+	wire [31:0] SRES = PRUNE ? PROD[31:0] :   $signed(MA) *   $signed(MB);
+	wire [31:0] URES = PRUNE ? PROD[31:0] : $unsigned(MA) * $unsigned(MB);
 	wire [41:0] ACC  = {MACH,MACL} + {{10{SRES[31]}},SRES[31:0]};
 	
 	always @(posedge CLK or negedge RST_N) begin
 		bit        MUL_EXEC;
 		bit        MACW_EXEC;
 //		bit        SAT;
-		bit        SIGNED;
 		bit [15:0] DW;
 		
 		if (!RST_N) begin
@@ -72,7 +81,7 @@ module SH7034_MULT (
 					end
 					4'b1001: begin		//MAC.L
 					end
-					4'b1011: begin		//MAC.W
+					4'b1011: if (!PRUNE) begin		//MAC.W
 						DW = !CBUS_A[1] ? CBUS_DI[31:16] : CBUS_DI[15:0];
 						if (MAC_SEL[1]) MA <= DW;
 						if (MAC_SEL[0]) MB <= DW;
@@ -80,7 +89,7 @@ module SH7034_MULT (
 						SIGNED <= MAC_OP[0];
 //						SAT <= MAC_S;
 					end
-					4'b1111: {MACH,MACL} <= '0;
+					4'b1111: if (!PRUNE) {MACH,MACL} <= '0;
 				endcase
 			end
 			

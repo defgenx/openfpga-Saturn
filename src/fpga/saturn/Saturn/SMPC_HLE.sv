@@ -70,6 +70,7 @@ module SMPC_HLE (
 		CS_INTBACK_CONT,CS_INTBACK_CONT2,
 		CS_INTBACK_PERI,CS_INTBACK_PERI2,CS_INTBACK_PERI3,
 		CS_INTBACK_BREAK, 
+		CS_NMI_REL,
 		CS_END
 	} CommExecState_t;
 	CommExecState_t COMM_ST;
@@ -234,6 +235,8 @@ module SMPC_HLE (
 		bit         INTBACK_EXEC;
 		bit         INTBACK_PERI;
 		bit         INTBACK_OPTIM_EN;
+		bit         INTBACK_IMM;
+		bit [10: 0] IMM_CNT;
 		bit         INTBACK_OPTIM_TIME,INTBACK_NOT_OPTIM_TIME;
 		bit [ 3: 0] INTBACK_VB_CNT;
 		bit         CHECK_CONTINUE;
@@ -283,6 +286,7 @@ module SMPC_HLE (
 			SRES_EXEC <= 0;
 			INTBACK_EXEC <= 0;
 			INTBACK_PERI <= 0;
+			INTBACK_IMM <= 0;
 			BREAK <= 0;
 			CONT <= 0;
 			CONT_PREV <= 0;
@@ -308,6 +312,7 @@ module SMPC_HLE (
 			{VB_PEND,VBIN_PEND,VBOUT_PEND} <= '0;
 			INTBACK_EXEC <= 0;
 			INTBACK_PERI <= 0;
+			INTBACK_IMM <= 0;
 			{INTBACK_OPTIM_TIME,INTBACK_NOT_OPTIM_TIME} <= '0;
 			BREAK <= 0;
 			CONT <= 0;
@@ -323,6 +328,7 @@ module SMPC_HLE (
 				
 				if (WAIT_CNT) WAIT_CNT <= WAIT_CNT - 20'd1;
 				if (INBACK_STAT_CYC_CNT) INBACK_STAT_CYC_CNT <= INBACK_STAT_CYC_CNT - 10'd1;
+				if (IMM_CNT) IMM_CNT <= IMM_CNT - 11'd1;
 				
 				if (!SRES_N && !RESD && !SRES_EXEC) begin
 					MSHNMI_N <= 0;
@@ -361,7 +367,7 @@ module SMPC_HLE (
 					INTBACK_NOT_OPTIM_TIME <= 0;
 				end else begin
 					//~1ms prior to vblank
-					if (TIME_CNT == ((PAL ? 18'd80128 : 18'd66860) - VBLANK_TIME - 18'd5520)) begin
+					if (TIME_CNT == ((PAL ? 18'd80128 : 18'd66860) - VBLANK_TIME - 18'd6070)) begin
 						INTBACK_OPTIM_TIME <= 1;
 					end
 				end
@@ -384,7 +390,8 @@ module SMPC_HLE (
 							WAIT_ST <= CS_INTBACK_BREAK;
 							COMM_ST <= CS_WAIT;
 						end 
-						else if (INTBACK_PERI && ((INTBACK_OPTIM_EN && INTBACK_OPTIM_TIME) || (!INTBACK_OPTIM_EN && INTBACK_NOT_OPTIM_TIME)) && IRQV_N && !SRES_EXEC) begin
+						else if (INTBACK_PERI && (INTBACK_IMM ? !IMM_CNT : ((INTBACK_OPTIM_EN && INTBACK_OPTIM_TIME) || (!INTBACK_OPTIM_EN && INTBACK_NOT_OPTIM_TIME))) && IRQV_N && !SRES_EXEC) begin
+							INTBACK_IMM <= 0;
 							OREG_CNT <= '0;
 							JOY_START <= 1;
 							COMM_ST <= CS_INTBACK_PERI;
@@ -509,39 +516,34 @@ module SMPC_HLE (
 								COMM_ST <= CS_WAIT;
 							end
 							
-							8'h0D: begin		//SYSRES
+							8'h0D: begin		//SYSRES (SSH and sound stay in reset until SSHON/SNDON)
 								MSHRES_N <= 0;
-								MSHNMI_N <= 0;
+								MSHNMI_N <= 1;
 								SSHRES_N <= 0;
-								SSHNMI_N <= 0;
 								SNDRES_N <= 0;
 								CDRES_N <= 0;
 								SYSRES_N <= 0;
-								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2;
+								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2 + 16'd29;
 								WAIT_ST <= CS_RESET_START;
 								COMM_ST <= CS_WAIT;
 							end
 							
 							8'h0E: begin		//CKCHG352
-								MSHNMI_N <= 1;
 								SSHRES_N <= 0;
-								SSHNMI_N <= 0;
 								SNDRES_N <= 0;
 								SYSRES_N <= 0;
 								DOTSEL <= 1;
-								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2;
+								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2 + 16'd22;
 								WAIT_ST <= CS_RESET_START;
 								COMM_ST <= CS_WAIT;
 							end
 							
 							8'h0F: begin		//CKCHG320
-								MSHNMI_N <= 1;
 								SSHRES_N <= 0;
-								SSHNMI_N <= 0;
 								SNDRES_N <= 0;
 								SYSRES_N <= 0;
 								DOTSEL <= 0;
-								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2;
+								WAIT_CNT <= 16'd120 - 16'd87 - 16'd2 + 16'd22;
 								WAIT_ST <= CS_RESET_START;
 								COMM_ST <= CS_WAIT;
 							end
@@ -559,6 +561,8 @@ module SMPC_HLE (
 									end else begin
 										INTBACK_EXEC <= 1;
 										INTBACK_PERI <= 1;
+										INTBACK_IMM <= 1;
+										IMM_CNT <= IREG[1][1] ? 11'd413 : 11'd964;
 										CONT_PREV <= 0;
 										COMM_ST <= IREG[2][3:0] ? CS_INTBACK_WAIT : CS_IDLE;
 									end
@@ -583,7 +587,7 @@ module SMPC_HLE (
 							end
 							
 							8'h18: begin		//NMIREQ
-								WAIT_CNT <= 16'd130 - 16'd87;
+								WAIT_CNT <= 16'd130 - 16'd87 - 16'd14;
 								WAIT_ST <= CS_EXEC;
 								COMM_ST <= CS_WAIT;
 							end
@@ -634,7 +638,6 @@ module SMPC_HLE (
 						case (COMMAND) 
 							8'h0D: begin		//SYSRES
 								CDRES_N <= 1;
-								SNDRES_N <= 1;
 								SYSRES_N <= 1;
 							end
 							
@@ -669,7 +672,7 @@ module SMPC_HLE (
 							10'd0716: begin OREG_RAM_WA <= 5'h05; OREG_RAM_D <= RTC_HOUR;                                                    OREG_RAM_WE <= 2'b11; end
 							10'd0668: begin OREG_RAM_WA <= 5'h06; OREG_RAM_D <= RTC_MIN;                                                     OREG_RAM_WE <= 2'b11; end
 							10'd0620: begin OREG_RAM_WA <= 5'h07; OREG_RAM_D <= RTC_SEC;                                                     OREG_RAM_WE <= 2'b11; end
-							10'd0571: begin OREG_RAM_WA <= 5'h08; OREG_RAM_D <= 8'h00;                                                       OREG_RAM_WE <= 2'b11; end
+							10'd0571: begin OREG_RAM_WA <= 5'h08; OREG_RAM_D <= 8'h01;                                                       OREG_RAM_WE <= 2'b11; end
 							10'd0521: begin OREG_RAM_WA <= 5'h09; OREG_RAM_D <= {4'b0000,AC};                                                OREG_RAM_WE <= 2'b11; end
 							10'd0471: begin OREG_RAM_WA <= 5'h0A; OREG_RAM_D <= {1'b0,DOTSEL,1'b1,SSHRES_N,MSHNMI_N,1'b1,SYSRES_N,SNDRES_N}; OREG_RAM_WE <= 2'b11; end
 							10'd0421: begin OREG_RAM_WA <= 5'h0B; OREG_RAM_D <= {1'b0,CDRES_N,6'b000010};                                    OREG_RAM_WE <= 2'b11; end
@@ -792,7 +795,9 @@ module SMPC_HLE (
 							
 							8'h18: begin		//NMIREQ
 								MSHNMI_N <= 0;
-								COMM_ST <= CS_END;
+								WAIT_CNT <= 16'd4 - 16'd2;
+								WAIT_ST <= CS_NMI_REL;
+								COMM_ST <= CS_WAIT;
 							end
 							
 							8'h19: begin		//RESENAB
@@ -884,9 +889,17 @@ module SMPC_HLE (
 					CS_INTBACK_BREAK: begin
 						INTBACK_EXEC <= 0;
 						INTBACK_PERI <= 0;
+						INTBACK_IMM <= 0;
 						CHECK_CONTINUE <= 0;
 						SF <= 0;
 						COMM_ST <= CS_IDLE;
+					end
+					
+					CS_NMI_REL: begin
+						MSHNMI_N <= 1;
+						WAIT_CNT <= 16'd24 - 16'd2;
+						WAIT_ST <= CS_END;
+						COMM_ST <= CS_WAIT;
 					end
 					
 					CS_END: begin
@@ -923,8 +936,6 @@ module SMPC_HLE (
 							8'h0D: begin		//SYSRES
 								MSHRES_N <= 1;
 								MSHNMI_N <= 1;
-								SSHRES_N <= 1;
-								SSHNMI_N <= 1;
 							end
 							
 							8'h0E: begin		//CKCHG352
@@ -1032,10 +1043,15 @@ module SMPC_HLE (
 							PORT_ST <= PS_DPAD_0;
 //						else if (MD_ID == 4'hD)
 //							PORT_ST <= PS_MD_0;
+`ifdef POCKET_CUT_SMPC_HLE
+						else if (MD_ID == 4'h3 || MD_ID == 4'h5)
+							PORT_ST <= PS_NEXT;
+`else
 						else if (MD_ID == 4'h3)
 							PORT_ST <= PS_MOUSE_0;
 						else if (MD_ID == 4'h5)
 							PORT_ST <= PS_ID5_0;
+`endif
 						else if (MD_ID == 4'hF || MD_ID == 4'hA)
 							PORT_ST <= PS_NOTHING_STUNNER;
 						else 
@@ -1102,6 +1118,7 @@ module SMPC_HLE (
 						PORT_ST <= PS_NEXT;
 					end
 					
+`ifndef POCKET_CUT_SMPC_HLE   //Saturn build: standard digital pads only
 					//Mouse,Wheel(Arcade racer)
 					PS_MOUSE_0: begin
 						DDR[PORT_NUM][`THTR] <= 2'b11;
@@ -1261,6 +1278,7 @@ module SMPC_HLE (
 					end
 					
 					
+`endif
 					PS_NEXT: begin
 						DDR[PORT_NUM][`THTR] <= 2'b11;
 						PDR_O[PORT_NUM][`THTR] <= 2'b11;

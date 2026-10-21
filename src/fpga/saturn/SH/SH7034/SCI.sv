@@ -1,5 +1,5 @@
 module SH7034_SCI 
-#(parameter bit N=0, bit DISABLE=0)
+#(parameter bit N=0, bit DISABLE=0, bit PRUNE=0)
 (
 	input             CLK,
 	input             RST_N,
@@ -33,6 +33,10 @@ module SH7034_SCI
 );
 
 	import SH7034_PKG::*;
+
+	//Write masks of the CD-block firmware (PRUNE=1, see SH7034_fw.sv)
+	localparam bit [7:0] SMR_FWM = PRUNE ? SMR_WMASK & SH7034_FW::SMR : SMR_WMASK;
+	localparam bit [7:0] SCR_FWM = PRUNE ? SCR_WMASK & SH7034_FW::SCR : SCR_WMASK;
 
 	RDR_t       RDR;
 	TDR_t       TDR;
@@ -369,11 +373,11 @@ module SH7034_SCI
 				if (REG_SEL && IBUS_WE && IBUS_REQ) begin
 					case ({IBUS_A[2:1],1'b0})
 						3'h0: begin
-							if (IBUS_BA[3]) SMR <= IBUS_DI[31:24] & SMR_WMASK;
+							if (IBUS_BA[3]) SMR <= IBUS_DI[31:24] & SMR_FWM;
 							if (IBUS_BA[2]) BRR <= IBUS_DI[23:16] & BRR_WMASK;
 						end 
 						3'h2: begin
-							if (IBUS_BA[1]) SCR <= IBUS_DI[15:8] & SCR_WMASK;
+							if (IBUS_BA[1]) SCR <= IBUS_DI[15:8] & SCR_FWM;
 							if (IBUS_BA[0]) TDR <= IBUS_DI[7:0] & TDR_WMASK;
 						end 
 						default:;
@@ -396,9 +400,9 @@ module SH7034_SCI
 			end else if (CE_F && !DISABLE) begin
 				if (REG_SEL && !IBUS_WE && IBUS_REQ) begin
 					case (IBUS_A[2:0])
-						3'h0: begin REG_DO <= {4{SMR & SMR_WMASK}}; end
+						3'h0: begin REG_DO <= {4{SMR & SMR_FWM}}; end
 						3'h1: begin REG_DO <= {4{BRR & BRR_WMASK}}; end
-						3'h2: begin REG_DO <= {4{SCR & SCR_WMASK}}; end
+						3'h2: begin REG_DO <= {4{SCR & SCR_FWM}}; end
 						3'h3: begin REG_DO <= {4{TDR & TDR_WMASK}}; end
 						3'h4: begin REG_DO <= {4{SSR & SSR_RMASK}}; SSR_READED <= SSR & SSR_RMASK; end
 						3'h5: begin REG_DO <= {4{RDR & RDR_RMASK}}; end

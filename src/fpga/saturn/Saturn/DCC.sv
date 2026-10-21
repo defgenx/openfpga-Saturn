@@ -132,17 +132,18 @@ module DCC
 		bit WE_N_OLD;
 		
 		if (!RST_N) begin
-			MFTI = 1;
-			SFTI = 1;
+			MFTI <= 1;
+			SFTI <= 1;
 		end else if (!RES_N) begin
-			MFTI = 1;
-			SFTI = 1;
+			MFTI <= 1;
+			SFTI <= 1;
 		end else if (CE_R) begin
-			MFTI = 1;
-			SFTI = 1;
+			MFTI <= 1;
+			SFTI <= 1;
 			
-			WE_N_OLD <= WE_N[0];
-			if (!WE_N[0] && WE_N_OLD) begin
+			// Nonblocking only: a blocking write races the FRT's FTI sample at the same CE_R edge. Any lane counts as a write.
+			WE_N_OLD <= &WE_N;
+			if (!(&WE_N) && WE_N_OLD) begin
 				if (SINIT_SEL) MFTI <= 0;
 				if (MINIT_SEL) SFTI <= 0;
 			end

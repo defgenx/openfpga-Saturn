@@ -154,6 +154,72 @@ module SH7604_CACHE (
 	CACHE_VALID valid2(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CVALID_D), .wren(CVALID_WE[2] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CVALID_Q[2]));
 	CACHE_VALID valid3(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CVALID_D), .wren(CVALID_WE[3] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CVALID_Q[3]));
 	
+`ifdef POCKET_CUT_SH2_PURGE
+	// Epoch purge in place of the per-entry dirty flip-flops (docs/cuts.md). A stamp 0 is dead; a live
+	// entry carries EPOCH (1..7). CCR.CP advances EPOCH; the scrubber rewrites stale stamps to 0 within one
+	// 64-set lap so that a stamp cannot match again after the epoch wraps.
+	bit   [2:0] EPOCH;
+	bit         INIT;
+	bit   [5:0] SC_PTR;
+	bit   [4:0] SC_STALE;
+	bit         SC_SKIP;
+	wire  [4:0] SC_WE_ALL = {5{INIT}} | SC_STALE & {5{~SC_SKIP}};
+	wire        SC_WR = CE_F && (INIT || (|SC_STALE && !SC_SKIP));
+	wire  [2:0] ST_D = SC_WR ? 3'd0 : CACHE_LINE_PURGE ? 3'd0 : EPOCH;
+	wire  [5:0] ST_WA = SC_WR ? SC_PTR : CACHE_WR_ADDR[9:4];
+	wire  [4:0] ST_WE = SC_WR ? SC_WE_ALL : ({LRU_WE, CVALID_WE} & {5{EN & CE_R}});
+	wire  [2:0] STW_Q[4];
+	wire  [2:0] STW_S[4];
+	wire  [2:0] STL_A_Q, STL_B_Q, STL_S_Q;
+	CACHE_STAMP stw0(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[0]), .rdaddress(CBUS_A[9:4]), .q(STW_Q[0]));
+	CACHE_STAMP stw1(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[1]), .rdaddress(CBUS_A[9:4]), .q(STW_Q[1]));
+	CACHE_STAMP stw2(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[2]), .rdaddress(CBUS_A[9:4]), .q(STW_Q[2]));
+	CACHE_STAMP stw3(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[3]), .rdaddress(CBUS_A[9:4]), .q(STW_Q[3]));
+	CACHE_STAMP sts0(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[0]), .rdaddress(SC_PTR), .q(STW_S[0]));
+	CACHE_STAMP sts1(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[1]), .rdaddress(SC_PTR), .q(STW_S[1]));
+	CACHE_STAMP sts2(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[2]), .rdaddress(SC_PTR), .q(STW_S[2]));
+	CACHE_STAMP sts3(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[3]), .rdaddress(SC_PTR), .q(STW_S[3]));
+	CACHE_STAMP stla(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[4]), .rdaddress(CACHE_WR_ADDR[9:4]), .q(STL_A_Q));
+	CACHE_STAMP stlb(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[4]), .rdaddress(CBUS_A[9:4]), .q(STL_B_Q));
+	CACHE_STAMP stls(.clock(CLK), .wraddress(ST_WA), .data(ST_D), .wren(ST_WE[4]), .rdaddress(SC_PTR), .q(STL_S_Q));
+	
+	wire  [3:0] TAG_DIRTY_W = {STW_Q[3] != EPOCH, STW_Q[2] != EPOCH, STW_Q[1] != EPOCH, STW_Q[0] != EPOCH} | {4{INIT}};
+	wire        LRU_A_DIRTY = (STL_A_Q != EPOCH) | INIT;
+	wire        LRU_B_DIRTY = (STL_B_Q != EPOCH) | INIT;
+	
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			EPOCH <= 3'd1;
+		end
+		else if (EN && CE_R) begin
+		end
+		else if (CCR.CP) begin
+			EPOCH <= (EPOCH == 3'd7) ? 3'd1 : EPOCH + 3'd1;
+		end
+	end
+	
+	// Scrubber: decide in the CE_R clock, write the dead stamp in the following CE_F clock (no CE_R write then).
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			INIT <= 1;
+			SC_PTR <= '0;
+			SC_STALE <= '0;
+			SC_SKIP <= 0;
+		end
+		else begin
+			if (CE_F) begin
+				SC_PTR <= SC_PTR + 6'd1;
+				if (SC_PTR == 6'd63) INIT <= 0;
+			end
+			if (CE_R) begin
+				SC_STALE <= {STL_S_Q != 3'd0 && STL_S_Q != EPOCH,
+				             STW_S[3] != 3'd0 && STW_S[3] != EPOCH, STW_S[2] != 3'd0 && STW_S[2] != EPOCH,
+				             STW_S[1] != 3'd0 && STW_S[1] != EPOCH, STW_S[0] != 3'd0 && STW_S[0] != EPOCH};
+				SC_SKIP <= EN && (|CVALID_WE || LRU_WE) && CACHE_WR_ADDR[9:4] == SC_PTR;
+			end
+		end
+	end
+`else
 	reg [63:0] TAG_DIRTY[4];
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -183,10 +249,15 @@ module SH7604_CACHE (
 		end
 	end
 	
+	wire  [3:0] TAG_DIRTY_W = {TAG_DIRTY[3][CBUS_A[9:4]], TAG_DIRTY[2][CBUS_A[9:4]], TAG_DIRTY[1][CBUS_A[9:4]], TAG_DIRTY[0][CBUS_A[9:4]]};
+	wire        LRU_A_DIRTY = LRU_DIRTY[CACHE_WR_ADDR[9:4]];
+	wire        LRU_B_DIRTY = LRU_DIRTY[CBUS_A[9:4]];
+`endif
+	
 	wire  [5:0] LRU_WRADDR = CACHE_WR_ADDR[9:4];
 	wire  [5:0] LRU_A_RDADDR = CACHE_WR_ADDR[9:4];
 	wire  [5:0] LRU_B_RDADDR = CBUS_A[9:4];
-	wire  [5:0] LRU_D = CACHE_ADDR_WRITE ? CBUS_DI[9:4] : LRUSelect(CACHE_WR_WAY, LRU_A_Q & {6{~LRU_DIRTY[LRU_A_RDADDR]}});
+	wire  [5:0] LRU_D = CACHE_ADDR_WRITE ? CBUS_DI[9:4] : LRUSelect(CACHE_WR_WAY, LRU_A_Q & {6{~LRU_A_DIRTY}});
 	wire        LRU_WE = CACHE_UPDATE | CACHE_WRITE | CACHE_READ | CACHE_ADDR_WRITE;
 	
 	bit  [5:0] LRU_A_Q,LRU_B_Q;
@@ -196,7 +267,7 @@ module SH7604_CACHE (
 	always_comb begin	
 		bit       DIRTY;
 
-		DIRTY = LRU_DIRTY[LRU_B_RDADDR];
+		DIRTY = LRU_B_DIRTY;
 		
 		LRU_DATA = LRU_B_Q & {6{~DIRTY}};
 	end
@@ -205,10 +276,7 @@ module SH7604_CACHE (
 		bit [ 3: 0] DIRTY;
 		bit [31: 0] CACHE_ADDR_AREA_DATA;
 		
-		DIRTY[0] = TAG_DIRTY[0][CBUS_A[9:4]];
-		DIRTY[1] = TAG_DIRTY[1][CBUS_A[9:4]];
-		DIRTY[2] = TAG_DIRTY[2][CBUS_A[9:4]];
-		DIRTY[3] = TAG_DIRTY[3][CBUS_A[9:4]];
+		DIRTY = TAG_DIRTY_W;
 	
 		WAY_TAG[0] = CTAG_Q[0] == CBUS_A[28:10];
 		WAY_TAG[1] = CTAG_Q[1] == CBUS_A[28:10];

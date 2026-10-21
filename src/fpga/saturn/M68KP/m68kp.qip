@@ -1,0 +1,7 @@
+# 68K sound CPU for POCKET_M68KP: FX68K copy with the register file in MLAB and the opcode decode in ROM.
+# Needs microrom.mem and nanorom.mem in the project directory, like FX68K.
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m68kp.sv ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m68kp_alu.sv ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m68kp_pla.sv ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m68kp_plarom.sv ]
+set_global_assignment -name SDC_FILE           [file join $::quartus(qip_path) m68kp.sdc ]

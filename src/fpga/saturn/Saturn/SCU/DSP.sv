@@ -118,15 +118,19 @@ module SCU_DSP (
 	//ALU
 	ALUReg_t   ALU_Q;
 	bit        ALU_C;
+	//One 48-bit adder serves ADD, SUB and ADD48 (SUB adds the inverted operand with carry-in).
+	wire        ALU_SUB = IC[29:26] == 4'b0101;
+	wire [32:0] ALU_LS = {1'b0,AC.L} + {1'b0,P.L ^ {32{ALU_SUB}}} + {32'd0,ALU_SUB};
+	wire [16:0] ALU_HS = {1'b0,AC.H} + {1'b0,P.H} + {16'd0,ALU_LS[32]};
 	always_comb begin
 		{ALU_C,ALU_Q} = {1'b0,AC};
 		case (IC[29:26])
 			4'b0001: {ALU_C,ALU_Q.L} = {1'b0,AC.L} & {1'b0,P.L};
 			4'b0010: {ALU_C,ALU_Q.L} = {1'b0,AC.L} | {1'b0,P.L};
 			4'b0011: {ALU_C,ALU_Q.L} = {1'b0,AC.L} ^ {1'b0,P.L};
-			4'b0100: {ALU_C,ALU_Q.L} = {1'b0,AC.L} + {1'b0,P.L};
-			4'b0101: {ALU_C,ALU_Q.L} = {1'b0,AC.L} - {1'b0,P.L};
-			4'b0110: {ALU_C,ALU_Q  } = {1'b0,AC  } + {1'b0,P  };
+			4'b0100: {ALU_C,ALU_Q.L} = ALU_LS;
+			4'b0101: {ALU_C,ALU_Q.L} = {~ALU_LS[32],ALU_LS[31:0]};
+			4'b0110: {ALU_C,ALU_Q  } = {ALU_HS,ALU_LS[31:0]};
 			4'b1000: {ALU_Q.L,ALU_C} = {AC.L[31],AC.L};
 			4'b1001: {ALU_Q.L,ALU_C} = {AC.L[0],AC.L};
 			4'b1010: {ALU_C,ALU_Q.L} = {AC.L,1'b0};
@@ -195,9 +199,14 @@ module SCU_DSP (
 	bit  [31: 0] D1BUS;
 	bit  [31: 0] XBUS;
 	bit  [31: 0] YBUS;
+	//The Y bank mux also serves the control-port data read (RE and CE are never in the same cycle).
+	//The X bank mux also serves DMA_DO: DMA_DO is sampled only in CE_F cycles, X only with CE (a CE_R cycle).
+	wire [31:0] XQ = DATA_RAM_Q[CE_F ? DMAI.RAMS : DECI.XBUS.RAMS];
+	wire        YQ_TR = RE && A == 2'b11;
+	wire [31:0] YQ = DATA_RAM_Q[YQ_TR ? DATA_TRANS_ADDR[7:6] : DECI.YBUS.RAMS];
 	always_comb begin
-		XBUS = DATA_RAM_Q[DECI.XBUS.RAMS];
-		YBUS = DATA_RAM_Q[DECI.YBUS.RAMS];
+		XBUS = XQ;
+		YBUS = YQ;
 		
 		if (DECI.D1BUS.IMMS) begin
 			D1BUS = ImmSext(IC, DECI.D1BUS.IMMT);
@@ -212,7 +221,7 @@ module SCU_DSP (
 			D1BUS = '1;
 		end
 		
-		D0BUSO = DATA_RAM_Q[DMAI.RAMS];
+		D0BUSO = DATA_RAM_Q[DMAI.RAMS];	//debug taps only
 	end
 	
 	always @(posedge CLK or negedge RST_N) begin
@@ -483,7 +492,7 @@ module SCU_DSP (
 		end
 	end
 	
-	assign DMA_DO = D0BUSO;
+	assign DMA_DO = XQ;
 	assign DMA_WE = DMAI.DIR;
 	assign DMA_RUN = T0;
 	assign DMA_LAST = (TN0_NEXT == 8'd0);
@@ -596,7 +605,7 @@ module SCU_DSP (
 						2'b01: DO <= '0;
 						2'b10: DO <= '0;
 						2'b11: begin
-							DO <= !EX || EP ? DATA_RAM_Q[DATA_TRANS_ADDR[7:6]] : '1;
+							DO <= !EX || EP ? YQ : '1;
 							DATA_TRANS_RE <= 1;
 						end
 						default: DO <= '0;

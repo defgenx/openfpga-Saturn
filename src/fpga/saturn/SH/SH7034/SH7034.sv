@@ -1,6 +1,6 @@
 module SH7034
 #(
-	parameter bit UBC_DISABLE=0, bit SCI0_DISABLE=0, bit SCI1_DISABLE=0, bit WDT_DISABLE=0
+	parameter bit UBC_DISABLE=0, bit SCI0_DISABLE=0, bit SCI1_DISABLE=0, bit WDT_DISABLE=0, bit FW_PRUNE=0
 )
 (
 	input             CLK,
@@ -310,7 +310,7 @@ module SH7034
 	assign CBUS_WAIT = IBUS_WAIT;
 	
 	wire [31:0] MULT_DI = |MAC_SEL && MAC_OP[3:2] == 2'b10 ? IBUS_DI : CBUS_DO;
-	SH7034_MULT mult
+	SH7034_MULT #(FW_PRUNE) mult
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -378,7 +378,7 @@ module SH7034
 	bit         DBUS_REQ;
 	bit         DBUS_WAIT;
 	bit         DBUS_LOCK;
-	SH7034_DMAC dmac
+	SH7034_DMAC #(FW_PRUNE) dmac
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -481,7 +481,7 @@ module SH7034
 	bit  [15:0] IDI;
 	bit  [15:0] IDO;
 	bit         BUS_RLS;
-	SH7034_BSC #(.AREA3(0), .W3(1), .IW3(0), .LW3(0)) bsc
+	SH7034_BSC #(.AREA3(0), .W3(1), .IW3(0), .LW3(0), .PRUNE(FW_PRUNE)) bsc
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -518,7 +518,7 @@ module SH7034
 		.BUS_RLS(BUS_RLS)
 	);
 	
-	SH7034_INTC intc
+	SH7034_INTC #(FW_PRUNE) intc
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -607,7 +607,7 @@ module SH7034
 		end
 	end
 
-	SH7034_SCI #(0,SCI0_DISABLE) sci0
+	SH7034_SCI #(0,SCI0_DISABLE,FW_PRUNE) sci0
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -640,7 +640,7 @@ module SH7034
 		.ERI_IRQ(ERI0_IRQ)
 	);
 
-	SH7034_SCI #(1,SCI1_DISABLE) sci1
+	SH7034_SCI #(1,SCI1_DISABLE,FW_PRUNE) sci1
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -673,7 +673,7 @@ module SH7034
 		.ERI_IRQ(ERI1_IRQ)
 	);
 	
-	SH7034_ITU itu
+	SH7034_ITU #(FW_PRUNE) itu
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -745,7 +745,7 @@ module SH7034
 		.MRES(WDT_MRES)
 	);
 
-	SH7034_PFC pfc
+	SH7034_PFC #(FW_PRUNE) pfc
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
