@@ -43,12 +43,12 @@ module altsyncram #(
 	reg [width_b-1:0] q;
 	integer i;
 	initial for (i = 0; i < numwords_a; i = i + 1) mem[i] = 0;
-	// outdata_reg_b = "CLOCK0": the block's output register, enabled by clocken3,
+	// outdata_reg_b = "CLOCK1" (clock1 tied to clock0): the block's output register, enabled by clocken3,
 	// holds what the array returned for the registered address.
 	reg [widthad_b-1:0] areg;
-	// outdata_aclr_b = "CLEAR0": aclr0 clears the output register asynchronously.
-	always @(posedge clock0 or posedge aclr0) if (aclr0 && outdata_aclr_b == "CLEAR0") q <= 0; else begin
-		if (outdata_reg_b == "CLOCK0") begin
+	// outdata_aclr_b = "CLEAR1": aclr1 clears the output register asynchronously.
+	always @(posedge clock0 or posedge aclr1) if (aclr1 && outdata_aclr_b == "CLEAR1") q <= 0; else begin
+		if (outdata_reg_b == "CLOCK1") begin
 			if (clocken3) q <= mem[areg];
 		end else
 			q <= mem[address_b];
