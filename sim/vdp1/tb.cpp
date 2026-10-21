@@ -583,7 +583,7 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 			else if (k < 8) T->m.q.push_back(rd16(0x80000 + (sr.u(0x20000) * 2), sr.u(4)));
 			else T->m.q.push_back(rd16(REG + 0x10 + 2 * sr.u(4), sr.u(3)));
 			if (sr.chance(10)) {  // burst write into scratch
-				Op o; o.wr = true; o.burst = true; o.w = W_SCRATCH + 0x900 + sr.u(0x100);
+				Op o; o.wr = true; o.burst = true; o.w = sr.chance(50) ? (u32)(W_SCRATCH + 0x900 + sr.u(0x100)) : (u32)(0x40000 + sr.u(0x1F000));
 				int nb = sr.range(2, 8);
 				for (int j = 0; j < nb; j++) o.d.push_back((u16)sr.next());
 				o.gap = sr.u(4);
