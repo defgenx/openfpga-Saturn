@@ -33,7 +33,21 @@ struct Mem {
 };
 static Mem mem_a, mem_b, mem_c;
 
+#ifdef DBGSTATE
+#include "Vtb_scu___024root.h"
+static void dump_state() {
+	auto* r = d->rootp;
+	printf("REF: st=%d wpos=%d rpos=%d size=%d rba=%d dsp=%d ind=%d buf=", r->tb_scu__DOT__ref_i__DOT__DMA_ST, r->tb_scu__DOT__ref_i__DOT__DMA_BUF_WPOS, r->tb_scu__DOT__ref_i__DOT__DMA_BUF_RPOS, r->tb_scu__DOT__ref_i__DOT__DMA_BUF_SIZE, r->tb_scu__DOT__ref_i__DOT__unnamedblk2__DOT__DMA_RBA, r->tb_scu__DOT__ref_i__DOT__unnamedblk2__DOT__DMA_DSP, r->tb_scu__DOT__ref_i__DOT__DMA_IND);
+	for (int i = 0; i < 8; i++) printf("%02x ", r->tb_scu__DOT__ref_i__DOT__DMA_BUF[i]);
+	printf("\nDUT: st=%d wpos=%d rpos=%d size=%d rba=%d dsp=%d ind=%d buf=", r->tb_scu__DOT__dut_i__DOT__DMA_ST, r->tb_scu__DOT__dut_i__DOT__DMA_BUF_WPOS, r->tb_scu__DOT__dut_i__DOT__DMA_BUF_RPOS, r->tb_scu__DOT__dut_i__DOT__DMA_BUF_SIZE, r->tb_scu__DOT__dut_i__DOT__DMA_RBA, r->tb_scu__DOT__dut_i__DOT__unnamedblk4__DOT__DMA_DSP, r->tb_scu__DOT__dut_i__DOT__DMA_IND);
+	for (int i = 0; i < 8; i++) printf("%02x ", r->tb_scu__DOT__dut_i__DOT__DMA_BUF[i]);
+	printf("\n");
+}
+#endif
 static void fail(const char* what) {
+#ifdef DBGSTATE
+	dump_state();
+#endif
 	uint32_t mm = d->MM;
 	printf("MISMATCH cycle %llu (%s):", (unsigned long long)cyc, what);
 	for (int i = 0; i < 32; i++) if (mm >> i & 1) printf(" %s", OUT_NAMES[i]);
@@ -475,6 +489,9 @@ int main(int argc, char** argv) {
 	       (unsigned long long)seed, (unsigned long long)ncyc, ce_mode, fast,
 	       (unsigned long long)ops_done, (unsigned long long)ivec_done, res_cnt, (unsigned long long)stall_resets, rdlog.size());
 	d->final();
+#if VM_COVERAGE
+	Verilated::threadContextp()->coveragep()->write("coverage.dat");
+#endif
 	delete d;
 	return 0;
 }

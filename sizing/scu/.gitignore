@@ -1,3 +1,6 @@
 out_*/
 db/
 incremental_db/
+snap/
+scu_*.qsf
+scu_*.qpf

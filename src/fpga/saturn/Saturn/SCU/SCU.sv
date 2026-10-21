@@ -359,9 +359,25 @@ module SCU
 	bit  [ 2:0] DMA_BUF_WPOS;
 	bit  [ 2:0] DMA_BUF_RPOS;
 	bit  [ 2:0] DMA_BUF_SIZE;
+	bit  [ 1:0] DMA_RBA;
 	bit  [ 3:0] DMA_WBE;
 	bit         DMA_BUF_RDY;
 	bit         DMA_IND;
+	
+	//A push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS; byte i takes
+	//source byte DMA_PUSH_K[i] when DMA_PUSH_V[i]. DMA_RBA and DMA_BUF_WPOS are 0 for DSP transfers.
+	bit  [ 1:0] DMA_PUSH_K[8];
+	bit         DMA_PUSH_V[8];
+	always_comb begin
+		bit [3:0] k;
+		bit [2:0] ii;
+		for (int i=0; i<8; i++) begin
+			ii = i;
+			k = {1'b0,ii - DMA_BUF_WPOS} + {2'b00,DMA_RBA};
+			DMA_PUSH_K[i] = k[1:0];
+			DMA_PUSH_V[i] = ~k[3] & ~k[2];
+		end
+	end
 	
 	bit DMA_FACT[3];
 	always_comb begin
@@ -408,7 +424,6 @@ module SCU
 		bit  [ 2:0] DMA_WTN_DEC;
 		bit  [19:0] DMA_RTN_NEXT;
 		bit  [19:0] DMA_WTN_NEXT;
-		bit  [ 1:0] DMA_RBA;
 		bit  [ 1:0] DMA_IND_REG;
 		bit         DMA_LAST;
 		bit         DMA_DSP;
@@ -461,6 +476,10 @@ module SCU
 		bit         CBUS_DMA_OUT;
 		bit         CBUS_READ_DONE;
 		bit  [31:0] RD_DATA;
+		bit  [31:0] PUSH_DATA;
+		bit         DSP_PUSH;
+		bit         PUSH_RD;
+		bit         PUSH_RDD;
 				
 		if (!RST_N) begin
 			DR <= '{'0,'0,'0};
@@ -1792,6 +1811,7 @@ module SCU
 			
 			//DMA
 			DMA_END = 0;
+			DSP_PUSH = 0;
 			case (DMA_ST)
 				DMA_IDLE: if (CE_R) begin
 					DSTA.D0MV <= 0;//?
@@ -2154,10 +2174,7 @@ module SCU
 				DMA_DSP_BBUS,
 				DMA_DSP_CBUS: if (CE_F) begin
 					if (DSP_DMA_REQ && !DMA_BUF_SIZE) begin
-						{DMA_BUF[DMA_BUF_WPOS+3'd0],
-						 DMA_BUF[DMA_BUF_WPOS+3'd1],
-						 DMA_BUF[DMA_BUF_WPOS+3'd2],
-						 DMA_BUF[DMA_BUF_WPOS+3'd3]} <= DSP_DMA_DO;
+						DSP_PUSH = 1;
 						DMA_BUF_WPOS <= DMA_BUF_WPOS + 3'd4;
 						DMA_BUF_SIZE <= DMA_BUF_SIZE + 3'd4;
 						DSP_DMA_ACK <= 1;
@@ -2249,24 +2266,24 @@ module SCU
 			
 			if (CE_F) begin
 				RD_DATA = ABUS_READ_DONE ? ABUS_BUF : BBUS_READ_DONE ? BBUS_BUF : CCACHE_Q;
-				if ((ABUS_READ_DONE || BBUS_READ_DONE || (CBUS_READ_DONE && !DMA_IND)) && DMA_BUF_SIZE < 3'd4 && !DMA_DSP) begin
-					case (DMA_RBA[1:0])
-						2'b00: {DMA_BUF[DMA_BUF_WPOS+3'd0],DMA_BUF[DMA_BUF_WPOS+3'd1],DMA_BUF[DMA_BUF_WPOS+3'd2],DMA_BUF[DMA_BUF_WPOS+3'd3]} <= RD_DATA[31:0];
-						2'b01: {DMA_BUF[DMA_BUF_WPOS+3'd0],DMA_BUF[DMA_BUF_WPOS+3'd1],DMA_BUF[DMA_BUF_WPOS+3'd2]}                            <= RD_DATA[23:0];
-						2'b10: {DMA_BUF[DMA_BUF_WPOS+3'd0],DMA_BUF[DMA_BUF_WPOS+3'd1]}                                                       <= RD_DATA[15:0];
-						2'b11: {DMA_BUF[DMA_BUF_WPOS+3'd0]}                                                                                  <= RD_DATA[ 7:0];
-					endcase
-					case (DMA_RBA[1:0])
-						2'b00: begin DMA_BUF_WPOS <= DMA_BUF_WPOS + 3'd4; DMA_BUF_SIZE <= DMA_BUF_SIZE + 3'd4; end
-						2'b01: begin DMA_BUF_WPOS <= DMA_BUF_WPOS + 3'd3; DMA_BUF_SIZE <= DMA_BUF_SIZE + 3'd3; end
-						2'b10: begin DMA_BUF_WPOS <= DMA_BUF_WPOS + 3'd2; DMA_BUF_SIZE <= DMA_BUF_SIZE + 3'd2; end
-						2'b11: begin DMA_BUF_WPOS <= DMA_BUF_WPOS + 3'd1; DMA_BUF_SIZE <= DMA_BUF_SIZE + 3'd1; end
-					endcase
+				PUSH_RD = (ABUS_READ_DONE || BBUS_READ_DONE || (CBUS_READ_DONE && !DMA_IND)) && DMA_BUF_SIZE < 3'd4 && !DMA_DSP;
+				PUSH_RDD = (ABUS_READ_DONE || BBUS_READ_DONE || CBUS_READ_DONE) && DMA_DSP;
+				//Bytes 0-3 take RD_DATA when PUSH_RDD (it wins over the DSP push), the others follow WPOS.
+				if (PUSH_RD || PUSH_RDD || DSP_PUSH) begin
+					PUSH_DATA = DSP_PUSH ? DSP_DMA_DO : RD_DATA;
+					for (int i=0; i<8; i++) begin
+						if (i < 4 && PUSH_RDD)
+							DMA_BUF[i] <= RD_DATA[8*(3-i) +: 8];
+						else if (DMA_PUSH_V[i])
+							DMA_BUF[i] <= PUSH_DATA[8*(3-DMA_PUSH_K[i]) +: 8];
+					end
+				end
+				if (PUSH_RD) begin
+					DMA_BUF_WPOS <= DMA_BUF_WPOS + (3'd4 - {1'b0,DMA_RBA});
+					DMA_BUF_SIZE <= DMA_BUF_SIZE + (3'd4 - {1'b0,DMA_RBA});
 					DMA_RBA <= '0;
 				end
-				if ((ABUS_READ_DONE || BBUS_READ_DONE || CBUS_READ_DONE) && DMA_DSP) begin
-					{DMA_BUF[0],DMA_BUF[1],DMA_BUF[2],DMA_BUF[3]} <= RD_DATA;
-					
+				if (PUSH_RDD) begin
 					DSP_DMA_ACK <= 1;
 					if (DSP_DMA_LAST) begin
 						DSP_DMA_END <= 1;
