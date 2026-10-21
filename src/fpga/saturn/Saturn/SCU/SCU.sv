@@ -115,9 +115,6 @@ module SCU
 		endcase
 	endfunction
 	
-	//Indirect table word source: B-bus buffer or C-bus data
-	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
-	
 	bit  [26:2] DSP_DR;	//bits 1:0 are always 0
 	bit  [26:0] DSP_DW;
 	bit  [ 2:0] DSP_ADD;
@@ -370,6 +367,16 @@ module SCU
 	bit         DMA_RUN[3];
 	
 	bit         DMA_PEND[4];
+	bit [ 7: 2] REG_A;
+	
+	//DMA channel registers read through one set of channel muxes: the idle-state load happens in a
+	//CE_R cycle (lowest pending channel), the register-file read in a CE_F cycle (channel from REG_A).
+	wire [ 1:0] DMA_PEND_CH = DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;
+	wire [ 1:0] DREG_CH = CE_F ? REG_A[6:5] : DMA_PEND_CH;
+	wire [26:0] DRSEL = DR[DREG_CH][26:0];
+	wire [26:0] DWSEL = DW[DREG_CH][26:0];
+	wire [19:0] DCSEL = DC[DREG_CH][19:0];
+	
 	bit  [ 7:0] DMA_BUF[8];
 	bit  [ 2:0] DMA_BUF_WPOS;
 	bit  [ 2:0] DMA_BUF_RPOS;
@@ -421,6 +428,9 @@ module SCU
 	
 	bit  [31:0] ABUS_BUF;
 	bit  [31:0] BBUS_BUF;
+	//Indirect table word source: B-bus buffer or C-bus data
+	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
+	
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [24:0] ABUS_CA_INNER,BBUS_CA_INNER;
 		bit  [31:0] ABUS_CDI_INNER,BBUS_CDI_INNER;
@@ -1813,16 +1823,16 @@ module SCU
 						DMA_IDX = DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;
 						DMA_PEND[DMA_IDX] <= 0;
 						if (!DMD[DMA_IDX].MOD) begin
-							DMA_RA <= DR[DMA_IDX][26:0];
-							DMA_WA <= DW[DMA_IDX][26:0];
-							DMA_RTN <= DC[DMA_IDX][19:0];
-							DMA_WTN <= DC[DMA_IDX][19:0];
+							DMA_RA <= DRSEL;
+							DMA_WA <= DWSEL;
+							DMA_RTN <= DCSEL;
+							DMA_WTN <= DCSEL;
 							DMA_RADD <= DAD[DMA_IDX].DRA;
 							DMA_WADD <= DAD[DMA_IDX].DWA;
 							DMA_IND <= 0;
 							DMA_ST <= DMA_SELECT;
 						end else begin
-							DMA_IA <= {DW[DMA_IDX][26:2],2'b00};
+							DMA_IA <= {DWSEL[26:2],2'b00};
 							DMA_IND <= 1;
 							DMA_ST <= DMA_IND_START;
 						end
@@ -2886,7 +2896,6 @@ module SCU
 	
 	
 	//Registers
-	bit [ 7: 2] REG_A;
 	bit [31: 0] REG_WDI;
 	bit [ 3: 0] REG_WREN;
 	bit [31: 0] REG_DO;
@@ -2955,15 +2964,10 @@ module SCU
 			
 			if (REG_RWAIT && REG_WAIT_DELAY == 3'd2 && CE_F) begin
 				case ({REG_A,2'b00})
-					8'h00: REG_DO <= DR[0] & DxR_RMASK;
-					8'h04: REG_DO <= DW[0] & DxW_RMASK;
-					8'h08: REG_DO <= DC[0] & D0C_RMASK;
-					8'h20: REG_DO <= DR[1] & DxR_RMASK;
-					8'h24: REG_DO <= DW[1] & DxW_RMASK;
-					8'h28: REG_DO <= DC[1] & D12C_RMASK;
-					8'h40: REG_DO <= DR[2] & DxR_RMASK;
-					8'h44: REG_DO <= DW[2] & DxW_RMASK;
-					8'h48: REG_DO <= DC[2] & D12C_RMASK;
+					8'h00,8'h20,8'h40: REG_DO <= {5'd0,DRSEL} & DxR_RMASK;
+					8'h04,8'h24,8'h44: REG_DO <= {5'd0,DWSEL} & DxW_RMASK;
+					8'h08: REG_DO <= {12'd0,DCSEL} & D0C_RMASK;
+					8'h28,8'h48: REG_DO <= {12'd0,DCSEL} & D12C_RMASK;
 					8'h7C: REG_DO <= DSTA & DSTA_RMASK;
 					
 					8'hA4: REG_DO <= IST & IST_RMASK;
