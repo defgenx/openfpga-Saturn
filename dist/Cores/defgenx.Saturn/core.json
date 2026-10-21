@@ -1,0 +1,36 @@
+{
+  "core": {
+    "magic": "APF_VER_1",
+    "metadata": {
+      "platform_ids": [
+        "saturn"
+      ],
+      "shortname": "Saturn",
+      "description": "Sega Saturn, port of the Saturn_MiSTer core",
+      "author": "defgenx",
+      "url": "https://github.com/defgenx/openfpga-Saturn",
+      "version": "0.0.1",
+      "date_release": "2026-10-21"
+    },
+    "framework": {
+      "target_product": "Analogue Pocket",
+      "version_required": "2.0",
+      "sleep_supported": false,
+      "dock": {
+        "supported": true,
+        "analog_output": false
+      },
+      "hardware": {
+        "link_port": false,
+        "cartridge_adapter": -1
+      }
+    },
+    "cores": [
+      {
+        "name": "default",
+        "id": 0,
+        "filename": "saturn.rbf_r"
+      }
+    ]
+  }
+}

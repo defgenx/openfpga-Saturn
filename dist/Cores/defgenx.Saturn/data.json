@@ -1,0 +1,52 @@
+{
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "name": "BIOS",
+        "id": 0,
+        "required": true,
+        "parameters": "0x2",
+        "filename": "sega_101.bin",
+        "size_exact": 524288,
+        "address": "0x20000000"
+      },
+      {
+        "name": "CD image",
+        "id": 1,
+        "required": true,
+        "parameters": "0x1",
+        "deferload": true,
+        "extensions": ["cue"],
+        "size_maximum": 65536
+      },
+      {
+        "name": "CD track",
+        "id": 2,
+        "required": false,
+        "parameters": "0x1",
+        "deferload": true,
+        "extensions": ["bin"],
+        "size_maximum": "0xFFFFFE00"
+      },
+      {
+        "name": "Backup RAM",
+        "id": 3,
+        "required": false,
+        "parameters": "0x4",
+        "filename": "saturn_bram.sav",
+        "size_exact": 32768,
+        "address": "0x40000000"
+      },
+      {
+        "name": "Cart backup RAM",
+        "id": 4,
+        "required": false,
+        "parameters": "0x4",
+        "filename": "saturn_cart.sav",
+        "size_exact": 524288,
+        "address": "0x50000000"
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "interact": {
+    "magic": "APF_VER_1",
+    "variables": [
+      {
+        "name": "Reset",
+        "id": 1,
+        "type": "action",
+        "enabled": true,
+        "address": "0x80000000",
+        "value": 1
+      },
+      {
+        "name": "Region",
+        "id": 2,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0x80000004",
+        "defaultval": 0,
+        "options": [
+          {
+            "value": 0,
+            "name": "Auto"
+          },
+          {
+            "value": 1,
+            "name": "Japan"
+          },
+          {
+            "value": 2,
+            "name": "USA"
+          },
+          {
+            "value": 3,
+            "name": "Europe"
+          }
+        ]
+      },
+      {
+        "name": "CD Speed",
+        "id": 3,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0x80000008",
+        "defaultval": 0,
+        "options": [
+          {
+            "value": 0,
+            "name": "1x"
+          },
+          {
+            "value": 1,
+            "name": "2x"
+          }
+        ]
+      }
+    ],
+    "messages": []
+  }
+}
