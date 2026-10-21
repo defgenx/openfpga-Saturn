@@ -493,6 +493,15 @@ module VDP1 (
 	bit  [ 8: 0] CMD_PIX_XPOS,CMD_PIX_YPOS;
 	bit          CMD_SKIP_EN,CMD_PIX_EN,DBG_DRAW_EN;
 `endif
+	// Clip window in command-local coordinates. Purely combinational: the inputs only change while a command
+	// table is being loaded, at least a dozen clocks before any drawing state reads the result.
+	wire        CLIP_USR = CMD.CMDPMOD.CLIP && !CMD.CMDPMOD.CMOD;
+	wire [12: 0] LOC_X13 = {LOC_COORD.X[10],LOC_COORD.X};
+	wire [12: 0] LOC_Y13 = {LOC_COORD.Y[10],LOC_COORD.Y};
+	wire [12: 0] SYS_CLIP_X1 = (CLIP_USR ? {{2{USR_CLIP.X1[10]}},USR_CLIP.X1} : 13'd0) - LOC_X13;
+	wire [12: 0] SYS_CLIP_Y1 = (CLIP_USR ? {{2{USR_CLIP.Y1[10]}},USR_CLIP.Y1} : 13'd0) - LOC_Y13;
+	wire [12: 0] SYS_CLIP_X2 = (CLIP_USR ? {{2{USR_CLIP.X2[10]}},USR_CLIP.X2} : {{2{SYS_CLIP.X2[10]}},SYS_CLIP.X2}) - LOC_X13;
+	wire [12: 0] SYS_CLIP_Y2 = (CLIP_USR ? {{2{USR_CLIP.Y2[10]}},USR_CLIP.Y2} : {{2{SYS_CLIP.Y2[10]}},SYS_CLIP.Y2}) - LOC_Y13;
 	bit  [ 8: 0] CMD_DELAY;
 	bit  [ 9: 0] PENALTY_CNT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -515,9 +524,6 @@ module VDP1 (
 		bit [11: 0] LN_MAJ,LN_MIN;
 		bit [16: 3] SPR_OFFSY_NEXT;
 		bit         CLIP_H;
-		bit [ 1: 0] SYS_CLIP_STATE;
-		bit [12: 0] SYS_CLIP_A,SYS_CLIP_B,SYS_CLIP_RES;
-		bit [12: 0] SYS_CLIP_X1,SYS_CLIP_X2,SYS_CLIP_Y1,SYS_CLIP_Y2;
 		bit [12: 0] LINE_DIFF_LEFT_CLIPX1,LINE_DIFF_LEFT_CLIPX2,LINE_DIFF_RIGHT_CLIPX1,LINE_DIFF_RIGHT_CLIPX2;
 		bit         LINE_EQ_LEFT_CLIPX1,LINE_EQ_LEFT_CLIPX2,LINE_EQ_RIGHT_CLIPX1,LINE_EQ_RIGHT_CLIPX2;
 		bit         LINE_GT_LEFT_CLIPX1,LINE_GT_LEFT_CLIPX2,LINE_GT_RIGHT_CLIPX1,LINE_GT_RIGHT_CLIPX2;
@@ -558,37 +564,6 @@ module VDP1 (
 			CMD_ST <= CMDS_IDLE;
 		end else if (EN) begin
 			SPR_OFFSY_NEXT = TEXT_DIRY ? SPR_OFFSY - ORIG_WIDTH[8:3] : SPR_OFFSY + ORIG_WIDTH[8:3];
-			
-			if (CMD.CMDPMOD.CLIP && !CMD.CMDPMOD.CMOD) begin
-				case (SYS_CLIP_STATE)
-					2'd0: SYS_CLIP_A = {{2{USR_CLIP.X1[10]}},USR_CLIP.X1};
-					2'd1: SYS_CLIP_A = {{2{USR_CLIP.Y1[10]}},USR_CLIP.Y1};
-					2'd2: SYS_CLIP_A = {{2{USR_CLIP.X2[10]}},USR_CLIP.X2};
-					2'd3: SYS_CLIP_A = {{2{USR_CLIP.Y2[10]}},USR_CLIP.Y2};
-				endcase
-			end else begin
-				case (SYS_CLIP_STATE)
-					2'd0: SYS_CLIP_A = 13'd0;
-					2'd1: SYS_CLIP_A = 13'd0;
-					2'd2: SYS_CLIP_A = {{2{SYS_CLIP.X2[10]}},SYS_CLIP.X2};
-					2'd3: SYS_CLIP_A = {{2{SYS_CLIP.Y2[10]}},SYS_CLIP.Y2};
-				endcase
-			end
-			case (SYS_CLIP_STATE)
-				2'd0: SYS_CLIP_B = {{1{LOC_COORD.X[10]}},LOC_COORD.X};
-				2'd1: SYS_CLIP_B = {{1{LOC_COORD.Y[10]}},LOC_COORD.Y};
-				2'd2: SYS_CLIP_B = {{1{LOC_COORD.X[10]}},LOC_COORD.X};
-				2'd3: SYS_CLIP_B = {{1{LOC_COORD.Y[10]}},LOC_COORD.Y};
-			endcase
-				
-			SYS_CLIP_RES = $signed(SYS_CLIP_A) - $signed(SYS_CLIP_B);
-			case (SYS_CLIP_STATE)
-				2'd0: SYS_CLIP_X1 <= SYS_CLIP_RES;
-				2'd1: SYS_CLIP_Y1 <= SYS_CLIP_RES;
-				2'd2: SYS_CLIP_X2 <= SYS_CLIP_RES;
-				2'd3: SYS_CLIP_Y2 <= SYS_CLIP_RES;
-			endcase
-			SYS_CLIP_STATE <= SYS_CLIP_STATE + 2'd1;
 			
 			LINE_DIFF_LEFT_CLIPX1 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X1);
 			LINE_DIFF_LEFT_CLIPX2 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X2);
@@ -783,17 +758,14 @@ module VDP1 (
 							
 							4'h8,
 							4'hB: begin	
-								SYS_CLIP_STATE <= '0;
 								CMD_ST <= CMDS_END;
 							end
 							
 							4'h9: begin	
-								SYS_CLIP_STATE <= '0;
 								CMD_ST <= CMDS_END;
 							end
 							
 							4'hA: begin	
-								SYS_CLIP_STATE <= '0;
 								CMD_ST <= CMDS_END;
 							end
 								
