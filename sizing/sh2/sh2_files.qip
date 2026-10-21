@@ -1,0 +1,3 @@
+set_global_assignment -name QIP_FILE ../../src/fpga/saturn/SH/SH7604/SH7604.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH_mem.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH7604_mem.sv

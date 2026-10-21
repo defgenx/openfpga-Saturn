@@ -1,0 +1,20 @@
+mem_pocket                         ALUT  2090  REG  2101  Mbit-kb   1099
+  ddram_pocket:ddram|                ALUT   686  REG   783  Mbit-kb     43
+    ddp_cache_ram:cache0|              ALUT     0  REG     0  Mbit-kb      1
+    ddp_cache_ram:cache1|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache2|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache3|              ALUT     0  REG     0  Mbit-kb      8
+    ddp_cache_ram:cache5|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache6|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache7|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_infifo:ramh_fifo|              ALUT    24  REG    71  Mbit-kb      0
+    ddp_infifo:vdp1vram_fifo|          ALUT    24  REG    53  Mbit-kb      0
+    ddp_ram:ramh_ram|                  ALUT     0  REG    36  Mbit-kb     32
+  load_pocket:loader|                ALUT    99  REG   185  Mbit-kb     14
+  psram_sync:psram0|                 ALUT   251  REG   119  Mbit-kb      0
+  psram_sync:psram1|                 ALUT   241  REG   120  Mbit-kb      0
+  sdram_pocket:sdram|                ALUT   401  REG   533  Mbit-kb      0
+    sdram_clk_out:u_clk|               ALUT     0  REG     0  Mbit-kb      0
+      altddio_out:ddio|                  ALUT     0  REG     0  Mbit-kb      0
+  sram_pocket:sram|                  ALUT    65  REG    68  Mbit-kb      0
+  vdp1_fb_pocket:fb|                 ALUT   346  REG   293  Mbit-kb   1042

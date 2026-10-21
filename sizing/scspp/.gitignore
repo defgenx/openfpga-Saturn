@@ -1,0 +1,5 @@
+snap_*/
+out_*/
+db/
+incremental_db/
+*.log

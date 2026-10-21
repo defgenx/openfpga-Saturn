@@ -1,0 +1,10 @@
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY cpu_femto
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_cpu_femto
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+source ../area_profile.qsf
+set_global_assignment -name SYSTEMVERILOG_FILE femto_top.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-learn-fpga/repo/FemtoRV/RTL/PROCESSOR/femtorv32_quark.v
+set_instance_assignment -name VIRTUAL_PIN ON -to *

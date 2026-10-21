@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Wed Oct 21 07:28:00 2026
+Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Lite Edition
+Revision Name : saturn_min
+Top-level Entity Name : saturn_min_wrap
+Family : Cyclone V
+Logic utilization (in ALMs) : N/A
+Total registers : 24792
+Total pins : 0
+Total virtual pins : 1,000
+Total block memory bits : 720,960
+Total DSP Blocks : 29
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 0
+Total DLLs : 0

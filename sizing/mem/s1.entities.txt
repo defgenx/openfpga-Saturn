@@ -1,0 +1,120 @@
+mem_pocket                         ALUT  2104  REG  2158  Mbit-kb   1474
+  ddram_pocket:ddram|                ALUT   705  REG   783  Mbit-kb     43
+    ddp_cache_ram:cache0|              ALUT     0  REG     0  Mbit-kb      1
+    ddp_cache_ram:cache1|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache2|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache3|              ALUT     0  REG     0  Mbit-kb      8
+    ddp_cache_ram:cache5|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache6|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_cache_ram:cache7|              ALUT     0  REG     0  Mbit-kb      0
+    ddp_infifo:ramh_fifo|              ALUT    24  REG    71  Mbit-kb      0
+    ddp_infifo:vdp1vram_fifo|          ALUT    24  REG    53  Mbit-kb      0
+    ddp_ram:ramh_ram|                  ALUT     0  REG    36  Mbit-kb     32
+  load_pocket:loader|                ALUT   105  REG   185  Mbit-kb     14
+  psram_sync:psram0|                 ALUT   254  REG   164  Mbit-kb      0
+  psram_sync:psram1|                 ALUT   239  REG   165  Mbit-kb      0
+  sdram_pocket:sdram|                ALUT   426  REG   617  Mbit-kb      0
+    sdram_clk_out:u_clk|               ALUT     0  REG     0  Mbit-kb      0
+      altddio_out:ddio|                  ALUT     0  REG     0  Mbit-kb      0
+  sram_pocket:sram|                  ALUT    65  REG    68  Mbit-kb      0
+  vdp1_fb_pocket:fb|                 ALUT   308  REG   176  Mbit-kb   1417
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT    17  REG    34  Mbit-kb      0
+4:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+3:1                                ALUT    16  REG    32  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+3:1                                ALUT     4  REG     8  Mbit-kb      0
+3:1                                ALUT     4  REG     8  Mbit-kb      0
+3:1                                ALUT     9  REG    18  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     9  REG    18  Mbit-kb      0
+3:1                                ALUT    15  REG    30  Mbit-kb      0
+3:1                                ALUT     6  REG    12  Mbit-kb      0
+4:1                                ALUT     2  REG     4  Mbit-kb      0
+4:1                                ALUT    16  REG    32  Mbit-kb      0
+4:1                                ALUT     2  REG     4  Mbit-kb      0
+4:1                                ALUT    16  REG    32  Mbit-kb      0
+4:1                                ALUT     8  REG    16  Mbit-kb      0
+4:1                                ALUT     8  REG    16  Mbit-kb      0
+5:1                                ALUT     4  REG    12  Mbit-kb      0
+5:1                                ALUT     2  REG     6  Mbit-kb      0
+5:1                                ALUT     5  REG    15  Mbit-kb      0
+5:1                                ALUT     5  REG    15  Mbit-kb      0
+6:1                                ALUT     8  REG    32  Mbit-kb      0
+6:1                                ALUT     8  REG    32  Mbit-kb      0
+10:1                               ALUT     2  REG    12  Mbit-kb      0
+6:1                                ALUT    16  REG    64  Mbit-kb      0
+5:1                                ALUT     3  REG     9  Mbit-kb      0
+5:1                                ALUT     8  REG    24  Mbit-kb      0
+5:1                                ALUT     8  REG    24  Mbit-kb      0
+5:1                                ALUT     3  REG     9  Mbit-kb      0
+5:1                                ALUT    23  REG    69  Mbit-kb      0
+5:1                                ALUT    23  REG    69  Mbit-kb      0
+5:1                                ALUT    16  REG    48  Mbit-kb      0
+5:1                                ALUT     5  REG    15  Mbit-kb      0
+5:1                                ALUT     5  REG    15  Mbit-kb      0
+18:1                               ALUT     6  REG    72  Mbit-kb      0
+18:1                               ALUT     6  REG    72  Mbit-kb      0
+9:1                                ALUT     7  REG    42  Mbit-kb      0
+8:1                                ALUT     5  REG    25  Mbit-kb      0
+8:1                                ALUT     2  REG    10  Mbit-kb      0
+8:1                                ALUT     9  REG    45  Mbit-kb      0
+9:1                                ALUT     2  REG    12  Mbit-kb      0
+9:1                                ALUT     2  REG    12  Mbit-kb      0
+9:1                                ALUT     2  REG    12  Mbit-kb      0
+9:1                                ALUT     2  REG    12  Mbit-kb      0
+10:1                               ALUT     6  REG    36  Mbit-kb      0
+10:1                               ALUT     2  REG    12  Mbit-kb      0
+7:1                                ALUT     2  REG     8  Mbit-kb      0
+7:1                                ALUT     2  REG     8  Mbit-kb      0
+8:1                                ALUT     8  REG    40  Mbit-kb      0
+8:1                                ALUT     8  REG    40  Mbit-kb      0
+10:1                               ALUT    32  REG   192  Mbit-kb      0
+9:1                                ALUT     8  REG    48  Mbit-kb      0
+9:1                                ALUT     7  REG    42  Mbit-kb      0
+6:1                                ALUT     2  REG     8  Mbit-kb      0
+13:1                               ALUT     2  REG    16  Mbit-kb      0
+14:1                               ALUT    11  REG    99  Mbit-kb      0
+13:1                               ALUT    13  REG   104  Mbit-kb      0
+14:1                               ALUT     2  REG    18  Mbit-kb      0
+14:1                               ALUT     2  REG    18  Mbit-kb      0
+14:1                               ALUT     2  REG    18  Mbit-kb      0
+14:1                               ALUT     2  REG    18  Mbit-kb      0
+13:1                               ALUT    13  REG   104  Mbit-kb      0
+25:1                               ALUT    18  REG   288  Mbit-kb      0
+16:1                               ALUT     2  REG    20  Mbit-kb      0
+16:1                               ALUT     4  REG    40  Mbit-kb      0
+35:1                               ALUT     2  REG    46  Mbit-kb      0
+35:1                               ALUT     3  REG    69  Mbit-kb      0
+35:1                               ALUT     3  REG    69  Mbit-kb      0
+12:1                               ALUT     2  REG    16  Mbit-kb      0
+12:1                               ALUT     2  REG    16  Mbit-kb      0
+17:1                               ALUT     2  REG    22  Mbit-kb      0
+17:1                               ALUT     2  REG    22  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT    16  REG    32  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     2  REG     4  Mbit-kb      0
+3:1                                ALUT     8  REG    16  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+3:1                                ALUT     3  REG     6  Mbit-kb      0
+8:1                                ALUT     4  REG    20  Mbit-kb      0
+10:1                               ALUT    16  REG    96  Mbit-kb      0
+7:1                                ALUT     2  REG     8  Mbit-kb      0
+7:1                                ALUT     2  REG     8  Mbit-kb      0
+11:1                               ALUT     5  REG    35  Mbit-kb      0
+16:1                               ALUT     4  REG    40  Mbit-kb      0
+16:1                               ALUT     2  REG    20  Mbit-kb      0
+16:1                               ALUT     4  REG    40  Mbit-kb      0
+16:1                               ALUT     2  REG    20  Mbit-kb      0

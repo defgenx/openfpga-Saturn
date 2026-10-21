@@ -1,0 +1,22 @@
+Fitter Status : Failed - Wed Oct 21 16:54:37 2026
+Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Lite Edition
+Revision Name : saturn_min_area
+Top-level Entity Name : saturn_min_wrap
+Family : Cyclone V
+Device : 5CEBA4F23C8
+Timing Models : Final
+Logic utilization (in ALMs) : 27,639 / 18,480 ( 150 % )
+  * Logic utilization warning : A large number of ALMs contain virtual pins and count towards logic utilization
+  * ALMs containing virtual pins : 501 / 18,480 ( 3 % )
+Total registers : 24566
+Total pins : 0 / 224 ( 0 % )
+Total virtual pins : 1,000
+Total block memory bits : 720,960 / 3,153,920 ( 23 % )
+Total RAM Blocks : 0 / 308 ( 0 % )
+Total DSP Blocks : 29 / 66 ( 44 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 0 / 4 ( 0 % )
+Total DLLs : 0 / 4 ( 0 % )

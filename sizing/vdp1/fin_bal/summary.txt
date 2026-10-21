@@ -1,0 +1,2 @@
+VDP1 top: ALUTs  3499 (3412)          regs  1990 (1889)                blockbits  0                  DSP  1          
+; Total registers                 ; 1990                                        ;

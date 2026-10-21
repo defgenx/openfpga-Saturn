@@ -1,0 +1,2 @@
+m10k: mapALM=950 ALUT=1495 REG=951 MEMbits=84,430 MLAB=0
+Logic utilization (in ALMs) : 972 / 18,480 ( 5 % )

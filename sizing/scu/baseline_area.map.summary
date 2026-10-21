@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Wed Oct 21 08:00:05 2026
+Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Lite Edition
+Revision Name : scu_base
+Top-level Entity Name : SCU
+Family : Cyclone V
+Logic utilization (in ALMs) : N/A
+Total registers : 1650
+Total pins : 0
+Total virtual pins : 330
+Total block memory bits : 16,384
+Total DSP Blocks : 3
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 0
+Total DLLs : 0

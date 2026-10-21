@@ -1,0 +1,25 @@
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY cpu_serv
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_cpu_serv
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+source ../area_profile.qsf
+set_global_assignment -name SYSTEMVERILOG_FILE serv_top.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_aligner.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_alu.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_bufreg.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_bufreg2.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_compdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_csr.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_ctrl.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_decode.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_immdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_mem_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_rf_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_rf_ram.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_rf_ram_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_rf_top.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_state.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../../_ref/cpu-serv/repo/rtl/serv_top.v
+set_instance_assignment -name VIRTUAL_PIN ON -to *

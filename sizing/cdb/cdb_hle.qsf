@@ -1,0 +1,31 @@
+# cdb_hle: HLE CD block (SERV + datapath + host registers), standalone map project, 5CEBA4F23C8, area profile.
+# Run: ./run_map.sh . cdb_hle
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY cdb_hle
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_cdb_hle
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+source area_profile.qsf
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/cdb_hle.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/cdb_xfer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/cdb_sink.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/cdb_dram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_aligner.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_alu.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_bufreg.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_bufreg2.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_compdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_csr.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_ctrl.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_decode.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_immdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_mem_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_rf_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_rf_ram.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_rf_ram_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_rf_top.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_state.v
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/CD/hle/serv/serv_top.v
+set_parameter -name FW_FILE "../../src/fpga/saturn/Saturn/CD/hle/cdb_fw.hex"
+set_instance_assignment -name VIRTUAL_PIN ON -to *

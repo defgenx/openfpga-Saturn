@@ -1,0 +1,56 @@
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY SMPC_SERV
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name AUTO_ROM_RECOGNITION ON
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_aligner.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_alu.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_bufreg.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_bufreg2.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_compdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_csr.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_ctrl.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_decode.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_immdec.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_mem_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_rf_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_rf_ram.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_rf_ram_if.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_rf_top.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_state.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/serv_top.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/SMPC_SERV.sv
+set_global_assignment -name SDC_FILE ../clk.sdc
+set_instance_assignment -name VIRTUAL_PIN ON -to RST_N
+set_instance_assignment -name VIRTUAL_PIN ON -to CE
+set_instance_assignment -name VIRTUAL_PIN ON -to MRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to TIME_SET
+set_instance_assignment -name VIRTUAL_PIN ON -to EXT_RTC
+set_instance_assignment -name VIRTUAL_PIN ON -to AC
+set_instance_assignment -name VIRTUAL_PIN ON -to A
+set_instance_assignment -name VIRTUAL_PIN ON -to DI
+set_instance_assignment -name VIRTUAL_PIN ON -to DO
+set_instance_assignment -name VIRTUAL_PIN ON -to CS_N
+set_instance_assignment -name VIRTUAL_PIN ON -to RW_N
+set_instance_assignment -name VIRTUAL_PIN ON -to SRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to IRQV_N
+set_instance_assignment -name VIRTUAL_PIN ON -to EXL_N
+set_instance_assignment -name VIRTUAL_PIN ON -to MSHRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to MSHNMI_N
+set_instance_assignment -name VIRTUAL_PIN ON -to SSHRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to SSHNMI_N
+set_instance_assignment -name VIRTUAL_PIN ON -to SYSRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to SNDRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to CDRES_N
+set_instance_assignment -name VIRTUAL_PIN ON -to MIRQ_N
+set_instance_assignment -name VIRTUAL_PIN ON -to DOTSEL
+set_instance_assignment -name VIRTUAL_PIN ON -to PDR1I
+set_instance_assignment -name VIRTUAL_PIN ON -to PDR1O
+set_instance_assignment -name VIRTUAL_PIN ON -to DDR1
+set_instance_assignment -name VIRTUAL_PIN ON -to PDR2I
+set_instance_assignment -name VIRTUAL_PIN ON -to PDR2O
+set_instance_assignment -name VIRTUAL_PIN ON -to DDR2
+source ../../area_profile.qsf

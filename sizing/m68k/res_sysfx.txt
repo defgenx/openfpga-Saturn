@@ -1,0 +1,2 @@
+sysfx: mapALM=4271 ALUT=6091 REG=3031 MEMbits=73,152 MLAB=1312
+Logic utilization (in ALMs) : 4,196 / 18,480 ( 23 % )

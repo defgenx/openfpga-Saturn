@@ -1,0 +1,22 @@
+mem_pocket                           ALM    1931  ALUT   2104  REG   2100  Mbit-kb   1474  DSP 200
+  ddram_pocket:ddram|                  ALM     483  ALUT    705  REG    784  Mbit-kb     43  DSP 21
+    ddp_cache_ram:cache0|                ALM       0  ALUT      0  REG      0  Mbit-kb      1  DSP  2
+    ddp_cache_ram:cache1|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  2
+    ddp_cache_ram:cache2|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  2
+    ddp_cache_ram:cache3|                ALM       0  ALUT      0  REG      0  Mbit-kb      8  DSP  2
+    ddp_cache_ram:cache5|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  2
+    ddp_cache_ram:cache6|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  2
+    ddp_cache_ram:cache7|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  2
+    ddp_infifo:ramh_fifo|                ALM      16  ALUT     24  REG     71  Mbit-kb      0  DSP  2
+    ddp_infifo:vdp1vram_fifo|            ALM      21  ALUT     24  REG     54  Mbit-kb      0  DSP  1
+    ddp_ram:ramh_ram|                    ALM      10  ALUT      0  REG     36  Mbit-kb     32  DSP  4
+  load_pocket:loader|                  ALM      57  ALUT    105  REG    136  Mbit-kb     14  DSP  2
+  psram_sync:psram0|                   ALM     118  ALUT    254  REG    174  Mbit-kb      0  DSP  0
+  psram_sync:psram1|                   ALM     122  ALUT    239  REG    176  Mbit-kb      0  DSP  0
+  sdram_pocket:sdram|                  ALM     292  ALUT    426  REG    618  Mbit-kb      0  DSP  0
+    sdram_clk_out:u_clk|                 ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  0
+      altddio_out:ddio|                    ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  0
+  sram_pocket:sram|                    ALM      36  ALUT     65  REG     71  Mbit-kb      0  DSP  0
+  vdp1_fb_pocket:fb|                   ALM     188  ALUT    308  REG    141  Mbit-kb   1417  DSP 177
+        decode_h2a:rden_decode_b|            ALM       5  ALUT     11  REG      0  Mbit-kb      0  DSP  0
+        decode_oma:decode2|                  ALM       5  ALUT     11  REG      0  Mbit-kb      0  DSP  0

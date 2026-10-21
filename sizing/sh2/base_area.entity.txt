@@ -1,0 +1,28 @@
+|sh2_pair_wrap                                               alut=11587 regs= 5901 bits= 65536 dsp=6
+|sh2_pair_wrap|SH7604:MSH                                    alut= 5778 regs= 2952 bits= 32768 dsp=3
+|sh2_pair_wrap|SH7604:MSH|SH7604_BSC:bsc                     alut=  530 regs=  255 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_CACHE:cache                 alut=  945 regs=  448 bits= 32768 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_DIVU:divu                   alut=  507 regs=  515 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_DMAC:dmac                   alut=  551 regs=  413 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_FRT:frt                     alut=  155 regs=  107 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_INTC:intc                   alut=  210 regs=  144 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_MSBY:msby                   alut=   11 regs=    3 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_MULT:mult                   alut=  362 regs=  138 bits=     0 dsp=3
+|sh2_pair_wrap|SH7604:MSH|SH7604_SCI:sci                     alut=    3 regs=    0 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_UBC:UBC                     alut=    2 regs=    0 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH7604_WDT:wdt                     alut=   80 regs=   41 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:MSH|SH_core:core                       alut= 2057 regs=  861 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH                                    alut= 5808 regs= 2949 bits= 32768 dsp=3
+|sh2_pair_wrap|SH7604:SSH|SH7604_BSC:bsc                     alut=  553 regs=  253 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_CACHE:cache                 alut=  947 regs=  448 bits= 32768 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_DIVU:divu                   alut=  508 regs=  515 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_DMAC:dmac                   alut=  552 regs=  412 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_FRT:frt                     alut=  157 regs=  107 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_INTC:intc                   alut=  212 regs=  144 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_MSBY:msby                   alut=   12 regs=    3 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_MULT:mult                   alut=  362 regs=  138 bits=     0 dsp=3
+|sh2_pair_wrap|SH7604:SSH|SH7604_SCI:sci                     alut=    4 regs=    0 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_UBC:UBC                     alut=    2 regs=    0 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH7604_WDT:wdt                     alut=   79 regs=   41 bits=     0 dsp=0
+|sh2_pair_wrap|SH7604:SSH|SH_core:core                       alut= 2064 regs=  861 bits=     0 dsp=0
+ALMs needed (estimate): 8084
