@@ -202,6 +202,8 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	default: break;
 	}
 	if (rng.chance(30)) R_(0xE4) |= 0x7777 & rng.next();
+	// RBG1 owns VRAM banks B0/B1 (pattern names in B1, characters in B0): rotation screen 0 cannot also be given those banks
+	if (R_(0x20) & 0x20) R_(0x0E) &= ~0x00F0;
 	(void)bg;
 }
 
@@ -310,7 +312,9 @@ int main(int argc, char** argv) {
 					else ra = 2 * rng.below(0x90);
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
 						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0x9E) || (ra >= 0xB0 && ra <= 0xBA);
-						Op o{0, (uint32_t)(0x180000 + ra), {(uint16_t)(rng.next() & (rng.next() | rng.next()))}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
+						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
+						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);   // keep RBG1 on/off as programmed
+						Op o{0, (uint32_t)(0x180000 + ra), {wv}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
 						if (unsafe) pend_cfg.push_back(o); else bus.q.push_back(o);
 					}
 				}
