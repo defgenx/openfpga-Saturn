@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: sizing/vdp2/snap_run.sh <tag> [balanced|area]
+# usage: [SRC=ref] [SEDX=expr] sizing/vdp2/snap_run.sh <tag> [balanced|area]
 # Copies the current VDP2 sources into sizing/vdp2/snap/<tag>/ and runs quartus_map on the copy
 # (so later edits do not disturb the run). Result: snap/<tag>/<tag>.log and output_files/*.map.rpt.
 set -e
@@ -7,7 +7,11 @@ TAG=$1; PROF=${2:-area}
 D=$(cd "$(dirname "$0")/../.." && pwd)
 S=$D/sizing/vdp2/snap/$TAG
 rm -rf $S; mkdir -p $S
-cp $D/src/fpga/saturn/Saturn/VDP2/VDP2.sv $D/src/fpga/saturn/Saturn/VDP2/VDP2_pkg.sv $D/src/fpga/saturn/Saturn/VDP2/VDP2_mem.sv $D/sizing/vdp2/vdp2_wrap.sv $D/sizing/vdp2/area.qsf $S/
+# SRC=ref uses the unmodified golden sources; SEDX='<sed expr>' (optional) is applied to the copied VDP2.sv (ablation runs)
+if [ "$SRC" = ref ]; then V=$D/ref/Saturn_MiSTer/rtl/Saturn/VDP2; else V=$D/src/fpga/saturn/Saturn/VDP2; fi
+cp $V/VDP2.sv $V/VDP2_pkg.sv $V/VDP2_mem.sv $D/sizing/vdp2/vdp2_wrap.sv $D/sizing/vdp2/area.qsf $S/
+[ -n "$SEDX" ] && sed -i "" "$SEDX" $S/VDP2.sv
+[ -n "$SEDP" ] && sed -i "" "$SEDP" $S/VDP2_pkg.sv
 cat > $S/p.qpf <<Q
 PROJECT_REVISION = "p"
 Q

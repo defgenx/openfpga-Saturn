@@ -204,3 +204,22 @@ module VDP2_NDCRD (
 	end
 	assign Q = q[{IDX[2:0],3'b000} +: 8];
 endmodule
+
+// Rotation parameter table words: 64 x 32, one write port, one registered read port. Each consumer
+// has its own copy; the read address changes at least two clocks before the value is used.
+module VDP2_RPRAM (
+	input         CLK,
+	input         WE,
+	input  [ 5:0] WA,
+	input  [31:0] WD,
+	input  [ 5:0] RA,
+	output [31:0] Q
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [31:0] mem [0:63];
+	reg [31:0] q = '0;
+	always @(posedge CLK) begin
+		if (WE) mem[WA] <= WD;
+		q <= mem[RA];
+	end
+	assign Q = q;
+endmodule

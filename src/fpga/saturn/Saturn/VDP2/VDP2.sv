@@ -1765,32 +1765,83 @@ module VDP2 (
 	end
 	
 	//Rotation parameters
-	ScrnStart_t  RP_Xst;		//00
-	ScrnStart_t  RP_Yst;		//04
-	ScrnStart_t  RP_Zst;		//08
-	ScrnInc_t    RP_DXst;	//0C
-	ScrnInc_t    RP_DYst;	//10
-	ScrnInc_t    RP_DX;		//14
-	ScrnInc_t    RP_DY;		//18
-	MatrParam_t  RP_A;		//1C
-	MatrParam_t  RP_B;		//20
-	MatrParam_t  RP_C;		//24
-	MatrParam_t  RP_D;		//28
-	MatrParam_t  RP_E;		//2C
-	MatrParam_t  RP_F;		//30
-	ScrnCoord_t  RP_PX;		//34
-	ScrnCoord_t  RP_PY;		//36
-	ScrnCoord_t  RP_PZ;		//38
-	ScrnCoord_t  RP_CX;		//3C
-	ScrnCoord_t  RP_CY;		//3E
-	ScrnCoord_t  RP_CZ;		//40
-	Shift_t      RP_MX;		//44
-	Shift_t      RP_MY;		//48
-	Scalling_t   RP_KX[2];	//4C
-	Scalling_t   RP_KY[2];	//50
-	TblAddr_t    RP_KAst;	//54
-	AddrInc_t    RP_DKAst;	//58
-	AddrInc_t    RP_DKAx[2];//5C
+	//Rotation parameter table words live in block RAM: one word per table entry, written as they are fetched,
+	//read back through one port per consumer (the address follows the microcode step).
+	wire [ 4: 0] RPP = VA2.RP_POS[6:2];
+	wire         RPN = ~VA2.RP_POS[7];
+	wire [31: 0] RPW_WD = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
+	wire         RPW_WE = DOT_CE_R && (VA2.RPA || VA2.RPB) && RPP <= 5'd23;
+	wire [ 5: 0] RPW_WA = RPP == 5'd19 ? {4'b1000,1'b0,RPN} : RPP == 5'd20 ? {4'b1000,1'b1,RPN} : RPP == 5'd23 ? {4'b1001,1'b0,RPN} : {1'b0,RPP};
+	bit  [ 5: 0] RPA_A, RPB_A, RPM_A, RPN_A, RPK_A, RPFR_A, RPFF_A;
+	bit  [ 6: 0] HPOS_PIPE;
+	wire [31: 0] PA_Q, PB_Q, PM_Q, PN_Q, PK_Q, DK0_Q, DK1_Q, PFR_Q, PFF_Q;
+	always_comb begin
+		case (RPP)
+			5'd04:   RPA_A = 6'd3;
+			5'd05:   RPA_A = 6'd4;
+			5'd12:   RPA_A = 6'd5;
+			5'd13:   RPA_A = 6'd6;
+			5'd16:   RPA_A = 6'd2;
+			5'd17:   RPA_A = 6'd13;
+			5'd18:   RPA_A = 6'd13;
+			5'd19:   RPA_A = 6'd14;
+			5'd23:   RPA_A = 6'd22;
+			default: RPA_A = 6'd0;
+		endcase
+		case (RPP)
+			5'd04:   RPB_A = 6'd0;
+			5'd05:   RPB_A = 6'd1;
+			5'd14:   RPB_A = 6'd13;
+			5'd15:   RPB_A = 6'd13;
+			5'd16:   RPB_A = 6'd14;
+			5'd17:   RPB_A = 6'd15;
+			5'd18:   RPB_A = 6'd15;
+			5'd19:   RPB_A = 6'd16;
+			5'd23:   RPB_A = 6'd21;
+			default: RPB_A = 6'd0;
+		endcase
+		case (RPP)
+			5'd12,5'd14,5'd17: RPM_A = 6'd7;
+			5'd13,5'd15,5'd18: RPM_A = 6'd8;
+			5'd16,5'd19:       RPM_A = 6'd9;
+			5'd20:             RPM_A = 6'd17;
+			default:           RPM_A = 6'd0;
+		endcase
+		case (RPP)
+			5'd12,5'd14,5'd17: RPN_A = 6'd10;
+			5'd13,5'd15,5'd18: RPN_A = 6'd11;
+			5'd16,5'd19:       RPN_A = 6'd12;
+			5'd20:             RPN_A = 6'd18;
+			default:           RPN_A = 6'd0;
+		endcase
+		case (DOTCLK_DIV)
+			2'd0: RPK_A = 6'd32;
+			2'd1: RPK_A = 6'd34;
+			2'd2: RPK_A = 6'd33;
+			2'd3: RPK_A = 6'd35;
+		endcase
+		if      (HPOS_PIPE[0]) RPFR_A = 6'd0;
+		else if (HPOS_PIPE[1]) RPFR_A = 6'd1;
+		else if (HPOS_PIPE[2]) RPFR_A = 6'd3;
+		else if (HPOS_PIPE[3]) RPFR_A = 6'd4;
+		else if (HPOS_PIPE[4]) RPFR_A = 6'd5;
+		else                   RPFR_A = 6'd6;
+		if      (HPOS_PIPE[1]) RPFF_A = 6'd0;
+		else if (HPOS_PIPE[2]) RPFF_A = 6'd1;
+		else if (HPOS_PIPE[3]) RPFF_A = 6'd3;
+		else if (HPOS_PIPE[4]) RPFF_A = 6'd4;
+		else if (HPOS_PIPE[5]) RPFF_A = 6'd5;
+		else                   RPFF_A = 6'd6;
+	end
+	VDP2_RPRAM rp_a (CLK, RPW_WE, RPW_WA, RPW_WD, RPA_A,  PA_Q);
+	VDP2_RPRAM rp_b (CLK, RPW_WE, RPW_WA, RPW_WD, RPB_A,  PB_Q);
+	VDP2_RPRAM rp_m (CLK, RPW_WE, RPW_WA, RPW_WD, RPM_A,  PM_Q);
+	VDP2_RPRAM rp_n (CLK, RPW_WE, RPW_WA, RPW_WD, RPN_A,  PN_Q);
+	VDP2_RPRAM rp_k (CLK, RPW_WE, RPW_WA, RPW_WD, RPK_A,  PK_Q);
+	VDP2_RPRAM rp_d0(CLK, RPW_WE, RPW_WA, RPW_WD, 6'd36,  DK0_Q);
+	VDP2_RPRAM rp_d1(CLK, RPW_WE, RPW_WA, RPW_WD, 6'd37,  DK1_Q);
+	VDP2_RPRAM rp_fr(CLK, RPW_WE, RPW_WA, RPW_WD, RPFR_A, PFR_Q);
+	VDP2_RPRAM rp_ff(CLK, RPW_WE, RPW_WA, RPW_WD, RPFF_A, PFF_Q);
 	RotCoord_t   Xsp[2],Ysp[2];
 	RotCoord_t   Xp[2],Yp[2];
 	RotCoord_t   dX[2],dY[2];
@@ -1833,34 +1884,6 @@ module VDP2 (
 					2'b10: RP_WD = RB0_BUF;
 					2'b11: RP_WD = RB1_BUF;
 				endcase
-				if (VA2.RPA || VA2.RPB) begin
-					case (VA2.RP_POS[6:2])
-						5'd00: RP_Xst <= RP_WD;
-						5'd01: RP_Yst <= RP_WD;
-						5'd02: RP_Zst <= RP_WD;
-						5'd03: RP_DXst <= RP_WD;
-						5'd04: RP_DYst <= RP_WD;
-						5'd05: RP_DX <= RP_WD;
-						5'd06: RP_DY <= RP_WD;
-						5'd07: RP_A <= RP_WD;
-						5'd08: RP_B <= RP_WD;
-						5'd09: RP_C <= RP_WD;
-						5'd10: RP_D <= RP_WD;
-						5'd11: RP_E <= RP_WD;
-						5'd12: RP_F <= RP_WD;
-						5'd13: {RP_PX,RP_PY} <= RP_WD;
-						5'd14: RP_PZ <= RP_WD[31:16];
-						5'd15: {RP_CX,RP_CY} <= RP_WD;
-						5'd16: RP_CZ <= RP_WD[31:16];
-						5'd17: RP_MX <= RP_WD;
-						5'd18: RP_MY <= RP_WD;
-						5'd19: RP_KX[N] <= RP_WD;
-						5'd20: RP_KY[N] <= RP_WD;
-						5'd21: RP_KAst <= RP_WD;
-						5'd22: RP_DKAst <= RP_WD;
-						5'd23: RP_DKAx[N] <= RP_WD;
-					endcase
-				end
 				
 				if (VA2.RCTA) begin
 					CTD[0] <= CTData(RPxREG[0].KMD, RPxREG[0].KDBS, RP_WD);
@@ -1897,81 +1920,81 @@ module VDP2 (
 				if (VA2.RPA || VA2.RPB) begin
 					case (VA2.RP_POS[6:2])
 						5'd04: begin 
-							Xst[N] <= $signed(Xst[N]) + $signed(ScrnIncToRC(RP_DXst));
+							Xst[N] <= $signed(Xst[N]) + $signed(ScrnIncToRC(PA_Q));
 							if (IS_LAST_LINE) begin
-								Xst[N] <= ScrnStartToRC(RP_Xst);
+								Xst[N] <= ScrnStartToRC(PB_Q);
 							end
 						end
 						5'd05: begin 
-							Yst[N] <= $signed(Yst[N]) + $signed(ScrnIncToRC(RP_DYst));
+							Yst[N] <= $signed(Yst[N]) + $signed(ScrnIncToRC(PA_Q));
 							if (IS_LAST_LINE) begin
-								Yst[N] <= ScrnStartToRC(RP_Yst);
+								Yst[N] <= ScrnStartToRC(PB_Q);
 							end
 						end
 						
 						5'd12: begin 																				//sumx = 0 + (A * (РћвЂќX - 0)), sumy = 0 + (D * (РћвЂќX - 0))
-							SUBXA <= ScrnIncToRC(RP_DX); SUBXB <= RC_NULL; 								//sub = РћвЂќX - 0
-							SUBYA <= ScrnIncToRC(RP_DX); SUBYB <= RC_NULL; 								//sub = РћвЂќX - 0
-							MULXA <= MatrParamToRC(RP_A);														//multx = A * sub
-							MULYA <= MatrParamToRC(RP_D);														//multy = D * sub
+							SUBXA <= ScrnIncToRC(PA_Q); SUBXB <= RC_NULL; 								//sub = РћвЂќX - 0
+							SUBYA <= ScrnIncToRC(PA_Q); SUBYB <= RC_NULL; 								//sub = РћвЂќX - 0
+							MULXA <= MatrParamToRC(PM_Q);														//multx = A * sub
+							MULYA <= MatrParamToRC(PN_Q);														//multy = D * sub
 							ACCX <= '0; 																		//accx = 0
 							ACCY <= '0; 																		//accy = 0
 						end
 						5'd13: begin 																				//sumx = accx + (B * (РћвЂќY - 0)), sumy = 0 + (E * (РћвЂќY - 0))
-							SUBXA <= ScrnIncToRC(RP_DY); SUBXB <= RC_NULL; 								//sub = РћвЂќY - 0
-							SUBYA <= ScrnIncToRC(RP_DY); SUBYB <= RC_NULL; 								//sub = РћвЂќY - 0
-							MULXA <= MatrParamToRC(RP_B);														//multx = B * sub
-							MULYA <= MatrParamToRC(RP_E); 													//multy = E * sub
+							SUBXA <= ScrnIncToRC(PA_Q); SUBXB <= RC_NULL; 								//sub = РћвЂќY - 0
+							SUBYA <= ScrnIncToRC(PA_Q); SUBYB <= RC_NULL; 								//sub = РћвЂќY - 0
+							MULXA <= MatrParamToRC(PM_Q);														//multx = B * sub
+							MULYA <= MatrParamToRC(PN_Q); 													//multy = E * sub
 						end
 						5'd14: begin 
 							dX[N] <= SUMX;																			//dX = accx + multx
 							dY[N] <= SUMY;																			//dY = accy + multy
-							SUBXA <= Xst[N]; SUBXB <= ScrnCoordToRC(RP_PX);								//sub = Xst - Px
-							SUBYA <= Xst[N]; SUBYB <= ScrnCoordToRC(RP_PX);								//sub = Xst - Px
-							MULXA <= MatrParamToRC(RP_A);														//multx = A * sub
-							MULYA <= MatrParamToRC(RP_D); 													//multy = D * sub
+							SUBXA <= Xst[N]; SUBXB <= ScrnCoordToRC(PB_Q[31:16]);								//sub = Xst - Px
+							SUBYA <= Xst[N]; SUBYB <= ScrnCoordToRC(PB_Q[31:16]);								//sub = Xst - Px
+							MULXA <= MatrParamToRC(PM_Q);														//multx = A * sub
+							MULYA <= MatrParamToRC(PN_Q); 													//multy = D * sub
 							ACCX <= RC_NULL; 																		//accx = 0
 							ACCY <= RC_NULL; 																		//accy = 0
 						end
 						5'd15: begin 
-							SUBXA <= Yst[N]; SUBXB <= ScrnCoordToRC(RP_PY);								//sub = Yst - Py
-							SUBYA <= Yst[N]; SUBYB <= ScrnCoordToRC(RP_PY);								//sub = Yst - Py
-							MULXA <= MatrParamToRC(RP_B);														//multx = B * sub
-							MULYA <= MatrParamToRC(RP_E); 													//multy = E * sub
+							SUBXA <= Yst[N]; SUBXB <= ScrnCoordToRC(PB_Q[15:0]);								//sub = Yst - Py
+							SUBYA <= Yst[N]; SUBYB <= ScrnCoordToRC(PB_Q[15:0]);								//sub = Yst - Py
+							MULXA <= MatrParamToRC(PM_Q);														//multx = B * sub
+							MULYA <= MatrParamToRC(PN_Q); 													//multy = E * sub
 						end
 						5'd16: begin 
-							SUBXA <= ScrnStartToRC(RP_Zst); SUBXB <= ScrnCoordToRC(RP_PZ);			//sub = Zst - Pz
-							SUBYA <= ScrnStartToRC(RP_Zst); SUBYB <= ScrnCoordToRC(RP_PZ);			//sub = Zst - Pz
-							MULXA <= MatrParamToRC(RP_C);														//multx = C * sub
-							MULYA <= MatrParamToRC(RP_F); 													//multy = F * sub
+							SUBXA <= ScrnStartToRC(PA_Q); SUBXB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Zst - Pz
+							SUBYA <= ScrnStartToRC(PA_Q); SUBYB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Zst - Pz
+							MULXA <= MatrParamToRC(PM_Q);														//multx = C * sub
+							MULYA <= MatrParamToRC(PN_Q); 													//multy = F * sub
 						end
 						5'd17: begin 
 							Xsp[N] <= SUMX;																		//Xsp = accx + multx
 							Ysp[N] <= SUMY;																		//Ysp = accy + multy
-							SUBXA <= ScrnCoordToRC(RP_PX); SUBXB <= ScrnCoordToRC(RP_CX);			//sub = Px - Cx
-							SUBYA <= ScrnCoordToRC(RP_PX); SUBYB <= ScrnCoordToRC(RP_CX);			//sub = Px - Cx
-							MULXA <= MatrParamToRC(RP_A); 													//multx = A * sub
-							MULYA <= MatrParamToRC(RP_D);														//multy = D * sub
-							ACCX <= ScrnCoordToRC(RP_CX); 													//accx = Cx
-							ACCY <= ScrnCoordToRC(RP_CY); 													//accy = Cy
+							SUBXA <= ScrnCoordToRC(PA_Q[31:16]); SUBXB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Px - Cx
+							SUBYA <= ScrnCoordToRC(PA_Q[31:16]); SUBYB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Px - Cx
+							MULXA <= MatrParamToRC(PM_Q); 													//multx = A * sub
+							MULYA <= MatrParamToRC(PN_Q);														//multy = D * sub
+							ACCX <= ScrnCoordToRC(PB_Q[31:16]); 													//accx = Cx
+							ACCY <= ScrnCoordToRC(PB_Q[15:0]); 													//accy = Cy
 						end
 						5'd18: begin 
-							SUBXA <= ScrnCoordToRC(RP_PY); SUBXB <= ScrnCoordToRC(RP_CY);			//sub = Py - Cy
-							SUBYA <= ScrnCoordToRC(RP_PY); SUBYB <= ScrnCoordToRC(RP_CY);			//sub = Py - Cy
-							MULXA <= MatrParamToRC(RP_B);														//multx = B * sub
-							MULYA <= MatrParamToRC(RP_E);												 		//multy = E * sub
+							SUBXA <= ScrnCoordToRC(PA_Q[15:0]); SUBXB <= ScrnCoordToRC(PB_Q[15:0]);			//sub = Py - Cy
+							SUBYA <= ScrnCoordToRC(PA_Q[15:0]); SUBYB <= ScrnCoordToRC(PB_Q[15:0]);			//sub = Py - Cy
+							MULXA <= MatrParamToRC(PM_Q);														//multx = B * sub
+							MULYA <= MatrParamToRC(PN_Q);												 		//multy = E * sub
 						end
 						5'd19: begin 
-							SUBXA <= ScrnCoordToRC(RP_PZ); SUBXB <= ScrnCoordToRC(RP_CZ);			//sub = Py - Cy
-							SUBYA <= ScrnCoordToRC(RP_PZ); SUBYB <= ScrnCoordToRC(RP_CZ);			//sub = Py - Cy
-							MULXA <= MatrParamToRC(RP_C);														//multx = C * sub
-							MULYA <= MatrParamToRC(RP_F);														//multy = F * sub
+							SUBXA <= ScrnCoordToRC(PA_Q[31:16]); SUBXB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Py - Cy
+							SUBYA <= ScrnCoordToRC(PA_Q[31:16]); SUBYB <= ScrnCoordToRC(PB_Q[31:16]);			//sub = Py - Cy
+							MULXA <= MatrParamToRC(PM_Q);														//multx = C * sub
+							MULYA <= MatrParamToRC(PN_Q);														//multy = F * sub
 						end
 						5'd20: begin 
 							SUBXA <= RC_ONE; SUBXB <= RC_NULL;												//sub = 1 - 0
 							SUBYA <= RC_ONE; SUBYB <= RC_NULL;												//sub = 1 - 0
-							MULXA <= ShiftToRC(RP_MX);															//multx = Mx * 1
-							MULYA <= ShiftToRC(RP_MY);															//multy = My * 1
+							MULXA <= ShiftToRC(PM_Q);															//multx = Mx * 1
+							MULYA <= ShiftToRC(PN_Q);															//multy = My * 1
 						end
 						5'd21: begin 
 							Xp[N] <= SUMX;																			//Xp = accx + multx
@@ -1986,8 +2009,8 @@ module VDP2 (
 						5'd22: begin 
 						end
 						5'd23: begin
-							KAst[N] <= TblAddrToRC(RP_KAst);
-							KAy[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(RP_DKAst));
+							KAst[N] <= TblAddrToRC(PB_Q);
+							KAy[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
 							if (IS_LAST_LINE) begin
 								KAy[N] <= '0;
 							end
@@ -1997,8 +2020,8 @@ module VDP2 (
 				end
 				
 				if (VA_PIPE[0].RxA0CT[0] || VA_PIPE[0].RxA1CT[0] || VA_PIPE[0].RxB0CT[0] || VA_PIPE[0].RxB1CT[0] || VA_PIPE[0].RxCRCT[0]) begin
-					KAx[0] <= $signed(KAx[0]) + $signed(AddrIncToRA(RP_DKAx[0]));
-					KAx[1] <= $signed(KAx[1]) + $signed(AddrIncToRA(RP_DKAx[1]));
+					KAx[0] <= $signed(KAx[0]) + $signed(AddrIncToRA(DK0_Q));
+					KAx[1] <= $signed(KAx[1]) + $signed(AddrIncToRA(DK1_Q));
 				end
 				
 				if (RBG_CALC) begin
@@ -2015,7 +2038,7 @@ module VDP2 (
 					if (RPxREG[0].KTE && !RPxREG[0].KMD[1])
 						MULT1 = {CTD[0].INT,CTD[0].FRAC};
 					else
-						MULT1 = ScallingToRC(RP_KX[0]);
+						MULT1 = ScallingToRC(PK_Q);
 					MULT2 = Xsp[0];
 				end
 				2'd1: begin
@@ -2023,7 +2046,7 @@ module VDP2 (
 					if (RPxREG[0].KTE && !RPxREG[0].KMD[0])
 						MULT1 = {CTD[0].INT,CTD[0].FRAC};
 					else
-						MULT1 = ScallingToRC(RP_KY[0]);
+						MULT1 = ScallingToRC(PK_Q);
 					MULT2 = Ysp[0];
 				end
 				2'd2: begin
@@ -2031,7 +2054,7 @@ module VDP2 (
 					if (RPxREG[1].KTE && !RPxREG[1].KMD[1])
 						MULT1 = {CTD[1].INT,CTD[1].FRAC};
 					else
-						MULT1 = ScallingToRC(RP_KX[1]);
+						MULT1 = ScallingToRC(PK_Q);
 					MULT2 = Xsp[1];
 				end
 				2'd3: begin
@@ -2039,7 +2062,7 @@ module VDP2 (
 					if (RPxREG[1].KTE && !RPxREG[1].KMD[0])
 						MULT1 = {CTD[1].INT,CTD[1].FRAC};
 					else
-						MULT1 = ScallingToRC(RP_KY[1]);
+						MULT1 = ScallingToRC(PK_Q);
 					MULT2 = Ysp[1];
 				end
 			endcase
@@ -2104,8 +2127,6 @@ module VDP2 (
 	
 	wire [8:0] FBD_HSTART = !HRES[0] ? 9'h18B : 9'h1A8;
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [6:0] HPOS_PIPE;
-		
 		if (!RST_N) begin
 			HPOS_PIPE <= '0;
 			FBDO <= '0;
@@ -2116,32 +2137,32 @@ module VDP2 (
 				if (H_CNT == FBD_HSTART - 1 - 1) HPOS_PIPE[0] <= 1;
 				
 				if (HPOS_PIPE[0])
-					FBDO <= RP_Xst[31:16];
+					FBDO <= PFR_Q[31:16];
 				else if (HPOS_PIPE[1])
-					FBDO <= RP_Yst[31:16];
+					FBDO <= PFR_Q[31:16];
 				else if (HPOS_PIPE[2])
-					FBDO <= RP_DXst[31:16];
+					FBDO <= PFR_Q[31:16];
 				else if (HPOS_PIPE[3])
-					FBDO <= RP_DYst[31:16];
+					FBDO <= PFR_Q[31:16];
 				else if (HPOS_PIPE[4])
-					FBDO <= RP_DX[31:16];
+					FBDO <= PFR_Q[31:16];
 				else if (HPOS_PIPE[5])
-					FBDO <= RP_DY[31:16];
+					FBDO <= PFR_Q[31:16];
 			end
 			
 			if (DOT_CE_F) begin
 				if (HPOS_PIPE[1])
-					FBDO <= RP_Xst[15:0];
+					FBDO <= PFF_Q[15:0];
 				else if (HPOS_PIPE[2])
-					FBDO <= RP_Yst[15:0];
+					FBDO <= PFF_Q[15:0];
 				else if (HPOS_PIPE[3])
-					FBDO <= RP_DXst[15:0];
+					FBDO <= PFF_Q[15:0];
 				else if (HPOS_PIPE[4])
-					FBDO <= RP_DYst[15:0];
+					FBDO <= PFF_Q[15:0];
 				else if (HPOS_PIPE[5])
-					FBDO <= RP_DX[15:0];
+					FBDO <= PFF_Q[15:0];
 				else if (HPOS_PIPE[6])
-					FBDO <= RP_DY[15:0];
+					FBDO <= PFF_Q[15:0];
 			end
 		end
 	end
