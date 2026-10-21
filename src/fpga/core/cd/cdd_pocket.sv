@@ -62,6 +62,8 @@ module cdd_pocket #(
 	output wire        sram_we_n,
 	output wire        sram_ub_n,
 	output wire        sram_lb_n,
+	output wire        sram_req,
+	input  wire        sram_gnt,
 
 	output wire        DISC_OK,
 	output wire [15:0] DBG,
@@ -110,7 +112,7 @@ cd_stream #(.RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDG
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
 	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
-	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n),
+	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n), .sram_req(sram_req), .sram_gnt(sram_gnt),
 	.disc_ok(DISC_OK), .disc_new(disc_new), .boot_busy(BOOT_BUSY), .boot_wr(BOOT_WR),
 	.boot_addr(BOOT_ADDR), .boot_data(BOOT_DATA),
 	.ntracks(ntracks), .ntbcd(ntbcd), .toc_end(toc_end), .hack_wwf(hack_wwf), .hack_rr(hack_rr),

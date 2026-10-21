@@ -57,6 +57,8 @@ module cd_stream #(
 	output reg         sram_we_n = 1'b1,
 	output wire        sram_ub_n,
 	output wire        sram_lb_n,
+	output wire        sram_req,             // an access is pending or running
+	input  wire        sram_gnt,             // the shared SRAM is ours (tie high when dedicated)
 
 	// disc
 	output reg         disc_ok = 1'b0,
@@ -183,6 +185,7 @@ reg [15:0] sr_d = 16'd0;
 wire [13:0] fd_sr_a;
 wire        fd_sr_rq;
 
+assign sram_req = w_pend | r_pend | (ss != 3'd0);
 assign sram_ub_n = 1'b0;
 assign sram_lb_n = 1'b0;
 
@@ -197,9 +200,9 @@ always @(posedge clk) begin
 	case (ss)
 	3'd0: begin
 		sram_dq_oe <= 1'b0; sram_we_n <= 1'b1; sram_oe_n <= 1'b1;
-		if (w_pend) begin
+		if (w_pend && sram_gnt) begin
 			w_pend <= 1'b0; half <= 1'b0; ss <= 3'd1;
-		end else if (r_pend) begin
+		end else if (r_pend && sram_gnt) begin
 			r_pend <= 1'b0; sram_a <= {3'd0, fd_sr_a}; sram_oe_n <= 1'b0; ss <= 3'd5;
 		end
 	end

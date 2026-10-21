@@ -56,7 +56,7 @@ cdd_pocket dut (
 	.target_dataslot_bridgeaddr(t_baddr), .target_dataslot_length(t_len),
 	.target_dataslot_ack(t_ack), .target_dataslot_done(t_done), .target_dataslot_err(t_err),
 	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(dq),
-	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n),
+	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n), .sram_req(), .sram_gnt(1'b1),
 	.DISC_OK(DISC_OK), .DBG(DBG), .STALL(STALL)
 );
 
