@@ -67,6 +67,11 @@ module SH7604
 	input       [5:0] MD,
 	
 	input             FAST
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	                  ,
+	input     [140:0] DVS_I,
+	output     [65:0] DVS_O
+`endif
 	
 `ifdef DEBUG
 	                  ,
@@ -622,7 +627,11 @@ module SH7604
 		.VBUS_WAIT(BSC_VBUS_BUSY)
 	);
 	
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	SH7604_DIVU_CL divu
+`else
 	SH7604_DIVU divu
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -641,8 +650,15 @@ module SH7604
 		.IBUS_BUSY(DIVU_BUSY),
 		.IBUS_ACT(DIVU_ACT),
 		
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		.IRQ(DIVU_IRQ),
+		.VEC(DIVU_VEC),
+		.SH_I(DVS_I),
+		.SH_O(DVS_O)
+`else
 		.IRQ(DIVU_IRQ),
 		.VEC(DIVU_VEC)
+`endif
 	);
 
 	SH7604_SCI #(SCI_DISABLE) sci

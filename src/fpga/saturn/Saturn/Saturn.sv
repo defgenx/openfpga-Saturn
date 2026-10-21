@@ -339,6 +339,12 @@ module Saturn
 	bit  [15:0] CD_SL;
 	bit  [15:0] CD_SR;
 	
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	wire [65:0] DVS0_O, DVS1_O;
+	wire [140:0] DVS0_I, DVS1_I;
+	SH7604_DIVU_SHR dvshr(.CLK(CLK), .RST_N(RST_N), .CE_R(SYS_CE_R), .EN(EN), .C0_O(DVS0_O), .C1_O(DVS1_O), .C0_I(DVS0_I), .C1_I(DVS1_I));
+`endif
+
 	SH7604 #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({RAMH_SLOW,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) MSH
 	(
 		.CLK(CLK),
@@ -400,6 +406,9 @@ module Saturn
 		.MD(6'b001000),
 		
 		.FAST(FAST)
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS0_I), .DVS_O(DVS0_O)
+`endif
 `ifdef DEBUG
 		,
 		.DBG_REGN('0),
@@ -468,6 +477,9 @@ module Saturn
 		.MD(6'b101000),
 		
 		.FAST(FAST)
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS1_I), .DVS_O(DVS1_O)
+`endif
 `ifdef DEBUG
 		,
 		.DBG_REGN('0),

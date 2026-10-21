@@ -7,13 +7,13 @@ GOLD    := $(ROOT)/ref/Saturn_MiSTer/rtl
 # CUTS="POCKET_CUT_A POCKET_CUT_B" builds the DUT with those macros; use BUILD=build_x to keep it apart.
 CUTS    ?=
 BUILD   := build
-DUT_INC ?= tb/sh_pair_inst.inc
+DUT_INC ?= $(if $(findstring DIVU_SHARED,$(CUTS)),tb/sh_pair_inst_divs.inc,tb/sh_pair_inst.inc)
 
 SH_FILES := SH/core/SH_pkg.sv SH/core/SH_regfile.sv SH/core/SH_core.sv \
             SH/SH7604/SH7604_pkg.sv SH/SH7604/CACHE.sv SH/SH7604/BSC.sv SH/SH7604/DMAC.sv SH/SH7604/UBC.sv \
             SH/SH7604/INTC.sv SH/SH7604/FRT.sv SH/SH7604/WDT.sv SH/SH7604/SCI.sv SH/SH7604/DIVU.sv \
             SH/SH7604/MULT.sv SH/SH7604/MSBY.sv SH/SH7604/SH7604.sv SH7604_mem.sv SH_mem.sv
-DUT_SRCS := $(addprefix $(SRC)/,$(SH_FILES)) $(wildcard $(SRC)/SH/SH7604_dual/*.sv)
+DUT_SRCS := $(addprefix $(SRC)/,$(SH_FILES)) $(wildcard $(SRC)/SH/SH7604_dual/*.sv) $(SRC)/SH/SH7604/DIVU_SHARED.sv
 GOLD_SRCS := $(addprefix $(GOLD)/,$(SH_FILES))
 
 TESTS := $(basename $(notdir $(wildcard progs/t_*.py)))
