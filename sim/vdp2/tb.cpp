@@ -56,7 +56,11 @@ struct Mem {
 				switch (style) {
 				case 0: break;                                          // noise
 				case 1: v = r.chance(50) ? 0 : (v & 0x0FFF); break;     // small values, many zeros
-				default: v = (r.chance(30) ? 0 : v) & (r.chance(50) ? 0xFFFF : 0x07FF); break;
+				case 2: v = (r.chance(30) ? 0 : v) & (r.chance(50) ? 0xFFFF : 0x07FF); break;
+				default: {   // smooth ramps with a little noise: recognisable tiles and gradients in the dumped frames
+					size_t k = &*b->h.begin() == nullptr ? 0 : i;
+					v = (uint32_t)(((k >> 3) * 0x0421) ^ (k & 7) * 0x1111) + (r.chance(5) ? r.next() & 0xFF : 0);
+					break; }
 				}
 				b->h[i] = (uint16_t)v;
 			}
@@ -220,7 +224,7 @@ int main(int argc, char** argv) {
 	if (getenv("VDP2_CFG")) { for (int i = 0; i < 0x90; i++) printf("%03x=%04x%s", 2*i, cfg.r[i], (i&7)==7?"\n":" "); printf("\n"); }
 	Mem mr, md;
 	Rng mrng(seed ^ 0xABCDEF);
-	mr.fill(mrng, (int)(seed % 3));
+	mr.fill(mrng, (seed % 7 == 0) ? 3 : (int)(seed % 3));
 	md = mr;
 
 	auto* top = new Vtb_top;
