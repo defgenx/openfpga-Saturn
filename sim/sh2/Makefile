@@ -57,9 +57,9 @@ report: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 	  echo "SUMMARY cuts='$(CUTS)': $$pass match, $$bad differ"
 
 # Contention test for POCKET_CUT_SH2_DIVU_SHARED: both CPUs divide with deterministic operands; only the final memory
-# is compared (cycle timing legitimately differs). Run with CUTS=POCKET_CUT_SH2_DIVU_SHARED BUILD=build_divs.
+# is compared (cycle timing legitimately differs; no IRQ injection, whose counters are timing dependent). Run with CUTS=POCKET_CUT_SH2_DIVU_SHARED BUILD=build_divs.
 contend-mem: $(BUILD)/Vtb_top $(BUILD)/prog_t_divu_both.hex
-	@for cfg in $(CFGS); do set -- $$cfg; \
+	@for cfg in "0 0 0" "1 0 0" "3 0 1" "2 0 1"; do set -- $$cfg; \
 	  $(BUILD)/Vtb_top +prog=$(BUILD)/prog_t_divu_both.hex +name=divu_both/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) +nocmp | grep -E "^(PASS|FAIL|MISMATCH)" | head -1 | cut -c1-90; done
 
 one: $(BUILD)/Vtb_top $(BUILD)/prog_$(T).hex
