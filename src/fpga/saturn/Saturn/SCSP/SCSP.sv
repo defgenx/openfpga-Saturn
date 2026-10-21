@@ -611,9 +611,11 @@ module SCSP #(
 	bit          ADP_PCM8B;
 	bit  [13: 0] OP3_PHASE_FRAC_NEXT;//Phase fractional for next slot
 	
-	wire [21: 0] MOD_PHASE_CURR = OP3.MOD + {16'h0000,OP3.PHASE_FRAC[13:8]};
-	wire [21: 0] MOD_PHASE_NEXT = OP3.MOD + {16'h0000,OP3_PHASE_FRAC_NEXT[13:8]};
-	wire [15: 0] MOD_PHASE_INTEGER = !CYCLE_NUM[2] ? MOD_PHASE_CURR[21:6] : MOD_PHASE_NEXT[21:6];
+	//One adder serves the current slot (cycles 0-3) and the next one (4-7); the
+	//low 6 bits for the current slot are needed on their own.
+	wire [21: 0] MOD_PHASE_SEL = OP3.MOD + {16'h0000,(!CYCLE_NUM[2] ? OP3.PHASE_FRAC[13:8] : OP3_PHASE_FRAC_NEXT[13:8])};
+	wire [ 5: 0] MOD_PHASE_CURR_LO = OP3.MOD[5:0] + OP3.PHASE_FRAC[13:8];
+	wire [15: 0] MOD_PHASE_INTEGER = MOD_PHASE_SEL[21:6];
 	wire [16: 0] SO_MOD = ({1'b0,OP3.SO + (!CYCLE_NUM[2] ? 16'd0 : 16'd1)} + {MOD_PHASE_INTEGER[15],MOD_PHASE_INTEGER}) & OP3.MASK;
 	assign ADP = ADP_SA + (!ADP_PCM8B ? {{2{SO_MOD[16]}},SO_MOD,1'b0} : {{3{SO_MOD[16]}},SO_MOD});
 	
@@ -654,7 +656,7 @@ module SCSP #(
 				OP4.KOFF <= OP3.KOFF;
 				OP4.LOOP <= OP3.LOOP;
 				OP4.ND <= OP3.ND;
-				OP4.MODF <= MOD_PHASE_CURR[5:0];
+				OP4.MODF <= MOD_PHASE_CURR_LO;
 				OP4.SSCTL <= OP3_SCR0.SSCTL;
 				OP4.SBCTL <= OP3_SCR0.SBCTL;
 				
