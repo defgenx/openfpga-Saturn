@@ -383,7 +383,7 @@ package VDP1_PKG;
 	function bit [11:0] Abs(input bit [12:0] C);
 		bit [12:0] abs; 
 		
-		abs = $signed(C) >= 0 ? $signed(C) : -$signed(C);
+		abs = (C ^ {13{C[12]}}) + {12'h000,C[12]};
 		return abs[11:0];
 	endfunction
 	
