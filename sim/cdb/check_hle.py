@@ -100,5 +100,14 @@ def fbytes(seed, size, n):
     return bytes([((seed + i * 7 + (i >> 8)) & 0xFF) if i < size else 0 for i in range(n)])
 rd = fsd[2] if len(fsd) > 2 else []
 ok("read file ABC.TXT", rd == words(fbytes(0x11, 3000, 4096)), "len %d" % len(rd))
+# --- CD-DA output: the sampled L/R pair is a real sample of audio sectors 150..169 of the file
+m = [l for l in cmds("audio") if l.startswith("AUDIO")]
+if m:
+    L, R = [int(x.split("=")[1], 16) for x in m[0].split()[1:3]]
+    hit = [(n, i) for n in range(150, 172) for i in range(0, 2352, 4)
+           if (n * 131 + i) & 0xFFFF == L and (0xFFFF - (n * 17 + i * 5)) & 0xFFFF == R]
+    ok("CD-DA sample", bool(hit), "L=%04x R=%04x" % (L, R))
+r = find_cmd("audio", "0000", 0)
+ok("audio play status", r is not None and (r[0] >> 8) == 3 and (r[1] >> 8) == 1 and (r[1] & 0xFF) == 2, r)
 print("%d checks, %d failed" % (checks, fails))
 sys.exit(1 if fails else 0)

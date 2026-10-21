@@ -17,8 +17,19 @@ VFLAGS := --binary --timing --timescale 1ns/1ps -Wno-TIMESCALEMOD -Wno-fatal -Wn
           -Wno-UNOPTFLAT -Wno-CMPCONST -Wno-IMPLICIT -Wno-PINMISSING -Wno-MULTIDRIVEN -O3 -j 4 --public-flat-rw
 ALL    := tb_cdb.sv $(CDRTL) $(HLERTL) $(SH)
 
-.PHONY: all gen hle lle run-hle run-lle compare clean
-all: hle
+.PHONY: all gen hle lle run-hle run-lle test compare clean
+all: test
+
+# HLE against the disc image (check_hle.py) and the no-disc script; about 12 minutes
+test: hle gen
+	./build/hle/Vtb_cdb +SCRIPT=script_cmds.txt +LOG=build/hle_script_cmds.log > build/hle_script_cmds.out
+	python3 check_hle.py build/hle_script_cmds.log
+	./build/hle/Vtb_cdb +SCRIPT=script_nodisc.txt +LOG=build/hle_script_nodisc.log > build/hle_script_nodisc.out
+
+# LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
+compare: lle test
+	./build/lle/Vtb_cdb +SCRIPT=script_nodisc.txt +LOG=build/lle_script_nodisc.log +FW=$(LLEFW) > build/lle_script_nodisc.out
+	python3 compare.py build/lle_script_nodisc.log build/hle_script_nodisc.log
 
 gen: build/C_f0.hex
 build/C_f0.hex: gen_iso.py
