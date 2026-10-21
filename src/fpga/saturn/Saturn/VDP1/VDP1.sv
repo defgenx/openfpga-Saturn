@@ -1353,25 +1353,23 @@ module VDP1 (
 							CMD_ST <= CMDS_END;
 						end
 					end else if (CMD.CMDCTRL.COMM == 4'h5 || CMD.CMDCTRL.COMM == 4'h7) begin
+						// Each polyline segment starts where the previous one ended: the right point/colour moves to the left;
+						// RIGHT_VERT/RIGHT_GHCOLOR are not stepped for polylines, so they still hold the previous segment end.
+						LEFT_VERT <= RIGHT_VERT;
+						LEFT_GHCOLOR <= RIGHT_GHCOLOR;
 						case (POLY_S)
 							2'd0: begin
-								LEFT_VERT <= VERTB;
 								RIGHT_VERT <= VERTC;
-								LEFT_GHCOLOR <= RGBItoF(GHCOLOR_B);
 								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_C);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
 							2'd1: begin
-								LEFT_VERT <= VERTC;
 								RIGHT_VERT <= VERTD;
-								LEFT_GHCOLOR <= RGBItoF(GHCOLOR_C);
 								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_D);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
 							2'd2: begin
-								LEFT_VERT <= VERTD;
 								RIGHT_VERT <= VERTA;
-								LEFT_GHCOLOR <= RGBItoF(GHCOLOR_D);
 								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_A);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
