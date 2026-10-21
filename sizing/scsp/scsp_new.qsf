@@ -20,8 +20,9 @@ set_global_assignment -name AUTO_RAM_RECOGNITION ON
 set_global_assignment -name AUTO_ROM_RECOGNITION ON
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
-set_global_assignment -name TOP_LEVEL_ENTITY SCSP
+set_global_assignment -name TOP_LEVEL_ENTITY scsp_wrap
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_new
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/SCSP/SCSP_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/Saturn/SCSP/SCSP.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
+set_global_assignment -name SYSTEMVERILOG_FILE scsp_wrap.sv

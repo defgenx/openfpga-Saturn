@@ -8,9 +8,10 @@ B      ?= build
 SEEDS  ?= 1 2 3 4 5 6
 ROUNDS ?= 400
 
-# Drop the `define SIM and the synopsys translate_off regions so the
+# Drop the `define SIM and the synopsys translate_off regions, and make the one
+# blocking write to a register read by another block non-blocking, so the
 # simulated netlist matches what Quartus synthesises.
-FILTER = perl -ne 'if (/synopsys translate_off/) {$$s=1} if (!$$s && !/^`define SIM/) {print} if (/synopsys translate_on/) {$$s=0}'
+FILTER = perl -ne 'if (/synopsys translate_off/) {$$s=1} if (!$$s && !/^`define SIM/) {s/OP2\.PHASE = PHASE;/OP2.PHASE <= PHASE;/; print} if (/synopsys translate_on/) {$$s=0}'
 
 .PHONY: all run clean
 all: run

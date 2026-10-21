@@ -526,11 +526,11 @@ int main(int argc, char **argv) {
 		else if (act < 91 && R->chance(30)) {
 			// reset pulse mid-run
 			drain();
-			top->RES_N = 0; run_clks(R->range(1, 40)); top->RES_N = 1;
+			fprintf(stderr,"[reset pulse at clk %llu]\n",(unsigned long long)clk_count); top->RES_N = 0; run_clks(R->range(1, 40)); top->RES_N = 1;
 			if (R->chance(50)) { for (int i = 0, n = R->range(1, 30); i < n; i++) rand_reg_write(); }
 		}
 		else if (act < 92 && R->chance(15)) {
-			drain(); top->RES_N = 0; run_clks(2); top->RST_N = 0; run_clks(R->range(2, 20)); top->RST_N = 1; run_clks(R->range(2, 20)); top->RES_N = 1;
+			fprintf(stderr,"[hard reset at clk %llu]\n",(unsigned long long)clk_count); drain(); top->RES_N = 0; run_clks(2); top->RST_N = 0; run_clks(R->range(2, 20)); top->RST_N = 1; run_clks(R->range(2, 20)); top->RES_N = 1;
 		}
 		if (R->chance(30)) { top->SCFC = 7; run_clks(R->range(2, 10)); top->SCFC = 5; }
 		run_samples(R->range(0, 6));
