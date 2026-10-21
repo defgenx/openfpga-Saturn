@@ -30,7 +30,8 @@ module tb_top (
 	output [16:1] r_RB1_A, d_RB1_A,
 	output [63:0] r_RB_D, d_RB_D,
 	output [ 7:0] r_RB_WE, d_RB_WE,
-	output        r_RB_RD, d_RB_RD
+	output        r_RB_RD, d_RB_RD,
+	output [15:0] cov
 );
 	wire [15:0] r_DO, d_DO, r_FBDO, d_FBDO;
 	wire r_RDY_N, r_VINT_N, r_HINT_N, r_DCE_R, r_DCE_F, r_HTIM_N, r_VTIM_N;
@@ -66,6 +67,25 @@ module tb_top (
 		.R(d_R), .G(d_G), .B(d_B), .DCLK(d_DCLK), .HS_N(d_HS_N), .VS_N(d_VS_N),
 		.HBL_N(d_HBL_N), .VBL_N(d_VBL_N), .FIELD(d_FIELD), .INTERLACE(d_INTERLACE),
 		.HRES(d_HRES), .VRES(d_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
+
+	// coverage probes on the golden copy
+	wire hires = u_ref.HRES[1];
+	assign cov[0] = u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & u_ref.DOT_FST.LCEN & u_ref.DOT_THD.CCEN & ~hires;
+	assign cov[1] = u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & ~hires;
+	assign cov[2] = u_ref.DOT_FST.CCEN & u_ref.DOT_SEC.P;
+	assign cov[3] = u_ref.DOT_FST.SDEN;
+	assign cov[4] = u_ref.SDOT.P | ~u_ref.SDOT.TP;
+	assign cov[5] = u_ref.W0_HIT & u_ref.W1_HIT;
+	assign cov[6] = u_ref.RBG_CALC & u_ref.REGS.BGON.R0ON;
+	assign cov[7] = u_ref.NSxREG[0].LSCX | u_ref.NSxREG[0].LSCY;
+	assign cov[8] = u_ref.NSxREG[0].MZE & u_ref.NSxREG[0].ON;
+	assign cov[9] = u_ref.REGS.RAMCTL.CRMD[1] & u_ref.REGS.RAMCTL.CRMD[0];
+	assign cov[10] = u_ref.NSxREG[0].BMEN & u_ref.NSxREG[0].ON;
+	assign cov[11] = u_ref.REGS.CCCTL.BOKEN;
+	assign cov[12] = hires;
+	assign cov[13] = u_ref.REGS.TVMD.LSMD[1];
+	assign cov[14] = u_ref.N0DOT.TP ^ u_ref.N1DOT.TP;
+	assign cov[15] = u_ref.REGS.CCCTL.EXCCEN & ~u_ref.REGS.CCCTL.BOKEN & u_ref.DOT_SEC.CCEN & u_ref.DOT_THD.CCEN & ~u_ref.DOT_FST.LCEN & u_ref.CCENFST & ~hires & ~((|u_ref.REGS.RAMCTL.CRMD) & u_ref.DOT_THD.P);
 
 	assign r_misc = {r_DO,r_RDY_N,r_VINT_N,r_HINT_N,r_DCE_R,r_DCE_F,r_HTIM_N,r_VTIM_N,r_FBDO,r_R,r_G,r_B,r_DCLK,r_HS_N,r_VS_N,r_HBL_N,r_VBL_N,r_FIELD,r_INTERLACE,r_HRES,r_VRES};
 	assign d_misc = {d_DO,d_RDY_N,d_VINT_N,d_HINT_N,d_DCE_R,d_DCE_F,d_HTIM_N,d_VTIM_N,d_FBDO,d_R,d_G,d_B,d_DCLK,d_HS_N,d_VS_N,d_HBL_N,d_VBL_N,d_FIELD,d_INTERLACE,d_HRES,d_VRES};

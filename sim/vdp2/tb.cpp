@@ -148,7 +148,7 @@ static void gen_cycles(Rng& rng, Cfg& c, int mode) {
 }
 
 #define R_(a) c.r[(a) / 2]
-static const int N_SCENES = 14;
+static const int N_SCENES = 17;
 
 static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	for (int i = 0; i < 0x90; i++) {
@@ -161,7 +161,7 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	// sane control registers
 	uint16_t hres = rng.chance(60) ? rng.below(2) : (rng.chance(50) ? 2 + rng.below(2) : rng.below(2));
 	R_(0x00) = (rng.chance(92) ? 0x8000 : 0) | ((rng.chance(25) ? 1 + rng.below(3) : 0) << 6) | ((rng.below(3)) << 4) | hres | (rng.chance(20) ? 0x100 : 0);
-	R_(0x0E) = (R_(0x0E) & 0x30FF) | ((rng.below(4) == 0 ? 0x300 : (rng.below(2) ? 0x100 : 0)));
+	R_(0x0E) = (R_(0x0E) & 0x00FF) | ((rng.below(4) == 0 ? 0x300 : (rng.below(2) ? 0x100 : 0))) | (rng.below(4) << 12) | (rng.chance(10) ? 0x8000 : 0);
 	R_(0x02) = rng.chance(20) ? 0x0100 : 0;
 	uint16_t bg = 0x3F & ~0;
 	switch (scene) {
@@ -179,7 +179,20 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	case 10: R_(0x20) = 0x003F; R_(0xE0) = rng.next() & 0x373F; R_(0xEC) = rng.next() & 0xF77F; break;  // sprite, color calc
 	case 11: R_(0x20) = 0x000F; R_(0x22) = rng.next() & 0xFF1F; R_(0x98) = rng.next() & 0x0303; break;  // mosaic, zoom
 	case 12: R_(0x00) |= 0x00C0; R_(0x00) = (R_(0x00) & ~3) | rng.below(4); R_(0x20) = 0x000F; break;   // interlace/hires
-	default: R_(0x20) = (R_(0x20) | rng.next()) & 0x1F3F; break;                                         // random
+	case 13: R_(0x20) = (R_(0x20) | rng.next()) & 0x1F3F; break;                                         // random
+	case 14: case 15: case 16: {   // tied priorities, extended color calc, line color, shadow
+		R_(0x20) = 0x000F | (scene == 15 ? 0x0010 : 0) | (rng.chance(85) ? 0x1F00 : 0);
+		for (int a = 0xF0; a <= 0xFC; a += 2) R_(a) = ((rng.below(3) + 1) << 8) | (rng.below(3) + 1);
+		R_(0xEC) = (rng.chance(90) ? 0x0400 : 0) | (rng.chance(50) ? 0x0200 : 0) | (rng.chance(50) ? 0x0100 : 0) |
+		           (rng.chance(70) ? 0x007F : (rng.next() & 0x007F)) | (rng.chance(3) ? 0x8000 | ((rng.below(7)) << 12) : 0);
+		R_(0xE8) = rng.chance(60) ? 0x3F : (rng.next() & 0x3F);
+		R_(0xE2) = rng.next() & 0x013F;
+		R_(0xEE) = rng.chance(70) ? 0 : (rng.next() & 0x03FF);
+		R_(0xEA) = scene == 16 ? (rng.next() & 0x03FF) : R_(0xEA);
+		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);   // not hires: extended calc is a low-res feature
+		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;   // RGB555 color RAM: extended calc applies to palette dots too
+		break; }
+	default: break;
 	}
 	if (rng.chance(30)) R_(0xE4) |= 0x7777 & rng.next();
 	(void)bg;
@@ -202,7 +215,9 @@ int main(int argc, char** argv) {
 	int dens = 10 + rng.below(35);
 	int pal = rng.chance(30);
 	Cfg cfg; gen_config(rng, cfg, scene, dens);
+	bool lock_regs = (seed & 3) == 0;
 
+	if (getenv("VDP2_CFG")) { for (int i = 0; i < 0x90; i++) printf("%03x=%04x%s", 2*i, cfg.r[i], (i&7)==7?"\n":" "); printf("\n"); }
 	Mem mr, md;
 	Rng mrng(seed ^ 0xABCDEF);
 	mr.fill(mrng, (int)(seed % 3));
@@ -225,6 +240,7 @@ int main(int argc, char** argv) {
 	std::vector<uint8_t> curline[2];
 	int saved = 0;
 	bool rdy_n_prev = true;
+	long covc[16] = {0};
 	uint16_t fbdi = 0;
 	int exlat = 1;
 
@@ -261,9 +277,18 @@ int main(int argc, char** argv) {
 				uint32_t a = sp == 0 ? 0x180000 + 2 * rng.below(8) : sp == 1 ? 0x100000 + 2 * rng.below(2048) : 2 * rng.below(0x40000);
 				bus.q.push_back({1, a, {}, 0, (int)rng.below(4)});
 			} else if (k < 55) {     // register write
-				int ra = 2 * rng.below(0x90);
-				if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(80)) && ra != 0x0E)
-					W(0x180000 + ra, (uint16_t)rng.next() & (rng.next() | rng.next()), rng.below(4), rng.chance(10) ? rng.below(3) : 0);
+				if (!lock_regs) {
+					int ra;
+					uint32_t pick = rng.below(100);
+					if (pick < 40) ra = 0x70 + 2 * rng.below(14);           // scroll / zoom
+					else if (pick < 55) ra = 0xC0 + 2 * rng.below(16);      // windows
+					else if (pick < 70) ra = 0xF0 + 2 * rng.below(7);       // priorities
+					else if (pick < 85) ra = 0x100 + 2 * rng.below(16);     // color calc / offsets
+					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
+					else ra = 2 * rng.below(0x90);
+					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E)
+						W(0x180000 + ra, (uint16_t)rng.next() & (rng.next() | rng.next()), rng.below(4), rng.chance(10) ? rng.below(3) : 0);
+				}
 			} else if (k < 75) {     // VRAM write
 				W(2 * rng.below(0x40000), rng.next(), rng.below(4), rng.chance(20) ? rng.below(4) : 0);
 			} else if (k < 85) {     // VRAM burst
@@ -302,6 +327,7 @@ int main(int argc, char** argv) {
 			failed = true;
 		}
 		rdy_n_prev = bits(rm, 58, 1);
+		for (int k = 0; k < 16; k++) covc[k] += (top->cov >> k) & 1;
 		mr.tick(top->r_RA0_A, top->r_RA1_A, top->r_RA_D, top->r_RA_WE, top->r_RB0_A, top->r_RB1_A, top->r_RB_D, top->r_RB_WE);
 		md.tick(top->d_RA0_A, top->d_RA1_A, top->d_RA_D, top->d_RA_WE, top->d_RB0_A, top->d_RB1_A, top->d_RB_D, top->d_RB_WE);
 
@@ -333,6 +359,7 @@ int main(int argc, char** argv) {
 	}
 	// bus driver: run the slot logic with the golden RDY_N is handled in the loop below
 	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, failed ? "FAIL" : "PASS");
+	if (getenv("VDP2_COV")) { for (int k = 0; k < 16; k++) printf("cov%d=%ld ", k, covc[k]); printf("\n"); }
 	delete top;
 	return failed ? 1 : 0;
 }
