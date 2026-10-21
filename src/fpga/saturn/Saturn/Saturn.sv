@@ -701,7 +701,13 @@ module Saturn
 `endif
 	
 	
-`ifndef STV_BUILD
+`ifdef STV_BUILD
+`define SMPC_IS_HLE
+`endif
+`ifdef POCKET_CUT_SMPC_HLE
+`define SMPC_IS_HLE
+`endif
+`ifndef SMPC_IS_HLE
 	bit MRES_N;
 	bit CE32K;
 	always @(posedge CLK or negedge RST_N) begin
