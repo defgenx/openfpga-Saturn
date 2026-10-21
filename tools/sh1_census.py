@@ -89,18 +89,18 @@ for i in range(32, 64):
     VEC_NAMES[i] = 'TRAPA#%d' % (i - 32)
 for i in range(8):
     VEC_NAMES[64 + i] = 'IRQ%d' % i
-for ch, v in enumerate((72, 76, 80, 84)):
-    VEC_NAMES[v] = 'DEI%d(DMAC%d)' % (ch, ch)
-for ch, v in enumerate((88, 92, 96, 100, 104)):
+for ch in range(4):
+    VEC_NAMES[72 + 2 * ch] = 'DEI%d(DMAC%d)' % (ch, ch)
+for ch in range(5):
+    v = 80 + 4 * ch
     VEC_NAMES[v] = 'IMIA%d(ITU%d)' % (ch, ch)
     VEC_NAMES[v + 1] = 'IMIB%d(ITU%d)' % (ch, ch)
     VEC_NAMES[v + 2] = 'OVI%d(ITU%d)' % (ch, ch)
-for ch, v in enumerate((120, 124)):
+for ch in range(2):
     for k, nm in enumerate(('ERI', 'RXI', 'TXI', 'TEI')):
-        VEC_NAMES[v + k] = '%s%d(SCI%d)' % (nm, ch, ch)
-VEC_NAMES[126 + 8] = 'ADI(ADC)'
-VEC_NAMES[136] = 'ITI(WDT)'
-VEC_NAMES[137] = 'CMI(REF)'
+        VEC_NAMES[100 + 4 * ch + k] = '%s%d(SCI%d)' % (nm, ch, ch)
+VEC_NAMES[112] = 'ITI(WDT)'
+VEC_NAMES[113] = 'CMI(REF)'
 
 
 def s16(x):
