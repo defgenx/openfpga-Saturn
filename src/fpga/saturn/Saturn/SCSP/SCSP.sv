@@ -232,16 +232,25 @@ module SCSP (
 	end
 
 	//Operation 1: PLFO, PG, KEY ON/OFF
-	bit          SCR0_KB[32];
+	
 	bit  [ 4: 0] SLOT;
 	bit          RST;
+	bit          KYONEX_RUN,KYONEX_PEND;
+	//Key-on bit and its previous value per slot. The first sample period after
+	//RES_N clears them one slot per step (docs/scsp.md).
+	wire        KB_SWEEP = RST & SLOT1_CE;
+	wire        KB_WR = CYCLE1_CE & RES_N & REG_A[11:10] == 2'b00 & {REG_A[4:1],1'b0} == 5'h00 & REG_WE[1];
+	wire        KB_Q,KBO_Q;
+	SCSP_BIT_RAM #(5) KB_RAM (CLK, KB_SWEEP ? SLOT : REG_A[9:5], ~KB_SWEEP & REG_D[11], KB_SWEEP | KB_WR, SLOT, KB_Q);
+	SCSP_BIT_RAM #(5) KBO_RAM(CLK, SLOT, ~KB_SWEEP & KB_Q, KB_SWEEP | (SLOT1_CE & KYONEX_RUN & RES_N), SLOT, KBO_Q);
+
 	SCR5_t       OP1_SCR5;
 	SCR6_t       OP1_SCR6;
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [ 9: 0] OP1_LFO_DIV;
 		bit  [ 7: 0] OP1_LFO_DATA;
-		bit          KYONEX_RUN,KYONEX_PEND;
-		bit          SCR0_KB_OLD[32];
+		
+		
 		bit  [ 7: 0] PLFO_WAVE;
 		bit  [22: 0] PHASE;
 		bit  [ 7: 0] NEW_LFO_DATA;
@@ -251,8 +260,8 @@ module SCSP (
 			// synopsys translate_off
 			OP1_SCR5 <= '0;
 			OP1_SCR6 <= '0;
-			SCR0_KB <= '{32{0}};
-			SCR0_KB_OLD <= '{32{0}};
+			
+			
 			KYONEX_PEND <= 0;
 			SLOT <= '0;
 			RST <= 1;
@@ -261,8 +270,8 @@ module SCSP (
 		end else if (!RES_N) begin
 			OP1_SCR5 <= '0;
 			OP1_SCR6 <= '0;
-			SCR0_KB <= '{32{0}};
-			SCR0_KB_OLD <= '{32{0}};
+			
+			
 			KYONEX_PEND <= 0;
 			SLOT <= '0;
 			RST <= 1;
@@ -282,21 +291,19 @@ module SCSP (
 			//Key on/off
 			if (CYCLE1_CE) begin
 				if (REG_A[11:10] == 2'b00 && {REG_A[4:1],1'b0} == 5'h00 && REG_WE[1]) begin
-					SCR0_KB[REG_A[9:5]] <= REG_D[11];
 					if (REG_D[12]) KYONEX_PEND <= 1;
 				end
 			end
 			if (SLOT1_CE) begin
 				KEY_RAM_D <= '0;
-				if (KYONEX_RUN) begin
-					if (SCR0_KB[SLOT] && !SCR0_KB_OLD[SLOT]) begin
-						KEY_RAM_D[0] <= 1;
+				if (KYONEX_RUN && !RST) begin
+						if (KB_Q && !KBO_Q) begin
+							KEY_RAM_D[0] <= 1;
+						end
+						if (!KB_Q && KBO_Q) begin
+							KEY_RAM_D[1] <= 1;
+						end
 					end
-					if (!SCR0_KB[SLOT] && SCR0_KB_OLD[SLOT]) begin
-						KEY_RAM_D[1] <= 1;
-					end
-					SCR0_KB_OLD[SLOT] <= SCR0_KB[SLOT];
-				end
 				
 				if (SLOT == 5'd31) begin
 					KYONEX_RUN <= 0;
@@ -678,18 +685,18 @@ module SCSP (
 	bit  [ 9: 0] OP4_EVOL;	//Current envelope volume
 	EGState_t    OP4_EST;	//Current envelope state
 	bit  [14: 0] SCNT;		//Sample counter
-	bit  [14: 0] SCNT_PREV;
+	wire [14: 0] SCNT_PREV = SCNT - 15'd1;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			SCNT <= '0;
-			SCNT_PREV <= '1;
+			
 		end else if (!RES_N) begin
 			SCNT <= '0;
-			SCNT_PREV <= '1;
+			
 		end else begin
 			if (SLOT1_CE) begin
 				if (OP4.SLOT == 5'd31) begin
-					SCNT_PREV <= SCNT;
+					
 					SCNT <= SCNT + 1'd1;
 				end
 			end
@@ -990,10 +997,13 @@ module SCSP (
 	
 	//DSP
 	MPRO_t       MPRO0_Q,MPRO1_Q;
+	bit          MPRO_OK;
+	wire         MPRO_SET_Q;
 	EFREG_t      EFREG_Q;
-	assign MPRO0_Q = MPRO_RAM_Q & {64{DSP_MPRO_SET[DSP_MPRO_STEP]}};
+	assign MPRO0_Q = MPRO_RAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
 	
-	bit          DSP_MPRO_SET[128];
+	
+
 	
 	//DSP input
 	bit  [ 3: 0] MIXSA_RA,MIXSB_RA;
@@ -1003,8 +1013,15 @@ module SCSP (
 	bit  [31: 0] PCM_MIXS_Q,DSP_MIXS_Q;
 	
 	bit  [15: 0] DSP_EXTS[2];
-	bit  [15: 0] MIXS_NULL[2];
+	
 	bit          MIXS_GEN;
+	//Per-entry 'not written yet' flags for the two MIXS generations. The idle
+	//generation is set one entry per slot during slots 0-15, before it is used.
+	wire         MIXS_NULL_Q;
+	wire         MIXS_NULL_SET = SLOT1_CE & ~OP7.SLOT[4] & RES_N;
+	wire         MIXS_NULL_CLR = CYCLE1_CE & CYCLE_NUM[2:1] == 2'b00 & RES_N;
+	SCSP_BIT_RAM #(5) MIXS_NULL_RAM (CLK, MIXS_NULL_SET ? {~MIXS_GEN,OP7.SLOT[3:0]} : {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_SET, MIXS_NULL_SET | MIXS_NULL_CLR, {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_Q);
+
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [19: 0] SD;
 		MIXS_t       MIXS_OLD;
@@ -1025,8 +1042,7 @@ module SCSP (
 
 			if (CYCLE1_CE) begin
 				if (CYCLE_NUM[2:1] == 2'b00) begin
-					MIXS_OLD <= MIXS_NULL[MIXS_GEN][OP7_SCR7.ISEL] ? '0 : {PCM_MIXS_Q[15:0],PCM_MIXS_Q[19:16]};
-					MIXS_NULL[MIXS_GEN][OP7_SCR7.ISEL] <= 0;
+					MIXS_OLD <= MIXS_NULL_Q ? '0 : {PCM_MIXS_Q[15:0],PCM_MIXS_Q[19:16]};
 				end
 				if (CYCLE_NUM[2:1] == 2'b01) begin
 					MIXS_D <= MIXS_OLD + SD;
@@ -1034,7 +1050,7 @@ module SCSP (
 			end
 			
 			if (OP7.SLOT == 5'd31 && SLOT1_CE) begin
-				MIXS_NULL[~MIXS_GEN] <= '1;
+				
 				MIXS_GEN <= ~MIXS_GEN;
 				DSP_EXTS[0] <= !SND_EN[2] ? 16'h0000 : ESL;
 				DSP_EXTS[1] <= !SND_EN[2] ? 16'h0000 : ESR;
@@ -1054,6 +1070,18 @@ module SCSP (
 	bit  [ 6: 0] DSP_MPRO_STEP;
 `endif
 	assign DSP_MPRO_STEP = {OP7.SLOT,CYCLE_NUM[2:1]};
+	//MPRO entry valid bit: set by writing its last word, cleared by the sweep
+	//after RES_N. MPRO_OK masks every entry until that sweep has finished.
+	
+	
+	wire         MPRO_SET_WR = CYCLE1_CE & RES_N & |REG_WE & REG_A[11:10] == 2'b10 & REG_A[2:1] == 2'b11;
+	SCSP_BIT_RAM #(7) MPRO_SET_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], ~OP7.RST, OP7.RST | MPRO_SET_WR, DSP_MPRO_STEP, MPRO_SET_Q);
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) MPRO_OK <= 0;
+		else if (!RES_N) MPRO_OK <= 0;
+		else if (SLOT1_CE && OP7.RST && !OP6.RST) MPRO_OK <= 1;
+	end
+
 	
 	bit  [ 6: 0] DSP_TEMP_RA;
 	bit  [ 6: 0] DSP_TEMP_WA;
@@ -1774,7 +1802,7 @@ module SCSP (
 			CR17 <= '0;
 			CR18 <= '0;
 			CR19 <= '0;
-			DSP_MPRO_SET <= '{128{0}};
+			
 			REG_Q <= '0;
 		end else begin
 			if (!RES_N) begin
@@ -1798,7 +1826,7 @@ module SCSP (
 				CR17 <= '0;
 				CR18 <= '0;
 				CR19 <= '0;
-				DSP_MPRO_SET <= '{128{0}};
+				
 			end else begin
 				REG_RD_DELAY <= REG_RD;
 				if (REG_WE && CYCLE1_CE) begin
@@ -1892,8 +1920,6 @@ module SCSP (
 	//				end else if (REG_A[11:9] == 3'b011) begin
 	//					if (MEM_WE[0]) STACK[REG_A[7:1]][ 7:0] <= MEM_D[ 7:0];
 	//					if (MEM_WE[1]) STACK[REG_A[7:1]][15:8] <= MEM_D[15:8];
-					end else if (MPRO_SEL) begin
-						if (REG_A[2:1] == 2'b11) DSP_MPRO_SET[REG_A[9:3]] <= 1;
 					end
 				end else if (REG_RD_DELAY) begin
 					if (REG_A[11:10] == 2'b00) begin
@@ -2261,6 +2287,53 @@ module SCSP_KEY_RAM
 //	
 //`endif
 	
+endmodule
+
+module SCSP_BIT_RAM #(
+	parameter addr_width = 5
+)
+(
+	input                  CLK,
+	input [addr_width-1:0] WRADDR,
+	input                  DATA,
+	input                  WREN,
+	input [addr_width-1:0] RDADDR,
+	output                 Q
+);
+	altdpram	altdpram_component (
+				.data (DATA),
+				.inclock (CLK),
+				.rdaddress (RDADDR),
+				.wraddress (WRADDR),
+				.wren (WREN),
+				.byteena (1'b1),
+				.q (Q),
+				.aclr (1'b0),
+				.inclocken (1'b1),
+				.rdaddressstall (1'b0),
+				.rden (1'b1),
+				.wraddressstall (1'b0));
+	defparam
+		altdpram_component.byte_size = 8,
+		altdpram_component.indata_aclr = "OFF",
+		altdpram_component.indata_reg = "INCLOCK",
+		altdpram_component.intended_device_family = "Cyclone V",
+		altdpram_component.lpm_type = "altdpram",
+		altdpram_component.outdata_aclr = "OFF",
+		altdpram_component.outdata_reg = "UNREGISTERED",
+		altdpram_component.ram_block_type = "MLAB",
+		altdpram_component.rdaddress_aclr = "OFF",
+		altdpram_component.rdaddress_reg = "UNREGISTERED",
+		altdpram_component.rdcontrol_aclr = "OFF",
+		altdpram_component.rdcontrol_reg = "UNREGISTERED",
+		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
+		altdpram_component.width = 1,
+		altdpram_component.widthad = addr_width,
+		altdpram_component.width_byteena = 1,
+		altdpram_component.wraddress_aclr = "OFF",
+		altdpram_component.wraddress_reg = "INCLOCK",
+		altdpram_component.wrcontrol_aclr = "OFF",
+		altdpram_component.wrcontrol_reg = "INCLOCK";
 endmodule
 
 module SCSP_PHASE_RAM (

@@ -3,8 +3,8 @@
 #   make clean
 ROOT   := $(abspath ../..)
 GOLD   := $(ROOT)/ref/Saturn_MiSTer/rtl/Saturn/SCSP
-NEW    := $(ROOT)/src/fpga/saturn/Saturn/SCSP
-B      := build
+NEW    ?= $(ROOT)/src/fpga/saturn/Saturn/SCSP
+B      ?= build
 SEEDS  ?= 1 2 3 4 5 6
 ROUNDS ?= 400
 
@@ -38,3 +38,7 @@ run: $(B)/obj/Vtb_top
 
 clean:
 	rm -rf $(B)
+
+# Used by mutate.sh: build only, into $(B).
+.PHONY: build_mut_exe
+build_mut_exe: $(B)/obj/Vtb_top
