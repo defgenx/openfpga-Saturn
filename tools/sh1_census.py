@@ -130,6 +130,17 @@ def plausible_fn(c, v, limit=3000):
     return False
 
 
+def covers(x, y):
+    """True if abstract value x covers y (None = anything, frozenset = any member)."""
+    if x is None or x == y:
+        return True
+    if isinstance(x, frozenset):
+        if isinstance(y, frozenset):
+            return y <= x
+        return y in x
+    return False
+
+
 def is_rd(v):
     return isinstance(v, tuple) and v[0] == 'rd'
 
@@ -180,6 +191,7 @@ class Census:
         self.writes_val = collections.defaultdict(set)   # byte addr -> {(kind, byte|None)}
         self.wr_full = collections.defaultdict(set)      # (addr,size) -> {value|None}
         self.dyn_sites = collections.defaultdict(set)    # addr -> pcs writing an unknown value
+        self.restores = collections.defaultdict(set)     # addr -> pcs restoring a saved value
         self.fn_body = collections.defaultdict(set)
         self.fn_of = {}
         self.ptr_loads = set()   # pcs of pc-relative literal loads that were executed
@@ -199,16 +211,25 @@ class Census:
 
     @staticmethod
     def join(a, b):
-        return tuple(x if x == y else None for x, y in zip(a, b))
+        out = []
+        for i, (x, y) in enumerate(zip(a, b)):
+            if x == y:
+                out.append(x)
+            elif i == GBR and x is not None and y is not None:
+                u = (x if isinstance(x, frozenset) else frozenset([x])) | (y if isinstance(y, frozenset) else frozenset([y]))
+                out.append(u if len(u) <= 12 else None)
+            else:
+                out.append(None)
+        return tuple(out)
 
     # ---- state set management
     def add_state(self, pc, st):
         """Record st at pc. Returns True if it adds information."""
         cur = self.states.setdefault(pc, [])
         for t in cur:
-            if all(x is None or x == y for x, y in zip(t, st)):
+            if all(covers(x, y) for x, y in zip(t, st)):
                 return False
-        cur[:] = [t for t in cur if not all(x is None or x == y for x, y in zip(st, t))]
+        cur[:] = [t for t in cur if not all(covers(x, y) for x, y in zip(st, t))]
         if len(cur) >= self.STATE_CAP:
             j = st
             for t in cur:
@@ -242,7 +263,12 @@ class Census:
                         self.writes_val[ea + k].add(('set', (v >> (8 * (size - 1 - k))) & 0xFF))
                 elif isinstance(val, tuple) and val[0] in ('and', 'or', 'xor'):
                     self.writes_val[ea].add((val[0], val[1]))
-                elif is_rd(val) and val[1] == ea and val[2] == size:
+                elif isinstance(val, tuple) and val[0] == 'keep':
+                    # restore of a value that was saved from the same register: no new bits
+                    self.restores[ea].add(pc)
+                    for k in range(size):
+                        self.writes_val[ea + k].add(('keep', 0))
+                elif is_rd(val) and val[1] + val[2] == ea + size and size <= val[2]:
                     # read-modify-write of the same register: only the OR/AND constants matter
                     for k in range(size):
                         sh = 8 * (size - 1 - k)
@@ -261,6 +287,13 @@ class Census:
                         self.writes_val[ea + k].add(('set', None))
         else:
             self.ext[ea].add((d, size, pc))
+
+    def is_stack_restore(self, pc, reg):
+        """True if the previous instruction is `mov.l @r15+,reg` (a register restored from the stack)."""
+        if pc < 2:
+            return False
+        i = decode(self.w(pc - 2))
+        return i.mn == 'MOV.L' and i.mem == ('post', 4, 'R') and i.m == 15 and i.n == reg
 
     def load_value(self, ea, size):
         if isint(ea) and IO_LO <= (ea & M32) <= IO_HI:
@@ -314,25 +347,30 @@ class Census:
             desc = None
             if mode in ('gbrd', 'gbr0'):
                 g = K(GBR)
-                if mode == 'gbrd':
-                    ea = g + ins.disp if isint(g) else None
-                    desc = 'gbr(unknown)'
-                else:
-                    r0 = K(0)
-                    if isint(g) and isint(r0):
-                        ea = g + r0
-                    elif isint(g) and r0 is None:
-                        ea = ('off', g)
-                    else:
-                        desc = 'gbr+r0'
+                gs = list(g) if isinstance(g, frozenset) else ([g] if isint(g) else [])
                 gval = None
                 if d == 'W' and mn.startswith('MOV'):
                     gval = K(0)
+                    if gval is None and self.is_stack_restore(pc, 0):
+                        gval = ('keep',)
                 elif mn in ('AND.B', 'OR.B', 'XOR.B'):
                     gval = (mn[:-2].lower(), ins.imm)
-                self.rec(pc, ins, ea, size, d, desc, gval)
+                r0 = K(0)
+                if not gs:
+                    self.rec(pc, ins, None, size, d, 'gbr(unknown)' if mode == 'gbrd' else 'gbr+r0(unknown)', gval)
+                    ea = None
+                for gv in gs:
+                    ea = None
+                    desc = None
+                    if mode == 'gbrd':
+                        ea = gv + ins.disp
+                    elif isint(r0):
+                        ea = gv + r0
+                    else:
+                        ea = ('off', gv)
+                    self.rec(pc, ins, ea, size, d, desc, gval)
                 if 'R' in d and mn.startswith('MOV'):
-                    setr(0, self.load_value(ea, size))
+                    setr(0, self.load_value(ea if len(gs) == 1 else None, size))
                 return
             if mn in ('MAC.W', 'MAC.L'):
                 base = m
@@ -370,6 +408,8 @@ class Census:
             if d == 'W' and mn.startswith('MOV'):
                 src = 0 if (ins.op >> 12) == 8 else m
                 val = K(src)
+                if val is None and self.is_stack_restore(pc, src):
+                    val = ('keep',)
             self.rec(pc, ins, ea, size, d, desc, val)
             if mode == 'post':
                 if mn in ('MAC.W', 'MAC.L'):
@@ -471,13 +511,15 @@ class Census:
         elif mn == 'LDC':
             ctl = ins.text.split(',')[1]
             if ctl == 'gbr':
-                st[GBR] = ival(n)
+                v = K(n)
+                st[GBR] = v if (isint(v) or isinstance(v, frozenset)) else None
             elif ctl == 'vbr':
                 st[VBR] = ival(n)
                 self.ldc_vbr.add((pc, ival(n)))
         elif mn == 'STC':
             ctl = ins.text.split(' ')[1].split(',')[0]
-            setr(n, st[GBR] if ctl == 'gbr' else st[VBR] if ctl == 'vbr' else None)
+            gv = st[GBR] if ctl == 'gbr' else st[VBR] if ctl == 'vbr' else None
+            setr(n, gv if isint(gv) else None)
         else:
             for r in self.dest_regs(ins):
                 if r < 16:
@@ -845,75 +887,101 @@ def io_literals(img):
     return out
 
 
+def module_of(a):
+    return REG_AT[a][2] if a in REG_AT else 'unmapped'
+
+
+def report(path, out):
+    P = analyse(path, False)
+    C = analyse(path, True)
+    pr = lambda *a: print(*a, file=out)
+    pr('=' * 78)
+    pr('image: %s' % path)
+    pr('reset PC %08X SP %08X | manual reset PC %08X SP %08X' % (C.vec(0), C.vec(1), C.vec(2), C.vec(3)))
+    pr('precise trace (vectors + resolved calls/tables): %d instructions, %d functions'
+       % (len(P.code), len(P.fn_entries)))
+    pr('conservative trace (+ %d address-taken roots from literal pools / data words): %d instructions, %d functions'
+       % (len(C.addr_taken), len(C.code), len(C.fn_entries)))
+    pr('VBR writes: %s' % sorted(C.ldc_vbr))
+    cnt = collections.Counter(C.vector_roots[v] for v in range(4, 128))
+    default, _ = cnt.most_common(1)[0]
+    pr('default vector target %06X (%d entries); non-default vectors:' % (default, cnt[default]))
+    for v in range(4, 128):
+        t = C.vector_roots[v]
+        if t != default:
+            pr('  vec %3d  %-16s -> %06X' % (v, VEC_NAMES.get(v, '?'), t))
+    per = summarize(C)
+    perP = summarize(P)
+    pr('on-chip register accesses (C = also reached only by the conservative trace):')
+    mods = collections.OrderedDict()
+    for (base, n, m), e in per.items():
+        mods.setdefault(m, []).append((base, n, e))
+    for m, lst in mods.items():
+        pr('  [%s]' % m)
+        for base, n, e in lst:
+            tag = '  ' if (base, n, m) in perP else 'C '
+            pr('   %s%07X %-10s R:%-3d W:%-3d sz=%s%s' % (tag, base, n, len(e['R']), len(e['W']),
+                                                       ''.join(map(str, sorted(e['sizes']))), fmt_writes(C, base, e)))
+    pr('indexed on-chip accesses (base known, offset not): %s' % {hex(k): len(v) for k, v in C.idx_io.items()})
+    pr('external bus accesses (resolved, by area):')
+    for ar, e in sorted(ext_areas(C).items(), key=lambda kv: str(kv[0])):
+        pr('  area %s  R-sites=%d W-sites=%d  range %08X..%08X' % (ar, e['R'], e['W'], e['lo'], e['hi']))
+    byb = collections.Counter(u[4] for u in C.unres)
+    pr('unresolved memory accesses: %d (+%d stack); by base register: %s'
+       % (len(C.unres), C.stack_acc, dict(byb.most_common())))
+    pr('unresolved indirect jumps/calls: %s' % sorted(set(C.indirect)))
+    lits = io_literals(C.img)
+    loaded = {}
+    for pc, ea in C.ptr_loads:
+        v = C.l(ea) if ea % 4 == 0 else None
+        if v in lits:
+            loaded.setdefault(v, set()).add(pc)
+    pr('on-chip I/O address literals in the image: %d distinct; not loaded by any reachable instruction: %s'
+       % (len(lits), ['%08X' % v for v in sorted(lits) if v not in loaded]))
+    mn = collections.Counter(i.mn for i in C.code.values())
+    pr('reachable mnemonics: %s' % dict(mn.most_common()))
+    pr('SH-1 mnemonics never reached: %s' % [x for x in ALL_MN if x not in mn and x not in
+                                              ('MAC.L', 'MUL.L', 'DMULS.L', 'DMULU.L', 'BRAF', 'BSRF', 'BT/S', 'BF/S', 'DT')])
+    pr('SH-2-only encodings (not valid on SH-1) in reachable code: %d' % sum(1 for i in C.code.values() if 'sh2-only' in i.text))
+    modes = collections.Counter()
+    for i in C.code.values():
+        if i.mem:
+            modes[(i.mem[0], i.mem[1])] += 1
+    pr('addressing modes (mode,size): %s' % dict(sorted(modes.items())))
+    return P, C
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('images', nargs='+')
-    ap.add_argument('--json')
-    ap.add_argument('-v', '--verbose', action='store_true')
+    ap.add_argument('--json', help='write per-register masks (union over images) as JSON')
     args = ap.parse_args()
-    results = {}
-    for p in args.images:
-        c = analyse(p)
-        img = c.img
-        per = summarize(c)
-        print('=' * 78)
-        print('image: %s' % p)
-        print('reset PC %08X SP %08X | manual reset PC %08X SP %08X' % (c.vec(0), c.vec(1), c.vec(2), c.vec(3)))
-        codesz = len(c.code) * 2
-        print('reachable instructions: %d (%d bytes), functions: %d, passes: %d' % (len(c.code), codesz, len(c.fn_entries), c.n_pass + 1))
-        print('VBR writes: %s' % sorted(c.ldc_vbr))
-        # vector table
-        cnt = collections.Counter(c.vector_roots[v] for v in range(4, 128))
-        default, _ = cnt.most_common(1)[0]
-        print('default vector target %06X (%d entries)' % (default, cnt[default]))
-        print('non-default vectors:')
-        for v in range(4, 128):
-            t = c.vector_roots[v]
-            if t != default:
-                print('  vec %3d  %-16s -> %08X%s' % (v, VEC_NAMES.get(v, '?'), t, '' if t < ROM_END else ' (outside ROM)'))
-        print('on-chip register accesses (resolved):')
-        mods = collections.OrderedDict()
-        for (base, n, m), e in per.items():
-            mods.setdefault(m, []).append((base, n, e))
-            wv = set()
-            for k in range(0, 4):
-                for v in c.writes_val.get(base + k, ()):
-                    wv.add(v)
-        for m, lst in mods.items():
-            print('  [%s]' % m)
-            for base, n, e in lst:
-                wvs = fmt_writes(c, base, e)
-                print('    %07X %-10s R:%-3d W:%-3d sz=%s%s' % (base, n, len(e['R']), len(e['W']), ''.join(map(str, sorted(e['sizes']))), wvs))
-        print('external bus accesses (resolved, by area):')
-        for ar, e in sorted(ext_areas(c).items(), key=lambda kv: str(kv[0])):
-            print('  area %s  R-sites=%d W-sites=%d  range %08X..%08X' % (ar, e['R'], e['W'], e['lo'], e['hi']))
-        print('unresolved memory accesses: %d (stack %d)' % (len(c.unres), c.stack_acc))
-        byb = collections.Counter(u[4] for u in c.unres)
-        print('  by base:', dict(byb.most_common()))
-        if args.verbose:
-            for u in c.unres:
-                print('   %05X %-28s %s sz%d via %s' % u)
-        print('unresolved indirect jumps/calls: %d' % len(c.indirect))
-        for i in c.indirect:
-            print('   %05X %s' % i)
-        print('resolved jump tables: %d' % len(c.tables))
-        lits = io_literals(img)
-        print('image-wide on-chip I/O literals (any 32-bit word in range): %d distinct' % len(lits))
-        mn = usage_report(c)
-        unused = [x for x in ALL_MN if x not in mn]
-        print('mnemonic histogram:', dict(mn.most_common()))
-        print('SH-1/SH-2 mnemonics never reached:', unused)
-        modes = collections.Counter()
-        for i in c.code.values():
-            if i.mem:
-                modes[(i.mem[0], i.mem[1])] += 1
-        print('addressing modes:', dict(modes))
-        results[p] = {
-            'regs': {'%07X' % b: {'name': n, 'module': m, 'R': len(e['R']), 'W': len(e['W'])} for (b, n, m), e in per.items()},
-            'unresolved': len(c.unres), 'indirect': len(c.indirect),
-        }
+    union = {}
+    for path in args.images:
+        P, C = report(path, sys.stdout)
+        touched = set()
+        for a in list(C.acc):
+            if a in REG_AT:
+                touched.add(REG_AT[a][0])
+        for a in list(C.writes_val):
+            if a in REG_AT:
+                touched.add(REG_AT[a][0])
+        for base, nbytes, n, m in REGS:
+            if base not in touched:
+                continue
+            e1, e0, dyn = reg_masks(C, base, nbytes)
+            r = sum(1 for k in range(nbytes) if any('R' in d for d, sz, pc in C.acc.get(base + k, ())))
+            w = sum(1 for k in range(nbytes) if base + k in C.writes_val)
+            u = union.setdefault('%07X' % base, {'name': n, 'module': m, 'bytes': nbytes, 'R': 0, 'W': 0,
+                                                 'ever1': 0, 'ever0': 0, 'dyn': False, 'images': []})
+            u['R'] += r
+            u['W'] += w
+            u['ever1'] |= e1
+            u['ever0'] |= e0
+            u['dyn'] |= dyn
+            u['images'].append(os.path.basename(path))
     if args.json:
-        json.dump(results, open(args.json, 'w'), indent=1)
+        json.dump(union, open(args.json, 'w'), indent=1, sort_keys=True)
 
 
 if __name__ == '__main__':
