@@ -36,6 +36,9 @@ module tb_top;
 	wire m_bs  = obs_ref[255-0] ; // placeholder, real decode below
 	wire [26:0] ma = ref0.MSHA;
 
+`ifdef POCKET_CUT_SH2_PURGE
+	reg [2:0] ep_prev;
+`endif
 	always @(posedge CLK) begin
 		if (RST_N) begin
 			cyc <= cyc + 1;
@@ -48,6 +51,10 @@ module tb_top;
 				$display("FAIL %s", name);
 				$finish;
 			end
+`ifdef POCKET_CUT_SH2_PURGE
+			if ($test$plusargs("epochdbg") && dut.MSH.cache.EPOCH !== ep_prev) $display("EPOCH clk %0d -> %0d", cyc, dut.MSH.cache.EPOCH);
+			ep_prev <= dut.MSH.cache.EPOCH;
+`endif
 			if (verbose && cyc < verbose) $display("%0d MSH A=%07h BS=%b CS=%b%b%b%b RW=%b RD=%b DQM=%b DO=%08h DI=%08h WAIT=%b | PC=%08h  SSHres=%b BGR=%b ST=%0d RFS=%b BREQ=%b SPC=%08h", cyc, ref0.MSHA, ref0.MSHBS_N, ref0.MSHCS0_N, ref0.MSHCS1_N, ref0.MSHCS2_N, ref0.MSHCS3_N, ref0.MSHRD_WR_N, ref0.MSHRD_N, ref0.MSHDQM_N, ref0.MSHDO, ref0.MSHDI, ref0.MSHWAIT_N, ref0.MSH.core.PC, ref0.SSHRES_N, ref0.MSHBGR_N, ref0.MSH.bsc.BUS_STATE, ref0.MSRFS, ref0.SSHBREQ_N, ref0.SSH.core.PC);
 			if (watch_hi != 0 && !watch_hit && ref0.MSH.core.PC >= watch_lo && ref0.MSH.core.PC < watch_hi) begin
 				watch_hit <= 1;

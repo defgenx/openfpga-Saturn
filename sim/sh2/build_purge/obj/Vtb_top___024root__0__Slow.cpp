@@ -443,8 +443,10 @@ VL_ATTR_COLD void Vtb_top___024root___ctor_var_reset(Vtb_top___024root* vlSelf) 
     vlSelf->tb_top__DOT__watch_lo = 0;
     vlSelf->tb_top__DOT__watch_hi = 0;
     vlSelf->tb_top__DOT__peek = 0;
+    vlSelf->tb_top__DOT__ep_prev = 0;
     vlSelf->tb_top__DOT__unnamedblk1__DOT__i = 0;
     vlSelf->tb_top__DOT__unnamedblk2__DOT__i = 0;
+    vlSelf->tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i = 0;
     vlSelf->tb_top__DOT__dut__DOT__lfsr = 0;
     vlSelf->tb_top__DOT__dut__DOT__MCLK_DIV = 0;
     vlSelf->tb_top__DOT__dut__DOT__FAST_R = 0;

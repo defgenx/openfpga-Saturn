@@ -22,7 +22,7 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_sequent__TOP__tb_top__DOT__dut__DOT_
                                 & ((IData)(vlSelfRef.__PVT__cache__DOT__INIT) 
                                    | ((~ (IData)(vlSelfRef.__PVT__cache__DOT__SC_SKIP)) 
                                       & (0U != (IData)(vlSelfRef.__PVT__cache__DOT__SC_STALE)))));
-    vlSelfRef.__PVT__cache__DOT__ST_D = ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+    vlSelfRef.__PVT__cache__DOT__ST_D = ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                          & ((- (IData)(
                                                        (1U 
                                                         & (~ (IData)(__PVT__cache__DOT__SC_WR))))) 
@@ -683,7 +683,7 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_comb__TOP__tb_top__DOT__dut__DOT__MS
     vlSelfRef.__PVT__cache__DOT__CVALID_Q[3U] = vlSelfRef.__PVT__cache__DOT__valid3__DOT__altdpram_component__DOT__mem
         [(0x0000003fU & (vlSelfRef.__PVT__CBUS_A >> 4U))];
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = ((IData)(vlSelfRef.__PVT__cache__DOT__INIT) 
-                                                  | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                  | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                      != vlSelfRef.__PVT__cache__DOT__stlb__DOT__altdpram_component__DOT__mem
                                                      [
                                                      (0x0000003fU 
@@ -708,7 +708,7 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_comb__TOP__tb_top__DOT__dut__DOT__MS
                                                       (1U 
                                                        & (~ 
                                                           ((IData)(vlSelfRef.__PVT__cache__DOT__INIT) 
-                                                           | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                           | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                               != vlSelfRef.__PVT__cache__DOT__stla__DOT__altdpram_component__DOT__mem
                                                               [
                                                               (0x0000003fU 
@@ -1109,28 +1109,28 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_comb__TOP__tb_top__DOT__dut__DOT__MS
                                     | (IData)(vlSelfRef.__PVT__core__DOT__ID_STALL))) 
                                 & (IData)(__VdfgRegularize_hebeb780c_0_53));
     __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = (0x0000000fU 
-                                                  & ((((((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                  & ((((((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                          != vlSelfRef.__PVT__cache__DOT__stw3__DOT__altdpram_component__DOT__mem
                                                          [
                                                          (0x0000003fU 
                                                           & (vlSelfRef.__PVT__CBUS_A 
                                                              >> 4U))]) 
                                                         << 3U) 
-                                                       | (((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                       | (((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                            != vlSelfRef.__PVT__cache__DOT__stw2__DOT__altdpram_component__DOT__mem
                                                            [
                                                            (0x0000003fU 
                                                             & (vlSelfRef.__PVT__CBUS_A 
                                                                >> 4U))]) 
                                                           << 2U)) 
-                                                      | ((((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                      | ((((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                            != vlSelfRef.__PVT__cache__DOT__stw1__DOT__altdpram_component__DOT__mem
                                                            [
                                                            (0x0000003fU 
                                                             & (vlSelfRef.__PVT__CBUS_A 
                                                                >> 4U))]) 
                                                           << 1U) 
-                                                         | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                         | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                             != vlSelfRef.__PVT__cache__DOT__stw0__DOT__altdpram_component__DOT__mem
                                                             [
                                                             (0x0000003fU 
@@ -5786,7 +5786,7 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_sequent__TOP__tb_top__DOT__dut__DOT_
     vlSelfRef.__Vdly__divu__DOT__BUSY = vlSelfRef.__PVT__divu__DOT__BUSY;
     __Vdly__mult__DOT__unnamedblk1__DOT__MM_CYC = vlSelfRef.__PVT__mult__DOT__unnamedblk1__DOT__MM_CYC;
     __Vdly__mult__DOT__MM_DONE = vlSelfRef.__PVT__mult__DOT__MM_DONE;
-    __Vdly__cache__DOT__EPOCH = vlSelfRef.__PVT__cache__DOT__EPOCH;
+    __Vdly__cache__DOT__EPOCH = vlSelfRef.cache__DOT__EPOCH;
     vlSelfRef.__Vdly__divu__DOT__DIV64 = vlSelfRef.__PVT__divu__DOT__DIV64;
     vlSelfRef.__Vdly__divu__DOT__unnamedblk1__DOT__OVF0 
         = vlSelfRef.__PVT__divu__DOT__unnamedblk1__DOT__OVF0;
@@ -6851,11 +6851,11 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_sequent__TOP__tb_top__DOT__dut__DOT_
                 vlSelfRef.__Vdly__divu__DOT__BUSY = 0U;
             }
             if ((0x00000010U & (IData)(vlSelfRef.__PVT__cache__DOT__CCR))) {
-                __Vdly__cache__DOT__EPOCH = ((7U == (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))
+                __Vdly__cache__DOT__EPOCH = ((7U == (IData)(vlSelfRef.cache__DOT__EPOCH))
                                               ? 1U : 
                                              (7U & 
                                               ((IData)(1U) 
-                                               + (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))));
+                                               + (IData)(vlSelfRef.cache__DOT__EPOCH))));
             }
             if ((((IData)(vlSelfRef.__PVT__bsc__DOT__BUS_SEL) 
                   & (~ (IData)(vlSelfRef.__PVT__bsc__DOT__BREQ))) 
@@ -8049,20 +8049,20 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_sequent__TOP__tb_top__DOT__dut__DOT_
                      [vlSelfRef.__PVT__cache__DOT__SC_PTR]) 
                     & (vlSelfRef.__PVT__cache__DOT__stls__DOT__altdpram_component__DOT__mem
                        [vlSelfRef.__PVT__cache__DOT__SC_PTR] 
-                       != (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))) 
+                       != (IData)(vlSelfRef.cache__DOT__EPOCH))) 
                    << 4U) | ((((0U != vlSelfRef.__PVT__cache__DOT__STW_S[3U]) 
                                & (vlSelfRef.__PVT__cache__DOT__STW_S[3U] 
-                                  != (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))) 
+                                  != (IData)(vlSelfRef.cache__DOT__EPOCH))) 
                               << 3U) | (((0U != vlSelfRef.__PVT__cache__DOT__STW_S[2U]) 
                                          & (vlSelfRef.__PVT__cache__DOT__STW_S[2U] 
-                                            != (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))) 
+                                            != (IData)(vlSelfRef.cache__DOT__EPOCH))) 
                                         << 2U))) | 
                  ((((0U != vlSelfRef.__PVT__cache__DOT__STW_S[1U]) 
                     & (vlSelfRef.__PVT__cache__DOT__STW_S[1U] 
-                       != (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH))) 
+                       != (IData)(vlSelfRef.cache__DOT__EPOCH))) 
                    << 1U) | ((0U != vlSelfRef.__PVT__cache__DOT__STW_S[0U]) 
                              & (vlSelfRef.__PVT__cache__DOT__STW_S[0U] 
-                                != (IData)(vlSelfRef.__PVT__cache__DOT__EPOCH)))));
+                                != (IData)(vlSelfRef.cache__DOT__EPOCH)))));
             if (vlSelfRef.__PVT__INT_ACP) {
                 vlSelfRef.__PVT__intc__DOT__IRL_LVL_SAVE 
                     = vlSelfRef.__PVT__intc__DOT__IRL_LVL;
@@ -10205,7 +10205,7 @@ void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___nba_sequent__TOP__tb_top__DOT__dut__DOT_
         vlSelfRef.__PVT__core__DOT__regfile__DOT__GR[15U] = 0U;
         vlSelfRef.__PVT__core__DOT__regfile__DOT__GR[16U] = 0U;
     }
-    vlSelfRef.__PVT__cache__DOT__EPOCH = __Vdly__cache__DOT__EPOCH;
+    vlSelfRef.cache__DOT__EPOCH = __Vdly__cache__DOT__EPOCH;
     vlSelfRef.__PVT__core__DOT__ILI_EXP = __Vdly__core__DOT__ILI_EXP;
     vlSelfRef.__PVT__core__DOT__RES_EXP = __Vdly__core__DOT__RES_EXP;
     vlSelfRef.__PVT__cache__DOT__SC_PTR = __Vdly__cache__DOT__SC_PTR;

@@ -1882,7 +1882,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
     vlSelfRef.cache__DOT____Vcellinpt__lru_a__wren__strong 
         = ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__MCLK_DIV) 
            & (IData)(vlSelfRef.__PVT__cache__DOT__LRU_WE));
-    vlSelfRef.__PVT__cache__DOT__ST_D = ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+    vlSelfRef.__PVT__cache__DOT__ST_D = ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                          & ((- (IData)(
                                                        (1U 
                                                         & (~ (IData)(__PVT__cache__DOT__SC_WR))))) 
@@ -2338,7 +2338,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
     vlSelfRef.__PVT__cache__DOT__CVALID_Q[3U] = vlSelfRef.__PVT__cache__DOT__valid3__DOT__altdpram_component__DOT__mem
         [(0x0000003fU & (vlSelfRef.__PVT__CBUS_A >> 4U))];
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = ((IData)(vlSelfRef.__PVT__cache__DOT__INIT) 
-                                                  | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                  | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                      != vlSelfRef.__PVT__cache__DOT__stlb__DOT__altdpram_component__DOT__mem
                                                      [
                                                      (0x0000003fU 
@@ -2520,28 +2520,28 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
         vlSelfRef.__PVT__core__DOT__SR_NEW = vlSelfRef.__PVT__core__DOT__ALU_RES;
     }
     __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = (0x0000000fU 
-                                                  & ((((((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                  & ((((((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                          != vlSelfRef.__PVT__cache__DOT__stw3__DOT__altdpram_component__DOT__mem
                                                          [
                                                          (0x0000003fU 
                                                           & (vlSelfRef.__PVT__CBUS_A 
                                                              >> 4U))]) 
                                                         << 3U) 
-                                                       | (((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                       | (((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                            != vlSelfRef.__PVT__cache__DOT__stw2__DOT__altdpram_component__DOT__mem
                                                            [
                                                            (0x0000003fU 
                                                             & (vlSelfRef.__PVT__CBUS_A 
                                                                >> 4U))]) 
                                                           << 2U)) 
-                                                      | ((((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                      | ((((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                            != vlSelfRef.__PVT__cache__DOT__stw1__DOT__altdpram_component__DOT__mem
                                                            [
                                                            (0x0000003fU 
                                                             & (vlSelfRef.__PVT__CBUS_A 
                                                                >> 4U))]) 
                                                           << 1U) 
-                                                         | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                         | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                             != vlSelfRef.__PVT__cache__DOT__stw0__DOT__altdpram_component__DOT__mem
                                                             [
                                                             (0x0000003fU 
@@ -6581,7 +6581,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                       (1U 
                                                        & (~ 
                                                           ((IData)(vlSelfRef.__PVT__cache__DOT__INIT) 
-                                                           | ((IData)(vlSelfRef.__PVT__cache__DOT__EPOCH) 
+                                                           | ((IData)(vlSelfRef.cache__DOT__EPOCH) 
                                                               != vlSelfRef.__PVT__cache__DOT__stla__DOT__altdpram_component__DOT__mem
                                                               [
                                                               (0x0000003fU 
@@ -6764,7 +6764,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___ctor_var_reset(Vtb_top_SH76
     for (int __Vi0 = 0; __Vi0 < 4; ++__Vi0) {
         vlSelf->__PVT__cache__DOT__CVALID_Q[__Vi0] = 0;
     }
-    vlSelf->__PVT__cache__DOT__EPOCH = 0;
+    vlSelf->cache__DOT__EPOCH = 0;
     vlSelf->__PVT__cache__DOT__INIT = 0;
     vlSelf->__PVT__cache__DOT__SC_PTR = 0;
     vlSelf->__PVT__cache__DOT__SC_STALE = 0;

@@ -7,7 +7,7 @@ B    ?= build
 FILES := $(SRC)/SMPC/HMCS400_pkg.sv $(SRC)/SMPC/HMCS400_core.sv $(SRC)/SMPC/HMCS400_mem.sv $(SRC)/SMPC/SMPC_pkg.sv \
          $(SRC)/SMPC/SMPC.sv $(SRC)/SMPC_HLE.sv
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-UNOPTFLAT \
-          -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -DSIM -j 4
+          -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -DSIM -DPOCKET_CUT_SMPC_HLE -j 4
 
 .PHONY: run clean
 run: $(B)/log.txt

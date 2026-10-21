@@ -144,7 +144,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         CData/*3:0*/ __PVT__cache__DOT__CTAG_WE;
         CData/*0:0*/ __PVT__cache__DOT__CVALID_D;
         CData/*3:0*/ __PVT__cache__DOT__CVALID_WE;
-        CData/*2:0*/ __PVT__cache__DOT__EPOCH;
+        CData/*2:0*/ cache__DOT__EPOCH;
         CData/*0:0*/ __PVT__cache__DOT__INIT;
         CData/*5:0*/ __PVT__cache__DOT__SC_PTR;
         CData/*4:0*/ __PVT__cache__DOT__SC_STALE;

@@ -2346,50 +2346,87 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
     if (vlSelfRef.tb_top__DOT__RST_N) {
         __Vdly__tb_top__DOT__cyc = ((IData)(1U) + vlSelfRef.tb_top__DOT__cyc);
         __VdlyMask__tb_top__DOT__cyc = 0xffffffffU;
-        if (VL_UNLIKELY(((0U != ((((((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9) 
-                                       << 0x0000000dU) 
-                                      | ((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_3) 
-                                           << 8U) | 
-                                          (0x00000080U 
-                                           & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_10) 
-                                              >> 1U))) 
-                                         | ((0x0000007cU 
-                                             & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_10) 
-                                                << 1U)) 
-                                            | ((2U 
-                                                & ((~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__bsc__DOT__BREQ)) 
+        if (VL_UNLIKELY((((0U != ((((((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9) 
+                                        << 0x0000000dU) 
+                                       | ((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_3) 
+                                            << 8U) 
+                                           | (0x00000080U 
+                                              & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_10) 
+                                                 >> 1U))) 
+                                          | ((0x0000007cU 
+                                              & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_10) 
+                                                 << 1U)) 
+                                             | ((2U 
+                                                 & ((~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__bsc__DOT__BREQ)) 
+                                                    << 1U)) 
+                                                | (1U 
+                                                   & vlSelfRef.tb_top__DOT__dut__DOT__SSHDI))))) 
+                                      ^ (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12) 
+                                          << 0x0000000dU) 
+                                         | ((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_5) 
+                                              << 8U) 
+                                             | (0x00000080U 
+                                                & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_13) 
+                                                   >> 1U))) 
+                                            | ((0x0000007cU 
+                                                & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_13) 
                                                    << 1U)) 
-                                               | (1U 
-                                                  & vlSelfRef.tb_top__DOT__dut__DOT__SSHDI))))) 
-                                     ^ (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12) 
-                                         << 0x0000000dU) 
-                                        | ((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_5) 
-                                             << 8U) 
-                                            | (0x00000080U 
-                                               & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_13) 
-                                                  >> 1U))) 
-                                           | ((0x0000007cU 
-                                               & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_13) 
-                                                  << 1U)) 
-                                              | ((2U 
-                                                  & ((~ (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__PVT__bsc__DOT__BREQ)) 
-                                                     << 1U)) 
-                                                 | (1U 
-                                                    & vlSelfRef.tb_top__DOT__ref0__DOT__SSHDI)))))) 
-                                    | ((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9) 
-                                         >> 0x00000013U) 
+                                               | ((2U 
+                                                   & ((~ (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__PVT__bsc__DOT__BREQ)) 
+                                                      << 1U)) 
+                                                  | (1U 
+                                                     & vlSelfRef.tb_top__DOT__ref0__DOT__SSHDI)))))) 
+                                     | ((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9) 
+                                          >> 0x00000013U) 
+                                         | ((IData)(
+                                                    (vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9 
+                                                     >> 0x00000020U)) 
+                                            << 0x0000000dU)) 
+                                        ^ (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12) 
+                                            >> 0x00000013U) 
+                                           | ((IData)(
+                                                      (vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12 
+                                                       >> 0x00000020U)) 
+                                              << 0x0000000dU)))) 
+                                    | (((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
+                                          << 0x00000016U) 
+                                         | (((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_2) 
+                                               << 9U) 
+                                              | (0x00000100U 
+                                                 & (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_6))) 
+                                             | ((0x000000fcU 
+                                                 & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_6) 
+                                                    << 2U)) 
+                                                | (((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.RFS) 
+                                                    << 1U) 
+                                                   | (1U 
+                                                      & (~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
+                                            << 8U)) 
                                         | ((IData)(
                                                    (vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9 
                                                     >> 0x00000020U)) 
-                                           << 0x0000000dU)) 
-                                       ^ (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12) 
-                                           >> 0x00000013U) 
+                                           >> 0x00000013U)) 
+                                       ^ ((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
+                                            << 0x00000016U) 
+                                           | (((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_4) 
+                                                 << 9U) 
+                                                | (0x00000100U 
+                                                   & (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_7))) 
+                                               | ((0x000000fcU 
+                                                   & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_7) 
+                                                      << 2U)) 
+                                                  | (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.RFS) 
+                                                      << 1U) 
+                                                     | (1U 
+                                                        & (~ (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
+                                              << 8U)) 
                                           | ((IData)(
                                                      (vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12 
                                                       >> 0x00000020U)) 
-                                             << 0x0000000dU)))) 
-                                   | (((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
-                                         << 0x00000016U) 
+                                             >> 0x00000013U)))) 
+                                   | ((((0x000000ffU 
+                                         & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
+                                            >> 0x0000000aU)) 
                                         | (((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_2) 
                                               << 9U) 
                                              | (0x00000100U 
@@ -2401,12 +2438,17 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
                                                    << 1U) 
                                                   | (1U 
                                                      & (~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
-                                           << 8U)) 
-                                       | ((IData)((vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_9 
-                                                   >> 0x00000020U)) 
-                                          >> 0x00000013U)) 
-                                      ^ ((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
-                                           << 0x00000016U) 
+                                           >> 0x00000018U)) 
+                                       | ((0x003fff00U 
+                                           & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
+                                              >> 0x0000000aU)) 
+                                          | ((IData)(
+                                                     (vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0 
+                                                      >> 0x00000020U)) 
+                                             << 0x00000016U))) 
+                                      ^ (((0x000000ffU 
+                                           & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
+                                              >> 0x0000000aU)) 
                                           | (((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_4) 
                                                 << 9U) 
                                                | (0x00000100U 
@@ -2418,74 +2460,34 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
                                                      << 1U) 
                                                     | (1U 
                                                        & (~ (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
-                                             << 8U)) 
-                                         | ((IData)(
-                                                    (vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.__VdfgRegularize_hebeb780c_0_12 
-                                                     >> 0x00000020U)) 
-                                            >> 0x00000013U)))) 
-                                  | ((((0x000000ffU 
-                                        & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
-                                           >> 0x0000000aU)) 
-                                       | (((((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_2) 
-                                             << 9U) 
-                                            | (0x00000100U 
-                                               & (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_6))) 
-                                           | ((0x000000fcU 
-                                               & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_6) 
-                                                  << 2U)) 
-                                              | (((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.RFS) 
-                                                  << 1U) 
-                                                 | (1U 
-                                                    & (~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
-                                          >> 0x00000018U)) 
-                                      | ((0x003fff00U 
-                                          & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0) 
-                                             >> 0x0000000aU)) 
-                                         | ((IData)(
+                                             >> 0x00000018U)) 
+                                         | ((0x003fff00U 
+                                             & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
+                                                >> 0x0000000aU)) 
+                                            | ((IData)(
+                                                       (vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1 
+                                                        >> 0x00000020U)) 
+                                               << 0x00000016U))))) 
+                                  | (((0x000000ffU 
+                                       & ((IData)((vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0 
+                                                   >> 0x00000020U)) 
+                                          >> 0x0000000aU)) 
+                                      | (0x003fff00U 
+                                         & ((IData)(
                                                     (vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0 
                                                      >> 0x00000020U)) 
-                                            << 0x00000016U))) 
-                                     ^ (((0x000000ffU 
-                                          & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
-                                             >> 0x0000000aU)) 
-                                         | (((((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_4) 
-                                               << 9U) 
-                                              | (0x00000100U 
-                                                 & (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_7))) 
-                                             | ((0x000000fcU 
-                                                 & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_7) 
-                                                    << 2U)) 
-                                                | (((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.RFS) 
-                                                    << 1U) 
-                                                   | (1U 
-                                                      & (~ (IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__PVT__bsc__DOT__BGR)))))) 
-                                            >> 0x00000018U)) 
-                                        | ((0x003fff00U 
-                                            & ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1) 
-                                               >> 0x0000000aU)) 
-                                           | ((IData)(
+                                            >> 0x0000000aU))) 
+                                     ^ ((0x000000ffU 
+                                         & ((IData)(
+                                                    (vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1 
+                                                     >> 0x00000020U)) 
+                                            >> 0x0000000aU)) 
+                                        | (0x003fff00U 
+                                           & ((IData)(
                                                       (vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1 
                                                        >> 0x00000020U)) 
-                                              << 0x00000016U))))) 
-                                 | (((0x000000ffU & 
-                                      ((IData)((vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0 
-                                                >> 0x00000020U)) 
-                                       >> 0x0000000aU)) 
-                                     | (0x003fff00U 
-                                        & ((IData)(
-                                                   (vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_0 
-                                                    >> 0x00000020U)) 
-                                           >> 0x0000000aU))) 
-                                    ^ ((0x000000ffU 
-                                        & ((IData)(
-                                                   (vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1 
-                                                    >> 0x00000020U)) 
-                                           >> 0x0000000aU)) 
-                                       | (0x003fff00U 
-                                          & ((IData)(
-                                                     (vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_1 
-                                                      >> 0x00000020U)) 
-                                             >> 0x0000000aU))))))))) {
+                                              >> 0x0000000aU)))))) 
+                          & (! VL_TESTPLUSARGS_I("nocmp"s)))))) {
             VL_WRITEF_NX("MISMATCH %s at clk %0d (t=%0t)\n  ref  MSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b IVEC=%b RFS=%b BGR=%b\n  dut  MSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b IVEC=%b RFS=%b BGR=%b\n  ref  SSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b BREQ=%b\n  dut  SSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b BREQ=%b\nFAIL %s\n",53, 'T',-12
                          , 'S',&(vlSelfRef.tb_top__DOT__name)
                          , '#',32,vlSelfRef.tb_top__DOT__cyc
@@ -2575,7 +2577,14 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
                                 >> 1U)), '#',1,(1U 
                                                 & (~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__bsc__DOT__BREQ)))
                          , 'S',&(vlSelfRef.tb_top__DOT__name));
-            VL_FINISH_MT("tb/tb_top.sv", 49, "");
+            VL_FINISH_MT("tb/tb_top.sv", 52, "");
+        }
+        if (VL_UNLIKELY(((VL_TESTPLUSARGS_I("epochdbg"s) 
+                          && ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.cache__DOT__EPOCH) 
+                              != (IData)(vlSelfRef.tb_top__DOT__ep_prev)))))) {
+            VL_WRITEF_NX("EPOCH clk %0d -> %0d\n",2
+                         , '#',32,vlSelfRef.tb_top__DOT__cyc
+                         , '#',3,(IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.cache__DOT__EPOCH));
         }
         if (VL_UNLIKELY((((0U != vlSelfRef.tb_top__DOT__verbose) 
                           & (vlSelfRef.tb_top__DOT__cyc 
@@ -2624,6 +2633,7 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
                          , '#',32,vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.core__DOT__PC);
             vlSelfRef.tb_top__DOT__watch_hit = 1U;
         }
+        vlSelfRef.tb_top__DOT__ep_prev = vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.cache__DOT__EPOCH;
         if (VL_UNLIKELY((((((0U != vlSelfRef.tb_top__DOT__watch_hi) 
                             & (~ (IData)(vlSelfRef.tb_top__DOT__watch_hit_s))) 
                            & (vlSymsp->TOP__tb_top__DOT__ref0__DOT__SSH.core__DOT__PC 
@@ -2735,10 +2745,34 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
             }
             if (VL_UNLIKELY(((vlSelfRef.tb_top__DOT__chk_r 
                               != vlSelfRef.tb_top__DOT__chk_d)))) {
-                VL_WRITEF_NX("MISMATCH memory contents %s\nFAIL %s\n",2
-                             , 'S',&(vlSelfRef.tb_top__DOT__name)
+                VL_WRITEF_NX("MISMATCH memory contents %s\n",1
                              , 'S',&(vlSelfRef.tb_top__DOT__name));
-                VL_FINISH_MT("tb/tb_top.sv", 84, "");
+                vlSelfRef.tb_top__DOT__unnamedblk3__DOT__nd = 0U;
+                vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i = 0U;
+                while ((VL_GTS_III(32, 0x00010000U, vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i) 
+                        & VL_GTS_III(32, 0x0000000cU, vlSelfRef.tb_top__DOT__unnamedblk3__DOT__nd))) {
+                    if (VL_UNLIKELY(((vlSelfRef.tb_top__DOT__ref0__DOT__wramh
+                                      [(0x0000ffffU 
+                                        & vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i)] 
+                                      != vlSelfRef.tb_top__DOT__dut__DOT__wramh
+                                      [(0x0000ffffU 
+                                        & vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i)])))) {
+                        vlSelfRef.tb_top__DOT__unnamedblk3__DOT__nd 
+                            = ((IData)(1U) + vlSelfRef.tb_top__DOT__unnamedblk3__DOT__nd);
+                        VL_WRITEF_NX("  wramh[%05h] ref=%08h dut=%08h\n",3
+                                     , '~',32,VL_MULS_III(32, (IData)(4U), vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i)
+                                     , '#',32,vlSelfRef.tb_top__DOT__ref0__DOT__wramh
+                                     [(0x0000ffffU 
+                                       & vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i)]
+                                     , '#',32,vlSelfRef.tb_top__DOT__dut__DOT__wramh
+                                     [(0x0000ffffU 
+                                       & vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i)]);
+                    }
+                    vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i 
+                        = ((IData)(1U) + vlSelfRef.tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i);
+                }
+                VL_WRITEF_NX("FAIL %s\n",1, 'S',&(vlSelfRef.tb_top__DOT__name));
+                VL_FINISH_MT("tb/tb_top.sv", 91, "");
             }
             vlSelfRef.tb_top__DOT____VlemExpr_5 = VL_VALUEPLUSARGS_INI(32, "peek=%h"s, 
                                                                        vlSelfRef.tb_top__DOT__peek);
@@ -2796,7 +2830,7 @@ void Vtb_top___024root___nba_sequent__TOP__0(Vtb_top___024root* vlSelf) {
                          , '#',32,vlSelfRef.tb_top__DOT__nwrite
                          , '#',32,vlSelfRef.tb_top__DOT__nvec
                          , '#',1,(IData)(vlSelfRef.tb_top__DOT__ref0__DOT__SSHRES_N));
-            VL_FINISH_MT("tb/tb_top.sv", 92, "");
+            VL_FINISH_MT("tb/tb_top.sv", 99, "");
         }
     }
     if ((1U & (((~ ((IData)(vlSymsp->TOP__tb_top__DOT__ref0__DOT__MSH.__VdfgRegularize_hebeb780c_0_7) 

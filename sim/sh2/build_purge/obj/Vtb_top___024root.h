@@ -33,6 +33,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ tb_top__DOT__watch_hit;
         CData/*0:0*/ tb_top__DOT__watch_hit_s;
         CData/*0:0*/ tb_top__DOT__ack_prev;
+        CData/*2:0*/ tb_top__DOT__ep_prev;
         CData/*0:0*/ tb_top__DOT__dut__DOT__MCLK_DIV;
         CData/*0:0*/ tb_top__DOT__dut__DOT__FAST_R;
         CData/*0:0*/ tb_top__DOT__dut__DOT__MSHRES_N;
@@ -91,9 +92,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__nown_s;
         IData/*31:0*/ tb_top__DOT__nwrite;
         IData/*31:0*/ tb_top__DOT__verbose;
-        IData/*31:0*/ tb_top__DOT__chk_r;
     };
     struct {
+        IData/*31:0*/ tb_top__DOT__chk_r;
         IData/*31:0*/ tb_top__DOT__chk_d;
         IData/*31:0*/ tb_top__DOT__nz;
         IData/*31:0*/ tb_top__DOT__watch_lo;
@@ -102,6 +103,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__peek;
         IData/*31:0*/ tb_top__DOT__unnamedblk1__DOT__i;
         IData/*31:0*/ tb_top__DOT__unnamedblk2__DOT__i;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__nd;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_9__merge;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_8__merge;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_7__merge;
