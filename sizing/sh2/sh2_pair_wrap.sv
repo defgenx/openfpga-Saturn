@@ -134,10 +134,5 @@ module sh2_pair_wrap (
 		.MD(6'b101000),
 		
 		.FAST(FAST)
-`ifdef DEBUG
-		,
-		.DBG_REGN('0),
-		.DBG_REGQ(),
-		.DBG_RUN(1),
-		.DBG_BREAK()
+	);
 endmodule

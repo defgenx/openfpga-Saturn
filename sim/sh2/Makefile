@@ -50,6 +50,13 @@ test: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 one: $(BUILD)/Vtb_top $(BUILD)/prog_$(T).hex
 	$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$(T).hex +name=$(T) +wait=$(or $(WAIT),0) +irq=$(or $(IRQ),0) +fast=$(or $(FAST),0) +cycles=$(CYCLES)
 
+# block-level DIVU test (golden vs DUT module, random register traffic)
+$(BUILD)/Vtb_divu: $(BUILD)/ref/.stamp $(DUT_SRCS) unit/tb_divu.sv tb/altera_models.sv
+	verilator $(VFLAGS) --top-module tb_divu --Mdir $(BUILD)/obj_divu -o ../Vtb_divu tb/altera_models.sv \
+	  $(REF_ORDER) $(DUT_SRCS) unit/tb_divu.sv
+unit-divu: $(BUILD)/Vtb_divu
+	@for s in 1 2 3 4 5 6; do $(BUILD)/Vtb_divu +seed=$$s +cycles=$(or $(UCYCLES),600000) | grep -E "^(PASS|FAIL|MISMATCH)" || exit 1; done
+
 clean:
 	rm -rf $(BUILD)
-.PHONY: all test one clean
+.PHONY: all test one clean unit-divu

@@ -2,3 +2,15 @@ release/
 *.zip
 output/
 __pycache__/
+# simulation and synthesis outputs
+sim/**/build/
+sim/**/obj_*/
+*.vvp
+*.gch
+*.vqm
+db/
+incremental_db/
+output_files/
+sizing/**/*.log
+sizing/**/out/
+sizing/sh2/gen/
