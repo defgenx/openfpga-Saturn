@@ -4,7 +4,7 @@ VVP ?= vvp
 SRC := ../../src/fpga/core/mem
 FLAGS := -g2012 -Wall -Wno-timescale
 
-all: sdram psram ddram fb
+all: sdram psram ddram fb load
 
 build:
 	mkdir -p build
@@ -33,6 +33,12 @@ build/tb_fb_slow: tb_fb.sv $(FBSRC) | build
 
 fb: build/tb_fb
 	$(VVP) build/tb_fb
+
+build/tb_load: tb_load.sv $(SRC)/load_pocket.sv | build
+	$(IVL) $(FLAGS) -o $@ tb_load.sv $(SRC)/load_pocket.sv
+
+load: build/tb_load
+	$(VVP) build/tb_load
 
 sdram: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300

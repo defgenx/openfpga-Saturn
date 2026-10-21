@@ -802,7 +802,7 @@ ddp_cache_ram #(2) cache5 (clk, b_cwr[1:0], p1_dout, b_cache_wren & b_chan == 5,
 ddp_cache_ram #(2) cache6 (clk, a_cwr[1:0], p0_dout, a_cache_wren & a_chan == 6, cart_rcache_addr[4:3], cart_cache_q);
 ddp_cache_ram #(1) cache7 (clk, a_cwr[0:0], p0_dout, a_cache_wren & a_chan == 7, bsram_rcache_addr[3:3], bsram_cache_q);
 
-always_comb begin
+always @* begin
 	if (ramh_ram_sel)
 		ramh_dout = ramh_ram_q;
 	else
@@ -867,20 +867,23 @@ endmodule
 
 // ---- inferred memories (M10K / MLAB)
 
-// read caches: written 64 bit beats, read with a registered address (one cycle), as the altsyncram
+// read caches: written 64 bit beats, registered read address and an unregistered output (the altsyncram
+// configuration of ddram.sv: data written at an edge is visible right after it)
 module ddp_cache_ram #(parameter wa = 2) (
 	input  wire          clock,
 	input  wire [wa-1:0] wraddress,
 	input  wire [63:0]   data,
 	input  wire          wren,
 	input  wire [wa-1:0] rdaddress,
-	output reg  [63:0]   q
+	output wire [63:0]   q
 );
 	reg [63:0] mem [0:(1<<wa)-1];
+	reg [wa-1:0] ra;
 	always @(posedge clock) begin
 		if (wren) mem[wraddress] <= data;
-		q <= mem[rdaddress];
+		ra <= rdaddress;
 	end
+	assign q = mem[ra];
 endmodule
 
 // WRAM-H low 4 KB mirror, byte enables
@@ -890,16 +893,18 @@ module ddp_ram #(parameter wa = 10) (
 	input  wire [31:0]   data,
 	input  wire [ 3:0]   wren,
 	input  wire [wa-1:0] rdaddress,
-	output reg  [31:0]   q
+	output wire [31:0]   q
 );
 	reg [31:0] mem [0:(1<<wa)-1];
+	reg [wa-1:0] ra;
 	always @(posedge clock) begin
 		if (wren[0]) mem[wraddress][ 7: 0] <= data[ 7: 0];
 		if (wren[1]) mem[wraddress][15: 8] <= data[15: 8];
 		if (wren[2]) mem[wraddress][23:16] <= data[23:16];
 		if (wren[3]) mem[wraddress][31:24] <= data[31:24];
-		q <= mem[rdaddress];
+		ra <= rdaddress;
 	end
+	assign q = mem[ra];
 endmodule
 
 // posted write FIFO, 2**l entries
