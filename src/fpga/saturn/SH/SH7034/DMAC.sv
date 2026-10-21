@@ -1,4 +1,8 @@
-module SH7034_DMAC (
+module SH7034_DMAC
+#(
+	parameter bit PRUNE=0
+)
+(
 	input             CLK,
 	input             RST_N,
 	input             CE_R,
@@ -51,6 +55,12 @@ module SH7034_DMAC (
 );
 
 	import SH7034_PKG::*;
+
+	//Write masks of the CD-block firmware (PRUNE=1, see SH7034_fw.sv)
+	localparam bit [3:0][15:0] CHCR_FWM  = PRUNE ? SH7034_FW::CHCR : {4{CHCRx_WMASK}};
+	localparam bit [31:0]      SAR_FWM   = PRUNE ? SARx_WMASK & SH7034_FW::ADDR : SARx_WMASK;
+	localparam bit [31:0]      DAR_FWM   = PRUNE ? DARx_WMASK & SH7034_FW::ADDR : DARx_WMASK;
+	localparam bit [15:0]      DMAOR_FWM = PRUNE ? DMAOR_WMASK & SH7034_FW::DMAOR : DMAOR_WMASK;
 
 	SARx_t      SAR[4];
 	DARx_t      DAR[4];
@@ -424,77 +434,77 @@ module SH7034_DMAC (
 				if (REG_SEL && !(DMA_RD | DMA_WR) && IBUS_WE && IBUS_REQ) begin
 					case ({IBUS_A[5:2],2'b00})
 						6'h00: begin
-							if (IBUS_BA[3:2]) SAR[0][31:16] <= IBUS_DI[31:16] & SARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) SAR[0][15: 0] <= IBUS_DI[15: 0] & SARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) SAR[0][31:16] <= IBUS_DI[31:16] & SAR_FWM[31:16];
+							if (IBUS_BA[1:0]) SAR[0][15: 0] <= IBUS_DI[15: 0] & SAR_FWM[15: 0];
 						end
 						6'h04: begin
-							if (IBUS_BA[3:2]) DAR[0][31:16] <= IBUS_DI[31:16] & DARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) DAR[0][15: 0] <= IBUS_DI[15: 0] & DARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) DAR[0][31:16] <= IBUS_DI[31:16] & DAR_FWM[31:16];
+							if (IBUS_BA[1:0]) DAR[0][15: 0] <= IBUS_DI[15: 0] & DAR_FWM[15: 0];
 						end
 						6'h08: begin
-							if (IBUS_BA[3]) DMAOR[15:8] <= IBUS_DI[31:24] & DMAOR_WMASK[15:8];
-							if (IBUS_BA[2]) DMAOR[ 7:3] <= IBUS_DI[23:19] & DMAOR_WMASK[7:3];
+							if (IBUS_BA[3]) DMAOR[15:8] <= IBUS_DI[31:24] & DMAOR_FWM[15:8];
+							if (IBUS_BA[2]) DMAOR[ 7:3] <= IBUS_DI[23:19] & DMAOR_FWM[7:3];
 							if (IBUS_BA[2] && !IBUS_DI[18]) DMAOR[2] <= 0;
 							if (IBUS_BA[2] && !IBUS_DI[17]) DMAOR[1] <= 0;
-							if (IBUS_BA[2]) DMAOR[ 0:0] <= IBUS_DI[16:16] & DMAOR_WMASK[0];
+							if (IBUS_BA[2]) DMAOR[ 0:0] <= IBUS_DI[16:16] & DMAOR_FWM[0];
 							if (IBUS_BA[1:0]) TCR[0][15: 0] <= IBUS_DI[15: 0] & TCRx_WMASK[15: 0];
 						end
 						6'h0C: begin
-							if (IBUS_BA[1]) CHCR[0][15: 8] <= IBUS_DI[15: 8] & CHCRx_WMASK[15: 8];
-							if (IBUS_BA[0]) CHCR[0][ 7: 2] <= IBUS_DI[ 7: 2] & CHCRx_WMASK[ 7: 2];
+							if (IBUS_BA[1]) CHCR[0][15: 8] <= IBUS_DI[15: 8] & CHCR_FWM[0][15: 8];
+							if (IBUS_BA[0]) CHCR[0][ 7: 2] <= IBUS_DI[ 7: 2] & CHCR_FWM[0][ 7: 2];
 							if (IBUS_BA[0] && !IBUS_DI[1] && CHCR_READ[1]) CHCR[0][1] <= 0;
-							if (IBUS_BA[0]) CHCR[0][ 0: 0] <= IBUS_DI[ 0: 0] & CHCRx_WMASK[ 0: 0];
+							if (IBUS_BA[0]) CHCR[0][ 0: 0] <= IBUS_DI[ 0: 0] & CHCR_FWM[0][ 0: 0];
 						end
 						6'h10: begin
-							if (IBUS_BA[3:2]) SAR[1][31:16] <= IBUS_DI[31:16] & SARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) SAR[1][15: 0] <= IBUS_DI[15: 0] & SARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) SAR[1][31:16] <= IBUS_DI[31:16] & SAR_FWM[31:16];
+							if (IBUS_BA[1:0]) SAR[1][15: 0] <= IBUS_DI[15: 0] & SAR_FWM[15: 0];
 						end
 						6'h14: begin
-							if (IBUS_BA[3:2]) DAR[1][31:16] <= IBUS_DI[31:16] & DARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) DAR[1][15: 0] <= IBUS_DI[15: 0] & DARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) DAR[1][31:16] <= IBUS_DI[31:16] & DAR_FWM[31:16];
+							if (IBUS_BA[1:0]) DAR[1][15: 0] <= IBUS_DI[15: 0] & DAR_FWM[15: 0];
 						end
 						6'h18: begin
 							if (IBUS_BA[1:0]) TCR[1][15: 0] <= IBUS_DI[15: 0] & TCRx_WMASK[15: 0];
 						end
 						6'h1C: begin
-							if (IBUS_BA[1]) CHCR[1][15: 8] <= IBUS_DI[15: 8] & CHCRx_WMASK[15: 8];
-							if (IBUS_BA[0]) CHCR[1][ 7: 2] <= IBUS_DI[ 7: 2] & CHCRx_WMASK[ 7: 2];
+							if (IBUS_BA[1]) CHCR[1][15: 8] <= IBUS_DI[15: 8] & CHCR_FWM[1][15: 8];
+							if (IBUS_BA[0]) CHCR[1][ 7: 2] <= IBUS_DI[ 7: 2] & CHCR_FWM[1][ 7: 2];
 							if (IBUS_BA[0] && !IBUS_DI[1] && CHCR_READ[1]) CHCR[1][1] <= 0;
-							if (IBUS_BA[0]) CHCR[1][ 0: 0] <= IBUS_DI[ 0: 0] & CHCRx_WMASK[ 0: 0];
+							if (IBUS_BA[0]) CHCR[1][ 0: 0] <= IBUS_DI[ 0: 0] & CHCR_FWM[1][ 0: 0];
 						end
 						6'h20: begin
-							if (IBUS_BA[3:2]) SAR[2][31:16] <= IBUS_DI[31:16] & SARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) SAR[2][15: 0] <= IBUS_DI[15: 0] & SARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) SAR[2][31:16] <= IBUS_DI[31:16] & SAR_FWM[31:16];
+							if (IBUS_BA[1:0]) SAR[2][15: 0] <= IBUS_DI[15: 0] & SAR_FWM[15: 0];
 						end
 						6'h24: begin
-							if (IBUS_BA[3:2]) DAR[2][31:16] <= IBUS_DI[31:16] & DARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) DAR[2][15: 0] <= IBUS_DI[15: 0] & DARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) DAR[2][31:16] <= IBUS_DI[31:16] & DAR_FWM[31:16];
+							if (IBUS_BA[1:0]) DAR[2][15: 0] <= IBUS_DI[15: 0] & DAR_FWM[15: 0];
 						end
 						6'h28: begin
 							if (IBUS_BA[1:0]) TCR[2][15: 0] <= IBUS_DI[15: 0] & TCRx_WMASK[15: 0];
 						end
 						6'h2C: begin
-							if (IBUS_BA[1]) CHCR[2][15: 8] <= IBUS_DI[15: 8] & CHCRx_WMASK[15: 8];
-							if (IBUS_BA[0]) CHCR[2][ 7: 2] <= IBUS_DI[ 7: 2] & CHCRx_WMASK[ 7: 2];
+							if (IBUS_BA[1]) CHCR[2][15: 8] <= IBUS_DI[15: 8] & CHCR_FWM[2][15: 8];
+							if (IBUS_BA[0]) CHCR[2][ 7: 2] <= IBUS_DI[ 7: 2] & CHCR_FWM[2][ 7: 2];
 							if (IBUS_BA[0] && !IBUS_DI[1] && CHCR_READ[1]) CHCR[2][1] <= 0;
-							if (IBUS_BA[0]) CHCR[2][ 0: 0] <= IBUS_DI[ 0: 0] & CHCRx_WMASK[ 0: 0];
+							if (IBUS_BA[0]) CHCR[2][ 0: 0] <= IBUS_DI[ 0: 0] & CHCR_FWM[2][ 0: 0];
 						end
 						6'h30: begin
-							if (IBUS_BA[3:2]) SAR[3][31:16] <= IBUS_DI[31:16] & SARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) SAR[3][15: 0] <= IBUS_DI[15: 0] & SARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) SAR[3][31:16] <= IBUS_DI[31:16] & SAR_FWM[31:16];
+							if (IBUS_BA[1:0]) SAR[3][15: 0] <= IBUS_DI[15: 0] & SAR_FWM[15: 0];
 						end
 						6'h34: begin
-							if (IBUS_BA[3:2]) DAR[3][31:16] <= IBUS_DI[31:16] & DARx_WMASK[31:16];
-							if (IBUS_BA[1:0]) DAR[3][15: 0] <= IBUS_DI[15: 0] & DARx_WMASK[15: 0];
+							if (IBUS_BA[3:2]) DAR[3][31:16] <= IBUS_DI[31:16] & DAR_FWM[31:16];
+							if (IBUS_BA[1:0]) DAR[3][15: 0] <= IBUS_DI[15: 0] & DAR_FWM[15: 0];
 						end
 						6'h38: begin
 							if (IBUS_BA[1:0]) TCR[3][15: 0] <= IBUS_DI[15: 0] & TCRx_WMASK[15: 0];
 						end
 						6'h3C: begin
-							if (IBUS_BA[1]) CHCR[3][15: 8] <= IBUS_DI[15: 8] & CHCRx_WMASK[15: 8];
-							if (IBUS_BA[0]) CHCR[3][ 7: 2] <= IBUS_DI[ 7: 2] & CHCRx_WMASK[ 7: 2];
+							if (IBUS_BA[1]) CHCR[3][15: 8] <= IBUS_DI[15: 8] & CHCR_FWM[3][15: 8];
+							if (IBUS_BA[0]) CHCR[3][ 7: 2] <= IBUS_DI[ 7: 2] & CHCR_FWM[3][ 7: 2];
 							if (IBUS_BA[0] && !IBUS_DI[1] && CHCR_READ[1]) CHCR[3][1] <= 0;
-							if (IBUS_BA[0]) CHCR[3][ 0: 0] <= IBUS_DI[ 0: 0] & CHCRx_WMASK[ 0: 0];
+							if (IBUS_BA[0]) CHCR[3][ 0: 0] <= IBUS_DI[ 0: 0] & CHCR_FWM[3][ 0: 0];
 						end
 						default:;
 					endcase

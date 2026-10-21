@@ -951,10 +951,65 @@ def report(path, out):
     return P, C
 
 
+
+# ---- consistency check of src/.../SH7034_fw.sv against the census
+# name -> (registers in channel order, write mask, reset value, what the constant means)
+FW_REGS = {
+    'TSTR': ([0x5FFFF00], 0x1F, 0xE0, 'set'), 'TCR': ([0x5FFFF04, 0x5FFFF0E, 0x5FFFF18, 0x5FFFF22, 0x5FFFF32], 0x7F, 0x00, 'set'),
+    'TIOR': ([0x5FFFF05, 0x5FFFF0F, 0x5FFFF19, 0x5FFFF23, 0x5FFFF33], 0x77, 0x88, 'set'),
+    'TIER': ([0x5FFFF06, 0x5FFFF10, 0x5FFFF1A, 0x5FFFF24, 0x5FFFF34], 0x07, 0xF8, 'set'),
+    'GRA_ONE': ([0x5FFFF0A, 0x5FFFF14, 0x5FFFF1E, 0x5FFFF28, 0x5FFFF38], 0xFFFF, 0xFFFF, 'one'),
+    'GRB_ONE': ([0x5FFFF0C, 0x5FFFF16, 0x5FFFF20, 0x5FFFF2A, 0x5FFFF3A], 0xFFFF, 0xFFFF, 'one'),
+    'CHCR': ([0x5FFFF4E, 0x5FFFF5E, 0x5FFFF6E, 0x5FFFF7E], 0xFFFF, 0x0000, 'set'),
+    'DMAOR': ([0x5FFFF48], 0x0307, 0x0000, 'set'),
+    'IPRA': ([0x5FFFF84], 0xFFFF, 0, 'set'), 'IPRB': ([0x5FFFF86], 0xFFFF, 0, 'set'), 'IPRC': ([0x5FFFF88], 0xFFFF, 0, 'set'),
+    'IPRD': ([0x5FFFF8A], 0xFFFF, 0, 'set'), 'IPRE': ([0x5FFFF8C], 0xFFF0, 0, 'set'), 'ICR': ([0x5FFFF8E], 0x01FF, 0, 'set'),
+    'SMR': ([0x5FFFEC0], 0xFF, 0, 'set'), 'SCR': ([0x5FFFEC2], 0xFF, 0, 'set'),
+    'BCR': ([0x5FFFFA0], 0xF800, 0, 'set'), 'DCR': ([0x5FFFFA8], 0xFF00, 0, 'set'), 'PCR': ([0x5FFFFAA], 0xF800, 0, 'set'),
+    'PADR': ([0x5FFFFC0], 0xFFFF, 0, 'set'), 'PBDR': ([0x5FFFFC2], 0xFFFF, 0, 'set'),
+    'PAIOR': ([0x5FFFFC4], 0xFFFF, 0, 'set'), 'PBIOR': ([0x5FFFFC6], 0xFFFF, 0, 'set'),
+    'PACR1': ([0x5FFFFC8], 0xFFFF, 0, 'set'), 'PACR2': ([0x5FFFFCA], 0xFFFF, 0, 'set'),
+    'PBCR1': ([0x5FFFFCC], 0xFFFF, 0, 'set'), 'PBCR2': ([0x5FFFFCE], 0xFFFF, 0, 'set'),
+}
+
+
+def check_fw(path, union):
+    import re
+    txt = open(path).read()
+    bad = 0
+    for m in re.finditer(r"localparam\s+bit\s*(?:\[[^\]]+\]\s*)*(\w+)\s*=\s*([^;]+);", txt):
+        name, rhs = m[1], m[2]
+        if name not in FW_REGS:
+            continue
+        regs, wmask, init, kind = FW_REGS[name]
+        vals = [int(x, 16) for x in re.findall(r"\d+'h([0-9A-Fa-f]+)", rhs)][::-1]   # ch0 = lowest
+        for i, a in enumerate(regs):
+            if i >= len(vals):
+                break
+            u = union.get('%07X' % a)
+            if u is None:
+                continue          # never written: any mask is safe
+            if kind == 'set':
+                miss = u['ever1'] & wmask & ~vals[i] & ~init
+                if miss:
+                    print('FAIL %s[%d] (%07X): firmware sets %X not in mask %X' % (name, i, a, u['ever1'], vals[i]))
+                    bad += 1
+                if u['dyn']:
+                    print('NOTE %s[%d] (%07X): has writes of unknown value' % (name, i, a))
+            else:
+                miss = u['ever0'] & vals[i]
+                if miss:
+                    print('FAIL %s[%d] (%07X): firmware clears stuck bits %X' % (name, i, a, miss))
+                    bad += 1
+    print('check-fw: %s' % ('FAILED (%d)' % bad if bad else 'ok'))
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('images', nargs='+')
     ap.add_argument('--json', help='write per-register masks (union over images) as JSON')
+    ap.add_argument('--check-fw', metavar='SH7034_fw.sv', help='verify the RTL write masks cover everything the firmware writes')
     args = ap.parse_args()
     union = {}
     for path in args.images:
@@ -982,6 +1037,8 @@ def main():
             u['images'].append(os.path.basename(path))
     if args.json:
         json.dump(union, open(args.json, 'w'), indent=1, sort_keys=True)
+    if args.check_fw:
+        sys.exit(1 if check_fw(args.check_fw, union) else 0)
 
 
 if __name__ == '__main__':

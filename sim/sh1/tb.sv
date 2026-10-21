@@ -123,15 +123,16 @@ module tb;
 		end
 	endtask
 
+	// All spacing below is an even number of clocks so that strobes change right after a SYS_CE_R edge.
 	task host_wr(input [7:0] off, input [15:0] d);
 		begin
 			wait_ce_r;
 			AA <= off[7:1]; ADI <= d; ACS2_N <= 0;
-			repeat (3) @(posedge CLK);
+			repeat (4) @(posedge CLK);
 			AWRL_N <= 0; AWRU_N <= 0;
 			repeat (8) @(posedge CLK);
 			AWRL_N <= 1; AWRU_N <= 1;
-			repeat (3) @(posedge CLK);
+			repeat (4) @(posedge CLK);
 			ACS2_N <= 1;
 			repeat (4) @(posedge CLK);
 		end
@@ -142,14 +143,14 @@ module tb;
 		begin
 			wait_ce_r;
 			AA <= off[7:1]; ACS2_N <= 0;
-			repeat (3) @(posedge CLK);
+			repeat (4) @(posedge CLK);
 			ARD_N <= 0;
 			repeat (4) @(posedge CLK);
 			while (!AWAIT_A) @(posedge CLK);
 			repeat (4) @(posedge CLK);
 			rd_data = ADO_A;
 			ARD_N <= 1;
-			repeat (3) @(posedge CLK);
+			repeat (4) @(posedge CLK);
 			ACS2_N <= 1;
 			repeat (4) @(posedge CLK);
 		end

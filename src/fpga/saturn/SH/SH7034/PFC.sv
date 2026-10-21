@@ -1,4 +1,7 @@
-module SH7034_PFC 
+module SH7034_PFC
+#(
+	parameter bit PRUNE=0
+)
 (
 	input             CLK,
 	input             RST_N,
@@ -145,6 +148,16 @@ module SH7034_PFC
 );
 
 	import SH7034_PKG::*;
+
+	//Write masks of the CD-block firmware (PRUNE=1, see SH7034_fw.sv)
+	localparam bit [15:0] PAIOR_FWM = PRUNE ? PAIOR_WMASK & SH7034_FW::PAIOR : PAIOR_WMASK;
+	localparam bit [15:0] PBIOR_FWM = PRUNE ? PBIOR_WMASK & SH7034_FW::PBIOR : PBIOR_WMASK;
+	localparam bit [15:0] PACR1_FWM = PRUNE ? PACR1_WMASK & SH7034_FW::PACR1 : PACR1_WMASK;
+	localparam bit [15:0] PACR2_FWM = PRUNE ? PACR2_WMASK & SH7034_FW::PACR2 : PACR2_WMASK;
+	localparam bit [15:0] PBCR1_FWM = PRUNE ? PBCR1_WMASK & SH7034_FW::PBCR1 : PBCR1_WMASK;
+	localparam bit [15:0] PBCR2_FWM = PRUNE ? PBCR2_WMASK & SH7034_FW::PBCR2 : PBCR2_WMASK;
+	localparam bit [15:0] PADR_FWM = PRUNE ? PADR_WMASK & SH7034_FW::PADR : PADR_WMASK;
+	localparam bit [15:0] PBDR_FWM = PRUNE ? PBDR_WMASK & SH7034_FW::PBDR : PBDR_WMASK;
 	
 	PADR_t     PADR;
 	PBDR_t     PBDR;
@@ -385,28 +398,28 @@ module SH7034_PFC
 			if (REG_SEL && IBUS_WE && IBUS_REQ) begin
 				case ({IBUS_A[5:2],2'b00})
 					6'h00: begin
-						if (IBUS_BA[3]) PADR[15:8]  <= IBUS_DI[31:24] & PADR_WMASK[15:8];
-						if (IBUS_BA[2]) PADR[ 7:0]  <= IBUS_DI[23:16] & PADR_WMASK[7:0];
-						if (IBUS_BA[1]) PBDR[15:8] <= IBUS_DI[15: 8] & PBDR_WMASK[15:8];
-						if (IBUS_BA[0]) PBDR[ 7:0] <= IBUS_DI[ 7: 0] & PBDR_WMASK[7:0];
+						if (IBUS_BA[3]) PADR[15:8]  <= IBUS_DI[31:24] & PADR_FWM[15:8];
+						if (IBUS_BA[2]) PADR[ 7:0]  <= IBUS_DI[23:16] & PADR_FWM[7:0];
+						if (IBUS_BA[1]) PBDR[15:8] <= IBUS_DI[15: 8] & PBDR_FWM[15:8];
+						if (IBUS_BA[0]) PBDR[ 7:0] <= IBUS_DI[ 7: 0] & PBDR_FWM[7:0];
 					end 
 					6'h04: begin
-						if (IBUS_BA[3]) PAIOR[15:8] <= IBUS_DI[31:24] & PAIOR_WMASK[15:8];
-						if (IBUS_BA[2]) PAIOR[ 7:0] <= IBUS_DI[23:16] & PAIOR_WMASK[7:0];
-						if (IBUS_BA[1]) PBIOR[15:8] <= IBUS_DI[15: 8] & PBIOR_WMASK[15:8];
-						if (IBUS_BA[0]) PBIOR[ 7:0] <= IBUS_DI[ 7: 0] & PBIOR_WMASK[7:0];
+						if (IBUS_BA[3]) PAIOR[15:8] <= IBUS_DI[31:24] & PAIOR_FWM[15:8];
+						if (IBUS_BA[2]) PAIOR[ 7:0] <= IBUS_DI[23:16] & PAIOR_FWM[7:0];
+						if (IBUS_BA[1]) PBIOR[15:8] <= IBUS_DI[15: 8] & PBIOR_FWM[15:8];
+						if (IBUS_BA[0]) PBIOR[ 7:0] <= IBUS_DI[ 7: 0] & PBIOR_FWM[7:0];
 					end 
 					6'h08: begin
-						if (IBUS_BA[3]) PACR1[15:8] <= IBUS_DI[31:24] & PACR1_WMASK[15:8];
-						if (IBUS_BA[2]) PACR1[ 7:0] <= IBUS_DI[23:16] & PACR1_WMASK[7:0];
-						if (IBUS_BA[1]) PACR2[15:8] <= IBUS_DI[15: 8] & PACR2_WMASK[15:8];
-						if (IBUS_BA[0]) PACR2[ 7:0] <= IBUS_DI[ 7: 0] & PACR2_WMASK[7:0];
+						if (IBUS_BA[3]) PACR1[15:8] <= IBUS_DI[31:24] & PACR1_FWM[15:8];
+						if (IBUS_BA[2]) PACR1[ 7:0] <= IBUS_DI[23:16] & PACR1_FWM[7:0];
+						if (IBUS_BA[1]) PACR2[15:8] <= IBUS_DI[15: 8] & PACR2_FWM[15:8];
+						if (IBUS_BA[0]) PACR2[ 7:0] <= IBUS_DI[ 7: 0] & PACR2_FWM[7:0];
 					end 
 					6'h0C: begin
-						if (IBUS_BA[3]) PBCR1[15:8] <= IBUS_DI[31:24] & PBCR1_WMASK[15:8];
-						if (IBUS_BA[2]) PBCR1[ 7:0] <= IBUS_DI[23:16] & PBCR1_WMASK[7:0];
-						if (IBUS_BA[1]) PBCR2[15:8] <= IBUS_DI[15: 8] & PBCR2_WMASK[15:8];
-						if (IBUS_BA[0]) PBCR2[ 7:0] <= IBUS_DI[ 7: 0] & PBCR2_WMASK[7:0];
+						if (IBUS_BA[3]) PBCR1[15:8] <= IBUS_DI[31:24] & PBCR1_FWM[15:8];
+						if (IBUS_BA[2]) PBCR1[ 7:0] <= IBUS_DI[23:16] & PBCR1_FWM[7:0];
+						if (IBUS_BA[1]) PBCR2[15:8] <= IBUS_DI[15: 8] & PBCR2_FWM[15:8];
+						if (IBUS_BA[0]) PBCR2[ 7:0] <= IBUS_DI[ 7: 0] & PBCR2_FWM[7:0];
 					end 
 					6'h20: begin
 						if (IBUS_BA[3]) CASCR[15:8] <= IBUS_DI[31:24] & CASCR_WMASK[15:8];

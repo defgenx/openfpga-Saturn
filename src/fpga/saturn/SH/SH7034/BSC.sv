@@ -1,5 +1,5 @@
 module SH7034_BSC 
-#(parameter bit AREA3=0, bit [1:0] W3=0, bit [1:0] IW3=0, bit [1:0] LW3=0)
+#(parameter bit AREA3=0, bit [1:0] W3=0, bit [1:0] IW3=0, bit [1:0] LW3=0, bit PRUNE=0)
 (
 	input             CLK,
 	input             RST_N,
@@ -37,6 +37,11 @@ module SH7034_BSC
 );
 
 	import SH7034_PKG::*;
+
+	//Write masks of the CD-block firmware (PRUNE=1, see SH7034_fw.sv)
+	localparam bit [15:0] BCR_FWM = PRUNE ? BCR_WMASK & SH7034_FW::BCR : BCR_WMASK;
+	localparam bit [15:0] DCR_FWM = PRUNE ? DCR_WMASK & SH7034_FW::DCR : DCR_WMASK;
+	localparam bit [15:0] PCR_FWM = PRUNE ? PCR_WMASK & SH7034_FW::PCR : PCR_WMASK;
 
 	BCR_t       BCR;
 	WCR1_t      WCR1;
@@ -392,8 +397,8 @@ module SH7034_BSC
 			if (REG_SEL /*&& IBUS_DI[31:16] == 16'hA55A*/ && IBUS_WE && IBUS_REQ) begin
 				case ({IBUS_A[4:2],2'b00})
 					5'h00: begin
-						if (IBUS_BA[3]) BCR[15:8]  <= IBUS_DI[31:24] & BCR_WMASK[15:8];
-						if (IBUS_BA[2]) BCR[ 7:0]  <= IBUS_DI[23:16] & BCR_WMASK[7:0];
+						if (IBUS_BA[3]) BCR[15:8]  <= IBUS_DI[31:24] & BCR_FWM[15:8];
+						if (IBUS_BA[2]) BCR[ 7:0]  <= IBUS_DI[23:16] & BCR_FWM[7:0];
 						if (IBUS_BA[1]) WCR1[15:8] <= IBUS_DI[15: 8] & WCR1_WMASK[15:8];
 						if (IBUS_BA[0]) WCR1[ 7:0] <= IBUS_DI[ 7: 0] & WCR1_WMASK[7:0];
 					end 
@@ -404,10 +409,10 @@ module SH7034_BSC
 						if (IBUS_BA[0]) WCR3[ 7:0] <= IBUS_DI[ 7: 0] & WCR3_WMASK[7:0];
 					end 
 					5'h08: begin
-						if (IBUS_BA[3]) DCR[15:8] <= IBUS_DI[31:24] & DCR_WMASK[15:8];
-						if (IBUS_BA[2]) DCR[ 7:0] <= IBUS_DI[23:16] & DCR_WMASK[7:0];
-						if (IBUS_BA[1]) PCR[15:8] <= IBUS_DI[15: 8] & PCR_WMASK[15:8];
-						if (IBUS_BA[0]) PCR[ 7:0] <= IBUS_DI[ 7: 0] & PCR_WMASK[7:0];
+						if (IBUS_BA[3]) DCR[15:8] <= IBUS_DI[31:24] & DCR_FWM[15:8];
+						if (IBUS_BA[2]) DCR[ 7:0] <= IBUS_DI[23:16] & DCR_FWM[7:0];
+						if (IBUS_BA[1]) PCR[15:8] <= IBUS_DI[15: 8] & PCR_FWM[15:8];
+						if (IBUS_BA[0]) PCR[ 7:0] <= IBUS_DI[ 7: 0] & PCR_FWM[7:0];
 					end 
 					5'h0C: begin
 						if (IBUS_BA[3]) RCR[15:8] <= IBUS_DI[31:24] & RCR_WMASK[15:8];

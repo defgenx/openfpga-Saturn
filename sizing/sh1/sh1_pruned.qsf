@@ -14,6 +14,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/core/SH_
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/core/SH_mem.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/core/SH_core.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/SH7034/SH7034_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/SH7034/SH7034_fw.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/SH7034/MULT.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/SH7034/INTC.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/SH7034/BSC.sv

@@ -31,13 +31,13 @@ $(BUILD)/ref/SH1.sv: $(REFRTL)/Saturn/CD/SH1.sv
 $(BUILD)/ref/models_regram.sv: models_regram.sv
 	@mkdir -p $(dir $@); $(RENAME) $< > $@
 
-SRC_FILES := $(addprefix $(SRC)/SH/core/,$(CORE)) $(addprefix $(SRC)/SH/SH7034/,$(SH7034)) $(SRC)/Saturn/CD/SH1.sv
+SRC_FILES := $(addprefix $(SRC)/SH/core/,$(CORE)) $(addprefix $(SRC)/SH/SH7034/,SH7034_pkg.sv SH7034_fw.sv $(filter-out SH7034_pkg.sv,$(SH7034))) $(SRC)/Saturn/CD/SH1.sv
 
 $(BUILD)/obj/Vtb: $(REF_FILES) $(SRC_FILES) models_regram.sv models_altsyncram.sv cdd.sv cd_block.sv tb.sv
 	verilator $(VFLAGS) -Mdir $(BUILD)/obj \
 	  $(BUILD)/ref/SH_pkg.sv $(BUILD)/ref/SH7034_pkg.sv $(filter-out $(BUILD)/ref/SH_pkg.sv $(BUILD)/ref/SH7034_pkg.sv,$(REF_FILES)) \
-	  $(SRC)/SH/core/SH_pkg.sv $(SRC)/SH/SH7034/SH7034_pkg.sv $(SRC)/Saturn/CD/YGR019_PKG.sv \
-	  $(filter-out %/SH_pkg.sv %/SH7034_pkg.sv,$(SRC_FILES)) $(SRC)/Saturn/CD/YGR019.sv \
+	  $(SRC)/SH/core/SH_pkg.sv $(SRC)/SH/SH7034/SH7034_pkg.sv $(SRC)/SH/SH7034/SH7034_fw.sv $(SRC)/Saturn/CD/YGR019_PKG.sv \
+	  $(filter-out %/SH_pkg.sv %/SH7034_pkg.sv %/SH7034_fw.sv,$(SRC_FILES)) $(SRC)/Saturn/CD/YGR019.sv \
 	  models_regram.sv models_altsyncram.sv cdd.sv cd_block.sv tb.sv
 
 clean:
