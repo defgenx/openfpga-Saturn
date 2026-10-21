@@ -38,7 +38,7 @@
         ]
       },
       {
-        "name": "CD Speed",
+        "name": "Cartridge",
         "id": 3,
         "type": "list",
         "enabled": true,
@@ -48,11 +48,23 @@
         "options": [
           {
             "value": 0,
-            "name": "1x"
+            "name": "Auto"
           },
           {
-            "value": 1,
-            "name": "2x"
+            "value": 6,
+            "name": "None"
+          },
+          {
+            "value": 2,
+            "name": "RAM 1 MB"
+          },
+          {
+            "value": 3,
+            "name": "RAM 4 MB"
+          },
+          {
+            "value": 5,
+            "name": "Backup RAM"
           }
         ]
       }

@@ -2,6 +2,7 @@
 #   make -C sim cd         CD drive: synthetic discs, SH-1 host model, APF bridge model (about 5 minutes)
 #   make -C sim mem        memory subsystem (sdram, psram, ddram_pocket, framebuffer, loader), several minutes
 #   make -C sim mem-long   64 ms SDRAM retention run (about 10 minutes)
+#   make -C sim platform   resampler and video path (seconds)
 #   make -C sim sh1        SH-1 golden vs pruned (Verilator; firmware read from ../ref)
 #   make -C sim scsp       SCSP golden vs shrunk (Verilator)
 #   make -C sim vdp1       VDP1 golden vs shrunk (Verilator; vdp1-ppm dumps frames)
@@ -11,7 +12,10 @@
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: cd cd-real mem mem-long sh1 scsp vdp1 vdp1-ppm sh2 clean
+.PHONY: cd cd-real mem mem-long platform sh1 scsp vdp1 vdp1-ppm sh2 clean
+
+platform:
+	$(MAKE) -C platform all
 
 mem:
 	$(MAKE) -C mem all
@@ -52,5 +56,6 @@ $(CD)/build/tb_cdd.vvp: $(CD)/tb_cdd.sv $(CDRTL)
 clean:
 	rm -rf $(CD)/build
 	$(MAKE) -C mem clean
+	$(MAKE) -C platform clean
 	$(MAKE) -C sh1 clean
 	$(MAKE) -C vdp1 clean

@@ -1,14 +1,73 @@
 #
 # user core constraints
 #
-# put your clock groups in here as well as any net assignments
+# Clocks: clk_74a / clk_74b / bridge_spiclk come from apf_constraints.sdc. The system PLL (ic|saturn|pll) is
+# referenced from clk_74a; its four outputs are one synchronous family:
+#   general[0] clk_sys    57.27 MHz at compile time (53.4 .. 57.3 MHz at run time, PLL reconfiguration)
+#   general[1] clk_ram    2 x clk_sys, phase aligned
+#   general[2] clk_vid    clk_sys / 4 (APF pixel clock)
+#   general[3] clk_vid_90 clk_vid + 90 degrees
+# Analysis runs at the fastest mode (NTSC, 352 wide); every other mode is slower.
 #
 
+set clk_sys   {ic|saturn|pll|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk}
+set clk_ram   {ic|saturn|pll|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk}
+set clk_vid   {ic|saturn|pll|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk}
+set clk_vid90 {ic|saturn|pll|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk}
+
+# clk_74a (bridge, settings, loader, PLL management) and the PLL family are asynchronous to each other. The crossings
+# are 2-flop synchronisers (pads, settings, reset, RTC toggle), the gray-pointer FIFO in load_pocket and held
+# payloads (cd_stream request registers and ring words, stable for a bridge word time). No pair is timed.
 set_clock_groups -asynchronous \
  -group { bridge_spiclk } \
  -group { clk_74a } \
  -group { clk_74b } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk } 
+ -group [list $clk_sys $clk_ram $clk_vid $clk_vid90]
+
+# SH_core advances on CE_R only (every second clk_sys), so a register-to-register path inside the core has two
+# clk_sys periods. The unconstrained core is a 19 ns path (docs/sh2.md); clk_sys is 17.5 ns.
+foreach cpu {MSH SSH} {
+	set_multicycle_path -setup -from [get_registers "*|$cpu|core|*"] -to [get_registers "*|$cpu|core|*"] 2
+	set_multicycle_path -hold  -from [get_registers "*|$cpu|core|*"] -to [get_registers "*|$cpu|core|*"] 1
+}
+
+# ---------------------------------------------------------------------------------- SDRAM
+# dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). Datasheet values as quoted in docs/memory.md:
+# input setup 1.5 ns, hold 1.0 ns, output valid 5.5 ns max, hold 2.5 ns min.
+create_generated_clock -name dram_clk_pin -source [get_pins $clk_ram] -invert [get_ports dram_clk]
+set sdram_out [get_ports {dram_a[*] dram_ba[*] dram_dq[*] dram_dqm[*] dram_ras_n dram_cas_n dram_we_n dram_cke}]
+set_output_delay -clock dram_clk_pin -max 1.5  $sdram_out
+set_output_delay -clock dram_clk_pin -min -1.0 $sdram_out
+set_input_delay  -clock dram_clk_pin -max 5.5 [get_ports {dram_dq[*]}]
+set_input_delay  -clock dram_clk_pin -min 2.5 [get_ports {dram_dq[*]}]
+# read data is captured at READ+5 / READ+6 clk_ram edges (sdram_pocket CAP_NEG = 0), not at the next edge
+set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 5
+set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 4
+
+# ---------------------------------------------------------------------------------- PSRAM
+# The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,
+# hold 2 ns at the chip, tACLK 9 ns, tKOH 2 ns.
+foreach n {0 1} {
+	create_generated_clock -name cram${n}_clk_pin -source [get_pins $clk_ram] -divide_by 2 [get_ports cram${n}_clk]
+	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_ce0_n cram${n}_ce1_n cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
+	set_output_delay -clock cram${n}_clk_pin -max 3.0 $cram_out
+	set_output_delay -clock cram${n}_clk_pin -min -2.0 $cram_out
+	set_input_delay  -clock cram${n}_clk_pin -max 9.0 [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	set_input_delay  -clock cram${n}_clk_pin -min 2.0 [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	# read words are shifted in on the following clk_ram edges
+	set_multicycle_path -setup -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 2
+	set_multicycle_path -hold  -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 1
+}
+
+# ---------------------------------------------------------------------------------- SRAM (asynchronous)
+# No clock at the chip. Outputs are registered on clk_ram; read data returns within tAA plus board (12 ns here) and
+# is sampled RD_CYC - 1 = 3 clk_ram cycles after the address (sram_pocket.sv).
+set sram_out [get_ports {sram_a[*] sram_dq[*] sram_oe_n sram_we_n sram_ub_n sram_lb_n}]
+set_output_delay -clock [get_clocks $clk_ram] -max 2.0  $sram_out
+set_output_delay -clock [get_clocks $clk_ram] -min -1.0 $sram_out
+set_input_delay  -clock [get_clocks $clk_ram] -max 12.0 [get_ports {sram_dq[*]}]
+set_input_delay  -clock [get_clocks $clk_ram] -min 0.0  [get_ports {sram_dq[*]}]
+set_multicycle_path -setup -end -from [get_ports {sram_dq[*]}] -to [get_clocks $clk_ram] 3
+set_multicycle_path -hold  -end -from [get_ports {sram_dq[*]}] -to [get_clocks $clk_ram] 2
+# the CD ring FSM (cd_stream) runs on clk_sys and drives the same pins through sram_pocket: clk_sys and clk_ram are
+# phase aligned, so those paths are ordinary single-cycle paths of the clk_ram family.
