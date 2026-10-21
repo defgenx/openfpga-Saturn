@@ -37,9 +37,12 @@ and SSH both need their evaluation in that same window, so one datapath cannot s
 * running the datapath at 2x `clk_sys` (115 MHz): see Fmax below.
 
 Fmax of `SH_core` alone (registered I/O wrapper, `sizing/sh2/sh_core_wrap.sv`, 5CEBA4F23C8, area profile,
-8.7 ns clock constraint): @@FMAX@@
+8.7 ns clock constraint): **51.1 MHz** (slow 1100 mV 85 C, worst setup slack -10.9 ns at 8.7 ns; `sizing/sh2/core_fmax.sta.summary`).
 
-Verdict item 1: **no-go** for the barrel dual context; 2x-clock alternative: @@FMAX_VERDICT@@.
+Verdict item 1: **no-go** for the barrel dual context; 2x-clock alternative: **no-go**. A shared datapath at 115 MHz needs 8.7 ns; the core needs 19.6 ns. Even a 2-cycle multicycle budget at
+115 MHz (17.4 ns) fails. Side finding for the port: the single core does not close single-cycle at `clk_sys`
+57 MHz (17.5 ns) on a C8 part either, so the Pocket build needs a 2-cycle setup/1-cycle hold multicycle constraint on
+the CE_R-enabled core paths (the core only advances on CE_R, so the constraint is legal).
 
 ## 2. Dual-context SH7604 (plan item 2)
 
@@ -56,11 +59,64 @@ clk right after CE_R in both CPUs, so it would need a second slot per bus cycle;
 
 ## 3. Bit-exact changes made (plan item 3)
 
-@@CHANGES@@
+| Change | Where | Effect (per CPU) | Exact? |
+|---|---|---|---|
+| DIVU: the `VAL`/`NEG` operand registers (captured on CE_F one clock before use on CE_R) are replaced by a combinational select of the same sources | `SH/SH7604/DIVU.sv` | -66 regs (581 -> 515), ALUTs within noise (540 -> 508 in the A/B run) | yes: DIVU unit test (6 seeds, ~45k divisions, ~15k overflows) and the full system suite pass |
+
+Checked and left alone, with the reason:
+
+* SCI: already compiled out (`SCI_DISABLE=1`, 2-3 ALUTs left), SH7604 `UBC` likewise; the debug ports are `ifdef DEBUG`
+  and not defined in the Saturn build. Nothing to remove.
+* Bus-size / area configuration: `BUS_SIZE_BYTE_DISABLE=1` and `BUS_AREA_TIMIMG` are already parameters and constant
+  in `Saturn.sv`; MD pins, FAST-independent constants and the tied-off DREQ/RXD/SCKI/FTCI/ECE/EOE/EIVECF ports are
+  propagated by Quartus (sizing shows the same ALUTs with or without them). The SDRAM/DRAM paths of the BSC cannot
+  be removed: Saturn's WRAM-H uses the BSC refresh output (`RFS`) and the BSC state machine.
+* WDT (80 ALUTs/41 regs per CPU) and MSBY (11/3): `WDT_DISABLE` exists but the Saturn WDT is architecturally
+  present and a game may use it as an interval timer; not disabled without the owner's decision (pair saving ~160
+  ALUTs).
+* Cache global-purge ("dirty") flip-flops: 4x64 + 64 FFs per cache with a per-FF enable decoder, roughly 300 ALUTs
+  and 320 regs per CPU. They can be replaced by an epoch counter plus MLAB stamps with a background scrubber (about
+  -250 ALUTs per CPU), but a bit-exact version is only guaranteed while purges are further apart than the scrubber
+  period; not done because exactness is the contract.
 
 ## 4. Measurements
 
-@@MEASURE@@
+Method: `quartus_map` 21.1.1, 5CEBA4F23C8, `NUM_PARALLEL_PROCESSORS 1`, virtual pins, the pair instantiated exactly like
+`Saturn.sv` (`sizing/sh2/sh2_pair_wrap.sv`, same tie-offs). Area profile = `sizing/sh2/area_profile.qsf` (AREA technique,
+MINIMAL BITS, resource sharing on, retiming/WYSIWYG/physical synthesis off). Golden and DUT are mapped in the same run
+(`sizing/sh2/gen_ab.py`, `ab_area.entity.txt`), so both see identical settings.
+
+Pair totals (comb. ALUTs / registers / M10K bits / DSP):
+
+| | ALUTs | regs | block bits (M10K) | DSP |
+|---|---|---|---|---|
+| Golden, balanced mode (docs/sizing.md, Saturn run) | 11,685 | 6,040 | 65,536 (8 M10K) | 6 |
+| Golden, area profile (A/B run) | 11,702 | 6,033 | 65,536 | 6 |
+| DUT, area profile (A/B run) | 11,499 | 5,794 | 65,536 | 6 |
+| DUT, area profile (stand-alone run) | 11,587 | 5,901 | 65,536 | 6 |
+
+The area profile alone does not shrink the SH-2s (-0.1% ALUTs): the PSX-style gains came from other blocks. Run to
+run noise between two maps of the same RTL is about +-100 ALUTs and +-100 regs for the pair (rows 3 and 4 are the
+same source), so only the register change (-66 per CPU, deterministic: 581 -> 515 in every run) is a certain result.
+Net: **-1 to -2% ALUTs, -2 to -4% registers**. Targets of the task (<= 7,500 ALUTs, <= 4,200 regs, DSP <= 8,
+M10K +10 max): ALUTs and registers **not met**; DSP 6 and M10K +0 met.
+
+Per sub-block, area profile, one CPU (golden MSH -> DUT MSH; ALUTs/regs):
+
+| Block | Golden | DUT |
+|---|---|---|
+| SH_core | 2,078 / 861 | 2,056 / 861 |
+| CACHE (+32,768 bits) | 945 / 448 | 947 / 448 |
+| BSC | 569 / 255 | 568 / 255 |
+| DIVU | 540 / 581 | 508 / 515 |
+| DMAC | 550 / 413 | 550 / 412 |
+| MULT (3 DSP) | 362 / 138 | 362 / 138 |
+| INTC | 207 / 144 | 177 / 118 (identical source: mapping noise) |
+| FRT | 161 / 107 | 160 / 107 |
+| WDT / MSBY / SCI / UBC | 82 / 41, 11 / 3, 2 / 0, 2 / 0 | same |
+| top-level glue | ~300 / 27 | ~300 / 27 |
+
+`SH_core` Fmax: 51.1 MHz (see 1).
 
 ## 5. Verification
 
@@ -87,8 +143,26 @@ clk right after CE_R in both CPUs, so it would need a second slot per bus cycle;
   overflows per seed), `make -C sim/sh2 unit-divu`.
 * The comparison was checked to bite: a one-bit change in DIVU is reported as a mismatch within 3k clocks.
 
-@@RESULTS@@
+Results at the last commit: `make -C sim sh2`: 13 programs x 4 environment configurations = **52/52 PASS**
+(each 1.5 M `clk_sys` compared cycle by cycle, both CPUs, plus final memory); `make -C sim/sh2 unit-divu`: 6/6 PASS.
+BSC state coverage in the system tests: all 13 states (T0,T1,T2,TW,TRAS,TWCAS,TRCAS,TRD,TWNOP,TRFS1,TRFS2,TV1,TV2)
+are visited by `t_bsc` on both CPUs. Total suite run time about 3.5 min.
+
+Not covered by the tests: DREQ/DACK external requests (tied off in Saturn), SCI and UBC (disabled), standby
+(SBYCR/SLEEP standby mode), the SDRAM-mode BSC with a valid memory model (the bus model does not implement the
+SDRAM command protocol, so SDRAM-mode writes never reach it; the states are exercised but data is not checked),
+the external-master port of the SSH (`EA/ED*`, idle in the test bench).
 
 ## 6. Risks
 
-@@RISKS@@
+* **Timing**: `SH_core` is a 19.6 ns path (51 MHz) in a C8 part. It works at `clk_sys`/2 only with a multicycle
+  constraint; this holds for the unmodified golden core too and is the main timing item for the Pocket build.
+* **Dual context** (not built): not cycle-exact (section 1); would also have required the two-slot core evaluation
+  to meet 8.7 ns, which it cannot.
+* **DIVU sharing** (not built): both CPUs dividing at once would stall the second by up to 39 `CE_R` cycles; use by
+  both CPUs overlapping is not measured here (needs game traces). Savings ~270 regs / ~400 ALUTs for the pair.
+* **Measurement noise**: +-100 ALUTs per pair between two maps of identical RTL; fitter results will differ again.
+* **Shortfall against the target**: exact micro-changes recover ~2-4%; reaching 7,500 ALUTs would need either the
+  skewed barrel core (not bit-exact, ~-1,500 ALUTs), shared DIVU/MULT (not bit-exact on contention), disabling WDT
+  (-160) and the epoch-based cache purge (~-500), together roughly -2,200: still above 7,500. The pair is therefore
+  not reducible to the target by SH-2 work alone; the area has to come from other blocks (VDP2, SH-1, SCU DSP).
