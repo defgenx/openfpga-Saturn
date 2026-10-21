@@ -12,7 +12,7 @@ VFLAGS = --cc --exe --build -j 4 --top-module diff_top -Mdir obj -Wno-fatal -Wno
          -CFLAGS "-O2 -std=c++17" $(VEXTRA)
 SRC = gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1_pkg.sv $(DUT)/VDP1.sv altdpram.v gen/diff_top.sv
 
-all: run
+all: run divtest
 
 gen/REF_VDP1.sv: $(REF)/VDP1.sv
 	@mkdir -p gen
@@ -46,3 +46,10 @@ cov:
 	cd cov && ../obj_cov/Vdiff_top --n $(N) --seed $(SEED) --ppm 0 --out ../out && verilator_coverage --annotate annot --annotate-min 1 coverage.dat > summary.txt 2>&1 || true
 	@echo "see sim/vdp1/cov/annot"
 .PHONY: cov
+
+# Exhaustive divider equivalence (all 5-bit dividends x all 12-bit divisors)
+divtest: gen/REF_VDP1.sv
+	verilator --cc --exe --build -j 4 --top-module divtest -Mdir obj_div -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-COMBDLY -Wno-WIDTH --x-initial 0 -CFLAGS "-O2" \
+	  gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1_pkg.sv $(DUT)/VDP1.sv altdpram.v divtest.sv divtest.cpp
+	./obj_div/Vdivtest
+.PHONY: divtest

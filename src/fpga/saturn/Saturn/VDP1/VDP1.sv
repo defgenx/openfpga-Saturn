@@ -408,7 +408,7 @@ module VDP1 (
 	end
 	
 
-	bit  [16: 0] DIV_R_Q,DIV_G_Q,DIV_B_Q;//5.12
+	wire         DIV_R_QB,DIV_G_QB,DIV_B_QB,DIV_RUN;
 	wire DIV_START = (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT || CMD_ST == CMDS_GRD_CALC_LINE) && GRD_CALC_STATE == 0;
 	
 	RGB_t        GRD_CALC_1,GRD_CALC_2;
@@ -427,17 +427,22 @@ module VDP1 (
 					
 	// The dividers hold their quotient from step 18 until the next START and GRD_CALC_1/2 do not change while a
 	// calculation runs, so the step is read straight from the dividers when it is stored (state 20).
-	RGBFP_t      GRD_CALC_STEP;
-	assign GRD_CALC_STEP = {{DIV_A_B[5],DIV_B_Q},{DIV_A_G[5],DIV_G_Q},{DIV_A_R[5],DIV_R_Q}};
 	
-	VDP1_DIV_24_12 GRD_DIV_R(CLK, {DIV_A_R[4:0],12'b000000000000}, GRD_CALC_S, DIV_START, DIV_R_Q);
-	VDP1_DIV_24_12 GRD_DIV_G(CLK, {DIV_A_G[4:0],12'b000000000000}, GRD_CALC_S, DIV_START, DIV_G_Q);
-	VDP1_DIV_24_12 GRD_DIV_B(CLK, {DIV_A_B[4:0],12'b000000000000}, GRD_CALC_S, DIV_START, DIV_B_Q);
+	VDP1_DIV_STEP GRD_DIV_R(CLK, DIV_A_R[4:0], GRD_CALC_S, DIV_START, DIV_R_QB, DIV_RUN);
+	VDP1_DIV_STEP GRD_DIV_G(CLK, DIV_A_G[4:0], GRD_CALC_S, DIV_START, DIV_G_QB, );
+	VDP1_DIV_STEP GRD_DIV_B(CLK, DIV_A_B[4:0], GRD_CALC_S, DIV_START, DIV_B_QB, );
 	
 	RGB_t        GHCOLOR_A,GHCOLOR_B,GHCOLOR_C,GHCOLOR_D;
 	assign {GHCOLOR_A,GHCOLOR_B,GHCOLOR_C,GHCOLOR_D} = {GRD_TBL[0][14:0],GRD_TBL[1][14:0],GRD_TBL[2][14:0],GRD_TBL[3][14:0]};
 	RGBFP_t      LEFT_GHCOLOR,RIGHT_GHCOLOR,LINE_GHCOLOR;
+	// Gouraud steps: the quotient bits are shifted into the step registers of the running phase while the dividers
+	// iterate (see GRD_STEP_SHIFT); the direction bits are stored when the phase ends.
 	RGBFP_t      LEFT_GHCOLOR_STEP,RIGHT_GHCOLOR_STEP,LINE_GHCOLOR_STEP;
+	bit  [16: 0] LS_Q_R,LS_Q_G,LS_Q_B,RS_Q_R,RS_Q_G,RS_Q_B,NS_Q_R,NS_Q_G,NS_Q_B;
+	bit  [ 2: 0] LS_DIR,RS_DIR,NS_DIR;
+	assign LEFT_GHCOLOR_STEP  = {{LS_DIR[2],LS_Q_B},{LS_DIR[1],LS_Q_G},{LS_DIR[0],LS_Q_R}};
+	assign RIGHT_GHCOLOR_STEP = {{RS_DIR[2],RS_Q_B},{RS_DIR[1],RS_Q_G},{RS_DIR[0],RS_Q_R}};
+	assign LINE_GHCOLOR_STEP  = {{NS_DIR[2],NS_Q_B},{NS_DIR[1],NS_Q_G},{NS_DIR[0],NS_Q_R}};
 	
 `ifdef DEBUG
 	assign DBG_GHCOLOR_C = GRD_TBL[2][14:0];
@@ -870,7 +875,7 @@ module VDP1 (
 				CMDS_GRD_CALC_LEFT: begin
 					if (GRD_CALC_STATE == 5'd20) begin
 						GRD_CALC_STATE <= '0;
-						LEFT_GHCOLOR_STEP <= GRD_CALC_STEP;
+						LS_DIR <= {DIV_A_B[5],DIV_A_G[5],DIV_A_R[5]};
 						
 						CMD_ST <= CMDS_GRD_CALC_RIGHT;
 					end
@@ -879,7 +884,7 @@ module VDP1 (
 				CMDS_GRD_CALC_RIGHT: begin
 					if (GRD_CALC_STATE == 5'd20) begin
 						GRD_CALC_STATE <= '0;
-						RIGHT_GHCOLOR_STEP <= GRD_CALC_STEP;
+						RS_DIR <= {DIV_A_B[5],DIV_A_G[5],DIV_A_R[5]};
 						CMD_ST <= CMDS_ROW_DRAW;
 					end
 				end
@@ -993,7 +998,7 @@ module VDP1 (
 				CMDS_GRD_CALC_LINE: begin
 					if (GRD_CALC_STATE == 5'd20) begin
 						GRD_CALC_STATE <= '0;
-						LINE_GHCOLOR_STEP <= GRD_CALC_STEP;
+						NS_DIR <= {DIV_A_B[5],DIV_A_G[5],DIV_A_R[5]};
 						
 						case (CMD.CMDCTRL.COMM) 
 							4'h0: CMD_ST <= CMDS_NSPR_DRAW;
@@ -2446,6 +2451,24 @@ module VDP1 (
 	assign DO = REG_SEL ? REG_DO : FBRAM_SEL ? FB_DRAW_Q : MEM_DO;
 	assign RDY_N = ~CPU_VRAM_RRDY | ~CPU_VRAM_WRDY | ~CPU_FB_RRDY | ~CPU_FB_WRDY | ~READY;
 	
+	function automatic [16:0] SHQ(input [16:0] C, input B);
+		SHQ = {C[15:0],B};
+	endfunction
+	always @(posedge CLK) if (DIV_RUN) begin
+		case (CMD_ST)
+			CMDS_GRD_CALC_LEFT: begin
+				LS_Q_R <= SHQ(LS_Q_R,DIV_R_QB); LS_Q_G <= SHQ(LS_Q_G,DIV_G_QB); LS_Q_B <= SHQ(LS_Q_B,DIV_B_QB);
+			end
+			CMDS_GRD_CALC_RIGHT: begin
+				RS_Q_R <= SHQ(RS_Q_R,DIV_R_QB); RS_Q_G <= SHQ(RS_Q_G,DIV_G_QB); RS_Q_B <= SHQ(RS_Q_B,DIV_B_QB);
+			end
+			CMDS_GRD_CALC_LINE: begin
+				NS_Q_R <= SHQ(NS_Q_R,DIV_R_QB); NS_Q_G <= SHQ(NS_Q_G,DIV_G_QB); NS_Q_B <= SHQ(NS_Q_B,DIV_B_QB);
+			end
+			default:;
+		endcase
+	end
+	
 endmodule
 
 
@@ -2581,36 +2604,38 @@ module VDP1_COL_TBL (
 
 endmodule
 
-module VDP1_DIV_24_12 
+// Serial divider for the gouraud steps: (A << 12) / DVSR, A = 5-bit colour difference, 18 iterations of the
+// original 29-bit non-restoring divider. Only the 12-bit partial remainder is kept here; the dividend bits are
+// A[4:0] followed by zeros, and the quotient bits leave through QBIT (shifted into the destination register).
+module VDP1_DIV_STEP
 (
 	input         CLK,
-	input	 [16:0] DVDNT,
-	input	 [11:0] DVSR,
-	input	        START,
-	output [16:0] QUOT,
-	output reg    DONE
+	input  [ 4:0] A,
+	input  [11:0] DVSR,
+	input         START,
+	output        QBIT,
+	output        RUN
 );
-	
-	bit  [28: 0] D;
-	bit          T;	
-	wire [28: 0] SUM = T ? $signed(D) - $unsigned({DVSR,17'h00000}) : $signed(D) + $unsigned({DVSR,17'h00000});
+	bit  [11: 0] R;
+	bit          T;
+	bit  [ 4: 0] STEP;
+	bit          DONE;
+	wire [11: 0] SUM = T ? R - DVSR : R + DVSR;
+	wire         DB = STEP < 5'd5 ? A[3'd4 - STEP[2:0]] : 1'b0;
+	assign QBIT = ~(SUM[11]^DVSR[11]);
+	assign RUN = !DONE && !START;
 	always @(posedge CLK) begin
-		bit  [ 4: 0] STEP;
-	
 		if (START) begin
-			D <= {12'h000,DVDNT};
-			T <= ~(1'b0^DVSR[11]);
+			R <= '0;
+			T <= ~DVSR[11];
 			STEP <= '0;
 			DONE <= 0;
 		end
 		else if (!DONE) begin
-			D <= {SUM[27:0],~(SUM[28]^DVSR[11])};
-			T <= ~(SUM[28]^DVSR[11]);
+			R <= {SUM[10:0],DB};
+			T <= QBIT;
 			STEP <= STEP + 5'd1;
 			if (STEP == 5'd17) DONE <= 1;
 		end
 	end
-	assign QUOT = D[16:0];
-
 endmodule
-
