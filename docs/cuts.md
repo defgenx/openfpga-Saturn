@@ -164,7 +164,7 @@ likely in 3D titles (VF1 style matrix work), so cycle timing of those differs; n
 
 ## Default build
 
-No macro, no change: `make -C sim sh2` (64 runs = 16 programs x 4 environments, ALL PASS; three programs were added:
-`t_divu_msh`, `t_divu_ssh`, `t_divu_both`, plus `t_purge_few`, `t_purge_burst`), `make -C sim scsp` (6 seeds x 2 builds
+No macro, no change: `make -C sim sh2` (72 runs = 18 programs x 4 environments, ALL PASS; five programs were added:
+`t_divu_msh`, `t_divu_ssh`, `t_divu_both`, `t_purge_few`, `t_purge_burst`), `make -C sim scsp` (6 seeds x 2 builds
 PASS), `make -C sim sh1` PASS. Standalone map of the final default source: SCSP 2,174 ALM / 3,155 ALUT / 1,643 regs
-(identical to before), SH-2 pair: see the commit message numbers in the summary above (`sh2_final_default`).
+(identical to before), SH-2 pair 8,084 ALM / 11,587 ALUT / 5,901 regs (identical).
