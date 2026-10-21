@@ -12,6 +12,12 @@ module sh2_pair_wrap (
 	output [31:0] ECDI
 );
 	wire [31:0] SSHDI;
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	wire [65:0] DVS0_O, DVS1_O;
+	wire [140:0] DVS0_I, DVS1_I;
+	SH7604_DIVU_SHR dvshr(.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .EN(EN), .C0_O(DVS0_O), .C1_O(DVS1_O), .C0_I(DVS0_I), .C1_I(DVS1_I));
+`endif
+
 	SH7604 #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({1'b0,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) MSH
 	(
 		.CLK(CLK),
@@ -73,6 +79,9 @@ module sh2_pair_wrap (
 		.MD(6'b001000),
 		
 		.FAST(FAST)
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS0_I), .DVS_O(DVS0_O)
+`endif
 	);
 	
 	SH7604 #(.UBC_DISABLE(1), .SCI_DISABLE(1), .BUS_AREA_TIMIMG({1'b0,3'b111}), .BUS_SIZE_BYTE_DISABLE(1)) SSH
@@ -134,5 +143,8 @@ module sh2_pair_wrap (
 		.MD(6'b101000),
 		
 		.FAST(FAST)
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		,.DVS_I(DVS1_I), .DVS_O(DVS1_O)
+`endif
 	);
 endmodule

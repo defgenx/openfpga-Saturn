@@ -36,10 +36,13 @@ module tb_top;
 	wire m_bs  = obs_ref[255-0] ; // placeholder, real decode below
 	wire [26:0] ma = ref0.MSHA;
 
+`ifdef POCKET_CUT_SH2_PURGE
+	reg [2:0] ep_prev;
+`endif
 	always @(posedge CLK) begin
 		if (RST_N) begin
 			cyc <= cyc + 1;
-			if (obs_dut !== obs_ref) begin
+			if (obs_dut !== obs_ref && !$test$plusargs("nocmp")) begin
 				$display("MISMATCH %s at clk %0d (t=%0t)", name, cyc, $time);
 				$display("  ref  MSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b IVEC=%b RFS=%b BGR=%b", ref0.MSHA, ref0.MSHDO, ref0.MSHBS_N, ref0.MSHCS0_N, ref0.MSHCS1_N, ref0.MSHCS2_N, ref0.MSHCS3_N, ref0.MSHRD_WR_N, ref0.MSHDQM_N, ref0.MSHRD_N, ref0.MSHIVECF_N, ref0.MSRFS, ref0.MSHBGR_N);
 				$display("  dut  MSH A=%07h DO=%08h BS=%b CS=%b%b%b%b RDWR=%b DQM=%b RD=%b IVEC=%b RFS=%b BGR=%b", dut.MSHA, dut.MSHDO, dut.MSHBS_N, dut.MSHCS0_N, dut.MSHCS1_N, dut.MSHCS2_N, dut.MSHCS3_N, dut.MSHRD_WR_N, dut.MSHDQM_N, dut.MSHRD_N, dut.MSHIVECF_N, dut.MSRFS, dut.MSHBGR_N);
@@ -48,6 +51,10 @@ module tb_top;
 				$display("FAIL %s", name);
 				$finish;
 			end
+`ifdef POCKET_CUT_SH2_PURGE
+			if ($test$plusargs("epochdbg") && dut.MSH.cache.EPOCH !== ep_prev) $display("EPOCH clk %0d -> %0d", cyc, dut.MSH.cache.EPOCH);
+			ep_prev <= dut.MSH.cache.EPOCH;
+`endif
 			if (verbose && cyc < verbose) $display("%0d MSH A=%07h BS=%b CS=%b%b%b%b RW=%b RD=%b DQM=%b DO=%08h DI=%08h WAIT=%b | PC=%08h  SSHres=%b BGR=%b ST=%0d RFS=%b BREQ=%b SPC=%08h", cyc, ref0.MSHA, ref0.MSHBS_N, ref0.MSHCS0_N, ref0.MSHCS1_N, ref0.MSHCS2_N, ref0.MSHCS3_N, ref0.MSHRD_WR_N, ref0.MSHRD_N, ref0.MSHDQM_N, ref0.MSHDO, ref0.MSHDI, ref0.MSHWAIT_N, ref0.MSH.core.PC, ref0.SSHRES_N, ref0.MSHBGR_N, ref0.MSH.bsc.BUS_STATE, ref0.MSRFS, ref0.SSHBREQ_N, ref0.SSH.core.PC);
 			if (watch_hi != 0 && !watch_hit && ref0.MSH.core.PC >= watch_lo && ref0.MSH.core.PC < watch_hi) begin
 				watch_hit <= 1;
@@ -81,7 +88,7 @@ module tb_top;
 					chk_r = chk_r * 33 + ref0.wraml[i] + ref0.scr[i] + ref0.abus[i];
 					chk_d = chk_d * 33 + dut.wraml[i] + dut.scr[i] + dut.abus[i];
 				end
-				if (chk_r != chk_d) begin $display("MISMATCH memory contents %s", name); $display("FAIL %s", name); $finish; end
+				if (chk_r != chk_d) begin $display("MISMATCH memory contents %s", name); begin automatic int nd = 0; for (int i = 0; i < 65536 && nd < 12; i++) if (ref0.wramh[i] != dut.wramh[i]) begin $display("  wramh[%05h] ref=%08h dut=%08h", i*4, ref0.wramh[i], dut.wramh[i]); nd++; end end $display("FAIL %s", name); $finish; end
 				if ($value$plusargs("peek=%h", peek)) $display("  peek wramh[%08h]=%08h", peek, ref0.wramh[peek[17:2]]);
 				if ($value$plusargs("peek2=%h", peek)) $display("  peek wramh[%08h]=%08h", peek, ref0.wramh[peek[17:2]]);
 				if ($test$plusargs("frtdbg")) $display("  MSH frt: FRC=%h OCRA=%h OCRB=%h TIER=%h FTCSR=%h TCR=%h TOCR=%h | IPRB=%h VCRC=%h SR=%h", ref0.MSH.frt.FRC, ref0.MSH.frt.OCRA, ref0.MSH.frt.OCRB, ref0.MSH.frt.TIER, ref0.MSH.frt.FTCSR, ref0.MSH.frt.TCR, ref0.MSH.frt.TOCR, ref0.MSH.intc.IPRB, ref0.MSH.intc.VCRC, ref0.MSH.core.SR);

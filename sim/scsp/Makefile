@@ -53,6 +53,19 @@ run: $(B)/obj/Vtb_top $(B)/objm/Vtb_top
 clean:
 	rm -rf $(B)
 
+# POCKET_CUT_SCSP_DSP: shrunk SCSP built with the macro against the golden with the DSP disabled (zero program,
+# EFREG return and MIXS read-back forced to 0). Run: make cut-dsp
+$(B)/REF_SCSP_dspoff.sv: $(B)/REF_SCSP_nm.sv
+	perl -pe 's/assign MPRO0_Q = [^;]*;/assign MPRO0_Q = \x270;/; s/assign DSP_MIXS_Q = [^;]*;/assign DSP_MIXS_Q = \x270;/; s/TEMP = LevelCalc\(EFREG_Q,OP7_SCR8\.EFSDL\);/TEMP = \x270;/' $< > $@
+$(B)/objd/Vtb_top: $(B)/REF_SCSP_dspoff.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator $(VFLAGS) -DPOCKET_CUT_SCSP_DSP -Mdir $(B)/objd \
+	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_dspoff.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+	@test -x $@
+.PHONY: cut-dsp
+cut-dsp: $(B)/objd/Vtb_top
+	@set -e; for s in $(SEEDS); do $(B)/objd/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedd$$s; done
+	@cmp $(B)/seedd1_ref.wav $(B)/seedd1_new.wav && echo "WAV files identical (DSP cut)"
+
 # Used by mutate.sh: build only, into $(B).
 .PHONY: build_mut_exe
 build_mut_exe: $(B)/obj/Vtb_top
