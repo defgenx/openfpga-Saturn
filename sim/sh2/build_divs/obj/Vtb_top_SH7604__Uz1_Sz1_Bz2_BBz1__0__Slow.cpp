@@ -544,9 +544,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                            | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_WRITE) 
                                               | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_ADDR_WRITE) 
                                                  | (IData)(vlSelfRef.__PVT__cache__DOT__CACHE_READ))));
-    vlSelfRef.__PVT__divu__DOT__OWN = (1U & (~ ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__OWNER) 
-                                                | (0x3fU 
-                                                   == (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)))));
     vlSelfRef.__PVT__divu__DOT__SGN = ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__D_SIGN) 
                                        ^ (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__R_SIGN));
     vlSelfRef.__PVT__bsc__DOT__CBUS_EXT_REQ = ((IData)(vlSelfRef.__PVT__cache__DOT__IBREQ) 
@@ -714,6 +711,8 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                            <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
                                           & (0xfffffe19U 
                                              >= vlSelfRef.__PVT__cache__DOT__IBADDR));
+    vlSelfRef.__PVT__DIVU_ACT = ((0xffffff00U <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
+                                 & (0xffffff3fU >= vlSelfRef.__PVT__cache__DOT__IBADDR));
     vlSelfRef.__PVT__CBUS_BA = (0x0000000fU & (((0U 
                                                  == 
                                                  (3U 
@@ -752,8 +751,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                               ((IData)(vlSelfRef.__PVT__core__DOT__INST_SPLIT) 
                                                                | (IData)(vlSelfRef.__PVT__core__DOT__IFID_STALL))) 
                                                              & (IData)(vlSelfRef.__PVT__core__DOT__IF_ACTIVE))))));
-    vlSelfRef.__PVT__DIVU_ACT = ((0xffffff00U <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
-                                 & (0xffffff3fU >= vlSelfRef.__PVT__cache__DOT__IBADDR));
     vlSelfRef.__PVT__CBUS_REQ = (((((vlSelfRef.__PVT__core__DOT__PIPE
                                      .__PVT__MA.__PVT__DI[1U] 
                                      >> 0x0000000fU) 
@@ -2474,11 +2471,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                               & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_55));
     vlSelfRef.__PVT__frt__DOT__FTCSR_READ = ((IData)(__VdfgRegularize_hebeb780c_0_56) 
                                              & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_54));
-    vlSelfRef.__PVT__divu__DOT__OPERATE = ((IData)(vlSelfRef.__PVT__divu__DOT__OWN) 
-                                           | ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0) 
-                                              | ((0x3fU 
-                                                  != (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)) 
-                                                 & (IData)(vlSelfRef.__PVT__divu__DOT__START_A))));
     vlSelfRef.__PVT__core__DOT__INT_EXP = ((IData)(vlSelfRef.__PVT__core__DOT__INT_REQ_LATCH) 
                                            | (IData)(__VdfgRegularize_hebeb780c_0_57));
     __PVT__core__DOT__BUS_STALL = (((IData)(vlSelfRef.__PVT__core__DOT__VECT_ACTIVE) 
@@ -6715,6 +6707,8 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
             (((QData)((IData)(vlSelfRef.__PVT__IA)) 
               << 0x00000020U) | (QData)((IData)(vlSelfRef.__PVT__IDO)));
     }
+    vlSelfRef.__PVT__divu__DOT__OPERATE = (1U & ((~ (IData)(vlSymsp->TOP.__VdfgRegularize_hebeb780c_0_59)) 
+                                                 | (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0)));
     vlSelfRef.WAIT_N = (1U & (~ ((~ ((IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_6) 
                                      & (0x0000000fU 
                                         == (0x0000000fU 
@@ -7266,8 +7260,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                            | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_WRITE) 
                                               | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_ADDR_WRITE) 
                                                  | (IData)(vlSelfRef.__PVT__cache__DOT__CACHE_READ))));
-    vlSelfRef.__PVT__divu__DOT__OWN = ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__OWNER) 
-                                       & (0x3fU != (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)));
     vlSelfRef.__PVT__bsc__DOT__CBUS_EXT_REQ = ((IData)(vlSelfRef.__PVT__cache__DOT__IBREQ) 
                                                & (0U 
                                                   == 
@@ -7385,7 +7377,11 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
         vlSelfRef.cache__DOT____VlemCond_1 = vlSelfRef.cache__DOT____VlemCall_0__WayToAddr;
     }
     __PVT__cache__DOT__CRAM_WRWAY = vlSelfRef.cache__DOT____VlemCond_1;
+    vlSelfRef.__PVT__divu__DOT__OWN = ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__OWNER) 
+                                       & (0x3fU != (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)));
     vlSelfRef.__PVT__DBUS_BA = vlSelfRef.dmac__DOT____VlemCond_2;
+    vlSelfRef.__VdfgRegularize_hebeb780c_0_48 = ((IData)(vlSelfRef.__PVT__cache__DOT__IBWE) 
+                                                 & (IData)(vlSelfRef.__PVT__cache__DOT__IBREQ));
     vlSelfRef.__VdfgRegularize_hebeb780c_0_36 = ((1U 
                                                   == (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP))
                                                   ? 
@@ -7395,8 +7391,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                   : 
                                                  ((QData)((IData)(vlSelfRef.__PVT__divu__DOT__DVSR)) 
                                                   << 0x00000020U));
-    vlSelfRef.__VdfgRegularize_hebeb780c_0_48 = ((IData)(vlSelfRef.__PVT__cache__DOT__IBWE) 
-                                                 & (IData)(vlSelfRef.__PVT__cache__DOT__IBREQ));
     __PVT__core__DOT__unnamedblk6__DOT__temp = vlSelfRef.__PVT__core__DOT__PIPE
         .__PVT__MA.__PVT__WD;
     if (vlSelfRef.__PVT__bsc__DOT__SLV_BUS_RLS) {
@@ -7450,12 +7444,12 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                >= vlSelfRef.__PVT__cache__DOT__IBADDR));
     vlSelfRef.__Vcellinp__core__INT_REQ = ((~ (IData)(vlSelfRef.__PVT__MSBY_SBY)) 
                                            & (0U != (IData)(vlSelfRef.__PVT__intc__DOT__INT_ACTIVE)));
+    vlSelfRef.__PVT__DIVU_ACT = ((0xffffff00U <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
+                                 & (0xffffff3fU >= vlSelfRef.__PVT__cache__DOT__IBADDR));
     vlSelfRef.__PVT__frt__DOT__REG_SEL = ((0xfffffe10U 
                                            <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
                                           & (0xfffffe19U 
                                              >= vlSelfRef.__PVT__cache__DOT__IBADDR));
-    vlSelfRef.__PVT__DIVU_ACT = ((0xffffff00U <= vlSelfRef.__PVT__cache__DOT__IBADDR) 
-                                 & (0xffffff3fU >= vlSelfRef.__PVT__cache__DOT__IBADDR));
     vlSelfRef.__PVT__CBUS_BA = (0x0000000fU & (((0U 
                                                  == 
                                                  (3U 
@@ -8714,16 +8708,10 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                  << 8U) 
                                                 | (0x000000ffU 
                                                    & vlSelfRef.__PVT__cache__DOT__CACHE_WR_ADDR));
+    vlSelfRef.__PVT__divu__DOT__OPERATE = ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1) 
+                                           | (IData)(vlSelfRef.__PVT__divu__DOT__OWN));
     vlSelfRef.__PVT__DMAC_ACT = ((IData)(vlSelfRef.__PVT__dmac__DOT__REG1_SEL) 
                                  | (IData)(vlSelfRef.__PVT__dmac__DOT__REG2_SEL));
-    vlSelfRef.__PVT__frt__DOT__ICR_READ = ((IData)(vlSelfRef.__PVT__frt__DOT__REG_SEL) 
-                                           & ((9U == 
-                                               (0x0000000fU 
-                                                & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
-                                              & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_47)));
-    __VdfgRegularize_hebeb780c_0_49 = ((1U == (0x0000000fU 
-                                               & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
-                                       & (IData)(vlSelfRef.__PVT__frt__DOT__REG_SEL));
     vlSelfRef.__PVT__divu__DOT__START_A = ((IData)(vlSelfRef.__PVT__DIVU_ACT) 
                                            & (((4U 
                                                 == 
@@ -8734,6 +8722,14 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                   (0x0000001fU 
                                                    & vlSelfRef.__PVT__cache__DOT__IBADDR))) 
                                               & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_48)));
+    vlSelfRef.__PVT__frt__DOT__ICR_READ = ((IData)(vlSelfRef.__PVT__frt__DOT__REG_SEL) 
+                                           & ((9U == 
+                                               (0x0000000fU 
+                                                & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
+                                              & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_47)));
+    __VdfgRegularize_hebeb780c_0_49 = ((1U == (0x0000000fU 
+                                               & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
+                                       & (IData)(vlSelfRef.__PVT__frt__DOT__REG_SEL));
     __VdfgRegularize_hebeb780c_0_50 = ((~ ((vlSelfRef.__PVT__core__DOT__PIPE
                                             .__PVT__EX
                                             .__PVT__DI[0U] 
@@ -9214,11 +9210,6 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                               & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_48));
     vlSelfRef.__PVT__frt__DOT__FTCSR_READ = ((IData)(__VdfgRegularize_hebeb780c_0_49) 
                                              & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_47));
-    vlSelfRef.__PVT__divu__DOT__OPERATE = ((IData)(vlSelfRef.__PVT__divu__DOT__OWN) 
-                                           | ((IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1) 
-                                              | ((0x3fU 
-                                                  != (IData)(vlSymsp->TOP.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)) 
-                                                 & (IData)(vlSelfRef.__PVT__divu__DOT__START_A))));
     vlSelfRef.__PVT__core__DOT__INT_EXP = ((IData)(vlSelfRef.__PVT__core__DOT__INT_REQ_LATCH) 
                                            | (IData)(__VdfgRegularize_hebeb780c_0_50));
     __PVT__core__DOT__BUS_STALL = (((IData)(vlSelfRef.__PVT__core__DOT__VECT_ACTIVE) 

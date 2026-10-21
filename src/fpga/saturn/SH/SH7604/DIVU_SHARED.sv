@@ -31,8 +31,11 @@ module SH7604_DIVU_SHR (
 	
 	wire BUSY = (STEP != 6'h3F);
 	wire idle = !BUSY;
-	wire ACT0 = C0_O[0] & idle & ~PEND0 & EN & CE_R;
-	wire ACT1 = C1_O[0] & idle & ~PEND1 & EN & CE_R;
+	// A start write is accepted unless this CPU's own division is pending or running; if the datapath is taken
+	// by the other CPU the start is deferred (PEND). A bus access cannot be stalled in the cycle it is issued
+	// (the cache drops a write one clock before BUSY would rise), so the stall falls on the result read.
+	wire ACT0 = C0_O[0] & ~PEND0 & ~(BUSY & ~OWNER) & EN & CE_R;
+	wire ACT1 = C1_O[0] & ~PEND1 & ~(BUSY &  OWNER) & EN & CE_R;
 	wire SEL0 = idle & EN & CE_R & (PEND0 | (ACT0 & ~PEND1));
 	wire SEL1 = idle & EN & CE_R & ~SEL0 & (PEND1 | ACT1);
 	wire SEL64 = SEL0 ? (PEND0 ? P64_0 : C0_O[1]) : (PEND1 ? P64_1 : C1_O[1]);
@@ -123,6 +126,14 @@ module SH7604_DIVU_SHR (
 		end
 	end
 	
+`ifdef DIVS_DBG
+	always @(posedge CLK) if (EN && CE_R) begin
+		if (SEL0 || SEL1) $display("%0t SEL0=%b SEL1=%b pend=%b%b act=%b%b", $time, SEL0, SEL1, PEND0, PEND1, ACT0, ACT1);
+		if (STEP == 6'd1) $display("%0t step1 owner=%b opnd=%h", $time, OWNER, OPND);
+		if (STEP == 6'd2) $display("%0t step2 owner=%b opnd=%h", $time, OWNER, OPND);
+		if (STEP == 6'd38) $display("%0t done owner=%b Q=%h R=%h ovf=%b", $time, OWNER, Q, R[31:0], OVF);
+	end
+`endif
 	wire QB = ~SUM[64]^R_SIGN;
 	wire [137:0] BC = {Q, R64, R[31:0], R_SIGN^D_SIGN, DIV64, OVF, QB, STEP};
 	assign C0_I = {BC, BUSY, PEND0, BUSY & ~OWNER};
@@ -180,7 +191,7 @@ module SH7604_DIVU_CL (
 	
 	wire REG_SEL = (IBUS_A >= 32'hFFFFFF00 && IBUS_A <= 32'hFFFFFF3F);
 	wire START_A = REG_SEL && IBUS_WE && IBUS_REQ && (IBUS_A[4:0] == 5'h04 || IBUS_A[4:0] == 5'h14);
-	wire OPERATE = OWN | PEND | (CBUSY & START_A);
+	wire OPERATE = OWN | PEND;
 	assign SH_O = {STEP == 6'd1 ? {DVDNTH,DVDNTL} : {DVSR,32'h00000000}, IBUS_A[4:0] == 5'h14, START_A};
 	
 	bit          SND_UPD;
@@ -291,6 +302,9 @@ module SH7604_DIVU_CL (
 		end
 	end
 	
+`ifdef DIVS_DBG
+	always @(posedge CLK) if (REG_SEL && IBUS_REQ && (CE_F || CE_R) && $time > 37000 && $time < 40500) $display("%0t %m %s A=%h we=%b di=%h do=%h busy=%b oper=%b own=%b pend=%b cbusy=%b step=%0d dnl=%h", $time, CE_R?"R":"F", IBUS_A, IBUS_WE, IBUS_DI, REG_DO, BUSY, OPERATE, OWN, PEND, CBUSY, STEP, DVDNTL);
+`endif
 	assign IBUS_DO = REG_SEL ? (IBUS_BA != 4'b1111 ? {2{REG_DO[15:0]}} : REG_DO) : '0;
 	assign IBUS_BUSY = BUSY;
 	assign IBUS_ACT = REG_SEL;

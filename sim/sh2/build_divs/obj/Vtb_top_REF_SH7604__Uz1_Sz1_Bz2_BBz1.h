@@ -372,9 +372,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_17;
         CData/*7:0*/ __VdfgRegularize_hebeb780c_0_18;
         CData/*7:0*/ __VdfgRegularize_hebeb780c_0_19;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_74;
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_75;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_81;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_76;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_82;
         CData/*0:0*/ __Vdly__cache__DOT__IBUS_WRITE_PEND;
         CData/*0:0*/ __Vdly__cache__DOT__IBREQ;
         CData/*0:0*/ __Vdly__cache__DOT__IBUS_READ;

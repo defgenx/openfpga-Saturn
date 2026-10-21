@@ -145,16 +145,16 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
     __Vfunc_ByteShiftRigth__39__val = 0;
     CData/*1:0*/ __Vfunc_ByteShiftRigth__39__s;
     __Vfunc_ByteShiftRigth__39__s = 0;
-    CData/*0:0*/ __VdfgRegularize_hebeb780c_0_78;
-    __VdfgRegularize_hebeb780c_0_78 = 0;
     CData/*0:0*/ __VdfgRegularize_hebeb780c_0_79;
     __VdfgRegularize_hebeb780c_0_79 = 0;
     CData/*0:0*/ __VdfgRegularize_hebeb780c_0_80;
     __VdfgRegularize_hebeb780c_0_80 = 0;
-    VlWide<3>/*64:0*/ __VdfgRegularize_hebeb780c_0_89;
-    VL_ZERO_W(65, __VdfgRegularize_hebeb780c_0_89);
+    CData/*0:0*/ __VdfgRegularize_hebeb780c_0_81;
+    __VdfgRegularize_hebeb780c_0_81 = 0;
     VlWide<3>/*64:0*/ __VdfgRegularize_hebeb780c_0_90;
     VL_ZERO_W(65, __VdfgRegularize_hebeb780c_0_90);
+    VlWide<3>/*64:0*/ __VdfgRegularize_hebeb780c_0_91;
+    VL_ZERO_W(65, __VdfgRegularize_hebeb780c_0_91);
     VlWide<3>/*79:0*/ TOP__REF_SH2_PKG__DOT____PVT__Decode__Vstatic__DECI;
     VL_ZERO_W(80, TOP__REF_SH2_PKG__DOT____PVT__Decode__Vstatic__DECI);
     CData/*4:0*/ TOP__REF_SH2_PKG__DOT____PVT__Decode__Vstatic__RAN;
@@ -259,7 +259,7 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
     vlSelfRef.__PVT__divu__DOT__SUM[2U] = (1U & __Vtemp_2[2U]);
     vlSelfRef.__VdfgRegularize_hebeb780c_0_19 = ((IData)(vlSelfRef.frt__DOT__TIER) 
                                                  & (IData)(vlSelfRef.frt__DOT__FTCSR));
-    vlSelfRef.__VdfgRegularize_hebeb780c_0_74 = ((IData)(vlSelfRef.__PVT__bsc__DOT__VBUS_ACTIVE) 
+    vlSelfRef.__VdfgRegularize_hebeb780c_0_75 = ((IData)(vlSelfRef.__PVT__bsc__DOT__VBUS_ACTIVE) 
                                                  | (IData)(vlSelfRef.__PVT__bsc__DOT__REFRESH_ACTIVE));
     vlSelfRef.__PVT__cache__DOT__CVALID_D = ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_UPDATE) 
                                              | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_ADDR_WRITE) 
@@ -440,16 +440,16 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                                     & (IData)(vlSelfRef.frt__DOT__TCR))
                                                     ? (IData)(vlSelfRef.__PVT__CLK32_CE)
                                                     : (IData)(vlSelfRef.__PVT__CLK8_CE))));
-    __VdfgRegularize_hebeb780c_0_89[0U] = (IData)(vlSelfRef.__PVT__divu__DOT__R64);
-    __VdfgRegularize_hebeb780c_0_89[1U] = (IData)((vlSelfRef.__PVT__divu__DOT__R64 
+    __VdfgRegularize_hebeb780c_0_90[0U] = (IData)(vlSelfRef.__PVT__divu__DOT__R64);
+    __VdfgRegularize_hebeb780c_0_90[1U] = (IData)((vlSelfRef.__PVT__divu__DOT__R64 
                                                    >> 0x00000020U));
-    __VdfgRegularize_hebeb780c_0_89[2U] = (1U & (IData)(
+    __VdfgRegularize_hebeb780c_0_90[2U] = (1U & (IData)(
                                                         (vlSelfRef.__PVT__divu__DOT__R64 
                                                          >> 0x0000003fU)));
-    __VdfgRegularize_hebeb780c_0_90[0U] = (IData)(vlSelfRef.__PVT__divu__DOT__D64);
-    __VdfgRegularize_hebeb780c_0_90[1U] = (IData)((vlSelfRef.__PVT__divu__DOT__D64 
+    __VdfgRegularize_hebeb780c_0_91[0U] = (IData)(vlSelfRef.__PVT__divu__DOT__D64);
+    __VdfgRegularize_hebeb780c_0_91[1U] = (IData)((vlSelfRef.__PVT__divu__DOT__D64 
                                                    >> 0x00000020U));
-    __VdfgRegularize_hebeb780c_0_90[2U] = 0U;
+    __VdfgRegularize_hebeb780c_0_91[2U] = 0U;
     vlSelfRef.__PVT__cache__DOT__LRU_WE = ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_UPDATE) 
                                            | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_WRITE) 
                                               | ((IData)(vlSelfRef.__PVT__cache__DOT__CACHE_ADDR_WRITE) 
@@ -513,7 +513,7 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                  >> 0x0000000eU) & (IData)(vlSelfRef.__PVT__core__DOT__MA_ACTIVE));
     vlSelfRef.__VdfgRegularize_hebeb780c_0_15 = ((IData)(vlSelfRef.__PVT__cache__DOT__IBWE) 
                                                  & (IData)(vlSelfRef.__PVT__cache__DOT__IBREQ));
-    __VdfgRegularize_hebeb780c_0_78 = ((~ (IData)(vlSelfRef.__PVT__cache__DOT__IBWE)) 
+    __VdfgRegularize_hebeb780c_0_79 = ((~ (IData)(vlSelfRef.__PVT__cache__DOT__IBWE)) 
                                        & (IData)(vlSelfRef.__PVT__cache__DOT__IBREQ));
     __Vfunc_cache__DOT__AddrToWay__31__a = (3U & ((IData)(vlSelfRef.__PVT__cache__DOT__CCR) 
                                                   >> 6U));
@@ -1431,9 +1431,9 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                .__PVT__MA.__PVT__ADDR
                                 : (0xfffffffcU & vlSelfRef.core__DOT__PC));
     if (vlSelfRef.__PVT__divu__DOT__T64) {
-        VL_SUB_W(3, __Vtemp_12, __VdfgRegularize_hebeb780c_0_89, __VdfgRegularize_hebeb780c_0_90);
+        VL_SUB_W(3, __Vtemp_12, __VdfgRegularize_hebeb780c_0_90, __VdfgRegularize_hebeb780c_0_91);
     } else {
-        VL_ADD_W(3, __Vtemp_12, __VdfgRegularize_hebeb780c_0_89, __VdfgRegularize_hebeb780c_0_90);
+        VL_ADD_W(3, __Vtemp_12, __VdfgRegularize_hebeb780c_0_90, __VdfgRegularize_hebeb780c_0_91);
     }
     vlSelfRef.__PVT__divu__DOT__SUM64[0U] = __Vtemp_12[0U];
     vlSelfRef.__PVT__divu__DOT__SUM64[1U] = __Vtemp_12[1U];
@@ -1557,11 +1557,11 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                            & ((9U == 
                                                (0x0000000fU 
                                                 & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
-                                              & (IData)(__VdfgRegularize_hebeb780c_0_78)));
-    __VdfgRegularize_hebeb780c_0_79 = ((1U == (0x0000000fU 
+                                              & (IData)(__VdfgRegularize_hebeb780c_0_79)));
+    __VdfgRegularize_hebeb780c_0_80 = ((1U == (0x0000000fU 
                                                & vlSelfRef.__PVT__cache__DOT__IBADDR)) 
                                        & (IData)(vlSelfRef.__PVT__frt__DOT__REG_SEL));
-    __VdfgRegularize_hebeb780c_0_80 = ((~ ((vlSelfRef.__PVT__core__DOT__PIPE
+    __VdfgRegularize_hebeb780c_0_81 = ((~ ((vlSelfRef.__PVT__core__DOT__PIPE
                                             .__PVT__EX
                                             .__PVT__DI[0U] 
                                             >> 6U) 
@@ -2023,12 +2023,12 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                                     : 
                                                    (vlSelfRef.__PVT__bsc__DOT__DAT_BUF 
                                                     & (- (IData)((IData)(vlSelfRef.__PVT__bsc__DOT__CBUS_ACTIVE))))))))))));
-    vlSelfRef.__PVT__frt__DOT__FTCSR_WRITE = ((IData)(__VdfgRegularize_hebeb780c_0_79) 
+    vlSelfRef.__PVT__frt__DOT__FTCSR_WRITE = ((IData)(__VdfgRegularize_hebeb780c_0_80) 
                                               & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_15));
-    vlSelfRef.__PVT__frt__DOT__FTCSR_READ = ((IData)(__VdfgRegularize_hebeb780c_0_79) 
-                                             & (IData)(__VdfgRegularize_hebeb780c_0_78));
+    vlSelfRef.__PVT__frt__DOT__FTCSR_READ = ((IData)(__VdfgRegularize_hebeb780c_0_80) 
+                                             & (IData)(__VdfgRegularize_hebeb780c_0_79));
     vlSelfRef.__PVT__core__DOT__INT_EXP = ((IData)(vlSelfRef.__PVT__core__DOT__INT_REQ_LATCH) 
-                                           | (IData)(__VdfgRegularize_hebeb780c_0_80));
+                                           | (IData)(__VdfgRegularize_hebeb780c_0_81));
     __PVT__core__DOT__BUS_STALL = (((IData)(vlSelfRef.__PVT__core__DOT__VECT_ACTIVE) 
                                     & (IData)(vlSelfRef.__PVT__intc__DOT__VBREQ)) 
                                    | (((IData)(vlSelfRef.__PVT__core__DOT__MA_ACTIVE) 
@@ -2666,7 +2666,7 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_to
                                             | (IData)(vlSelfRef.__PVT__core__DOT__ID_STALL));
     vlSelfRef.__PVT__INT_ACP = ((~ ((IData)(vlSelfRef.__PVT__core__DOT__INT_REQ_LATCH) 
                                     | (IData)(vlSelfRef.__PVT__core__DOT__ID_STALL))) 
-                                & (IData)(__VdfgRegularize_hebeb780c_0_80));
+                                & (IData)(__VdfgRegularize_hebeb780c_0_81));
     vlSelfRef.__PVT__core__DOT__REGS_WAE = (1U & ((vlSelfRef.__PVT__core__DOT__PIPE
                                                    .__PVT__WB
                                                    .__PVT__DI[1U] 
@@ -7021,9 +7021,9 @@ VL_ATTR_COLD void Vtb_top_REF_SH7604__Uz1_Sz1_Bz2_BBz1___ctor_var_reset(Vtb_top_
     vlSelf->__VdfgRegularize_hebeb780c_0_17 = 0;
     vlSelf->__VdfgRegularize_hebeb780c_0_18 = 0;
     vlSelf->__VdfgRegularize_hebeb780c_0_19 = 0;
-    vlSelf->__VdfgRegularize_hebeb780c_0_74 = 0;
     vlSelf->__VdfgRegularize_hebeb780c_0_75 = 0;
-    vlSelf->__VdfgRegularize_hebeb780c_0_81 = 0;
+    vlSelf->__VdfgRegularize_hebeb780c_0_76 = 0;
+    vlSelf->__VdfgRegularize_hebeb780c_0_82 = 0;
     vlSelf->__Vdly__cache__DOT__IBUS_WRITE_PEND = 0;
     vlSelf->__Vdly__cache__DOT__IBREQ = 0;
     vlSelf->__Vdly__cache__DOT__IBUS_READ = 0;

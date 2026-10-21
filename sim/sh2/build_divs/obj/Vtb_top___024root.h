@@ -85,15 +85,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ tb_top__DOT__ref0__DOT__ssh_rel;
         CData/*7:0*/ tb_top__DOT__ref0__DOT__ssh_rel_dly;
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_23;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_59;
         CData/*3:0*/ __Vdly__tb_top__DOT__dut__DOT__mfti_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__dut__DOT__nmi_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__dut__DOT__snmi_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__dut__DOT__sfti_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__ref0__DOT__mfti_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__ref0__DOT__nmi_cnt;
-        CData/*3:0*/ __Vdly__tb_top__DOT__ref0__DOT__snmi_cnt;
     };
     struct {
+        CData/*3:0*/ __Vdly__tb_top__DOT__ref0__DOT__snmi_cnt;
         CData/*3:0*/ __Vdly__tb_top__DOT__ref0__DOT__sfti_cnt;
         CData/*0:0*/ __Vdly__tb_top__DOT__dut__DOT__MCLK_DIV;
         CData/*5:0*/ __Vdly__tb_top__DOT__dut__DOT__dvshr__DOT__STEP;
@@ -130,6 +131,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__peek;
         IData/*31:0*/ tb_top__DOT__unnamedblk1__DOT__i;
         IData/*31:0*/ tb_top__DOT__unnamedblk2__DOT__i;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__nd;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_9__merge;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_8__merge;
         IData/*31:0*/ tb_top__DOT__dut__DOT____VlemCall_7__merge;
@@ -155,11 +158,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__ref0__DOT____VlemCall_5__merge;
         IData/*31:0*/ tb_top__DOT__ref0__DOT__lfsr;
         IData/*31:0*/ tb_top__DOT__ref0__DOT__cyc;
+    };
+    struct {
         IData/*31:0*/ tb_top__DOT__ref0__DOT__SSHDI;
         IData/*31:0*/ tb_top__DOT__ref0__DOT__wait_mode;
         IData/*31:0*/ tb_top__DOT__ref0__DOT__irq_mode;
-    };
-    struct {
         IData/*31:0*/ tb_top__DOT__ref0__DOT__cs0w;
         IData/*31:0*/ __Vdly__tb_top__DOT__dut__DOT__cyc;
         IData/*31:0*/ __Vdly__tb_top__DOT__dut__DOT__dvshr__DOT__Q;

@@ -433,19 +433,17 @@ VL_ATTR_COLD void Vtb_top___024root___stl_sequent__TOP__0(Vtb_top___024root* vlS
     vlSelfRef.__VdfgRegularize_hebeb780c_0_23 = ((0x3fU 
                                                   == (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)) 
                                                  & (IData)(vlSelfRef.tb_top__DOT__dut__DOT__MCLK_DIV));
-    vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__ACT0 
-        = ((0x3fU == (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)) 
-           & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__PVT__divu__DOT__START_A) 
-              & ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0)) 
-                 & (IData)(vlSelfRef.tb_top__DOT__dut__DOT__MCLK_DIV))));
+    vlSelfRef.__VdfgRegularize_hebeb780c_0_59 = ((IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__OWNER) 
+                                                 | (0x3fU 
+                                                    == (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)));
     tb_top__DOT__dut__DOT__dvshr__DOT__OPND = ((IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__OWNER)
                                                 ? vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__VdfgRegularize_hebeb780c_0_36
                                                 : vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__VdfgRegularize_hebeb780c_0_28);
     vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__ACT1 
-        = ((0x3fU == (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__STEP)) 
-           & ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1)) 
-              & ((IData)(vlSelfRef.tb_top__DOT__dut__DOT__MCLK_DIV) 
-                 & (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__divu__DOT__START_A))));
+        = ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1)) 
+           & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__divu__DOT__START_A) 
+              & ((~ (IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__SSH.__PVT__divu__DOT__OWN)) 
+                 & (IData)(vlSelfRef.tb_top__DOT__dut__DOT__MCLK_DIV))));
     vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__QB 
         = (1U ^ (vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SUM[2U] 
                  ^ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__R_SIGN)));
@@ -460,11 +458,11 @@ VL_ATTR_COLD void Vtb_top___024root___stl_sequent__TOP__0(Vtb_top___024root* vlS
         = __Vtemp_4[1U];
     vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SUM64[2U] 
         = (1U & __Vtemp_4[2U]);
-    vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SEL0 
-        = (((IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0) 
-            | ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1)) 
-               & (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__ACT0))) 
-           & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_23));
+    vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__ACT0 
+        = ((IData)(vlSelfRef.tb_top__DOT__dut__DOT__MCLK_DIV) 
+           & ((IData)(vlSymsp->TOP__tb_top__DOT__dut__DOT__MSH.__PVT__divu__DOT__START_A) 
+              & ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0)) 
+                 & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_59))));
     __VdfgRegularize_hebeb780c_0_25[0U] = (IData)(tb_top__DOT__dut__DOT__dvshr__DOT__OPND);
     __VdfgRegularize_hebeb780c_0_25[1U] = (IData)((tb_top__DOT__dut__DOT__dvshr__DOT__OPND 
                                                    >> 0x00000020U));
@@ -515,6 +513,11 @@ VL_ATTR_COLD void Vtb_top___024root___stl_sequent__TOP__0(Vtb_top___024root* vlS
                                                                     >> 0x0000001fU))))) 
                        >> 0x00000020U));
     }
+    vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SEL0 
+        = (((IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND0) 
+            | ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__PEND1)) 
+               & (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__ACT0))) 
+           & (IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_23));
     vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SEL1 
         = ((IData)(vlSelfRef.__VdfgRegularize_hebeb780c_0_23) 
            & ((~ (IData)(vlSelfRef.tb_top__DOT__dut__DOT__dvshr__DOT__SEL0)) 
@@ -577,6 +580,7 @@ VL_ATTR_COLD void Vtb_top___024root___ctor_var_reset(Vtb_top___024root* vlSelf) 
     vlSelf->tb_top__DOT__peek = 0;
     vlSelf->tb_top__DOT__unnamedblk1__DOT__i = 0;
     vlSelf->tb_top__DOT__unnamedblk2__DOT__i = 0;
+    vlSelf->tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i = 0;
     vlSelf->tb_top__DOT__dut__DOT__lfsr = 0;
     vlSelf->tb_top__DOT__dut__DOT__MCLK_DIV = 0;
     vlSelf->tb_top__DOT__dut__DOT__FAST_R = 0;
@@ -681,6 +685,7 @@ VL_ATTR_COLD void Vtb_top___024root___ctor_var_reset(Vtb_top___024root* vlSelf) 
     vlSelf->tb_top__DOT__ref0__DOT__ssh_rel_dly = 0;
     vlSelf->tb_top__DOT__ref0__DOT__cs0w = 0;
     vlSelf->__VdfgRegularize_hebeb780c_0_23 = 0;
+    vlSelf->__VdfgRegularize_hebeb780c_0_59 = 0;
     vlSelf->__Vdly__tb_top__DOT__dut__DOT__mfti_cnt = 0;
     vlSelf->__Vdly__tb_top__DOT__dut__DOT__nmi_cnt = 0;
     vlSelf->__Vdly__tb_top__DOT__dut__DOT__snmi_cnt = 0;
