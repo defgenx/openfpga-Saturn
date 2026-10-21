@@ -184,3 +184,23 @@ module VDP2_DTAP #(
 	end
 	assign Q = q;
 endmodule
+
+// One read copy of a layer's two-bank cell data buffer. PTR is the bank holding logical bytes 0-7;
+// a write (WE) fills the other half of the logical window and flips PTR. IDX is the logical byte
+// index 0-15; the bank word is registered in the RAM, the byte is picked from it.
+module VDP2_NDCRD (
+	input         CLK,
+	input         WE,
+	input         PTR,
+	input  [63:0] D,
+	input  [ 3:0] IDX,
+	output [ 7:0] Q
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [63:0] mem [0:1];
+	reg [63:0] q = '0;
+	always @(posedge CLK) begin
+		if (WE) mem[PTR] <= D;
+		q <= mem[IDX[3] ^ PTR];
+	end
+	assign Q = q[{IDX[2:0],3'b000} +: 8];
+endmodule
