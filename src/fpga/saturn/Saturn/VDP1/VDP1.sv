@@ -525,7 +525,7 @@ module VDP1 (
 			GRD_READ <= 0;
 			CMD_ST <= CMDS_IDLE;
 		end else if (EN) begin
-			SPR_OFFSY_NEXT = TEXT_DIRY ? SPR_OFFSY - ORIG_WIDTH[8:3] : SPR_OFFSY + ORIG_WIDTH[8:3];
+			SPR_OFFSY_NEXT = SPR_OFFSY + ({14{TEXT_DIRY}} ^ {8'd0,ORIG_WIDTH[8:3]}) + {13'd0,TEXT_DIRY};
 			
 			LINE_DIFF_LEFT_CLIPX1 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X1);
 			LINE_DIFF_LEFT_CLIPX2 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X2);
@@ -1238,7 +1238,6 @@ module VDP1 (
 	bit          PAT_NEXT;
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [ 1: 0] RAS_DELAY;
-		bit          FBD_RAS;
 		
 		if (!RST_N) begin
 			FBD_ST <= FBDS_IDLE;
@@ -1314,7 +1313,6 @@ module VDP1 (
 							if (PENALTY_CNT < 10'd3) begin
 								FBD_ST <= FBDS_RAS;
 							end else begin
-								PENALTY_CNT <= PENALTY_CNT - 10'd3;
 								FBD_ST <= FBDS_IDLE;
 							end
 						else
@@ -1336,10 +1334,14 @@ module VDP1 (
 				end
 			endcase
 			
-			if (((CMD_ST == CMDS_LINE_DRAW && CMD.CMDCTRL.COMM <= 4'h3) || CMD_ST == CMDS_NSPR_DRAW || CMD_ST == CMDS_SSPR_DRAW) && PAT_PREREAD_WAIT && !CPU_VRAM_BUSY && CE_R) PENALTY_CNT <= PENALTY_CNT + 10'd1;
-			if ((CMD_ST == CMDS_EXEC || CMD_ST == CMDS_ROW_CLIP) && CMD_DELAY && PENALTY_CNT >= CMD_DELAY) PENALTY_CNT <= PENALTY_CNT - CMD_DELAY;
+			// One adder updates the penalty counter: +1 per pattern wait, -3 per RAS-delayed write, -CMD_DELAY when a row delay is absorbed
+			if (PEN_INC || PEN_ABSORB || PEN_RAS) PENALTY_CNT <= PENALTY_CNT + (PEN_ABSORB ? -CMD_DELAY : PEN_INC ? 10'd1 : -10'd3);
 		end
 	end
+	bit          FBD_RAS;
+	wire PEN_INC    = ((CMD_ST == CMDS_LINE_DRAW && CMD.CMDCTRL.COMM <= 4'h3) || CMD_ST == CMDS_NSPR_DRAW || CMD_ST == CMDS_SSPR_DRAW) && PAT_PREREAD_WAIT && !CPU_VRAM_BUSY && CE_R;
+	wire PEN_ABSORB = (CMD_ST == CMDS_EXEC || CMD_ST == CMDS_ROW_CLIP) && CMD_DELAY && PENALTY_CNT >= CMD_DELAY;
+	wire PEN_RAS    = FBD_ST == FBDS_WRITE && !FB_DRAW_WAIT && FBD_RAS && PENALTY_CNT >= 10'd3;
 	assign DRAW_WAIT = (FBD_ST != FBDS_IDLE) || CPU_VRAM_BUSY;
 	
 `ifdef DEBUG
