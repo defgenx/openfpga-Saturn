@@ -242,8 +242,6 @@ module VDP1 (
 	bit          LEFT_COL_X_STEP, LEFT_COL_Y_STEP;
 	bit          RIGHT_COL_X_STEP,RIGHT_COL_Y_STEP;
 	bit  [ 4: 0] GRD_CALC_STATE;
-	bit  [11: 0] GRD_CALC_S;
-	RGB_t        GRD_CALC_1,GRD_CALC_2;
 	
 	bit  [ 8: 0] ORIG_WIDTH;
 	bit  [ 7: 0] ORIG_HEIGHT;
@@ -269,6 +267,7 @@ module VDP1 (
 	wire [13: 0] COL_D_ERROR_ADJ       = -{1'b0,COL_HEIGHT,1'b0};
 	bit          LEFT_D_ERROR_CMP, RIGHT_D_ERROR_CMP, LEFT_COL_ERROR_X_CMP, LEFT_COL_ERROR_Y_CMP, RIGHT_COL_ERROR_X_CMP, RIGHT_COL_ERROR_Y_CMP;
 					 
+	bit  [13: 0] NEXT_LINE_ERROR, LINE_ERROR, LINE_ERROR_INC, LINE_ERROR_ADJ;
 	// Texture error set-up shared by the scaled-sprite and line row set-up states.
 	// W = texture width, R = row width in pixels; HSS half-size mode only applies below the texture width.
 	wire        TX_F    = TEXT_DIRX && ORIG_WIDTH != 9'd1;
@@ -290,9 +289,13 @@ module VDP1 (
 	wire [13: 0] TY_ADJ   = TY_SMALL ? {TY_H1[12:0],1'b0} : {1'b0,COL_HEIGHT,1'b0};
 	wire [13: 0] TY_ERR   = TY_SMALL ? {6'b000000,ORIG_HEIGHT} - {TY_H1[12:0],1'b0} - {13'd0,TY_F} : {13'd0,TY_F} - TY_H1;
 
-	bit  [13: 0] NEXT_LINE_ERROR, LINE_ERROR, LINE_ERROR_INC, LINE_ERROR_ADJ;
-	bit  [13: 0] NEXT_TEXT_ERROR, TEXT_ERROR, TEXT_ERROR_INC, TEXT_ERROR_ADJ;
-	bit  [13: 0] NEXT_TEXT_Y_ERROR, TEXT_Y_ERROR, TEXT_Y_ERROR_INC, TEXT_Y_ERROR_ADJ;
+	bit  [13: 0] NEXT_TEXT_ERROR, TEXT_ERROR;
+	// Increment and adjust of the row texture error follow from the row/texture sizes, which stay fixed while a row is drawn.
+	wire [13: 0] TEXT_ERROR_INC = TX_INC;
+	wire [13: 0] TEXT_ERROR_ADJ = TX_ADJ;
+	bit  [13: 0] NEXT_TEXT_Y_ERROR, TEXT_Y_ERROR;
+	wire [13: 0] TEXT_Y_ERROR_INC = TY_INC;
+	wire [13: 0] TEXT_Y_ERROR_ADJ = TY_ADJ;
 	always_comb begin
 		bit COL_STEP;
 		bit  [13: 0] TEXT_ERROR_ADJUSTED,LINE_ERROR_ICREMENTED;
@@ -447,6 +450,16 @@ module VDP1 (
 	bit  [16: 0] DIV_R_Q,DIV_G_Q,DIV_B_Q;//5.12
 	wire DIV_START = (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT || CMD_ST == CMDS_GRD_CALC_LINE) && GRD_CALC_STATE == 0;
 	
+	RGB_t        GRD_CALC_1,GRD_CALC_2;
+	wire [11: 0] GRD_CALC_S;
+	always_comb begin
+		case (CMD_ST)
+			CMDS_GRD_CALC_LEFT:  begin GRD_CALC_1 = GHCOLOR_A; GRD_CALC_2 = GHCOLOR_D; end
+			CMDS_GRD_CALC_RIGHT: begin GRD_CALC_1 = GHCOLOR_B; GRD_CALC_2 = GHCOLOR_C; end
+			default:             begin GRD_CALC_1 = RGBFtoI(LEFT_GHCOLOR); GRD_CALC_2 = RGBFtoI(RIGHT_GHCOLOR); end
+		endcase
+	end
+	assign GRD_CALC_S = CMD_ST == CMDS_GRD_CALC_LINE ? ROW_WIDTH : COL_HEIGHT + 12'd1;
 	wire [ 5: 0] DIV_A_R = GRD_CALC_2.R >= GRD_CALC_1.R ? {1'b0,GRD_CALC_2.R - GRD_CALC_1.R} : {1'b1,GRD_CALC_1.R - GRD_CALC_2.R};
 	wire [ 5: 0] DIV_A_G = GRD_CALC_2.G >= GRD_CALC_1.G ? {1'b0,GRD_CALC_2.G - GRD_CALC_1.G} : {1'b1,GRD_CALC_1.G - GRD_CALC_2.G};
 	wire [ 5: 0] DIV_A_B = GRD_CALC_2.B >= GRD_CALC_1.B ? {1'b0,GRD_CALC_2.B - GRD_CALC_1.B} : {1'b1,GRD_CALC_1.B - GRD_CALC_2.B};
@@ -885,8 +898,6 @@ module VDP1 (
 				end
 				
 				CMDS_POLYGON_CALCTY: begin
-					TEXT_Y_ERROR_INC <= TY_INC;
-					TEXT_Y_ERROR_ADJ <= TY_ADJ;
 					TEXT_Y_ERROR <= TY_ERR;
 					
 					LEFT_COL_ERROR_X <= ~LEFT_HEIGHT;
@@ -918,9 +929,6 @@ module VDP1 (
 					LEFT_GHCOLOR <= RGBItoF(GHCOLOR_A);
 					RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_B);
 					
-					GRD_CALC_1 <= GHCOLOR_A;
-					GRD_CALC_2 <= GHCOLOR_D;
-					GRD_CALC_S <= COL_HEIGHT + 12'd1;
 					GRD_CALC_STATE <= '0;
 					CMD_ST <= CMDS_GRD_CALC_LEFT;
 				end
@@ -930,9 +938,6 @@ module VDP1 (
 						GRD_CALC_STATE <= '0;
 						LEFT_GHCOLOR_STEP <= GRD_CALC_STEP;
 						
-						GRD_CALC_1 <= GHCOLOR_B;
-						GRD_CALC_2 <= GHCOLOR_C;
-						GRD_CALC_S <= COL_HEIGHT + 12'd1;
 						CMD_ST <= CMDS_GRD_CALC_RIGHT;
 					end
 				end
@@ -1076,8 +1081,6 @@ module VDP1 (
 				
 				CMDS_SSPR_CALCTX,
 				CMDS_LINE_CALCTX: begin
-					TEXT_ERROR_INC <= TX_INC;
-					TEXT_ERROR_ADJ <= TX_ADJ;
 					TEXT_ERROR <= TX_ERR;
 					HSS_EN <= TX_HSS;
 					if (CMD_ST == CMDS_LINE_CALCTX) begin
@@ -1199,9 +1202,6 @@ module VDP1 (
 				
 				CMDS_GRD_CALC_ROW: begin
 					LINE_GHCOLOR <= DIR[0] ? RIGHT_GHCOLOR : LEFT_GHCOLOR;
-					GRD_CALC_1 <= RGBFtoI(LEFT_GHCOLOR);
-					GRD_CALC_2 <= RGBFtoI(RIGHT_GHCOLOR);
-					GRD_CALC_S <= ROW_WIDTH;
 					CMD_ST <= CMDS_GRD_CALC_LINE;
 				end
 				
