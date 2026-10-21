@@ -296,6 +296,8 @@ set_global_assignment -name ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP OFF
 set_global_assignment -name SYNTH_PROTECT_SDC_CONSTRAINT ON
 set_global_assignment -name PRE_MAPPING_RESYNTHESIS OFF
 set_global_assignment -name OPTIMIZATION_TECHNIQUE AREA
+set_global_assignment -name ALLOW_ANY_RAM_SIZE_FOR_RECOGNITION ON
+set_global_assignment -name ALLOW_ANY_ROM_SIZE_FOR_RECOGNITION ON
 set_global_assignment -name MUX_RESTRUCTURE ON
 set_global_assignment -name STATE_MACHINE_PROCESSING "MINIMAL BITS"
 set_global_assignment -name AUTO_RESOURCE_SHARING ON
@@ -740,10 +742,11 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
 # end ENTITY(mf_pllbase_0002)
 # ---------------------------
-# Saturn system sources (saturn.qip) are added when saturn_top is integrated
 set_global_assignment -name QIP_FILE apf/apf.qip
-set_global_assignment -name QIP_FILE core/mf_pllbase.qip
-set_global_assignment -name SIP_FILE core/mf_pllbase.sip
+set_global_assignment -name QIP_FILE core/saturn_pocket.qip
+set_global_assignment -name VERILOG_MACRO "LIGHT_SATURN=1"
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_global_assignment -name SYSTEMVERILOG_FILE core/core_top.v
 set_global_assignment -name VERILOG_FILE core/core_bridge_cmd.v
 set_global_assignment -name SYSTEMVERILOG_FILE core/bridge_loader.sv

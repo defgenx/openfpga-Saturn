@@ -86,7 +86,7 @@ sram_model #(.T_AA(`SRAMAA_PS)) smem (.a(a_d), .dq(dq), .oe_n(oen_d), .we_n(wen_
 reg [15:0] sh0 [0:90111];
 reg [15:0] sh1 [0:90111];
 integer errs = 0, i;
-initial for (i = 0; i < 90112; i = i + 1) begin sh0[i] = 16'h0; sh1[i] = 16'h0; fb.m1l[i] = 8'h0; fb.m1h[i] = 8'h0; smem.mem[16384 + i] = 16'h0; end
+initial for (i = 0; i < 90112; i = i + 1) begin sh0[i] = 16'h0; sh1[i] = 16'h0; fb.m1[i] = 16'h0; smem.mem[16384 + i] = 16'h0; end
 
 function automatic [17:1] vaddr(input [8:0] x, input [7:0] y);   // VDP1 FBn_A for pixel (x,y), normal mode
 	vaddr = {y[7:0], x[8:0]};

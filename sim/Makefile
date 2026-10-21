@@ -2,6 +2,7 @@
 #   make -C sim cd         CD drive: synthetic discs, SH-1 host model, APF bridge model (about 5 minutes)
 #   make -C sim mem        memory subsystem (sdram, psram, ddram_pocket, framebuffer, loader), several minutes
 #   make -C sim mem-long   64 ms SDRAM retention run (about 10 minutes)
+#   make -C sim platform   resampler and video path (seconds)
 #   make -C sim cdb        HLE CD block against the synthetic ISO disc (SERV firmware in Verilator, about 12 minutes)
 #   make -C sim cdb-compare  the same script on the SH-1 LLE and the HLE (needs ../ref)
 #   make -C sim sh1        SH-1 golden vs pruned (Verilator; firmware read from ../ref)
@@ -16,13 +17,16 @@
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: cdb cdb-compare cd cd-real mem mem-long sh1 scsp vdp1 vdp1-ppm sh2 scu smpc vdp2 vdp2-ppm clean
+.PHONY: cdb cdb-compare cd cd-real mem mem-long platform sh1 scsp vdp1 vdp1-ppm sh2 scu smpc vdp2 vdp2-ppm clean
 
 mem:
 	$(MAKE) -C mem all
 
 mem-long:
 	$(MAKE) -C mem long
+
+platform:
+	$(MAKE) -C platform all
 
 cdb:
 	$(MAKE) -C cdb test

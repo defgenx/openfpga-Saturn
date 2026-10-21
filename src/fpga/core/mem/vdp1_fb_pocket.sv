@@ -35,7 +35,7 @@ module vdp1_fb_pocket #(
 	input  wire [15:0] FB1_D,
 	input  wire  [1:0] FB1_WE,
 	input  wire        FB1_RD,
-	output reg  [15:0] FB1_Q,
+	output wire [15:0] FB1_Q,
 	output wire        FB_RDY,
 	output wire  [7:0] dbg_drop,           // FB0 writes lost to a full FIFO (saturating)
 
@@ -66,13 +66,33 @@ wire        in0 = i0 < WORDS;
 wire        in1 = i1 < WORDS;
 
 // ---------------------------------------------------------------- FB1 (M10K)
-reg [7:0] m1l [0:WORDS-1];
-reg [7:0] m1h [0:WORDS-1];
+// 90112 x 16 simple dual port M10K, byte enables, address registered (read data one clock after the address)
+reg [15:0] m1_q;
+reg        in1_q;
+`ifdef ALTERA_RESERVED_QIS
+altsyncram #(
+	.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+	.width_a(16), .widthad_a(17), .numwords_a(90112), .width_byteena_a(2),
+	.width_b(16), .widthad_b(17), .numwords_b(90112),
+	.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
+	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
+) fb1_ram (
+	.clock0(clk_sys), .address_a(i1), .data_a(FB1_D), .wren_a(|FB1_WE && in1), .byteena_a(FB1_WE),
+	.address_b(i1), .q_b(m1_q), .rden_b(1'b1),
+	.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_b(1'b1),
+	.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+	.data_b({16{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
+);
+`else
+reg [15:0] m1 [0:WORDS-1];
 always @(posedge clk_sys) begin
-	if (FB1_WE[0] && in1) m1l[i1] <= FB1_D[7:0];
-	if (FB1_WE[1] && in1) m1h[i1] <= FB1_D[15:8];
-	FB1_Q <= in1 ? {m1h[i1], m1l[i1]} : 16'h0000;
+	if (FB1_WE[0] && in1) m1[i1][7:0]  <= FB1_D[7:0];
+	if (FB1_WE[1] && in1) m1[i1][15:8] <= FB1_D[15:8];
+	m1_q <= m1[i1];
 end
+`endif
+always @(posedge clk_sys) in1_q <= in1;
+assign FB1_Q = in1_q ? m1_q : 16'h0000;
 
 // ---------------------------------------------------------------- FB0 write FIFO (clk_sys -> clk_ram), 256 entries: a VBlank erase pushes one write per two clk_sys, the
 // SRAM takes one per SRAM_CYC clk_ram, and the CD ring can hold the bus for a few writes at a time
@@ -80,7 +100,10 @@ reg [34:0] wf [0:255];             // {index, byte enables, data}, one M10K
 reg  [8:0] wptr = 9'd0;            // clk_sys
 reg  [8:0] rptr = 9'd0;            // clk_ram
 wire       wf_full  = (wptr - rptr) >= 9'd255;
-wire       wf_empty = (wptr == rptr);
+reg  [8:0] wptr_d = 9'd0;          // wptr seen one clk_ram late: wf_q has the entry by then
+wire       wf_empty = (wptr_d == rptr);
+reg [34:0] wf_q;                   // synchronous read, so wf maps to one M10K
+always @(posedge clk_ram) begin wptr_d <= wptr; wf_q <= wf[rptr[7:0]]; end
 assign sr_hint = !wf_empty;
 
 reg        rd_pend = 1'b0;         // set on clk_sys, cleared on clk_ram: toggle handshake
@@ -117,8 +140,8 @@ always @(posedge clk_ram) begin
 	3'd0: begin
 		if (!wf_empty && sr_ready) begin
 			sr_req <= 1'b1; sr_we <= 1'b1;
-			sr_a <= FB_BASE[16:0] + wf[rptr[7:0]][34:18];
-			sr_be <= wf[rptr[7:0]][17:16]; sr_d <= wf[rptr[7:0]][15:0];
+			sr_a <= FB_BASE[16:0] + wf_q[34:18];
+			sr_be <= wf_q[17:16]; sr_d <= wf_q[15:0];
 			rptr <= rptr + 1'd1; es <= 3'd4;           // posted: the next write may follow right away
 		end else if (rd_busy && sr_ready) begin
 			if (rd_idx == 17'h1FFFF) begin FB0_Q <= 16'h0000; rd_ack <= rd_t; end
