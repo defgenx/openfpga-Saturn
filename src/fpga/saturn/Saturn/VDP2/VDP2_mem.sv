@@ -155,3 +155,136 @@ module VDP2_WRITE_FIFO (
 	assign Q = sub_wire0;
 
 endmodule
+
+// Small RAM building blocks. ML=1 builds an MLAB with asynchronous read (cycle-identical to a register
+// array); ML=0 builds an M10K with a registered read, which the callers use only where the read address
+// is stable for at least two clocks before the value is consumed.
+
+// K-clock-enable delay of D (K >= 2): Q equals the output of a K-stage shift register that shifts when EN is
+// high and takes D as stage 0 input. 2**AW must exceed K. The M10K read address is the post-edge write
+// pointer, so the registered output never reads the word written on the same edge.
+module VDP2_DTAP #(
+	parameter W  = 8,
+	parameter K  = 2,
+	parameter AW = 3,
+	parameter ML = 1
+) (
+	input          CLK,
+	input          EN,
+	input  [W-1:0] D,
+	output [W-1:0] Q
+);
+	localparam [AW-1:0] KK = K;
+	reg  [AW-1:0] wp = '0;
+	wire [AW-1:0] wpn = EN ? wp + 1'd1 : wp;
+	always @(posedge CLK) if (EN) wp <= wpn;
+	generate if (ML) begin : g_ml
+		(* ramstyle = "MLAB, no_rw_check" *) reg [W-1:0] mem [0:(1<<AW)-1];
+		always @(posedge CLK) if (EN) mem[wp] <= D;
+		assign Q = mem[wp - KK];
+	end else begin : g_m10k
+		(* ramstyle = "M10K, no_rw_check" *) reg [W-1:0] mem [0:(1<<AW)-1];
+		reg [W-1:0] q = '0;
+		always @(posedge CLK) begin
+			if (EN) mem[wp] <= D;
+			q <= mem[wpn - KK];
+		end
+		assign Q = q;
+	end endgenerate
+endmodule
+
+// One read copy of a layer's two-bank cell data buffer. PTR is the bank holding logical bytes 0-7;
+// a write (WE) fills the other half of the logical window and the caller flips PTR. IDX is the logical
+// byte index 0-15.
+module VDP2_NDCRD #(
+	parameter ML = 1
+) (
+	input         CLK,
+	input         WE,
+	input         PTR,
+	input  [63:0] D,
+	input  [ 3:0] IDX,
+	output [ 7:0] Q
+);
+	wire [63:0] w;
+	generate if (ML) begin : g_ml
+		(* ramstyle = "MLAB, no_rw_check" *) reg [63:0] mem [0:1];
+		always @(posedge CLK) if (WE) mem[PTR] <= D;
+		assign w = mem[IDX[3] ^ PTR];
+	end else begin : g_m10k
+		(* ramstyle = "M10K, no_rw_check" *) reg [63:0] mem [0:1];
+		reg [63:0] q = '0;
+		always @(posedge CLK) begin
+			if (WE) mem[PTR] <= D;
+			q <= mem[IDX[3] ^ PTR];
+		end
+		assign w = q;
+	end endgenerate
+	assign Q = w[{IDX[2:0],3'b000} +: 8];
+endmodule
+
+// 2**AW x DW simple dual port RAM, one write port, one read port.
+module VDP2_SDP #(
+	parameter AW = 1,
+	parameter DW = 32,
+	parameter ML = 1
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+	generate if (ML) begin : g_ml
+		(* ramstyle = "MLAB, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+		always @(posedge CLK) if (WE) mem[WA] <= WD;
+		assign Q = mem[RA];
+	end else begin : g_m10k
+		(* ramstyle = "M10K, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+		reg [DW-1:0] q = '0;
+		always @(posedge CLK) begin
+			if (WE) mem[WA] <= WD;
+			q <= mem[RA];
+		end
+		assign Q = q;
+	end endgenerate
+endmodule
+
+// Register words held in RAM: 2**AW words of DW bits written by the CPU register decode. The registers
+// clear on reset, so each word carries a valid flag (flip-flops) that masks stale RAM contents.
+// ML=0 samples the read address on the falling edge so the word appears within the clock.
+module VDP2_REGRAM #(
+	parameter AW = 1,
+	parameter DW = 16,
+	parameter ML = 1
+) (
+	input           CLK,
+	input           RST_N,
+	input           RES_N,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+	reg [(1<<AW)-1:0] vld = '0;
+	wire [DW-1:0] w;
+	generate if (ML) begin : g_ml
+		(* ramstyle = "MLAB, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+		always @(posedge CLK) if (WE) mem[WA] <= WD;
+		assign w = mem[RA];
+	end else begin : g_m10k
+		(* ramstyle = "M10K, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+		reg [DW-1:0] q = '0;
+		always @(posedge CLK) if (WE) mem[WA] <= WD;
+		always @(negedge CLK) q <= mem[RA];
+		assign w = q;
+	end endgenerate
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) vld <= '0;
+		else if (!RES_N) vld <= '0;
+		else if (WE) vld[WA] <= 1'b1;
+	end
+	assign Q = vld[RA] ? w : '0;
+endmodule

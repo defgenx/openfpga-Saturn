@@ -8,12 +8,13 @@
 #   make -C sim sh2        SH-2 pair golden vs shrunk (Verilator)
 #   make -C sim scu        SCU and DSP golden vs shrunk (Verilator)
 #   make -C sim smpc      SMPC LLE (firmware from ../ref) vs SMPC_HLE: data and command timing (Verilator)
+#   make -C sim vdp2       VDP2 golden vs shrunk (Verilator; CUT=<name> for a cut, vdp2-ppm dumps frames)
 #   make -C sim cd-real    300 ms bridge stall at the real CDD_CE spacing (324 clk per CE; slow)
 
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: cd cd-real mem mem-long sh1 scsp vdp1 vdp1-ppm sh2 scu smpc clean
+.PHONY: cd cd-real mem mem-long sh1 scsp vdp1 vdp1-ppm sh2 scu smpc vdp2 vdp2-ppm clean
 
 mem:
 	$(MAKE) -C mem all
@@ -41,6 +42,9 @@ scu:
 
 smpc:
 	$(MAKE) -C smpc run
+
+vdp2 vdp2-ppm:
+	$(MAKE) -C vdp2 $@
 
 cd: $(CD)/build/tb_cdd.vvp
 	cd $(CD) && python3 gen_disc.py

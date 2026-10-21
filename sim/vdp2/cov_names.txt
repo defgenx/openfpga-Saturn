@@ -1,0 +1,16 @@
+u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & u_ref.DOT_FST.LCEN & u_ref.DOT_THD.CCEN & ~hires
+u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & ~hires
+u_ref.DOT_FST.CCEN & u_ref.DOT_SEC.P
+u_ref.DOT_FST.SDEN
+u_ref.SDOT.P | ~u_ref.SDOT.TP
+u_ref.W0_HIT & u_ref.W1_HIT
+u_ref.RBG_CALC & u_ref.REGS.BGON.R0ON
+u_ref.NSxREG[0].LSCX | u_ref.NSxREG[0].LSCY
+u_ref.NSxREG[0].MZE & u_ref.NSxREG[0].ON
+u_ref.REGS.RAMCTL.CRMD[1] & u_ref.REGS.RAMCTL.CRMD[0]
+u_ref.NSxREG[0].BMEN & u_ref.NSxREG[0].ON
+u_ref.REGS.CCCTL.BOKEN
+hires
+u_ref.REGS.TVMD.LSMD[1]
+u_ref.N0DOT.TP ^ u_ref.N1DOT.TP
+u_ref.REGS.SPCTL.SPCCCS[1]
