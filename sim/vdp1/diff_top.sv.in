@@ -1,0 +1,11 @@
+// Differential wrapper: golden VDP1 (REF_ prefix) and the shrunk VDP1 side by side.
+// Inputs are separate per side so the testbench can run an independent memory model on each.
+module diff_top (
+	input CLK, input RST_N, input CE_R, input CE_F, input EN, input RES_N,
+	input FAST, input BLUR_MESH, input [7:0] DBG_EXT,
+	input DCE_R, input DCE_F, input HTIM_N, input VTIM_N, input [15:0] VOUTI,
+	input [15:0] DI, input CS_N, input AD_N, input DTEN_N, input REQ_N,
+	@PORTS@
+);
+@INSTS@
+endmodule

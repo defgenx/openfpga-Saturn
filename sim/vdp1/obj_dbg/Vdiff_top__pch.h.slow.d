@@ -1,0 +1,13 @@
+Vdiff_top__pch.h.slow.gch: \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/SDKSettings.json \
+  Vdiff_top__pch.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_config.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilatedos.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_types.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_funcs.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_dpi.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_sym_props.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/vltstd/svdpi.h \
+  Vdiff_top__Syms.h Vdiff_top.h Vdiff_top___024root.h \
+  Vdiff_top_REF_VDP1_PKG.h Vdiff_top_VDP1_PKG.h
