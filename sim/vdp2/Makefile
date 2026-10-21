@@ -3,7 +3,7 @@
 #   make -C sim vdp2 SEEDS=100 CLKS=2000000
 HERE   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 B      := $(HERE)/build
-SEEDS  ?= 28
+SEEDS  ?= 60
 CLKS   ?= 1500000
 JOBS   ?= 4
 VFLAGS := --cc --exe --build -j 8 -O2 -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-WIDTH -Wno-CASEINCOMPLETE \
