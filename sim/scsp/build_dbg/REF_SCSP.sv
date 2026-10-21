@@ -938,9 +938,6 @@ module REF_SCSP (
 `endif
 	
 	//DSP
-	bit [23:0] INPUTS,X,Y_REG; bit [12:0] Y,FRC_REG; bit [25:0] BS,B,MUL; bit [11:0] ADRS_REG;
-	TEMP_t TEMP_Q; MEMS_t MEMS_Q; COEF_t COEF_Q; MADRS_t MADRS_Q; bit [15:0] EXTS_Q;
-	MIXS_t MIXS_Q;
 	MPRO_t       MPRO0_Q,MPRO1_Q;
 	EFREG_t      EFREG_Q;
 	assign MPRO0_Q = MPRO_RAM_Q & {64{DSP_MPRO_SET[DSP_MPRO_STEP]}};
@@ -1029,6 +1026,21 @@ module REF_SCSP (
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
 	
 	always @(posedge CLK or negedge RST_N) begin
+		TEMP_t       TEMP_Q;
+		MEMS_t       MEMS_Q;
+		COEF_t       COEF_Q;
+		MADRS_t      MADRS_Q;
+		MIXS_t       MIXS_Q;
+		bit  [15: 0] EXTS_Q;
+		bit  [23: 0] INPUTS;
+		bit  [23: 0] X;
+		bit  [12: 0] Y;
+		bit  [25: 0] BS;
+		bit  [25: 0] B;
+		bit  [23: 0] Y_REG;
+		bit  [12: 0] FRC_REG;
+		bit  [11: 0] ADRS_REG;
+		bit  [25: 0] MUL;
 		bit  [16: 1] ADDR;
 		
 		if (!RST_N) begin
@@ -1659,6 +1671,7 @@ module REF_SCSP (
 		end
 	end
 	
+	always @(posedge CLK) if (REG_ST!=MS_IDLE && REG_RD && CYCLE1_CE) $display("RDREG a=%h q=%h st=%0d dma=%b", REG_A, REG_Q, REG_ST, DMA_EXEC);
 	assign RAM_A = MEM_A;
 	assign RAM_D = MEM_D;
 	assign RAM_WE = MEM_WE;

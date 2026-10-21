@@ -1,5 +1,9 @@
 
-module SCSP (
+//MIDI_REGS: keep the MIDI buffer registers (CR2, CR3) readable. The Saturn has no
+//MIDI port, nothing in the SCSP uses them, so they read as 0 by default.
+module SCSP #(
+	parameter bit MIDI_REGS = 1'b0
+) (
 	input              CLK,
 	input              RST_N,
 	input              CE,
@@ -945,8 +949,6 @@ module SCSP (
 `endif
 	
 	//DSP
-	bit [23:0] INPUTS,X,Y_REG; bit [12:0] Y,FRC_REG; bit [25:0] BS,B,MUL; bit [11:0] ADRS_REG;
-	MIXS_t MIXS_Q;
 	MPRO_t       MPRO0_Q,MPRO1_Q;
 	//The DSP reads dedicated copies of its RAMs, so the values latched at CYCLE0_CE
 	//are read straight from them at the CYCLE1_CE edge that uses them.
@@ -1058,17 +1060,31 @@ module SCSP (
 	
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
 	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
-	wire [23:0] MEMS_Q = {MEMS_DRAM_Q[15:0],MEMS_DRAM_Q[23:16]};
+	
 	wire [12:0] COEF_Q = COEF_DRAM_Q[15:3];
 	wire [16:1] MADRS_Q = MADRS_DRAM_Q;
-	wire [15: 0] EXTS_Q = DSP_EXTS[MPRO0_Q.IRA[0]];
+	//INPUTS keeps its previous value when no source is selected, so the input
+	//select and the MEMS/EXTS data stay latched as before.
+	bit [5:0]  MPRO1_IRA;
+	bit [23:0] MEMS_Q;
+	bit [15:0] EXTS_Q;
 	
 	always @(posedge CLK or negedge RST_N) begin
 		
 		
 		
 		
+		MIXS_t       MIXS_Q;
 		
+		bit  [23: 0] INPUTS;
+		bit  [23: 0] X;
+		bit  [12: 0] Y;
+		bit  [25: 0] BS;
+		bit  [25: 0] B;
+		bit  [23: 0] Y_REG;
+		bit  [12: 0] FRC_REG;
+		bit  [11: 0] ADRS_REG;
+		bit  [25: 0] MUL;
 		bit  [16: 1] ADDR;
 		
 		if (!RST_N) begin
@@ -1078,14 +1094,15 @@ module SCSP (
 		end else if (!RES_N) begin
 			
 			MDEC_CT <= '0;
+			MPRO1_IRA <= '0;
 			DSP_READ <= 0;
 			DSP_WRITE <= 0;
 		end else begin
-			if (!MPRO1_Q.IRA[5])
+			if (!MPRO1_IRA[5])
 				INPUTS = MEMS_Q;
-			else if (!MPRO1_Q.IRA[4])
+			else if (!MPRO1_IRA[4])
 				INPUTS = {MIXS_Q,4'h0};
-			else if (!MPRO1_Q.IRA[3:1])
+			else if (!MPRO1_IRA[3:1])
 				INPUTS = {EXTS_Q,8'h00};
 			
 			case (MPRO1_Q.XSEL)
@@ -1115,6 +1132,9 @@ module SCSP (
 				
 				
 				MIXS_Q <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16]};
+				MPRO1_IRA <= MPRO0_Q.IRA;
+				MEMS_Q <= {MEMS_DRAM_Q[15:0],MEMS_DRAM_Q[23:16]};
+				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
 				
 				
 				
@@ -1771,12 +1791,12 @@ module SCSP (
 								if (REG_WE[1]) CR1[15:8] <= REG_D[15:8] & CR1_MASK[15:8];
 							end
 							6'h04: begin
-								if (REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
-								if (REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
 							end
 							6'h06: begin
-								if (REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
-								if (REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
 							end
 							6'h08: begin
 								//if (MEM_WE[0]) CR4[ 7:0] <= MEM_D[ 7:0] & CR4_WMASK[ 7:0];

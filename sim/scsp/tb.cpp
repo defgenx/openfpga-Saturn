@@ -51,6 +51,7 @@ struct Op68 { uint32_t addr; uint16_t data; bool wr; uint8_t be; };
 struct OpScu { bool wr; uint32_t a; std::vector<uint16_t> d; uint8_t dqm; };
 
 static Rng *R;
+static bool nomidi = false;  // MIDI buffer registers (0x404, 0x406) are not read back
 static T *top;
 static SoundRam ram_r, ram_n;
 static uint64_t clk_count = 0, ce_count = 0, mismatches = 0;
@@ -240,7 +241,7 @@ static void put68(uint32_t byte_addr, uint16_t v, bool wr = true, uint8_t be = 3
 	b68.q.push_back({byte_addr, v, wr, be});
 }
 static void putscu_reg(uint32_t off, uint16_t v) {
-	bscu.q.push_back({true, (1u << 20) | (off >> 1), {v}, 0});
+	bscu.q.push_back({true, (1u << 20) | off, {v}, 0});
 }
 static void wr_reg(uint32_t off, uint16_t v, int pct68 = 50) {
 	if (R->chance(pct68)) put68(0x100000 + off, v);
@@ -250,13 +251,19 @@ static void wr_reg_bytes(uint32_t off, uint16_t v) {  // via 68K byte writes
 	put68(0x100000 + off, v & 0xFF00, true, 2);
 	put68(0x100000 + off, v & 0x00FF, true, 1);
 }
+static uint32_t drga(uint32_t len) {
+	uint32_t w = R->below(0x400);
+	if (nomidi && w + len >= 0x1F0 && w <= 0x2FF) w = 0x300;
+	return w;
+}
 static void rd_reg(uint32_t off) {
+	if (nomidi && off >= 0x400 && off < 0x600 && ((off & 0x3E) == 0x04 || (off & 0x3E) == 0x06)) return;  // CR2, CR3 and their mirrors
 	if (R->chance(50)) put68(0x100000 + off, 0, false);
-	else bscu.q.push_back({false, (1u << 20) | (off >> 1), {0}, 0});
+	else bscu.q.push_back({false, (1u << 20) | off, {0}, 0});
 }
 static void wr_ram(uint32_t word, uint16_t v) {
 	if (R->chance(50)) put68((word & 0x3FFFF) << 1, v);
-	else bscu.q.push_back({true, word & 0x3FFFF, {v}, 0});
+	else bscu.q.push_back({true, (word & 0x3FFFF) << 1, {v}, 0});
 }
 
 // SCR offsets within a slot
@@ -379,8 +386,7 @@ static void rand_reg_write() {
 	default: off = R->below(0x7F0) & ~1; break;
 	}
 	if (off >= 0x400 && off < 0x430) {
-		uint32_t r = (off - 0x400) >> 1;
-		if (r == 7) return;  // keep DMA under directed control
+		if (off >= 0x412 && off <= 0x416) return;  // keep DMA under directed control
 	}
 	if (R->chance(10)) wr_reg_bytes(off, R->next());
 	else wr_reg(off, R->next());
@@ -419,12 +425,14 @@ static void setup_ram() {
 static void wait_reset_done() { run_samples(40); }
 
 int main(int argc, char **argv) {
+	setvbuf(stdout, NULL, _IONBF, 0);
 	Verilated::commandArgs(argc, argv);
 	uint32_t seed = 1, nrand = 300;
 	const char *wavp = "scsp";
 	for (int i = 1; i < argc; i++) {
 		if (!strncmp(argv[i], "+seed=", 6)) seed = atoi(argv[i] + 6);
 		if (!strncmp(argv[i], "+rounds=", 8)) nrand = atoi(argv[i] + 8);
+		if (!strcmp(argv[i], "+nomidi")) nomidi = true;
 		if (!strncmp(argv[i], "+wav=", 5)) wavp = argv[i] + 5;
 	}
 	Rng rng(seed); R = &rng;
@@ -474,10 +482,10 @@ int main(int argc, char **argv) {
 			if (R->chance(70)) wr_reg(0x422, R->below(0x800)); if (R->chance(70)) wr_reg(0x42E, R->below(0x800));
 			top->SCFC = 7; run_clks(R->range(2, 20)); top->SCFC = 5; }
 		// DMA: RAM -> regs and regs -> RAM
-		wr_reg(0x412, R->next() & 0xFFFE); wr_reg(0x414, (R->below(16) << 12) | (R->below(0x400) << 1));
-		wr_reg(0x416, (R->below(2) << 13) | (R->below(2) << 12) | (1 << 11) | (R->range(1, 40) << 1)); // DGATE|DDIR|DEXE ... DTLG
+		wr_reg(0x412, R->next() & 0xFFFE); wr_reg(0x414, (R->below(16) << 12) | (drga(41) << 1));
+		wr_reg(0x416, (R->below(2) << 14) | (R->below(2) << 13) | (1 << 12) | (R->range(1, 40) << 1)); // DGATE, DDIR, DEXE, DTLG
 		run_samples(8);
-		wr_reg(0x416, (R->below(2) << 13) | (1 << 12) | (R->range(1, 40) << 1) | (1u << 12)); // DDIR=1? keep random
+		wr_reg(0x416, (R->below(2) << 14) | (R->below(2) << 13) | (1 << 12) | (R->range(1, 40) << 1));
 		run_samples(20);
 		// key off half, observe release
 		for (int s = 0; s < 32; s += 2) wr_reg(s * 0x20, (s == 30 ? (1 << 12) : 0) | (0 << 11));
@@ -510,17 +518,17 @@ int main(int argc, char **argv) {
 			wr_reg(0x422, R->next() & 0x7FF); wr_reg(0x42E, R->next() & 0x7FF);
 		}
 		else if (act < 86) {
-			wr_reg(0x412, R->next() & 0xFFFE); wr_reg(0x414, (R->below(16) << 12) | (R->below(0x400) << 1));
+			wr_reg(0x412, R->next() & 0xFFFE); wr_reg(0x414, (R->below(16) << 12) | (drga(41) << 1));
 			wr_reg(0x416, (R->below(2) << 14) | (R->below(2) << 13) | (R->below(2) << 12) | (R->range(1, 30) << 1));
 		}
 		else if (act < 88) {
 			// SCU block write into sound RAM
-			OpScu o; o.wr = true; o.a = R->below(1 << 18) & ~0xFF; o.dqm = 0;
+			OpScu o; o.wr = true; o.a = (R->below(1 << 18) & ~0x7Fu) << 1; o.dqm = 0;
 			int n = R->range(2, 16); for (int i = 0; i < n; i++) o.d.push_back(R->next());
 			bscu.q.push_back(o);
 		}
 		else if (act < 90) {
-			OpScu o; o.wr = false; o.a = R->below(1 << 18) & ~0xFF; o.dqm = 0; o.d.assign(R->range(2, 8), 0);
+			OpScu o; o.wr = false; o.a = (R->below(1 << 18) & ~0x7Fu) << 1; o.dqm = 0; o.d.assign(R->range(2, 8), 0);
 			bscu.q.push_back(o);
 		}
 		else if (act < 91 && R->chance(30)) {

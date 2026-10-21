@@ -33,8 +33,17 @@ $(B)/obj/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NE
 	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
 	@test -x $@
 
-run: $(B)/obj/Vtb_top
-	@set -e; for s in $(SEEDS); do $(B)/obj/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seed$$s; done
+# Default build: MIDI registers read as 0 (tb avoids reading them back).
+# The MIDI=1 build checks full register read-back.
+$(B)/objm/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style -GMIDI=1 \
+	  --top-module tb_top -Mdir $(B)/objm \
+	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+	@test -x $@
+
+run: $(B)/obj/Vtb_top $(B)/objm/Vtb_top
+	@set -e; for s in $(SEEDS); do $(B)/obj/Vtb_top +nomidi +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seed$$s; done
+	@set -e; for s in $(SEEDS); do $(B)/objm/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedm$$s; done
 	@cmp $(B)/seed1_ref.wav $(B)/seed1_new.wav && echo "WAV files identical"
 
 clean:

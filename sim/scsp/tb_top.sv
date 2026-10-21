@@ -1,6 +1,6 @@
 // Lock-step wrapper: golden REF_SCSP and the shrunk SCSP share every input
 // except the sound RAM read data, which each gets from its own model.
-module tb_top (
+module tb_top #(parameter MIDI = 0) (
 	input         CLK, RST_N, CE, RES_N, CE_R, CE_F,
 	input  [15:0] DI,
 	input         CS_N, AD_N, DTEN_N, REQ_N,
@@ -34,7 +34,7 @@ module tb_top (
 		.RAM_A(R_RAM_A), .RAM_D(R_RAM_D), .RAM_Q(R_RAM_Q), .RAM_WE(R_RAM_WE),
 		.RAM_RD(R_RAM_RD), .RAM_CS(R_RAM_CS), .RAM_RFS(R_RAM_RFS), .RAM_RDY(1'b1),
 		.ESL(ESL), .ESR(ESR), .SOUND_L(R_SOUND_L), .SOUND_R(R_SOUND_R), .SND_EN(SND_EN));
-	SCSP new_i (
+	SCSP #(.MIDI_REGS(MIDI)) new_i (
 		.CLK(CLK), .RST_N(RST_N), .CE(CE), .RES_N(RES_N), .CE_R(CE_R), .CE_F(CE_F),
 		.DI(DI), .DO(N_DO), .CS_N(CS_N), .AD_N(AD_N), .DTEN_N(DTEN_N), .REQ_N(REQ_N),
 		.RDY_N(N_RDY_N), .INT_N(N_INT_N), .SCCE_R(N_SCCE_R), .SCCE_F(N_SCCE_F),

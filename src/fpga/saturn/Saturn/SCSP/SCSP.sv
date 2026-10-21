@@ -2,7 +2,11 @@
 `define SIM
 // synopsys translate_on
 
-module SCSP (
+//MIDI_REGS: keep the MIDI buffer registers (CR2, CR3) readable. The Saturn has no
+//MIDI port, nothing in the SCSP uses them, so they read as 0 by default.
+module SCSP #(
+	parameter bit MIDI_REGS = 1'b0
+) (
 	input              CLK,
 	input              RST_N,
 	input              CE,
@@ -1857,12 +1861,12 @@ module SCSP (
 								if (REG_WE[1]) CR1[15:8] <= REG_D[15:8] & CR1_MASK[15:8];
 							end
 							6'h04: begin
-								if (REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
-								if (REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
 							end
 							6'h06: begin
-								if (REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
-								if (REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
 							end
 							6'h08: begin
 								//if (MEM_WE[0]) CR4[ 7:0] <= MEM_D[ 7:0] & CR4_WMASK[ 7:0];
