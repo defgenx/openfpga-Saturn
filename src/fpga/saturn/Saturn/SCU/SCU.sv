@@ -512,7 +512,7 @@ module SCU
 		bit         CBUS_DATA_ACK;
 		bit         CBUS_DMA_OUT;
 		bit         CBUS_READ_DONE;
-		bit  [31:0] PUSH_HI, PUSH_LO;
+		bit  [31:0] PUSH_DATA, RD_DATA;
 		bit  [ 1:0] PUSH_RDSEL, PUSH_II;
 		bit  [ 1:0] DMA_IDX;
 		bit         DSP_PUSH;
@@ -2210,30 +2210,15 @@ module SCU
 			if (CE_F) begin
 				PUSH_RD = (ABUS_READ_DONE || BBUS_READ_DONE || (CBUS_READ_DONE && !DMA_IND)) && DMA_BUF_SIZE < 3'd4 && !DMA_DSP;
 				PUSH_RDD = (ABUS_READ_DONE || BBUS_READ_DONE || CBUS_READ_DONE) && DMA_DSP;
-				//Bytes 0-3 take the read word when PUSH_RDD (it wins over the DSP push), the others follow WPOS.
-				//Each half has its own 4:1 source select (A-bus, B-bus, C-bus, DSP).
+				RD_DATA = ABUS_READ_DONE ? ABUS_BUF : BBUS_READ_DONE ? BBUS_BUF : CCACHE_Q;
 				if (PUSH_RD || PUSH_RDD || DSP_PUSH) begin
-					PUSH_RDSEL = ABUS_READ_DONE ? 2'd0 : BBUS_READ_DONE ? 2'd1 : 2'd2;
-					case (DSP_PUSH ? 2'd3 : PUSH_RDSEL)
-						2'd0: PUSH_HI = ABUS_BUF;
-						2'd1: PUSH_HI = BBUS_BUF;
-						2'd2: PUSH_HI = CCACHE_Q;
-						2'd3: PUSH_HI = DSP_DMA_DO;
-					endcase
-					case ((DSP_PUSH && !PUSH_RDD) ? 2'd3 : PUSH_RDSEL)
-						2'd0: PUSH_LO = ABUS_BUF;
-						2'd1: PUSH_LO = BBUS_BUF;
-						2'd2: PUSH_LO = CCACHE_Q;
-						2'd3: PUSH_LO = DSP_DMA_DO;
-					endcase
-					for (int i=0; i<4; i++) begin
-						PUSH_II = i;
-						if (PUSH_RDD || DMA_PUSH_V[i])
-							DMA_BUF[i] <= PUSH_LO[8*(3-(PUSH_RDD ? PUSH_II : DMA_PUSH_K[i])) +: 8];
+					PUSH_DATA = DSP_PUSH ? DSP_DMA_DO : RD_DATA;
+					for (int i=0; i<8; i++) begin
+						if (i < 4 && PUSH_RDD)
+							DMA_BUF[i] <= RD_DATA[8*(3-i) +: 8];
+						else if (DMA_PUSH_V[i])
+							DMA_BUF[i] <= PUSH_DATA[8*(3-DMA_PUSH_K[i]) +: 8];
 					end
-					for (int i=4; i<8; i++)
-						if (DMA_PUSH_V[i])
-							DMA_BUF[i] <= PUSH_HI[8*(3-DMA_PUSH_K[i]) +: 8];
 				end
 				if (PUSH_RD) begin
 					DMA_BUF_WPOS <= DMA_BUF_WPOS + (3'd4 - {1'b0,DMA_RBA});
