@@ -9,6 +9,9 @@
 #include <vector>
 #include "Vtb_top.h"
 #include "verilated.h"
+#ifdef DBG
+#include "Vtb_top___024root.h"
+#endif
 
 struct Rng {
 	uint64_t s;
@@ -245,6 +248,8 @@ int main(int argc, char** argv) {
 	int saved = 0;
 	bool rdy_n_prev = true;
 	long covc[16] = {0};
+	std::deque<Op> pend_cfg;     // register writes that change VRAM access addressing: issued during vertical blank only
+	long vbl_age = 0;
 	uint16_t fbdi = 0;
 	int exlat = 1;
 
@@ -259,6 +264,9 @@ int main(int argc, char** argv) {
 		fclose(f);
 	};
 
+#ifdef DBG
+	struct Hist { int usel, mt, hm0, hm1, hm2, dcr, dcf, a0pn, a0ch, a0vs, uo, ha0, ha1, ha2, nx; uint32_t ra0a; uint32_t rch0, rch1, rch2, rpn0, rpn1; int cc1; uint32_t pn11, nbm1, nxx4; } hist[16];
+#endif
 	for (t = 0; t < nclk && !failed; t++) {
 		bool ce_r = !(t & 1), odd = t & 1;
 		top->CLK = 0;
@@ -275,9 +283,10 @@ int main(int argc, char** argv) {
 
 		// after a mid-run soft reset only part of the registers are programmed again
 		if (t == 700100 && (seed & 7) == 5) {
-			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && rng.chance(50)) W(0x180000 + a, cfg.r[a / 2], rng.below(3));
-			W(0x180000, cfg.r[0]);
+			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && rng.chance(50)) pend_cfg.push_back({0, (uint32_t)(0x180000 + a), {cfg.r[a / 2]}, 0, (int)rng.below(3)});
+			pend_cfg.push_back({0, 0x180000u, {cfg.r[0]}, 0, 0});
 		}
+		if (!pend_cfg.empty() && bus.idle() && vbl_age > 64 && vbl_age < 20000) { bus.q.push_back(pend_cfg.front()); pend_cfg.pop_front(); }
 		// CPU traffic once the initial programming is done
 		if (bus.idle() && t > 100000 && rng.chance(8)) {
 			int k = rng.below(100);
@@ -295,8 +304,11 @@ int main(int argc, char** argv) {
 					else if (pick < 85) ra = 0x100 + 2 * rng.below(16);     // color calc / offsets
 					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
 					else ra = 2 * rng.below(0x90);
-					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E)
-						W(0x180000 + ra, (uint16_t)rng.next() & (rng.next() | rng.next()), rng.below(4), rng.chance(10) ? rng.below(3) : 0);
+					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
+						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0x9E) || (ra >= 0xB0 && ra <= 0xBA);
+						Op o{0, (uint32_t)(0x180000 + ra), {(uint16_t)(rng.next() & (rng.next() | rng.next()))}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
+						if (unsafe) pend_cfg.push_back(o); else bus.q.push_back(o);
+					}
 				}
 			} else if (k < 75) {     // VRAM write
 				W(2 * rng.below(0x40000), rng.next(), rng.below(4), rng.chance(20) ? rng.below(4) : 0);
@@ -315,6 +327,13 @@ int main(int argc, char** argv) {
 		top->d_RA0_Q = md.a0.q; top->d_RA1_Q = md.a1.q; top->d_RB0_Q = md.b0.q; top->d_RB1_Q = md.b1.q;
 		top->CS_N = bus.out.cs_n; top->AD_N = bus.out.ad_n; top->DTEN_N = bus.out.dten_n; top->REQ_N = bus.out.req_n; top->DI = bus.out.di;
 		top->eval();
+#ifdef DBG
+		{ auto* r = top->rootp; Hist& h = hist[t & 15];
+		  h.usel = r->tb_top__DOT__u_dut__DOT__USEL; h.mt = r->tb_top__DOT__u_dut__DOT__MT; h.dcr = r->tb_top__DOT__u_dut__DOT__DOT_CE_R; h.dcf = r->tb_top__DOT__u_dut__DOT__DOT_CE_F;
+		  h.uo = r->tb_top__DOT__u_dut__DOT__UO; h.ha0 = r->tb_top__DOT__u_dut__DOT__HA[0]; h.ha1 = r->tb_top__DOT__u_dut__DOT__HA[1]; h.ha2 = r->tb_top__DOT__u_dut__DOT__HA[2];
+		  { int a = r->tb_top__DOT__u_dut__DOT__NBG_A0VA; h.a0pn = (a >> 4) & 1; h.a0ch = (a >> 3) & 1; h.a0vs = (a >> 2) & 1; h.nx = a & 3; }
+		  h.ra0a = top->d_RA0_A; h.rch0 = r->tb_top__DOT__u_ref__DOT__NxCH_ADDR[0]; h.rch1 = r->tb_top__DOT__u_ref__DOT__NxCH_ADDR[1]; h.rch2 = r->tb_top__DOT__u_ref__DOT__NxCH_ADDR[2]; h.rpn0 = r->tb_top__DOT__u_ref__DOT__NxPN_ADDR[0]; h.rpn1 = r->tb_top__DOT__u_ref__DOT__NxPN_ADDR[1]; h.cc1 = r->tb_top__DOT__u_ref__DOT__NBG_CH_CNT[1]; h.pn11 = r->tb_top__DOT__u_ref__DOT__PN_PIPE[1][1]; h.nbm1 = r->tb_top__DOT__u_ref__DOT__NBG_BM_CNT[1]; }
+#endif
 		top->CLK = 1;
 		top->eval();
 
@@ -334,8 +353,13 @@ int main(int argc, char** argv) {
 			#define CMP(n) if (top->r_##n != top->d_##n) printf("  %-9s ref=%llx dut=%llx\n", #n, (unsigned long long)top->r_##n, (unsigned long long)top->d_##n);
 			CMP(RA0_A) CMP(RA1_A) CMP(RA_D) CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) CMP(RB_D) CMP(RB_WE) CMP(RB_RD)
 			failed = true;
+#ifdef DBG
+			for (int k = 9; k >= 0; k--) { Hist& h = hist[(t - k) & 15];
+			  printf("  dbg t-%d usel=%d dcr=%d dcf=%d MT=%x a0 pn=%d ch=%d vs=%d nx=%d uo=%05x ha=%04x %04x %04x | ref ch0=%05x ch1=%05x ch2=%05x pn0=%05x pn1=%05x cc1=%d pn11=%08x bm1=%d\n", k, h.usel, h.dcr, h.dcf, h.mt, h.a0pn, h.a0ch, h.a0vs, h.nx, h.uo, h.ha0, h.ha1, h.ha2, h.rch0, h.rch1, h.rch2, h.rpn0, h.rpn1, h.cc1, h.pn11, h.nbm1); }
+#endif
 		}
 		rdy_n_prev = bits(rm, 58, 1);
+		vbl_age = bits(rm, 7, 1) ? 0 : vbl_age + 1;
 		for (int k = 0; k < 16; k++) covc[k] += (top->cov >> k) & 1;
 		mr.tick(top->r_RA0_A, top->r_RA1_A, top->r_RA_D, top->r_RA_WE, top->r_RB0_A, top->r_RB1_A, top->r_RB_D, top->r_RB_WE);
 		md.tick(top->d_RA0_A, top->d_RA1_A, top->d_RA_D, top->d_RA_WE, top->d_RB0_A, top->d_RB1_A, top->d_RB_D, top->d_RB_WE);

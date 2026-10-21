@@ -6,7 +6,7 @@ B      := $(HERE)/build
 SEEDS  ?= 60
 CLKS   ?= 1500000
 JOBS   ?= 4
-VFLAGS := --cc --exe --build -j 8 -O2 -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-WIDTH -Wno-CASEINCOMPLETE \
+VFLAGS := $(EXTRA) --cc --exe --build -j 8 -O2 -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-WIDTH -Wno-CASEINCOMPLETE \
           --x-assign 0 --x-initial 0 --no-timing -DLIGHT_SATURN --top-module tb_top \
           -CFLAGS "-O2" --Mdir $(B)/obj
 
