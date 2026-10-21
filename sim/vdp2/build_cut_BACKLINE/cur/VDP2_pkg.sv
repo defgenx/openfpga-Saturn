@@ -131,11 +131,6 @@ package VDP2_PKG;
 `endif
 ;
 	//Feature enables used outside the register masks (1 = present)
-	parameter bit EN_LNCOL  = 1'b1
-`ifdef POCKET_CUT_VDP2_LNCOL
-	& 1'b0
-`endif
-	;
 	parameter bit EN_COEF   = 1'b1
 `ifdef POCKET_CUT_VDP2_COEF
 	& 1'b0

@@ -606,7 +606,7 @@ module VDP2 (
 			end
 			
 			if (H_CNT == LN_FETCH_START - 1 && IS_RENDER_LINES && DISP_INT) begin
-				LN_FETCH <= EN_LNCOL;
+				LN_FETCH <= 1;
 			end else begin
 				LN_FETCH <= 0;
 			end
@@ -1100,17 +1100,26 @@ module VDP2 (
 		assign HCTB[gb] = RBV[gb].CT && MT[gb];
 		assign HIT[gb] = HPN[gb] | HCH[gb] | HVS[gb] | HRP[gb] | HRC[gb] | HCTB[gb];
 	end endgenerate
-	//Per-layer results of the hits (the same increment from several banks counts once)
+	//Per-layer results of the hits (the same increment from several banks counts once). The per-layer one-hot
+	//access flags of VA_PIPE[0] give the layer directly.
+	wire [ 3: 0] BKPN[4], BKCH[4];   // [bank][layer]
+	wire [ 1: 0] BKVS[4];
+	assign BKPN[0] = VA_PIPE[0].NxA0PN; assign BKPN[1] = VA_PIPE[0].NxA1PN; assign BKPN[2] = VA_PIPE[0].NxB0PN; assign BKPN[3] = VA_PIPE[0].NxB1PN;
+	assign BKCH[0] = VA_PIPE[0].NxA0CH; assign BKCH[1] = VA_PIPE[0].NxA1CH; assign BKCH[2] = VA_PIPE[0].NxB0CH; assign BKCH[3] = VA_PIPE[0].NxB1CH;
 	reg  [ 3: 0] E_PNEN, E_CHEN, E_BMINC, E_PNINC;
 	reg          E_VSINC;
 	reg  [ 1: 0] E_CTEN;
 	always_comb begin
 		E_PNEN = '0; E_CHEN = '0; E_BMINC = '0; E_PNINC = '0; E_VSINC = 0; E_CTEN = '0;
+		for (int l = 0; l < 4; l++) begin
+			for (int b = 0; b < 4; b++) begin
+				if (BKPN[b][l] && MT[b]) E_PNEN[l] = 1;
+				if (BKPN[b][l]) E_PNINC[l] = 1;
+				if (BKCH[b][l] && MT[b] && ((VA2.NxPN_FETCH[l] && NxPN_CYC[l]) || NSxREG[l].BMEN)) E_CHEN[l] = 1;
+				if (BKCH[b][l] && NSxREG[l].BMEN) E_BMINC[l] = 1;
+			end
+		end
 		for (int b = 0; b < 4; b++) begin
-			if (HPN[b]) E_PNEN[NBV[b].Nx] = 1;
-			if (NBV[b].PN && !NBV[b].Nx[1]) E_PNINC[NBV[b].Nx] = 1;
-			if (HCH[b]) E_CHEN[NBV[b].Nx] = 1;
-			if (NBV[b].CH && NSxREG[NBV[b].Nx].BMEN) E_BMINC[NBV[b].Nx] = 1;
 			if (HVS[b]) E_VSINC = 1;
 			if (HCTB[b]) E_CTEN[RBV[b].Rx] = 1;
 		end
@@ -1209,10 +1218,7 @@ module VDP2 (
 					end
 				end else begin		
 					for (int l = 0; l < 4; l++) begin
-						if (HPN[0] && NBV[0].Nx == l) NBG_PN_FETCH[l] <= 1;
-						if (HPN[1] && NBV[1].Nx == l) NBG_PN_FETCH[l] <= 1;
-						if (HPN[2] && NBV[2].Nx == l) NBG_PN_FETCH[l] <= 1;
-						if (HPN[3] && NBV[3].Nx == l) NBG_PN_FETCH[l] <= 1;
+						if (E_PNEN[l]) NBG_PN_FETCH[l] <= 1;
 					end
 					if (HIT[0]) begin
 						VRAMA0_A <= {1'b0,AD[0]};

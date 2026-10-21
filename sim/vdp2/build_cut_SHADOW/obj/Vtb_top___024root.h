@@ -143,18 +143,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ tb_top__DOT__u_dut__DOT__UMATCH;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__MT;
         CData/*0:0*/ tb_top__DOT__u_dut__DOT__TBL_ACT;
-        CData/*3:0*/ tb_top__DOT__u_dut__DOT__HPN;
-        CData/*3:0*/ tb_top__DOT__u_dut__DOT__HCH;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__HVS;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__E_PNEN;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__E_CHEN;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__E_BMINC;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__E_PNINC;
         CData/*1:0*/ tb_top__DOT__u_dut__DOT__E_CTEN;
-    };
-    struct {
         CData/*2:0*/ tb_top__DOT__u_dut__DOT__LS_POS;
         CData/*0:0*/ tb_top__DOT__u_dut__DOT__LW_POS;
+    };
+    struct {
         CData/*6:0*/ tb_top__DOT__u_dut__DOT__VS_OFFS;
         CData/*5:0*/ tb_top__DOT__u_dut__DOT__RP_POS;
         CData/*1:0*/ tb_top__DOT__u_dut__DOT__VRAM_BANK;
@@ -217,101 +215,101 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*1:0*/ tb_top__DOT__u_dut__DOT__unnamedblk1__DOT__VRES_LATCH0;
         CData/*1:0*/ tb_top__DOT__u_dut__DOT__unnamedblk1__DOT__VRES_LATCH1;
         CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk1__DOT__F;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk6__DOT__DTEN_N_OLD;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk6__DOT__CS_N_OLD;
     };
     struct {
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk4__DOT__DTEN_N_OLD;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk4__DOT__CS_N_OLD;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk4__DOT__VRAMA_ALLOW;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk4__DOT__VRAMB_ALLOW;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__LS_RD;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__N2;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__CT_RP;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__CT_USE;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__CT_SEL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__N;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk6__DOT__VRAMA_ALLOW;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk6__DOT__VRAMB_ALLOW;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__LS_RD;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__N2;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__CT_RP;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__CT_USE;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__CT_SEL;
         CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__N;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__PN_RP;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__CH_RP;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk28__DOT__R0DOT_FETCH;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SON;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0ON;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0ON;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1ON;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2ON;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3ON;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCAOS;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0CAOS;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0CAOS;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1CAOS;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2CAOS;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3CAOS;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0SFC;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0SFC;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1SFC;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2SFC;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3SFC;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SPRIN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0PRIN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0PRIN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1PRIN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2PRIN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3PRIN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0CCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0CCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1CCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2CCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3CCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__LCCCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCCM3;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0CCM3;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0CCM3;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1CCM3;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2CCM3;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3CCM3;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0CCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0CCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1CCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2CCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3CCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__BKCCRT;
-        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__LCCCRT;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCOEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0COEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0COEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1COEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2COEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__N;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__PN_RP;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__CH_RP;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk30__DOT__R0DOT_FETCH;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SON;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0ON;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0ON;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1ON;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2ON;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3ON;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCAOS;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0CAOS;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0CAOS;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1CAOS;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2CAOS;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3CAOS;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0SFC;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0SFC;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1SFC;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2SFC;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3SFC;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SPRIN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0PRIN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0PRIN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1PRIN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2PRIN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3PRIN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0CCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0CCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1CCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2CCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3CCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__LCCCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCCM3;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0CCM3;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0CCM3;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1CCM3;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2CCM3;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3CCM3;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0CCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0CCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1CCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2CCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3CCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__BKCCRT;
+        CData/*4:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__LCCCRT;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCOEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3COEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__BKCOEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SCOSL;
     };
     struct {
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__BKCOEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SCOSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0COSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0COSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1COSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2COSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3COSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__BKCOSL;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SBOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0BOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0BOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1BOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2BOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3BOKEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SLCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__R0LCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N0LCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N1LCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N2LCEN;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__N3LCEN;
-        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk32__DOT__CAOS;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CC;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CC_FST;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__BOKEN_PREV1;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__BOKEN_PREV2;
-        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__EXLAT_N_OLD;
-        CData/*3:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__REG_RD_DELAY;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0COSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0COSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1COSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2COSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3COSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__BKCOSL;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SBOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0BOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0BOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1BOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2BOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3BOKEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SLCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__R0LCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N0LCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N1LCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N2LCEN;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__N3LCEN;
+        CData/*2:0*/ tb_top__DOT__u_dut__DOT__unnamedblk34__DOT__CAOS;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CC;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CC_FST;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__BOKEN_PREV1;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__BOKEN_PREV2;
+        CData/*0:0*/ tb_top__DOT__u_dut__DOT__unnamedblk37__DOT__EXLAT_N_OLD;
+        CData/*3:0*/ tb_top__DOT__u_dut__DOT__unnamedblk37__DOT__REG_RD_DELAY;
         CData/*2:0*/ tb_top__DOT__u_dut__DOT__fifo__DOT__RADDR;
         CData/*2:0*/ tb_top__DOT__u_dut__DOT__fifo__DOT__WADDR;
         CData/*3:0*/ tb_top__DOT__u_dut__DOT__fifo__DOT__AMOUNT;
@@ -349,10 +347,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAMA1_RD;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAMB0_RD;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAMB1_RD;
-    };
-    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__DOT_CE_R;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__DOT_CE_F;
+    };
+    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__HCT9;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VCT0;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__SCRNX0;
@@ -415,10 +413,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*6:0*/ tb_top__DOT__u_ref__DOT__VS_OFFS;
         CData/*5:0*/ tb_top__DOT__u_ref__DOT__RP_POS;
         CData/*1:0*/ tb_top__DOT__u_ref__DOT__VRAM_BANK;
-    };
-    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAM_WRITE_PEND_CLR;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAM_RRDY;
+    };
+    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAM_WRDY;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__VRAM_WLOCK;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__FIFO_WRREQ;
@@ -481,10 +479,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N2CAOS;
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N3CAOS;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__R0SFC;
-    };
-    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N0SFC;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N1SFC;
+    };
+    struct {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N2SFC;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N3SFC;
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__SPRIN;
@@ -547,10 +545,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N2LCEN;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__N3LCEN;
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__FST_PRI;
-    };
-    struct {
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__SEC_PRI;
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk21__DOT__THD_PRI;
+    };
+    struct {
         CData/*2:0*/ tb_top__DOT__u_ref__DOT__unnamedblk22__DOT__CAOS;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__CC;
         CData/*0:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__CC_FST;
@@ -613,10 +611,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __Vfunc_WinTest__107__LOG;
         CData/*0:0*/ __Vfunc_WinTest__108__Vfuncout;
         CData/*0:0*/ __Vfunc_WinTest__108__W0HIT;
-    };
-    struct {
         CData/*0:0*/ __Vfunc_WinTest__108__W1HIT;
         CData/*0:0*/ __Vfunc_WinTest__108__WSHIT;
+    };
+    struct {
         CData/*0:0*/ __Vfunc_WinTest__108__W0E;
         CData/*0:0*/ __Vfunc_WinTest__108__W1E;
         CData/*0:0*/ __Vfunc_WinTest__108__SWE;
@@ -679,27 +677,27 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __Vfunc_WinTest__242__Vfuncout;
         CData/*0:0*/ __Vfunc_WinTest__242__W0HIT;
         CData/*0:0*/ __Vfunc_WinTest__242__W1HIT;
-    };
-    struct {
         CData/*0:0*/ __Vfunc_WinTest__242__WSHIT;
         CData/*0:0*/ __Vfunc_WinTest__242__W0E;
+    };
+    struct {
         CData/*0:0*/ __Vfunc_WinTest__242__W1E;
         CData/*0:0*/ __Vfunc_WinTest__242__SWE;
         CData/*0:0*/ __Vfunc_WinTest__242__LOG;
-        CData/*3:0*/ __VdfgRegularize_hebeb780c_0_12;
-        CData/*1:0*/ __VdfgRegularize_hebeb780c_0_15;
-        CData/*1:0*/ __VdfgRegularize_hebeb780c_0_17;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_29;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_33;
+        CData/*3:0*/ __VdfgRegularize_hebeb780c_0_19;
+        CData/*1:0*/ __VdfgRegularize_hebeb780c_0_22;
+        CData/*1:0*/ __VdfgRegularize_hebeb780c_0_24;
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_36;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_42;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_44;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_46;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_50;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_40;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_43;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_49;
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_51;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_52;
         CData/*0:0*/ __VdfgRegularize_hebeb780c_0_53;
-        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_59;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_57;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_58;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_62;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_63;
+        CData/*0:0*/ __VdfgRegularize_hebeb780c_0_69;
         CData/*1:0*/ __Vdly__tb_top__DOT__u_dut__DOT__DOTCLK_DIV;
         CData/*3:0*/ __Vdly__tb_top__DOT__u_dut__DOT__lcsd_tap__DOT__wp;
         CData/*1:0*/ __Vdly__tb_top__DOT__u_ref__DOT__DOTCLK_DIV;
@@ -708,11 +706,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__ODD;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__DISP_INT;
         CData/*2:0*/ __Vdly__tb_top__DOT__u_dut__DOT__CELLX;
-        CData/*5:0*/ __Vdly__tb_top__DOT__u_dut__DOT__RP_POS;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VRAM_READ_PEND;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VRAM_WRITE_PEND;
         CData/*7:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VRAM_WE;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VRAM_WLOCK;
+        CData/*5:0*/ __Vdly__tb_top__DOT__u_dut__DOT__RP_POS;
         CData/*2:0*/ __Vdly__tb_top__DOT__u_dut__DOT__LS_POS;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__LW_POS;
         CData/*6:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VS_OFFS;
@@ -721,7 +719,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__NDC_PTR;
         CData/*3:0*/ __Vdly__tb_top__DOT__u_dut__DOT__MOSAIC_HCNT;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_dut__DOT__REG_RRDY;
-        CData/*3:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__REG_RD_DELAY;
+        CData/*3:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk37__DOT__REG_RD_DELAY;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_ref__DOT__HCT9;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_ref__DOT__VCT0;
         CData/*0:0*/ __Vdly__tb_top__DOT__u_ref__DOT__ODD;
@@ -745,10 +743,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*3:0*/ __Vdly__tb_top__DOT__u_dut__DOT__fifo__DOT__AMOUNT;
         CData/*3:0*/ __Vdly__tb_top__DOT__u_ref__DOT__fifo__DOT__AMOUNT;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__HM__v0;
-    };
-    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__HM__v0;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__HM__v1;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__HM__v1;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__HM__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__HM__v2;
@@ -811,10 +809,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__pal2__DOT__altsyncram_component__DOT__mem__v0;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__pal2__DOT__altsyncram_component__DOT__mem__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__pal2__DOT__altsyncram_component__DOT__mem__v1;
-    };
-    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__pal1__DOT__altsyncram_component__DOT__mem__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__pal1__DOT__altsyncram_component__DOT__mem__v0;
+    };
+    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__pal1__DOT__altsyncram_component__DOT__mem__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__pal1__DOT__altsyncram_component__DOT__mem__v1;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NxPN_CYC_BY_T__v0;
@@ -826,43 +824,40 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyLsb__tb_top__DOT__u_dut__DOT__NxPN_CYC_BY_T__v2;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NxPN_CYC_BY_T__v3;
         CData/*2:0*/ __VdlyLsb__tb_top__DOT__u_dut__DOT__NxPN_CYC_BY_T__v3;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v3;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v4;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v3;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v4;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v4;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v5;
+        CData/*1:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v0;
+        CData/*1:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v4;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v6;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_TBL_OFFS__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LW_ADDR__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v3;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v4;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_TBL_OFFS__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LW_ADDR__v1;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v0;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v1;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v2;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_EN__v4;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v0;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v3;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v4;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v5;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v6;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v7;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v8;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v9;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v10;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v11;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v12;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v13;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v14;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v15;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_FETCH__v16;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v0;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v1;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v2;
-        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v3;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v3;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v4;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__VRAM_READ_PIPE__v5;
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v0;
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v1;
@@ -874,27 +869,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v8;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CH_CNT__v12;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_TBL_OFFS__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v1;
-    };
-    struct {
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LW_ADDR__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v3;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_VAL_OFFS__v4;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LS_TBL_OFFS__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LW_ADDR__v1;
-        CData/*1:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v0;
-        CData/*1:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v4;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_CNT__v6;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v0;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v1;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v2;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_PN_EN__v3;
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v0;
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v1;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v1;
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v2;
@@ -902,7 +886,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_BM_CNT__v8;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX__v0;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v0;
+        CData/*0:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_CT_EN__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NX__v0;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NX__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NX__v4;
@@ -921,15 +908,15 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NY__v1;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NY__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NY__v2;
-        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v0;
+        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v0;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NSY__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NSY__v2;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NY__v3;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NY__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NY__v4;
-        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v1;
+        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v1;
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__LZMX__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__LZMX__v0;
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__LZMX__v1;
@@ -938,13 +925,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NMOSY__v0;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NMOSY__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NMOSY__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD__v3;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NVCSY__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__CTD__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__CTD__v1;
-    };
-    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__CTD__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__CTD__v3;
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__KAst__v0;
@@ -957,8 +942,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__KAx__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__KAx__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__KAx__v2;
-        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RES_LATCH__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RES_LATCH__v0;
+        CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RES_LATCH__v0;
+    };
+    struct {
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RES_LATCH__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RxX__v0;
         CData/*6:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RPxLCSD__v0;
         CData/*6:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RPxLCSD__v1;
@@ -1009,8 +996,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v6;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_DC__v6;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v7;
-    };
-    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v8;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_DC__v8;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v9;
@@ -1024,6 +1009,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v15;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_DC__v15;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v16;
+    };
+    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_DC__v17;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_DC__v17;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v0;
@@ -1075,8 +1062,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CDC__v18;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v19;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v19;
-    };
-    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v20;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v20;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v21;
@@ -1090,6 +1075,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v24;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v25;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v25;
+    };
+    struct {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v26;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v26;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v27;
@@ -1141,8 +1128,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v46;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v46;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v47;
-    };
-    struct {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v47;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v48;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v48;
@@ -1156,6 +1141,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v52;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v53;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v53;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NBG_CDC__v53;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v54;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v54;
@@ -1207,8 +1194,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v73;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v74;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v74;
-    };
-    struct {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v75;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v75;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v76;
@@ -1222,6 +1207,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v79;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v80;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v80;
+    };
+    struct {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v81;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__NBG_CDC__v81;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NBG_CDC__v82;
@@ -1237,12 +1224,12 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_CDP__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_CDP__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__RBG_CDP__v3;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RBG_CH__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RBG_CH__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v0;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v1;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v2;
-        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v3;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RBG_CH__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RBG_CH__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v0;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v1;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v2;
+        CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NCDP0__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NCDP6__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_dut__DOT__NCDP1__v0;
@@ -1273,8 +1260,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v7;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v7;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v8;
-    };
-    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v8;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v9;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_EN__v9;
@@ -1288,6 +1273,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_PN_FETCH__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_PN_FETCH__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__VRAM_READ_PIPE__v2;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_PN_FETCH__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_PN_FETCH__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__VRAM_READ_PIPE__v3;
@@ -1339,8 +1326,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v3;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v3;
-    };
-    struct {
         CData/*2:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v4;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v4;
@@ -1354,6 +1339,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v7;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v7;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v8;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v12;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CH_CNT__v16;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_PN_EN__v0;
@@ -1405,8 +1392,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NY__v3;
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NY__v4;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NY__v4;
-    };
-    struct {
         CData/*1:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__unnamedblk4__DOT__SCYN_UPD__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__unnamedblk4__DOT__SCYN_UPD__v1;
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__LZMX__v0;
@@ -1420,6 +1405,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__unnamedblk4__DOT__SCYN_UPD__v2;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__unnamedblk4__DOT__SCYN_UPD__v3;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NVCSY__v0;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RP_KX__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RP_KY__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RP_DKAx__v0;
@@ -1471,8 +1458,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RPxKLCE_PIPE__v5;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RPxKLCE_PIPE__v6;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RPxKLCE_PIPE__v7;
-    };
-    struct {
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__WxSX__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__WxSX__v0;
         CData/*0:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__WxEX__v0;
@@ -1486,6 +1471,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v3;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v4;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v5;
+    };
+    struct {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v6;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v7;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W0_HIT_PIPE__v8;
@@ -1537,8 +1524,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v19;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v20;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v21;
-    };
-    struct {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v22;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v23;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v24;
@@ -1552,6 +1537,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v32;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__W1_HIT_PIPE__v33;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__PN_PIPE__v0;
+    };
+    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__PN_PIPE__v0;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__PN_PIPE__v1;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__PN_PIPE__v1;
@@ -1603,8 +1590,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CDP__v1;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v15;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v15;
-    };
-    struct {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CDC__v15;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v16;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v16;
@@ -1618,6 +1603,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v19;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v20;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v20;
+    };
+    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v21;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v21;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v22;
@@ -1669,8 +1656,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v41;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CDC__v41;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v42;
-    };
-    struct {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v42;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v43;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v43;
@@ -1684,6 +1669,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v47;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v47;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v48;
+    };
+    struct {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v48;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v49;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v49;
@@ -1735,8 +1722,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v68;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CDC__v68;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v69;
-    };
-    struct {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v69;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v70;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v70;
@@ -1750,6 +1735,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v74;
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v75;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v75;
+    };
+    struct {
         CData/*3:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDC__v76;
         CData/*2:0*/ __VdlyDim0__tb_top__DOT__u_ref__DOT__NBG_CDC__v76;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NBG_CDC__v76;
@@ -1801,8 +1788,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__unnamedblk12__DOT__RBG_CH__v1;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_DC__v9;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RBG_DC__v9;
-    };
-    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_DC__v10;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_DC__v11;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_DC__v12;
@@ -1816,6 +1801,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_DC__v17;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RBG_DC__v17;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v6;
+    };
+    struct {
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_TP_PIPE__v2;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_TP_PIPE__v3;
         CData/*0:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_TP_PIPE__v4;
@@ -1867,8 +1854,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v4;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v5;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v6;
-    };
-    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v7;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v8;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC2__v9;
@@ -1882,6 +1867,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC3__v0;
         CData/*0:0*/ __VdlySet__tb_top__DOT__u_ref__DOT__NDC3__v0;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC3__v1;
+    };
+    struct {
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC3__v2;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC3__v3;
         CData/*7:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NDC3__v4;
@@ -1933,8 +1920,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*15:0*/ tb_top__DOT__d_FBDO;
         SData/*10:0*/ tb_top__DOT__u_dut__DOT____VlemCond_15;
         SData/*10:0*/ tb_top__DOT__u_dut__DOT____VlemCond_13;
-    };
-    struct {
         SData/*15:0*/ tb_top__DOT__u_dut__DOT__VRAMA1_A;
         SData/*15:0*/ tb_top__DOT__u_dut__DOT__VRAMB1_A;
         SData/*15:0*/ tb_top__DOT__u_dut__DOT__VRAMA0_Q;
@@ -1948,6 +1933,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*8:0*/ tb_top__DOT__u_dut__DOT__SCRNX;
         SData/*8:0*/ tb_top__DOT__u_dut__DOT__SCRNY;
         VlWide<3>/*79:0*/ tb_top__DOT__u_dut__DOT__PN4E;
+    };
+    struct {
         SData/*8:0*/ tb_top__DOT__u_dut__DOT__HS_START;
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__VS_START;
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__VS_END;
@@ -1970,8 +1957,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__CT_CRAM_A;
         SData/*15:0*/ tb_top__DOT__u_dut__DOT__REG_DO;
         SData/*15:0*/ tb_top__DOT__u_dut__DOT__PAL_DO;
-        SData/*15:0*/ tb_top__DOT__u_dut__DOT__unnamedblk11__DOT__WD;
-        SData/*10:0*/ tb_top__DOT__u_dut__DOT__unnamedblk32__DOT__PAL;
+        SData/*15:0*/ tb_top__DOT__u_dut__DOT__unnamedblk13__DOT__WD;
+        SData/*10:0*/ tb_top__DOT__u_dut__DOT__unnamedblk34__DOT__PAL;
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__pal2__DOT__altsyncram_component__DOT__aa;
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__pal2__DOT__altsyncram_component__DOT__ab;
         SData/*9:0*/ tb_top__DOT__u_dut__DOT__pal1__DOT__altsyncram_component__DOT__aa;
@@ -1999,8 +1986,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*8:0*/ tb_top__DOT__u_ref__DOT__WSCRNY;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__RP_PX;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__RP_PY;
-    };
-    struct {
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__RP_PZ;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__RP_CX;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__RP_CY;
@@ -2014,6 +1999,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*10:0*/ tb_top__DOT__u_ref__DOT__PAL_N;
         SData/*10:0*/ tb_top__DOT__u_ref__DOT__IO_PAL_ADDR;
         SData/*9:0*/ tb_top__DOT__u_ref__DOT__IO_PAL_A;
+    };
+    struct {
         SData/*9:0*/ tb_top__DOT__u_ref__DOT__CT_CRAM_A;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__REG_DO;
         SData/*15:0*/ tb_top__DOT__u_ref__DOT__PAL_DO;
@@ -2046,14 +2033,14 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*11:0*/ __Vfunc_RxBMAddr__147__RxOFFY;
         SData/*11:0*/ __Vfunc_RxCHAddr__148__RxOFFX;
         SData/*11:0*/ __Vfunc_RxCHAddr__148__RxOFFY;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_6;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_9;
-        SData/*15:0*/ __VdfgRegularize_hebeb780c_0_16;
-        SData/*15:0*/ __VdfgRegularize_hebeb780c_0_18;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_23;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_24;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_25;
-        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_26;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_10;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_13;
+        SData/*15:0*/ __VdfgRegularize_hebeb780c_0_23;
+        SData/*15:0*/ __VdfgRegularize_hebeb780c_0_25;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_30;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_31;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_32;
+        SData/*9:0*/ __VdfgRegularize_hebeb780c_0_33;
         SData/*8:0*/ __Vdly__tb_top__DOT__u_dut__DOT__HCT;
         SData/*8:0*/ __Vdly__tb_top__DOT__u_dut__DOT__VCT;
         SData/*8:0*/ __Vdly__tb_top__DOT__u_dut__DOT__H_CNT;
@@ -2065,8 +2052,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*15:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_PZ;
         SData/*15:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_CX;
         SData/*15:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_CY;
-    };
-    struct {
         SData/*15:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_CZ;
         SData/*9:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__pal2__DOT__altsyncram_component__DOT__mem__v0;
         SData/*9:0*/ __VdlyDim0__tb_top__DOT__u_dut__DOT__pal2__DOT__altsyncram_component__DOT__mem__v1;
@@ -2080,6 +2065,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*10:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__LZMX__v1;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__WxSX__v0;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__WxEX__v0;
+    };
+    struct {
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__WxSX__v1;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__WxEX__v1;
         SData/*10:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__VS__v0;
@@ -2131,8 +2118,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v2;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v3;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v4;
-    };
-    struct {
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v5;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v6;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG_CDP__v7;
@@ -2146,6 +2131,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_CDP__v1;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_CDP__v2;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_CDP__v3;
+    };
+    struct {
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_CDP__v4;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_CDP__v5;
         SData/*9:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NCDP4__v0;
@@ -2197,8 +2184,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__UO;
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__RxRP_ADDR;
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__RxCTA_ADDR;
-    };
-    struct {
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__RxCTB_ADDR;
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__BS_ADDR;
         IData/*18:0*/ tb_top__DOT__u_dut__DOT__LN_ADDR;
@@ -2212,6 +2197,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__SUBXB;
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__SUBYA;
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__SUBYB;
+    };
+    struct {
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__MULXA;
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__MULYA;
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__ACCX;
@@ -2234,26 +2221,26 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*23:0*/ tb_top__DOT__u_dut__DOT__DCOL;
         IData/*31:0*/ tb_top__DOT__u_dut__DOT__CT_CRAM_Q;
         IData/*19:0*/ tb_top__DOT__u_dut__DOT__A;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__LS_WD;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RP_WD;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RCT_WD;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__ADD1;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__MULT1;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__MULT2;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RES;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__LW_WD;
-        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__RK;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_FST_LATCH;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_SEC_LATCH;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_THD_LATCH;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CSEC_PREV1;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CSEC_PREV2;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CSEC_DC;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CTHD_DC;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CFTH_DC;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__CSEC_ECC;
-        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk34__DOT__C;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__LS_WD;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RP_WD;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RCT_WD;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__ADD1;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__MULT1;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__MULT2;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RES;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__LW_WD;
+        IData/*31:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__RK;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_FST_LATCH;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_SEC_LATCH;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_THD_LATCH;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CSEC_PREV1;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CSEC_PREV2;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CSEC_DC;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CTHD_DC;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CFTH_DC;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__CSEC_ECC;
+        IData/*23:0*/ tb_top__DOT__u_dut__DOT__unnamedblk36__DOT__C;
         VlWide<8>/*238:0*/ tb_top__DOT__u_dut__DOT__tap4__DOT__g_m10k__DOT__q;
         VlWide<3>/*84:0*/ tb_top__DOT__u_dut__DOT__tap2__DOT__g_m10k__DOT__q;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_43__PNData;
@@ -2263,8 +2250,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCond_39;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_38__PNData;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_37__MultRC;
-    };
-    struct {
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_33__TblAddrToRC;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_32__ScrnStartToRC;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT____VlemCall_31__ScrnIncToRC;
@@ -2278,6 +2263,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*17:0*/ tb_top__DOT__u_ref__DOT__VRAM_WA;
         IData/*17:0*/ tb_top__DOT__u_ref__DOT__VRAM_RA;
         IData/*16:0*/ tb_top__DOT__u_ref__DOT__VRAMA0_A;
+    };
+    struct {
         IData/*16:0*/ tb_top__DOT__u_ref__DOT__VRAMB0_A;
         IData/*18:0*/ tb_top__DOT__u_ref__DOT__NxVS_ADDR;
         IData/*18:0*/ tb_top__DOT__u_ref__DOT__RxRP_ADDR;
@@ -2329,8 +2316,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__SUBXB;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__SUBYA;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__SUBYB;
-    };
-    struct {
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__MULXA;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__MULYA;
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk5__DOT__SUMX;
@@ -2344,6 +2329,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__u_ref__DOT__unnamedblk9__DOT__LW_WD;
         IData/*23:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__DC;
         IData/*23:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__DC_FST_LATCH;
+    };
+    struct {
         IData/*23:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__DC_SEC_LATCH;
         IData/*23:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__DC_THD_LATCH;
         IData/*23:0*/ tb_top__DOT__u_ref__DOT__unnamedblk23__DOT__CSEC_PREV1;
@@ -2357,11 +2344,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ __Vfunc_RxCHAddr__148__RxPNx;
         IData/*17:0*/ __VdfgRegularize_hebeb780c_0_3;
         IData/*17:0*/ __VdfgRegularize_hebeb780c_0_4;
-        IData/*31:0*/ __VdfgRegularize_hebeb780c_0_48;
-        IData/*31:0*/ __VdfgRegularize_hebeb780c_0_49;
-        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_THD_LATCH;
-        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_SEC_LATCH;
-        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk33__DOT__DC_FST_LATCH;
+        IData/*31:0*/ __VdfgRegularize_hebeb780c_0_55;
+        IData/*31:0*/ __VdfgRegularize_hebeb780c_0_56;
+        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_THD_LATCH;
+        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_SEC_LATCH;
+        IData/*23:0*/ __Vdly__tb_top__DOT__u_dut__DOT__unnamedblk35__DOT__DC_FST_LATCH;
         IData/*19:0*/ __Vdly__tb_top__DOT__u_dut__DOT__A;
         IData/*31:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_Xst;
         IData/*31:0*/ __Vdly__tb_top__DOT__u_ref__DOT__RP_Yst;
@@ -2393,12 +2380,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__r_xp__DOT__g_ml__DOT__mem__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__r_yst__DOT__g_ml__DOT__mem__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__r_xst__DOT__g_ml__DOT__mem__v0;
-        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX__v0;
-        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX__v1;
-    };
-    struct {
-        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX__v2;
-        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX__v3;
+        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX__v0;
+        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX__v1;
+        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX__v2;
+        IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX__v3;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NX__v0;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NX__v1;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NX__v2;
@@ -2410,6 +2395,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NSY__v1;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NY__v1;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NY__v2;
+    };
+    struct {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NSY__v2;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NY__v3;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NY__v4;
@@ -2418,7 +2405,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NVCSY__v0;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NVCSY__v1;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__KAst__v0;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RES_LATCH__v0;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RES_LATCH__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RxX__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RxY__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RxX__v1;
@@ -2447,12 +2434,12 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_PN_PIPE__v5;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_PN_PIPE__v6;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__RBG_PN_PIPE__v7;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RBG_CH__v0;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RBG_CH__v1;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v0;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v1;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v2;
-        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH__v3;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RBG_CH__v0;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RBG_CH__v1;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v0;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v1;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v2;
+        IData/*31:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH__v3;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v0;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v1;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v2;
@@ -2461,8 +2448,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v5;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v6;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v7;
-    };
-    struct {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v8;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v9;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_dut__DOT__NCX__v10;
@@ -2476,6 +2461,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NX__v2;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NX__v3;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NSX__v0;
+    };
+    struct {
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NSX__v1;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NSX__v2;
         IData/*18:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NSY__v0;
@@ -2527,8 +2514,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__PN_PIPE__v31;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__PN_PIPE__v32;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__PN_PIPE__v33;
-    };
-    struct {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__PN_PIPE__v34;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__PN_PIPE__v35;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__NBG0_PN_PIPE__v0;
@@ -2542,6 +2527,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v1;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v2;
+    };
+    struct {
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__unnamedblk12__DOT__RBG_CH__v0;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v3;
         IData/*31:0*/ __VdlyVal__tb_top__DOT__u_ref__DOT__RBG_PN_PIPE__v4;
@@ -2593,21 +2580,21 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         QData/*63:0*/ tb_top__DOT__u_dut__DOT__NDC_WD1;
         QData/*63:0*/ tb_top__DOT__u_dut__DOT__NDC_WD2;
         QData/*63:0*/ tb_top__DOT__u_dut__DOT__NDC_WD3;
-    };
-    struct {
         QData/*33:0*/ tb_top__DOT__u_dut__DOT__SDOT;
         QData/*39:0*/ tb_top__DOT__u_dut__DOT__DOT_FST;
         QData/*39:0*/ tb_top__DOT__u_dut__DOT__DOT_SEC;
         QData/*39:0*/ tb_top__DOT__u_dut__DOT__DOT_THD;
         QData/*39:0*/ tb_top__DOT__u_dut__DOT__DOT_FTH;
-        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__CT_D;
-        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__FST;
-        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__SEC;
-        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__THD;
-        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__BACKD;
+        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__CT_D;
+        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__FST;
+        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__SEC;
+        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__THD;
+        QData/*39:0*/ tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__BACKD;
         QData/*45:0*/ tb_top__DOT__u_dut__DOT__tap3__DOT__g_m10k__DOT__q;
         QData/*34:0*/ tb_top__DOT__u_ref__DOT____VlemCall_36__AddrIncToRA;
         QData/*34:0*/ tb_top__DOT__u_ref__DOT____VlemCall_35__AddrIncToRA;
+    };
+    struct {
         QData/*34:0*/ tb_top__DOT__u_ref__DOT____VlemCall_34__AddrIncToRA;
         QData/*39:0*/ tb_top__DOT__u_ref__DOT____VlemCall_26__CTData;
         QData/*39:0*/ tb_top__DOT__u_ref__DOT____VlemCall_25__CTData;
@@ -2659,8 +2646,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__NBG3_PN_PIPE;
         VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__RxSCRN_OVER;
         VlUnpacked<CData/*4:0*/, 4> tb_top__DOT__u_dut__DOT__NBV;
-    };
-    struct {
         VlUnpacked<CData/*3:0*/, 4> tb_top__DOT__u_dut__DOT__RBV;
         VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__NC_PN;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__NC_PN23;
@@ -2669,9 +2654,13 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<IData/*18:0*/, 2> tb_top__DOT__u_dut__DOT__NxLS_ADDR;
         VlUnpacked<IData/*18:0*/, 2> tb_top__DOT__u_dut__DOT__RxCT_ADDR;
         VlUnpacked<IData/*18:0*/, 2> tb_top__DOT__u_dut__DOT__LW_ADDR;
+        VlUnpacked<CData/*3:0*/, 4> tb_top__DOT__u_dut__DOT__BKPN;
+        VlUnpacked<CData/*3:0*/, 4> tb_top__DOT__u_dut__DOT__BKCH;
         VlUnpacked<CData/*1:0*/, 2> tb_top__DOT__u_dut__DOT__NBG_PN_CNT;
         VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__NBG_PN_EN;
         VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__NBG_PN_FETCH;
+    };
+    struct {
         VlUnpacked<CData/*2:0*/, 4> tb_top__DOT__u_dut__DOT__NBG_CH_CNT;
         VlUnpacked<CData/*2:0*/, 4> tb_top__DOT__u_dut__DOT__NBG_BM_CNT;
         VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__NBG_CH_EN;
@@ -2715,38 +2704,38 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_dut__DOT__NCX;
         VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__NxW_EN;
         VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__RxW_EN;
-        VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__CX;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk7__DOT__SCYN_UPD;
-        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk8__DOT__RES_LATCH;
-        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__PN_WD;
-        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NBG_CH;
-        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__VS_WD;
-        VlUnpacked<CData/*1:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__PN_CNT;
-        VlUnpacked<CData/*3:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NCNT;
-        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NHF;
-        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NPR;
+        VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__CX;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk9__DOT__SCYN_UPD;
+        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk10__DOT__RES_LATCH;
+        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__PN_WD;
+        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NBG_CH;
+        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__VS_WD;
+        VlUnpacked<CData/*1:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__PN_CNT;
+        VlUnpacked<CData/*3:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NCNT;
+        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NHF;
+        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NPR;
+        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NCC;
+        VlUnpacked<CData/*6:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NPALN;
+        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NCH;
+        VlUnpacked<CData/*2:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NCHCN;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NCHEN;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__NEN;
+        VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RHF;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RPR;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RCC;
+        VlUnpacked<CData/*6:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RPALN;
+        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RCH;
     };
     struct {
-        VlUnpacked<CData/*0:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NCC;
-        VlUnpacked<CData/*6:0*/, 8> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NPALN;
-        VlUnpacked<IData/*31:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NCH;
-        VlUnpacked<CData/*2:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NCHCN;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NCHEN;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__NEN;
-        VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RHF;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RPR;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RCC;
-        VlUnpacked<CData/*6:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RPALN;
-        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RCH;
-        VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RTP;
-        VlUnpacked<CData/*2:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RCELLX;
-        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RPN_WD;
-        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk12__DOT__RBG_CH;
-        VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk27__DOT__X;
-        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk28__DOT__NxDOT_FETCH;
-        VlUnpacked<QData/*39:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__LAY;
-        VlUnpacked<CData/*2:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__LPRI;
-        VlUnpacked<CData/*0:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__LON;
+        VlUnpacked<CData/*0:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RTP;
+        VlUnpacked<CData/*2:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RCELLX;
+        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RPN_WD;
+        VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_dut__DOT__unnamedblk14__DOT__RBG_CH;
+        VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk29__DOT__X;
+        VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_dut__DOT__unnamedblk30__DOT__NxDOT_FETCH;
+        VlUnpacked<QData/*39:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__LAY;
+        VlUnpacked<CData/*2:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__LPRI;
+        VlUnpacked<CData/*0:0*/, 6> tb_top__DOT__u_dut__DOT__unnamedblk31__DOT__LON;
         VlUnpacked<IData/*31:0*/, 32> tb_top__DOT__u_dut__DOT__rp_ff__DOT__g_ml__DOT__mem;
         VlUnpacked<IData/*31:0*/, 32> tb_top__DOT__u_dut__DOT__rp_fr__DOT__g_ml__DOT__mem;
         VlUnpacked<IData/*31:0*/, 32> tb_top__DOT__u_dut__DOT__rp_d1__DOT__g_ml__DOT__mem;
@@ -2791,8 +2780,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_ref__DOT__NxOFFX;
         VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_ref__DOT__NxOFFY;
         VlUnpacked<IData/*18:0*/, 2> tb_top__DOT__u_ref__DOT__VS;
-    };
-    struct {
         VlUnpacked<QData/*39:0*/, 2> tb_top__DOT__u_ref__DOT__CTD;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__RxX;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__RxY;
@@ -2804,6 +2791,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<CData/*0:0*/, 4> tb_top__DOT__u_ref__DOT__NxPN_CYC;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__NBG0_PN_PIPE;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__NBG1_PN_PIPE;
+    };
+    struct {
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__NBG2_PN_PIPE;
         VlUnpacked<IData/*31:0*/, 2> tb_top__DOT__u_ref__DOT__NBG3_PN_PIPE;
         VlUnpacked<IData/*18:0*/, 4> tb_top__DOT__u_ref__DOT__NxPN_ADDR;
@@ -2857,8 +2846,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<CData/*0:0*/, 34> tb_top__DOT__u_ref__DOT__W1_HIT_PIPE;
         VlUnpacked<VlUnpacked<IData/*31:0*/, 8>, 5> tb_top__DOT__u_ref__DOT__PN_PIPE;
         VlUnpacked<VlUnpacked<CData/*7:0*/, 8>, 4> tb_top__DOT__u_ref__DOT__NBG_CDC;
-    };
-    struct {
         VlUnpacked<SData/*9:0*/, 8> tb_top__DOT__u_ref__DOT__NBG_CDP;
         VlUnpacked<VlUnpacked<IData/*31:0*/, 2>, 5> tb_top__DOT__u_ref__DOT__RBG_PN_PIPE;
         VlUnpacked<VlUnpacked<CData/*0:0*/, 2>, 5> tb_top__DOT__u_ref__DOT__RBG_TP_PIPE;
@@ -2870,6 +2857,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<CData/*7:0*/, 16> tb_top__DOT__u_ref__DOT__NDC3;
         VlUnpacked<SData/*9:0*/, 2> tb_top__DOT__u_ref__DOT__NCDP0;
         VlUnpacked<SData/*9:0*/, 2> tb_top__DOT__u_ref__DOT__NCDP1;
+    };
+    struct {
         VlUnpacked<SData/*9:0*/, 2> tb_top__DOT__u_ref__DOT__NCDP2;
         VlUnpacked<SData/*9:0*/, 2> tb_top__DOT__u_ref__DOT__NCDP3;
         VlUnpacked<SData/*9:0*/, 2> tb_top__DOT__u_ref__DOT__NCDP4;
@@ -2923,8 +2912,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         VlUnpacked<QData/*63:0*/, 1> __VstlTriggered;
         VlUnpacked<QData/*63:0*/, 2> __VicoTriggered;
         VlUnpacked<QData/*63:0*/, 1> __VactTriggered;
-    };
-    struct {
         VlUnpacked<QData/*63:0*/, 1> __VnbaTriggered;
     };
     Vtb_top_NBGState_t__struct__0 tb_top__DOT__u_dut__DOT__BG0;

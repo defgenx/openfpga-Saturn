@@ -18,8 +18,8 @@ same settings is the baseline.
 | exact + all "game-safe" cuts (below) | 5,078 | 6,740 | 1,046 | 4,174 | 34,784 | 12 |
 | exact + every cut incl. must-stay features | 4,275 | 5,568 | 934 | 3,786 | 34,048 | 12 |
 
-Balanced profile (the one `docs/sizing.md` used): baseline 7,000 ALMs / 9,229 ALUTs / 7,822 registers; final exact
-rewrite: see `sizing/vdp2/snap/final_bal` (run at the end, number in the commit log of this doc).
+Balanced profile (the one `docs/sizing.md` used): baseline 7,000 ALMs / 9,229 ALUTs / 7,822 registers; exact rewrite
+5,909 ALMs / 7,889 ALUTs (+1,058 memory ALUTs) / 4,842 registers (-15% ALMs, -15% ALUTs, -38% registers).
 
 **Targets (<= 5,500 ALUTs, <= 4,500 registers): registers met (4,841 exact, 4,174 with the safe cuts); ALUTs not met**
 (7,686 exact, 6,740 with the safe cuts, 5,568 only if features that games need are removed too). The exact
@@ -144,7 +144,7 @@ register bits that select the feature (`CUT_*` constants in `VDP2_pkg.sv`, appli
 three of them, gates the fetch (COEF) or the sprite shadow bit (SHADOW). `make -C sim vdp2 CUT=<NAME>` builds the
 rewritten design with the macro and the golden copy with the same register bits cleared, and compares video
 (not the CPU/VRAM bus, whose timing changes when a fetch is gone) with CPU VRAM traffic disabled: all 16 cuts pass 40
-seeds. Savings are measured against the exact design (area profile), single cut each; the combined runs are on the
+seeds (re-run after the last stimulus change). Savings are measured against the exact design (area profile), single cut each; the combined runs are on the
 last lines. Game evidence is from `docs/game-impact.md` (emulator fix lists; counts are floors, not usage
 statistics).
 
