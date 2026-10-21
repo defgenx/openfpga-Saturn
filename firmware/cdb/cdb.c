@@ -74,7 +74,7 @@ static u32 calc_size;
 static struct { u32 fad; u16 spos; u8 pnum; } fadsrch;
 
 static struct {
-	u8 active, writing, needfree, fnum;
+	u8 active, writing, needfree, fnum, ehst;
 	u16 n, cur;
 	u8 list[NBUF];
 } dt;
@@ -105,7 +105,7 @@ static struct {
 static u8 finfo_valid, root_valid, auth_type;
 static u8 sw_reset_pending;
 static u16 sw_hirq_deferred;
-static u8 booted;
+static u8 booted, inited;
 
 /* ------------------------------------------------------------------ buffers */
 static void reset_buffers(void)
@@ -553,15 +553,15 @@ static void dt_feed(void)
 
 static void dt_start(int writing, int needfree, u16 n)
 {
-	dt.writing = writing; dt.needfree = needfree; dt.n = n; dt.cur = 0;
+	dt.writing = writing; dt.needfree = needfree; dt.n = n; dt.cur = 0; dt.ehst = 0;
 	MM(R_XF_MODE) = writing ? 2 : 1;
 	dt.active = 1;
 	dt_feed();
 }
 
-static void dt_start_pseudo(u32 a, u32 cnt)
+static void dt_start_pseudo(u32 a, u32 cnt, int ehst)
 {
-	dt.writing = 0; dt.needfree = 0; dt.n = 0; dt.cur = 0;
+	dt.writing = 0; dt.needfree = 0; dt.n = 0; dt.cur = 0; dt.ehst = ehst;
 	MM(R_XF_MODE) = 1;
 	xf_seg(a, 0, cnt);
 	dt.active = 1;
@@ -741,12 +741,12 @@ static void cmd_exec(void)
 	u8 f = CD[2] >> 8;
 	switch (cmd) {
 	case 0x00: cdstatus(0, 0); break;
-	case 0x01: results(base_status(0, 0) << 8, 0x0002, 0x0000, 0x0600); break;
+	case 0x01: results(base_status(0, 0) << 8, 0x0001, 0x0000, inited ? 0x0600 : 0xFF00); break;
 	case 0x02:
 		if (dphase == D_STARTUP || dt.active) cdstatus(0, S_WAIT);
 		else {
 			results(base_status(0, S_DTREQ) << 8, 0xCC, 0, 0);
-			dt_start_pseudo(A_TOC, 0xCC);
+			dt_start_pseudo(A_TOC, 0xCC, 1);
 			wait_ticks(2); irq(H_DRDY);
 		}
 		break;
@@ -757,6 +757,7 @@ static void cmd_exec(void)
 		results(base_status(0, 0) << 8, 0, (rsw << 8) | (fad >> 16), fad & 0xFFFF);
 		break; }
 	case 0x04:
+		inited = 1;
 		clear_pending_sec(); play_end = 0x800000; play_rep = 0; pos.status = S_BUSY;
 		cdstatus(0, 0);
 		if (CD[0] & 1) { wait_ticks(3); sw_reset_pending = 1; }
@@ -775,7 +776,7 @@ static void cmd_exec(void)
 				irq(H_EHST);
 			} else {
 				if (dt.needfree) for (i = 0; i < dt.n; i++) buf_free(dt.list[i]);
-				if (dt.n) { wait_ticks(2); irq(H_EHST); }
+				if (dt.n || dt.ehst) { wait_ticks(2); irq(H_EHST); }
 			}
 		} else results((base_status(0, 0) << 8) | 0xFF, 0xFFFF, 0, 0);
 		break;
@@ -818,13 +819,13 @@ static void cmd_exec(void)
 		u8 t = CD[0] & 0xFF;
 		if (dt.active) { cdstatus(0, S_WAIT); break; }
 		if (t >= 2) { cdstatus(1, 0); break; }
-		if (!t) { results(base_status(0, S_DTREQ) << 8, 5, 0, 0); dt_start_pseudo(A_SUBQ, 5); }
+		if (!t) { results(base_status(0, S_DTREQ) << 8, 5, 0, 0); dt_start_pseudo(A_SUBQ, 5, 0); }
 		else {
 			u8 i;
 			results(base_status(0, S_DTREQ) << 8, 0x0C, 0, 0);
 			dr_seek(A_SUBQ + 16);
 			for (i = 0; i < 12; i++) dr_wr(0xFFFF);
-			dt_start_pseudo(A_SUBQ + 16, 12);
+			dt_start_pseudo(A_SUBQ + 16, 12, 0);
 		}
 		wait_ticks(2); irq(H_DRDY);
 		break; }
@@ -1093,7 +1094,7 @@ static void cmd_exec(void)
 			u32 a, cnt;
 			if (fid == 0xFFFFFF) { a = A_FINFO + 12; cnt = 6u * fls.valid_cnt; } else { a = A_FINFO + 6 * fi; cnt = 6; }
 			results(base_status(0, S_DTREQ) << 8, cnt, 0, 0);
-			dt_start_pseudo(a, cnt);
+			dt_start_pseudo(a, cnt, 1);
 			wait_ticks(2); irq(H_DRDY);
 		}
 		break; }
@@ -1123,6 +1124,7 @@ static void cmd_exec(void)
 
 static void do_boot(void)
 {
+	inited = 0;
 	cmd_reset_state();
 	pos.status = S_BUSY; pos.is_cdrom = 0; pos.repcount = 0; pos.fad = pos.rel = 0xFFFFFF; pos.ctrl = pos.idx = pos.tno = 0xFF;
 	play_cmd_start = play_cmd_end = 0; play_cmd_rep = 0; play_rep_ctr = 0;

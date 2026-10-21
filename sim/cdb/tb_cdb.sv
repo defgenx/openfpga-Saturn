@@ -111,8 +111,28 @@ generate if (LLE) begin : g
 		.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
 		.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(), .sram_lb_n(), .sram_req(), .sram_gnt(1'b1),
 		.DISC_OK(disc_ok), .DBG(), .STALL());
+	// CDD link monitor (+CDDMON): packet RAM contents at each status send and each received command
+	reg mon = 0; integer mi2;
+	initial if ($test$plusargs("CDDMON")) mon = 1;
+	always @(posedge clk) if (mon && cdd.link.pk_send) begin
+		$write("[%0t] CDD stat ", $time);
+		for (mi2 = 0; mi2 < 12; mi2 = mi2 + 1) $write("%02h", cdd.link.stat_mem[mi2]);
+		$write("\n");
+	end
+	always @(posedge clk) if (mon && cdd.link.pk_cmd_new && !cdd.link.pk_cmd_ack) begin
+		$write("[%0t] CDD cmd  ", $time);
+		for (mi2 = 0; mi2 < 12; mi2 = mi2 + 1) $write("%02h", cdd.link.host_mem[mi2]);
+		$write("\n");
+	end
+	integer ckcnt = 0, irqu_cnt = 0, dreq_cnt = 0; reg irqu_o = 0, dreq_o = 1;
+	always @(posedge clk) begin
+		if (CD_CK) ckcnt <= ckcnt + 1;
+		irqu_o <= ygr.CDIRQU[4]; if (ygr.CDIRQU[4] && !irqu_o) irqu_cnt <= irqu_cnt + 1;
+		dreq_o <= DREQ0_N; if (!DREQ0_N && dreq_o) dreq_cnt <= dreq_cnt + 1;
+	end
+	final $display("LLE stats: cd_ck=%0d cdirqu4=%0d dreq0=%0d mask=%h reg1a=%h", ckcnt, irqu_cnt, dreq_cnt, ygr.CDMASKU, ygr.REG1A);
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
-	wire fd_active = 0;
+	function [15:0] dram_word(input integer a); dram_word = ram[a]; endfunction
 end else begin : g
 	// ------------------------------------------------------------ HLE: cdb_hle + cd_stream
 	wire [18:1] RAM_A; wire [15:0] RAM_D; wire [1:0] RAM_WE; wire RAM_RD, RAM_CS; reg [15:0] RAM_Q = 0; reg RAM_RDY = 1;
@@ -170,7 +190,7 @@ end else begin : g
 		RAM_RDY <= (bcnt <= 1) && !((RAM_RD && RAM_CS && !rd_old) || (|RAM_WE && RAM_CS && !wr_old));
 	end
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
-	wire fd_active = fd_busy;
+	function [15:0] dram_word(input integer a); dram_word = dmem[a]; endfunction
 end endgenerate
 
 // ---------------------------------------------------------------- bridge: files, TOC push, target commands
@@ -340,6 +360,12 @@ initial begin
 				$fwrite(lf, "PUTDATA %0d %04h\n", a1, a2);
 			end
 			else if (op == "mark") begin n = $sscanf(line, " %s %s", op, op); $fwrite(lf, "MARK %0s\n", op); end
+			else if (op == "dram") begin
+				n = $sscanf(line, " %s %h %d", op, a1, a2);
+				$fwrite(lf, "DRAM %05h:", a1);
+				for (w = 0; w < a2; w = w + 1) $fwrite(lf, " %04h", g.dram_word(a1 + w));
+				$fwrite(lf, "\n");
+			end
 			else if (op == "audio") $fwrite(lf, "AUDIO L=%04h R=%04h\n", g.audio_l, g.audio_r);
 			else if (op == "end") begin $fclose(sf); sf = 0; end
 		end
