@@ -1924,7 +1924,7 @@ module VDP2 (
 	VDP2_SDP #(1,32) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, DOTCLK_DIV[1], SPY_Q);
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [31: 0] RP_WD,RCT_WD;
-		bit          CT_RP;
+		bit          CT_RP, CT_USE, CT_SEL;
 		CT_t         CT_D;
 		RotCoord_t   ADD1;
 		RotCoord_t   MULT1,MULT2;
@@ -1946,31 +1946,30 @@ module VDP2 (
 					2'b11: RP_WD = RB1_BUF;
 				endcase
 				
-				if (VA2.RCTA) begin
-					CTD[0] <= CTData(RPxREG[0].KMD, RPxREG[0].KDBS, RP_WD);
-				end
-				if (VA2.RCTB) begin
-					CTD[1] <= CTData(RPxREG[1].KMD, RPxREG[1].KDBS, RP_WD);
-				end
-
-				if (RB2.RxCT[0] || RB2.RxCRCT[0]) begin
-					CT_RP = R0RP_PIPE[2];
-					if (RB2.RxCT[0]) 
-						if (RBG_PIPE[1].RxCT_EN[0]) 
-							case (RB2.RxCTS[0])
-								2'd0: RCT_WD = RA0_BUF;
-								2'd1: RCT_WD = RA1_BUF;
-								2'd2: RCT_WD = RB0_BUF;
-								2'd3: RCT_WD = RB1_BUF;
-							endcase
-						else
-							RCT_WD = '0;
+				//Coefficient table data: one decoder shared by the table fetch words (RCTA/RCTB, never in the same dot)
+				//and the per-dot coefficient reads (RAM or color RAM)
+				CT_USE = RB2.RxCT[0] || RB2.RxCRCT[0];
+				CT_RP = R0RP_PIPE[2];
+				if (RB2.RxCT[0]) 
+					if (RBG_PIPE[1].RxCT_EN[0]) 
+						case (RB2.RxCTS[0])
+							2'd0: RCT_WD = RA0_BUF;
+							2'd1: RCT_WD = RA1_BUF;
+							2'd2: RCT_WD = RB0_BUF;
+							2'd3: RCT_WD = RB1_BUF;
+						endcase
 					else
-						RCT_WD = CT_CRAM_Q;
-						
-					CT_D = CTData(RPxREG[CT_RP].KMD, RPxREG[CT_RP].KDBS, RCT_WD);
+						RCT_WD = '0;
+				else
+					RCT_WD = CT_CRAM_Q;
+				CT_SEL = CT_USE ? CT_RP : VA2.RCTB;
+				CT_D = CTData(RPxREG[CT_SEL].KMD, RPxREG[CT_SEL].KDBS, CT_USE ? RCT_WD : RP_WD);
+				if (CT_USE) begin
 					CTD[0] <= CT_D;
 					if (CT_RP) CTD[1] <= CT_D;
+				end else begin
+					if (VA2.RCTA) CTD[0] <= CT_D;
+					if (VA2.RCTB) CTD[1] <= CT_D;
 				end
 				
 				ACCX <= SUMX;

@@ -12,6 +12,7 @@ if [ "$SRC" = ref ]; then V=$D/ref/Saturn_MiSTer/rtl/Saturn/VDP2; else V=$D/src/
 cp $V/VDP2.sv $V/VDP2_pkg.sv $V/VDP2_mem.sv $D/sizing/vdp2/vdp2_wrap.sv $D/sizing/vdp2/area.qsf $S/
 [ -n "$SEDX" ] && sed -i "" "$SEDX" $S/VDP2.sv
 [ -n "$SEDP" ] && sed -i "" "$SEDP" $S/VDP2_pkg.sv
+[ -n "$PYX" ] && python3 "$PYX" $S
 cat > $S/p.qpf <<Q
 PROJECT_REVISION = "p"
 Q
