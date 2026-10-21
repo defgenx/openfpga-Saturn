@@ -9,3 +9,14 @@ sizing/vdp2/*.log
 sim/vdp2/build/
 sizing/vdp2/snap/
 sizing/vdp2/*.vqm
+# simulation and synthesis outputs
+sim/**/build/
+sim/**/obj_*/
+*.vvp
+*.gch
+*.vqm
+db/
+incremental_db/
+output_files/
+sizing/**/*.log
+sizing/**/out/
