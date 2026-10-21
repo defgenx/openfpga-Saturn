@@ -1,0 +1,23 @@
+# Whole-Saturn map project (Saturn as top, every port a virtual pin). cdb_lle: SH-1 + YGR019 (the CD drive layer is outside Saturn)
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY Saturn
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_sat_lle
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name AUTO_ROM_RECOGNITION ON
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
+source ../area_profile.qsf
+set_global_assignment -name QIP_FILE ../../../src/fpga/saturn/FX68K/fx68k.qip
+set_global_assignment -name QIP_FILE ../../../src/fpga/saturn/SH/SH7604/SH7604.qip
+set_global_assignment -name QIP_FILE ../../../src/fpga/saturn/SH/SH7034/SH7034.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../src/fpga/saturn/SH_mem.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../src/fpga/saturn/SH7604_mem.sv
+set_global_assignment -name QIP_FILE ../../../src/fpga/saturn/Saturn/Saturn.qip
+set_global_assignment -name VHDL_FILE ../../../src/fpga/saturn/CEGen.vhd
+set_global_assignment -name VHDL_FILE ../../../src/fpga/saturn/bram.vhd
+set_global_assignment -name VHDL_FILE ../../../src/fpga/saturn/mlab.vhd
+set_global_assignment -name SEARCH_PATH ../../../src/fpga/saturn/Saturn/CD/hle
+set_instance_assignment -name VIRTUAL_PIN ON -to *

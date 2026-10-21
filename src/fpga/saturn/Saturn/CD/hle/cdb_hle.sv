@@ -10,7 +10,8 @@
 // (GPL-3.0, Saturn_MiSTer by srg320).
 module cdb_hle #(
 	parameter FW_FILE = "cdb_fw.hex",
-	parameter ROM_AW  = 12,             // ROM words (2^12 = 16 KB)
+	parameter ROM_WORDS = 3072,         // 12 KB of firmware
+	parameter ROM_AW  = 12,             // ROM address bits
 	parameter RAM_AW  = 10              // RAM words (2^10 = 4 KB)
 ) (
 	input  wire        CLK,
@@ -95,7 +96,7 @@ serv_rf_top #(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 	.i_dbus_rdt(drd), .i_dbus_ack(dack),
 	.o_ext_rs1(), .o_ext_rs2(), .o_ext_funct3(), .i_ext_rd(32'd0), .i_ext_ready(1'b0), .o_mdu_valid());
 
-(* ramstyle = "M10K" *) reg [31:0] rom [0:(1<<ROM_AW)-1];
+(* ramstyle = "M10K" *) reg [31:0] rom [0:ROM_WORDS-1];
 initial $readmemh(FW_FILE, rom);
 reg [31:0] ird_r = 32'd0, rom_d = 32'd0;
 assign ird = ird_r;

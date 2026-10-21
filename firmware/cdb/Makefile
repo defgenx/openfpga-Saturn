@@ -8,7 +8,7 @@ CFLAGS  := -march=rv32ic -mabi=ilp32 -Os -ffreestanding -fno-builtin -nostdlib -
            -fno-asynchronous-unwind-tables -fomit-frame-pointer -Wall -Wextra -Wno-unused-parameter $(EXTRA)
 LDFLAGS := -nostdlib -Wl,--gc-sections -T link.ld
 OUT     := ../../src/fpga/saturn/Saturn/CD/hle
-ROMW    := 4096
+ROMW    := 3072
 
 all: build/cdb.elf $(OUT)/cdb_fw.hex $(OUT)/cdb_fw.mif
 	$(SIZE) build/cdb.elf

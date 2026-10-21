@@ -316,6 +316,7 @@ static u8 base_status(int rejected, u8 hb)
 
 static void make_report(int rejected, u8 hb)
 {
+	if (rejected) { MM(R_RR0) = 0xFFFF; MM(R_RR0 + 1) = 0xFFFF; MM(R_RR0 + 2) = 0xFFFF; MM(R_RR3) = 0xFFFF; return; }
 	MM(R_RR0 + 0) = (base_status(rejected, hb) << 8) | (pos.is_cdrom << 7) | (pos.repcount & 0x7F);
 	MM(R_RR0 + 1) = (pos.ctrl << 8) | pos.tno;
 	MM(R_RR0 + 2) = (pos.idx << 8) | (pos.fad >> 16);
@@ -945,7 +946,8 @@ static void cmd_exec(void)
 		int b;
 		shdr h;
 		u32 fad, fl = 0, ch = 0, sm = 0, ci = 0;
-		if (f >= NFILT || (offs != 0xFFFF && offs >= part[f].count) || !part[f].count) { cdstatus(1, 0); break; }
+		if (f >= NFILT) { cdstatus(1, 0); break; }
+		if ((offs != 0xFFFF && offs >= part[f].count) || !part[f].count) { cdstatus(0, S_WAIT); break; }
 		b = (offs == 0xFFFF) ? part[f].last : part_get(f, offs);
 		hdr_dram(b, &h);
 		fad = hdr_fad(&h);
@@ -955,7 +957,8 @@ static void cmd_exec(void)
 	case 0x55: {
 		u32 offs = CD[1], sfad = ((u32)(CD[2] & 0xFF) << 16) | CD[3];
 		int b, counter = 0, eff, made = 0;
-		if (f >= NFILT || (offs != 0xFFFF && offs >= part[f].count) || !part[f].count) { cdstatus(1, 0); break; }
+		if (f >= NFILT) { cdstatus(1, 0); break; }
+		if ((offs != 0xFFFF && offs >= part[f].count) || !part[f].count) { cdstatus(0, S_WAIT); break; }
 		fadsrch.spos = 0xFFFF; fadsrch.pnum = f; fadsrch.fad = 0;
 		eff = (offs == 0xFFFF) ? part[f].count - 1 : (int)offs;
 		for (b = part[f].first; b != 0xFF; b = bnext[b], counter++) {
@@ -1118,7 +1121,8 @@ static void cmd_exec(void)
 		}
 		break; }
 	case 0x75: cdstatus(0, 0); fls.abort = 1; break;
-	default: break;
+	case 0x05: case 0x12: cdstatus(0, 0); break;      /* open tray, scan: status only */
+	default: cdstatus(1, 0); break;      /* includes the MPEG commands: no card */
 	}
 }
 

@@ -1,6 +1,6 @@
 /* ROM at 0 (also readable on the data bus), RAM at 0x80000000, MMIO at 0x40000000 */
 MEMORY {
-	ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 16K
+	ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 12K
 	RAM (rw)  : ORIGIN = 0x80000000, LENGTH = 4K
 }
 ENTRY(_start)

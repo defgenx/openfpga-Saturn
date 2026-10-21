@@ -133,6 +133,7 @@ generate if (LLE) begin : g
 	final $display("LLE stats: cd_ck=%0d cdirqu4=%0d dreq0=%0d mask=%h reg1a=%h", ckcnt, irqu_cnt, dreq_cnt, ygr.CDMASKU, ygr.REG1A);
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
 	function [15:0] dram_word(input integer a); dram_word = ram[a]; endfunction
+	function [31:0] dbg_state(input integer d); dbg_state = 0; endfunction
 end else begin : g
 	// ------------------------------------------------------------ HLE: cdb_hle + cd_stream
 	wire [18:1] RAM_A; wire [15:0] RAM_D; wire [1:0] RAM_WE; wire RAM_RD, RAM_CS; reg [15:0] RAM_Q = 0; reg RAM_RDY = 1;
@@ -191,6 +192,9 @@ end else begin : g
 	end
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
 	function [15:0] dram_word(input integer a); dram_word = dmem[a]; endfunction
+	always @(posedge clk) if ($test$plusargs("XFMON") && hle.xf_mode_we) $display("[%0t] XF_MODE <= %0d", $time, hle.cpu_wd[2:0]);
+	wire [31:0] dbgw = {hle.xf_mode, hle.xf_idle, hle.f_empty, hle.seg1_free, hle.dp_wr, hle.abus_wait};
+	function [31:0] dbg_state(input integer d); dbg_state = dbgw; endfunction
 end endgenerate
 
 // ---------------------------------------------------------------- bridge: files, TOC push, target commands
@@ -292,6 +296,7 @@ task cd_cmd(input [15:0] c1, input [15:0] c2, input [15:0] c3, input [15:0] c4, 
 	integer t; reg ok; reg [15:0] hq;
 begin
 	t_cmd0 = cnt;
+	host_wr(8'h08, 16'h0000);          // clear every HIRQ bit before the command, as the BIOS does
 	host_wr(8'h18, c1); host_wr(8'h1C, c2); host_wr(8'h20, c3); host_wr(8'h24, c4);
 	ok = 0;
 	for (t = 0; t < to_us / 20 && !ok; t = t + 1) begin
@@ -351,6 +356,7 @@ initial begin
 			else if (op == "data") begin
 				n = $sscanf(line, " %s %d", op, a1);
 				$fwrite(lf, "DATA %0d", a1);
+				if ($test$plusargs("DBGDATA")) $fwrite(lf, " [st=%h t=%0t]", g.dbg_state(0), $time);
 				for (w = 0; w < a1; w = w + 1) begin host_rd(8'h00); $fwrite(lf, " %04h", rd_data); end
 				$fwrite(lf, "\n");
 			end
