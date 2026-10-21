@@ -371,10 +371,10 @@ module SCU
 	
 	//DMA channel registers read through one set of channel muxes: the idle-state load happens in a
 	//CE_R cycle (lowest pending channel), the register-file read in a CE_F cycle (channel from REG_A).
-	wire [ 1:0] DMA_PEND_CH = DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;
+	wire [ 1:0] DMA_PEND_CH = DMA_PEND[3] ? 2'd3 : DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;	//3: DSP
 	wire [ 1:0] DREG_CH = CE_F ? REG_A[6:5] : DMA_PEND_CH;
-	wire [26:0] DRSEL = DR[DREG_CH][26:0];
-	wire [26:0] DWSEL = DW[DREG_CH][26:0];
+	wire [26:0] DRSEL = DREG_CH == 2'd3 ? {DSP_DR,2'b00} : DR[DREG_CH][26:0];
+	wire [26:0] DWSEL = DREG_CH == 2'd3 ? DSP_DW : DW[DREG_CH][26:0];
 	wire [19:0] DCSEL = DC[DREG_CH][19:0];
 	
 	bit  [ 7:0] DMA_BUF[8];
@@ -500,8 +500,8 @@ module SCU
 		bit         CBUS_DATA_ACK;
 		bit         CBUS_DMA_OUT;
 		bit         CBUS_READ_DONE;
-		bit  [31:0] RD_DATA;
-		bit  [31:0] PUSH_DATA;
+		bit  [31:0] PUSH_HI, PUSH_LO;
+		bit  [ 1:0] PUSH_RDSEL, PUSH_II;
 		bit  [ 1:0] DMA_IDX;
 		bit         DSP_PUSH;
 		bit         PUSH_RD;
@@ -1808,8 +1808,8 @@ module SCU
 					DSTA.DDMV <= 0;//?
 					if (DMA_PEND[3]) begin
 						DMA_PEND[3] <= 0;
-						DMA_RA <= {DSP_DR,2'b00};
-						DMA_WA <= DSP_DW;
+						DMA_RA <= DRSEL;
+						DMA_WA <= DWSEL;
 						DMA_RADD <= DSP_ADD[0];
 						DMA_WADD <= DSP_ADD;
 							
@@ -2201,18 +2201,32 @@ module SCU
 			endcase
 			
 			if (CE_F) begin
-				RD_DATA = ABUS_READ_DONE ? ABUS_BUF : BBUS_READ_DONE ? BBUS_BUF : CCACHE_Q;
 				PUSH_RD = (ABUS_READ_DONE || BBUS_READ_DONE || (CBUS_READ_DONE && !DMA_IND)) && DMA_BUF_SIZE < 3'd4 && !DMA_DSP;
 				PUSH_RDD = (ABUS_READ_DONE || BBUS_READ_DONE || CBUS_READ_DONE) && DMA_DSP;
-				//Bytes 0-3 take RD_DATA when PUSH_RDD (it wins over the DSP push), the others follow WPOS.
+				//Bytes 0-3 take the read word when PUSH_RDD (it wins over the DSP push), the others follow WPOS.
+				//Each half has its own 4:1 source select (A-bus, B-bus, C-bus, DSP).
 				if (PUSH_RD || PUSH_RDD || DSP_PUSH) begin
-					PUSH_DATA = DSP_PUSH ? DSP_DMA_DO : RD_DATA;
-					for (int i=0; i<8; i++) begin
-						if (i < 4 && PUSH_RDD)
-							DMA_BUF[i] <= RD_DATA[8*(3-i) +: 8];
-						else if (DMA_PUSH_V[i])
-							DMA_BUF[i] <= PUSH_DATA[8*(3-DMA_PUSH_K[i]) +: 8];
+					PUSH_RDSEL = ABUS_READ_DONE ? 2'd0 : BBUS_READ_DONE ? 2'd1 : 2'd2;
+					case (DSP_PUSH ? 2'd3 : PUSH_RDSEL)
+						2'd0: PUSH_HI = ABUS_BUF;
+						2'd1: PUSH_HI = BBUS_BUF;
+						2'd2: PUSH_HI = CCACHE_Q;
+						2'd3: PUSH_HI = DSP_DMA_DO;
+					endcase
+					case ((DSP_PUSH && !PUSH_RDD) ? 2'd3 : PUSH_RDSEL)
+						2'd0: PUSH_LO = ABUS_BUF;
+						2'd1: PUSH_LO = BBUS_BUF;
+						2'd2: PUSH_LO = CCACHE_Q;
+						2'd3: PUSH_LO = DSP_DMA_DO;
+					endcase
+					for (int i=0; i<4; i++) begin
+						PUSH_II = i;
+						if (PUSH_RDD || DMA_PUSH_V[i])
+							DMA_BUF[i] <= PUSH_LO[8*(3-(PUSH_RDD ? PUSH_II : DMA_PUSH_K[i])) +: 8];
 					end
+					for (int i=4; i<8; i++)
+						if (DMA_PUSH_V[i])
+							DMA_BUF[i] <= PUSH_HI[8*(3-DMA_PUSH_K[i]) +: 8];
 				end
 				if (PUSH_RD) begin
 					DMA_BUF_WPOS <= DMA_BUF_WPOS + (3'd4 - {1'b0,DMA_RBA});
