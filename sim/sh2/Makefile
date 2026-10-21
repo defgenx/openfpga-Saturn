@@ -4,6 +4,8 @@
 ROOT    := $(abspath ../..)
 SRC     := $(ROOT)/src/fpga/saturn
 GOLD    := $(ROOT)/ref/Saturn_MiSTer/rtl
+# CUTS="POCKET_CUT_A POCKET_CUT_B" builds the DUT with those macros; use BUILD=build_x to keep it apart.
+CUTS    ?=
 BUILD   := build
 DUT_INC ?= tb/sh_pair_inst.inc
 
@@ -16,7 +18,7 @@ GOLD_SRCS := $(addprefix $(GOLD)/,$(SH_FILES))
 
 TESTS := $(basename $(notdir $(wildcard progs/t_*.py)))
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE \
-          -Wno-UNOPTFLAT -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -j 4
+          -Wno-UNOPTFLAT -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -j 4 $(addprefix -D,$(CUTS))
 
 all: test
 
@@ -47,6 +49,13 @@ test: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 	  $(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$t.hex +name=$$t/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) | grep -E "^(PASS|FAIL|MISMATCH)" || fail=1; done; done; \
 	  [ $$fail = 0 ] && echo "ALL PASS" || { echo "SOME FAILED"; exit 1; }
 
+# Like test, but counts: every run is listed and the summary shows how many matched exactly (for cut builds).
+report: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
+	@pass=0; bad=0; for t in $(TESTS); do for cfg in $(CFGS); do set -- $$cfg; \
+	  r=$$($(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$t.hex +name=$$t/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) | grep -E "^(PASS|FAIL|MISMATCH)" | head -1); \
+	  echo "$$r" | cut -c1-110; case "$$r" in PASS*) pass=$$((pass+1));; *) bad=$$((bad+1));; esac; done; done; \
+	  echo "SUMMARY cuts='$(CUTS)': $$pass match, $$bad differ"
+
 one: $(BUILD)/Vtb_top $(BUILD)/prog_$(T).hex
 	$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$(T).hex +name=$(T) +wait=$(or $(WAIT),0) +irq=$(or $(IRQ),0) +fast=$(or $(FAST),0) +cycles=$(CYCLES)
 
@@ -59,4 +68,4 @@ unit-divu: $(BUILD)/Vtb_divu
 
 clean:
 	rm -rf $(BUILD)
-.PHONY: all test one clean unit-divu
+.PHONY: all test report one clean unit-divu

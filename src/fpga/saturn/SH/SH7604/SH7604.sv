@@ -716,7 +716,11 @@ module SH7604
 		.OVI_IRQ(OVI_IRQ)
 	);
 	
+`ifdef POCKET_CUT_SH2_WDT
+	SH7604_WDT #(1) wdt
+`else
 	SH7604_WDT #(WDT_DISABLE) wdt
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
