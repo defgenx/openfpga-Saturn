@@ -2,7 +2,11 @@
 `define SIM
 // synopsys translate_on
 
-module SCSP (
+//MIDI_REGS: keep the MIDI buffer registers (CR2, CR3) readable. The Saturn has no
+//MIDI port, nothing in the SCSP uses them, so they read as 0 by default.
+module SCSP #(
+	parameter bit MIDI_REGS = 1'b0
+) (
 	input              CLK,
 	input              RST_N,
 	input              CE,
@@ -127,6 +131,12 @@ module SCSP (
 	CR19_t       CR19;
 	bit  [ 3: 0] CR4_CA;
 	
+	//LFO and EVOL RAMs have one copy per reading stage; each holds its word in the
+	//block's output register instead of a separate latch.
+	wire [17:0] OP1_LFO_Q;
+	wire [ 7:0] OP4_LFO_Q;
+	wire [11:0] OP2_EVOL_Q,OP4_EVOL_Q;
+	
 	OP2_t        OP2;
 	OP3_t        OP3;
 	OP4_t        OP4;
@@ -232,16 +242,27 @@ module SCSP (
 	end
 
 	//Operation 1: PLFO, PG, KEY ON/OFF
-	bit          SCR0_KB[32];
+	
 	bit  [ 4: 0] SLOT;
 	bit          RST;
+	bit          KYONEX_RUN,KYONEX_PEND;
+	//Key-on bit and its previous value per slot. The first sample period after
+	//RES_N clears them one slot per step (docs/scsp.md).
+	wire        KB_SWEEP = RST & SLOT1_CE;
+	wire        KB_WR = CYCLE1_CE & RES_N & REG_A[11:10] == 2'b00 & {REG_A[4:1],1'b0} == 5'h00 & REG_WE[1];
+	wire        KB_Q,KBO_Q;
+	SCSP_BIT_RAM #(5) KB_RAM (CLK, KB_SWEEP ? SLOT : REG_A[9:5], ~KB_SWEEP & REG_D[11], KB_SWEEP | KB_WR, SLOT, KB_Q);
+	SCSP_BIT_RAM #(5) KBO_RAM(CLK, SLOT, ~KB_SWEEP & KB_Q, KB_SWEEP | (SLOT1_CE & KYONEX_RUN & RES_N), SLOT, KBO_Q);
+
+	wire [ 9: 0] OP1_LFO_DIV = OP1_LFO_Q[17:8];
+	wire [ 7: 0] OP1_LFO_DATA = OP1_LFO_Q[7:0];
 	SCR5_t       OP1_SCR5;
 	SCR6_t       OP1_SCR6;
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [ 9: 0] OP1_LFO_DIV;
-		bit  [ 7: 0] OP1_LFO_DATA;
-		bit          KYONEX_RUN,KYONEX_PEND;
-		bit          SCR0_KB_OLD[32];
+		
+		
+		
+		
 		bit  [ 7: 0] PLFO_WAVE;
 		bit  [22: 0] PHASE;
 		bit  [ 7: 0] NEW_LFO_DATA;
@@ -251,8 +272,8 @@ module SCSP (
 			// synopsys translate_off
 			OP1_SCR5 <= '0;
 			OP1_SCR6 <= '0;
-			SCR0_KB <= '{32{0}};
-			SCR0_KB_OLD <= '{32{0}};
+			
+			
 			KYONEX_PEND <= 0;
 			SLOT <= '0;
 			RST <= 1;
@@ -261,8 +282,8 @@ module SCSP (
 		end else if (!RES_N) begin
 			OP1_SCR5 <= '0;
 			OP1_SCR6 <= '0;
-			SCR0_KB <= '{32{0}};
-			SCR0_KB_OLD <= '{32{0}};
+			
+			
 			KYONEX_PEND <= 0;
 			SLOT <= '0;
 			RST <= 1;
@@ -274,7 +295,6 @@ module SCSP (
 					2'b00: begin
 						OP1_SCR5 <= SCR_SCR5_Q;
 						OP1_SCR6 <= SCR_SCR6_Q;
-						{OP1_LFO_DIV,OP1_LFO_DATA} <= LFO_RAM_Q;
 					end
 				endcase
 			end
@@ -282,21 +302,19 @@ module SCSP (
 			//Key on/off
 			if (CYCLE1_CE) begin
 				if (REG_A[11:10] == 2'b00 && {REG_A[4:1],1'b0} == 5'h00 && REG_WE[1]) begin
-					SCR0_KB[REG_A[9:5]] <= REG_D[11];
 					if (REG_D[12]) KYONEX_PEND <= 1;
 				end
 			end
 			if (SLOT1_CE) begin
 				KEY_RAM_D <= '0;
-				if (KYONEX_RUN) begin
-					if (SCR0_KB[SLOT] && !SCR0_KB_OLD[SLOT]) begin
-						KEY_RAM_D[0] <= 1;
+				if (KYONEX_RUN && !RST) begin
+						if (KB_Q && !KBO_Q) begin
+							KEY_RAM_D[0] <= 1;
+						end
+						if (!KB_Q && KBO_Q) begin
+							KEY_RAM_D[1] <= 1;
+						end
 					end
-					if (!SCR0_KB[SLOT] && SCR0_KB_OLD[SLOT]) begin
-						KEY_RAM_D[1] <= 1;
-					end
-					SCR0_KB_OLD[SLOT] <= SCR0_KB[SLOT];
-				end
 				
 				if (SLOT == 5'd31) begin
 					KYONEX_RUN <= 0;
@@ -354,8 +372,9 @@ module SCSP (
 	SCSP_KEY_RAM KEY_RAM(CLK, OP2.SLOT, KEY_RAM_D, SLOT1_CE, SLOT, KEY_RAM_Q);
 	
 	bit  [17:0] LFO_RAM_D;
-	bit  [17:0] LFO_RAM_Q;
-	SCSP_LFO_RAM LFO_RAM(CLK, OP2.SLOT, LFO_RAM_D, SLOT1_CE, LFO_RA, LFO_RAM_Q);
+	
+	SCSP_RAM_LW #(18,5) LFO_RAM_1(CLK, OP2.SLOT, LFO_RAM_D, SLOT1_CE, SLOT, CYCLE0_CE & RES_N & CYCLE_NUM[2:1] == 2'b00, 1'b0, OP1_LFO_Q);
+	SCSP_RAM_LW #(8,5) LFO_RAM_4(CLK, OP2.SLOT, LFO_RAM_D[7:0], SLOT1_CE, OP4.SLOT, CYCLE0_CE & RES_N & CYCLE_NUM[2:1] == 2'b10, 1'b0, OP4_LFO_Q);
 	
 	//Operation 2: MD read, ADP
 	SCR0_t       OP2_SCR0;
@@ -364,6 +383,8 @@ module SCSP (
 	LSA_t        OP2_LSA;
 	LEA_t        OP2_LEA;
 	SCR4_t       OP2_SCR4;
+	wire [ 1: 0] OP2_EST = OP2_EVOL_Q[11:10];
+	wire [ 9: 0] OP2_EVOL = OP2_EVOL_Q[9:0];
 	
 	bit          STACK_RGEN;
 	bit  [ 5: 0] STACK_RA;
@@ -378,8 +399,8 @@ module SCSP (
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [15: 0] SOUSX;
 		bit  [15: 0] SOUSY;
-		EGState_t    OP2_EST;	//Current envelope state
-		bit  [ 9: 0] OP2_EVOL;	//Current envelope volume
+		
+		
 		bit  [ 8: 0] PHASE_INT;	//New phase integer
 		bit  [13: 0] PHASE_FRAC;	//New phase fractional
 		bit  [13: 0] CUR_PHASE_FRAC;//Current phase fractional
@@ -436,7 +457,7 @@ module SCSP (
 				OP2_SCR4 <= SCR_SCR4_Q;
 				case (CYCLE_NUM[2:1])
 					2'b00: begin
-						{OP2_EST,OP2_EVOL} <= EVOL_RAM_Q;
+						
 						OP2_SCR0 <= SCR_SCR0_Q;
 						OP2_SCR2 <= SCR_SCR2_Q;
 					end
@@ -590,9 +611,11 @@ module SCSP (
 	bit          ADP_PCM8B;
 	bit  [13: 0] OP3_PHASE_FRAC_NEXT;//Phase fractional for next slot
 	
-	wire [21: 0] MOD_PHASE_CURR = OP3.MOD + {16'h0000,OP3.PHASE_FRAC[13:8]};
-	wire [21: 0] MOD_PHASE_NEXT = OP3.MOD + {16'h0000,OP3_PHASE_FRAC_NEXT[13:8]};
-	wire [15: 0] MOD_PHASE_INTEGER = !CYCLE_NUM[2] ? MOD_PHASE_CURR[21:6] : MOD_PHASE_NEXT[21:6];
+	//One adder serves the current slot (cycles 0-3) and the next one (4-7); the
+	//low 6 bits for the current slot are needed on their own.
+	wire [21: 0] MOD_PHASE_SEL = OP3.MOD + {16'h0000,(!CYCLE_NUM[2] ? OP3.PHASE_FRAC[13:8] : OP3_PHASE_FRAC_NEXT[13:8])};
+	wire [ 5: 0] MOD_PHASE_CURR_LO = OP3.MOD[5:0] + OP3.PHASE_FRAC[13:8];
+	wire [15: 0] MOD_PHASE_INTEGER = MOD_PHASE_SEL[21:6];
 	wire [16: 0] SO_MOD = ({1'b0,OP3.SO + (!CYCLE_NUM[2] ? 16'd0 : 16'd1)} + {MOD_PHASE_INTEGER[15],MOD_PHASE_INTEGER}) & OP3.MASK;
 	assign ADP = ADP_SA + (!ADP_PCM8B ? {{2{SO_MOD[16]}},SO_MOD,1'b0} : {{3{SO_MOD[16]}},SO_MOD});
 	
@@ -633,7 +656,7 @@ module SCSP (
 				OP4.KOFF <= OP3.KOFF;
 				OP4.LOOP <= OP3.LOOP;
 				OP4.ND <= OP3.ND;
-				OP4.MODF <= MOD_PHASE_CURR[5:0];
+				OP4.MODF <= MOD_PHASE_CURR_LO;
 				OP4.SSCTL <= OP3_SCR0.SSCTL;
 				OP4.SBCTL <= OP3_SCR0.SBCTL;
 				
@@ -675,21 +698,21 @@ module SCSP (
 	SCR1_t       OP4_SCR1;
 	SCR2_t       OP4_SCR2;
 	SCR5_t       OP4_SCR5;
-	bit  [ 9: 0] OP4_EVOL;	//Current envelope volume
-	EGState_t    OP4_EST;	//Current envelope state
+	wire [ 9: 0] OP4_EVOL = OP4_EVOL_Q[9:0];	//Current envelope volume
+	wire [ 1: 0] OP4_EST = OP4_EVOL_Q[11:10];	//Current envelope state
 	bit  [14: 0] SCNT;		//Sample counter
-	bit  [14: 0] SCNT_PREV;
+	wire [14: 0] SCNT_PREV = SCNT - 15'd1;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			SCNT <= '0;
-			SCNT_PREV <= '1;
+			
 		end else if (!RES_N) begin
 			SCNT <= '0;
-			SCNT_PREV <= '1;
+			
 		end else begin
 			if (SLOT1_CE) begin
 				if (OP4.SLOT == 5'd31) begin
-					SCNT_PREV <= SCNT;
+					
 					SCNT <= SCNT + 1'd1;
 				end
 			end
@@ -729,7 +752,7 @@ module SCSP (
 	end
 	
 	SCR6_t       OP4_SCR6;
-	bit  [ 7: 0] OP4_LFO_DATA;
+	wire [ 7: 0] OP4_LFO_DATA = OP4_LFO_Q;
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [10: 0] ATTACK_VOL_CALC,DECAY_VOL_CALC;
 		bit  [ 9: 0] NEW_EVOL;
@@ -746,7 +769,7 @@ module SCSP (
 			OP4_SCR2 <= '0;
 			OP4_SCR5 <= '0;
 			OP4_SCR6 <= '0;
-			{OP4_EST,OP4_EVOL} <= '0;
+			
 			// synopsys translate_on
 		end else if (!RES_N) begin
 			OP5 <= OP5_RESET;
@@ -754,7 +777,7 @@ module SCSP (
 			OP4_SCR2 <= '0;
 			OP4_SCR5 <= '0;
 			OP4_SCR6 <= '0;
-			{OP4_EST,OP4_EVOL} <= '0;
+			
 		end else begin
 			if (CYCLE0_CE) begin
 				OP4_SCR1 <= SCR_SCR1_Q;
@@ -763,8 +786,8 @@ module SCSP (
 						OP4_SCR2 <= SCR_SCR2_Q;
 						OP4_SCR5 <= SCR_SCR5_Q;
 						OP4_SCR6 <= SCR_SCR6_Q;
-						{OP4_EST,OP4_EVOL} <= EVOL_RAM_Q;
-						OP4_LFO_DATA <= LFO_RAM_Q[7:0];
+						
+						
 					end
 				endcase
 			end
@@ -872,8 +895,9 @@ module SCSP (
 		end
 	end
 	bit [11:0] EVOL_RAM_D;
-	bit [11:0] EVOL_RAM_Q;
-	SCSP_EVOL_RAM EVOL_RAM(CLK, OP5.SLOT, EVOL_RAM_D, SLOT1_CE, EVOL_RA, EVOL_RAM_Q);
+	
+	SCSP_RAM_LW #(12,5) EVOL_RAM_2(CLK, OP5.SLOT, EVOL_RAM_D, SLOT1_CE, OP2.SLOT, CYCLE0_CE & RES_N & CYCLE_NUM[2:1] == 2'b00, 1'b0, OP2_EVOL_Q);
+	SCSP_RAM_LW #(12,5) EVOL_RAM_4(CLK, OP5.SLOT, EVOL_RAM_D, SLOT1_CE, OP4.SLOT, CYCLE0_CE & RES_N & CYCLE_NUM[2:1] == 2'b10, ~RES_N, OP4_EVOL_Q);
 		
 	//Operation 5: Level calculation
 	always @(posedge CLK or negedge RST_N) begin	
@@ -990,10 +1014,16 @@ module SCSP (
 	
 	//DSP
 	MPRO_t       MPRO0_Q,MPRO1_Q;
+	//The DSP reads dedicated copies of its RAMs, so the values latched at CYCLE0_CE
+	//are read straight from them at the CYCLE1_CE edge that uses them.
+	assign MPRO1_Q = MPRO0_Q;
+	bit          MPRO_OK;
+	wire         MPRO_SET_Q;
 	EFREG_t      EFREG_Q;
-	assign MPRO0_Q = MPRO_RAM_Q & {64{DSP_MPRO_SET[DSP_MPRO_STEP]}};
+	assign MPRO0_Q = MPRO_DRAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
 	
-	bit          DSP_MPRO_SET[128];
+	
+
 	
 	//DSP input
 	bit  [ 3: 0] MIXSA_RA,MIXSB_RA;
@@ -1003,8 +1033,15 @@ module SCSP (
 	bit  [31: 0] PCM_MIXS_Q,DSP_MIXS_Q;
 	
 	bit  [15: 0] DSP_EXTS[2];
-	bit  [15: 0] MIXS_NULL[2];
+	
 	bit          MIXS_GEN;
+	//Per-entry 'not written yet' flags for the two MIXS generations. The idle
+	//generation is set one entry per slot during slots 0-15, before it is used.
+	wire         MIXS_NULL_Q;
+	wire         MIXS_NULL_SET = SLOT1_CE & ~OP7.SLOT[4] & RES_N;
+	wire         MIXS_NULL_CLR = CYCLE1_CE & CYCLE_NUM[2:1] == 2'b00 & RES_N;
+	SCSP_BIT_RAM #(5) MIXS_NULL_RAM (CLK, MIXS_NULL_SET ? {~MIXS_GEN,OP7.SLOT[3:0]} : {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_SET, MIXS_NULL_SET | MIXS_NULL_CLR, {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_Q);
+
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [19: 0] SD;
 		MIXS_t       MIXS_OLD;
@@ -1025,8 +1062,7 @@ module SCSP (
 
 			if (CYCLE1_CE) begin
 				if (CYCLE_NUM[2:1] == 2'b00) begin
-					MIXS_OLD <= MIXS_NULL[MIXS_GEN][OP7_SCR7.ISEL] ? '0 : {PCM_MIXS_Q[15:0],PCM_MIXS_Q[19:16]};
-					MIXS_NULL[MIXS_GEN][OP7_SCR7.ISEL] <= 0;
+					MIXS_OLD <= MIXS_NULL_Q ? '0 : {PCM_MIXS_Q[15:0],PCM_MIXS_Q[19:16]};
 				end
 				if (CYCLE_NUM[2:1] == 2'b01) begin
 					MIXS_D <= MIXS_OLD + SD;
@@ -1034,7 +1070,7 @@ module SCSP (
 			end
 			
 			if (OP7.SLOT == 5'd31 && SLOT1_CE) begin
-				MIXS_NULL[~MIXS_GEN] <= '1;
+				
 				MIXS_GEN <= ~MIXS_GEN;
 				DSP_EXTS[0] <= !SND_EN[2] ? 16'h0000 : ESL;
 				DSP_EXTS[1] <= !SND_EN[2] ? 16'h0000 : ESR;
@@ -1054,6 +1090,18 @@ module SCSP (
 	bit  [ 6: 0] DSP_MPRO_STEP;
 `endif
 	assign DSP_MPRO_STEP = {OP7.SLOT,CYCLE_NUM[2:1]};
+	//MPRO entry valid bit: set by writing its last word, cleared by the sweep
+	//after RES_N. MPRO_OK masks every entry until that sweep has finished.
+	
+	
+	wire         MPRO_SET_WR = CYCLE1_CE & RES_N & |REG_WE & REG_A[11:10] == 2'b10 & REG_A[2:1] == 2'b11;
+	SCSP_BIT_RAM #(7) MPRO_SET_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], ~OP7.RST, OP7.RST | MPRO_SET_WR, DSP_MPRO_STEP, MPRO_SET_Q);
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) MPRO_OK <= 0;
+		else if (!RES_N) MPRO_OK <= 0;
+		else if (SLOT1_CE && OP7.RST && !OP6.RST) MPRO_OK <= 1;
+	end
+
 	
 	bit  [ 6: 0] DSP_TEMP_RA;
 	bit  [ 6: 0] DSP_TEMP_WA;
@@ -1079,14 +1127,23 @@ module SCSP (
 	bit          DSP_READ_NOFL1,DSP_READ_NOFL2;
 	
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
+	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
+	
+	bit [12:0] COEF_Q;
+	wire [16:1] MADRS_Q = MADRS_DRAM_Q;
+	//INPUTS keeps its previous value when no source is selected, so the input
+	//select and the MEMS/EXTS data stay latched as before.
+	bit [5:0]  MPRO1_IRA;
+	bit [23:0] MEMS_Q;
+	bit [15:0] EXTS_Q;
 	
 	always @(posedge CLK or negedge RST_N) begin
-		TEMP_t       TEMP_Q;
-		MEMS_t       MEMS_Q;
-		COEF_t       COEF_Q;
-		MADRS_t      MADRS_Q;
+		
+		
+		
+		
 		MIXS_t       MIXS_Q;
-		bit  [15: 0] EXTS_Q;
+		
 		bit  [23: 0] INPUTS;
 		bit  [23: 0] X;
 		bit  [12: 0] Y;
@@ -1110,16 +1167,17 @@ module SCSP (
 			DSP_OUT_REG <= '0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
-			MPRO1_Q <= '0;
+			
 			MDEC_CT <= '0;
+			MPRO1_IRA <= '0;
 			DSP_READ <= 0;
 			DSP_WRITE <= 0;
 		end else begin
-			if (!MPRO1_Q.IRA[5])
+			if (!MPRO1_IRA[5])
 				INPUTS = MEMS_Q;
-			else if (!MPRO1_Q.IRA[4])
+			else if (!MPRO1_IRA[4])
 				INPUTS = {MIXS_Q,4'h0};
-			else if (!MPRO1_Q.IRA[3:1])
+			else if (!MPRO1_IRA[3:1])
 				INPUTS = {EXTS_Q,8'h00};
 			
 			case (MPRO1_Q.XSEL)
@@ -1146,13 +1204,17 @@ module SCSP (
 			ADDR = MADRS_Q + (!MPRO1_Q.TABLE ? MDEC_CT : 16'h0000) + (MPRO1_Q.ADREB ? {{4{ADRS_REG[11]}},ADRS_REG} : 16'h0000) + (MPRO1_Q.NXADR ? 16'h0001 : 16'h0000);
 			
 			if (CYCLE0_CE) begin
-				MPRO1_Q <= MPRO0_Q;
-				MEMS_Q <= {MEMS_RAM_Q[15:0],MEMS_RAM_Q[23:16]};
+				
+				
 				MIXS_Q <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16]};
-				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
-				TEMP_Q <= {TEMP_RAM_Q[15:0],TEMP_RAM_Q[23:16]};
+				MPRO1_IRA <= MPRO0_Q.IRA;
+				MEMS_Q <= {MEMS_RAM_Q[15:0],MEMS_RAM_Q[23:16]};
 				COEF_Q <= COEF_RAM_Q[15:3];
-				MADRS_Q <= MADRS_RAM_Q;
+				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
+				
+				
+				
+				
 			end
 			if (CYCLE1_CE) begin
 				if (OP7.SLOT == 5'd31 && SLOT1_CE) 
@@ -1774,7 +1836,7 @@ module SCSP (
 			CR17 <= '0;
 			CR18 <= '0;
 			CR19 <= '0;
-			DSP_MPRO_SET <= '{128{0}};
+			
 			REG_Q <= '0;
 		end else begin
 			if (!RES_N) begin
@@ -1798,7 +1860,7 @@ module SCSP (
 				CR17 <= '0;
 				CR18 <= '0;
 				CR19 <= '0;
-				DSP_MPRO_SET <= '{128{0}};
+				
 			end else begin
 				REG_RD_DELAY <= REG_RD;
 				if (REG_WE && CYCLE1_CE) begin
@@ -1813,12 +1875,12 @@ module SCSP (
 								if (REG_WE[1]) CR1[15:8] <= REG_D[15:8] & CR1_MASK[15:8];
 							end
 							6'h04: begin
-								if (REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
-								if (REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR2[ 7:0] <= REG_D[ 7:0] & CR2_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR2[15:8] <= REG_D[15:8] & CR2_MASK[15:8];
 							end
 							6'h06: begin
-								if (REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
-								if (REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
+								if (MIDI_REGS && REG_WE[0]) CR3[ 7:0] <= REG_D[ 7:0] & CR3_MASK[ 7:0];
+								if (MIDI_REGS && REG_WE[1]) CR3[15:8] <= REG_D[15:8] & CR3_MASK[15:8];
 							end
 							6'h08: begin
 								//if (MEM_WE[0]) CR4[ 7:0] <= MEM_D[ 7:0] & CR4_WMASK[ 7:0];
@@ -1892,8 +1954,6 @@ module SCSP (
 	//				end else if (REG_A[11:9] == 3'b011) begin
 	//					if (MEM_WE[0]) STACK[REG_A[7:1]][ 7:0] <= MEM_D[ 7:0];
 	//					if (MEM_WE[1]) STACK[REG_A[7:1]][15:8] <= MEM_D[15:8];
-					end else if (MPRO_SEL) begin
-						if (REG_A[2:1] == 2'b11) DSP_MPRO_SET[REG_A[9:3]] <= 1;
 					end
 				end else if (REG_RD_DELAY) begin
 					if (REG_A[11:10] == 2'b00) begin
@@ -2070,7 +2130,9 @@ module SCSP (
 	//MADRS,100780-1007BF
 	wire       MADRS_SEL = REG_A[11:6] == 6'b011110;
 	bit [15:0] MADRS_RAM_Q;
-	SCSP_RAM_8X2 #(5) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, (REG_RD ? REG_A[5:1] : DSP_MADRS_RA), MADRS_RAM_Q);
+	bit [15:0] MADRS_DRAM_Q;
+	SCSP_RAM_8X2 #(5) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, REG_A[5:1], MADRS_RAM_Q);
+	SCSP_RAM_8X2 #(5) MADRS_DRAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, DSP_MADRS_RA, MADRS_DRAM_Q);
 	
 	//MPRO,100800-100BFF
 	wire       MPRO_SEL = REG_A[11:10] == 2'b10;
@@ -2079,14 +2141,19 @@ module SCSP (
 	wire       MPRO2_SEL = MPRO_SEL & (REG_A[2:1] == 3'h4>>1);
 	wire       MPRO3_SEL = MPRO_SEL & (REG_A[2:1] == 3'h6>>1);
 	bit [63:0] MPRO_RAM_Q;
-	SCSP_MPRO_RAM MPRO_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}}), (REG_RD ? REG_A[9:3] : DSP_MPRO_STEP), MPRO_RAM_Q);
+	bit [63:0] MPRO_DRAM_Q;
+	SCSP_MPRO_RAM MPRO_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}}), REG_A[9:3], MPRO_RAM_Q);
+	//Written at CYCLE1_CE only, so an entry changes between DSP steps, not under the step in flight.
+	SCSP_MPRO_RAM MPRO_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}} & {8{CYCLE1_CE}}), DSP_MPRO_STEP, MPRO_DRAM_Q);
 	
 	//TEMP,100C00-100DFF
 	wire       TEMP_SEL = REG_A[11:9] == 3'b110;
 	wire       TEMP0_SEL = TEMP_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       TEMP1_SEL = TEMP_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] TEMP_RAM_Q;
-	SCSP_RAM_8X4 #(7) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, (REG_RD ? REG_A[8:2] : DSP_TEMP_RA), TEMP_RAM_Q);
+	bit [31:0] TEMP_DRAM_Q;
+	SCSP_RAM_8X4 #(7) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, REG_A[8:2], TEMP_RAM_Q);
+	SCSP_RAM_8X4 #(7) TEMP_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, DSP_TEMP_RA, TEMP_DRAM_Q);
 	
 	//MEMS,100E00-100E7F
 	wire       MEMS_SEL = REG_A[11:7] == 5'b11100;
@@ -2261,6 +2328,119 @@ module SCSP_KEY_RAM
 //	
 //`endif
 	
+endmodule
+
+//RAM whose read data is held in the block's output register: the register is
+//enabled by EN, so Q changes only at the clocks that used to latch it. The read
+//address is registered one clock earlier, as in the unlatched RAMs. CLR clears
+//the held word asynchronously.
+module SCSP_RAM_LW
+#(
+	parameter W = 16,
+	parameter addr_width = 5
+)
+(
+	input                    CLK,
+	input  [addr_width-1:0]  WRADDR,
+	input           [W-1:0]  DATA,
+	input                    WREN,
+	input  [addr_width-1:0]  RDADDR,
+	input                    EN,
+	input                    CLR,
+	output          [W-1:0]  Q
+);
+	altsyncram	altsyncram_component (
+				.address_a (WRADDR),
+				.byteena_a (1'b1),
+				.clock0 (CLK),
+				.data_a (DATA),
+				.wren_a (WREN),
+				.address_b (RDADDR),
+				.q_b (Q),
+				.aclr0 (1'b0),
+				.aclr1 (CLR),
+				.addressstall_a (1'b0),
+				.addressstall_b (1'b0),
+				.byteena_b (1'b1),
+				.clock1 (CLK),
+				.clocken0 (1'b1),
+				.clocken1 (1'b1),
+				.clocken2 (1'b1),
+				.clocken3 (EN),
+				.data_b ({W{1'b1}}),
+				.eccstatus (),
+				.q_a (),
+				.rden_a (1'b1),
+				.rden_b (1'b1),
+				.wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "NORMAL",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**addr_width,
+		altsyncram_component.numwords_b = 2**addr_width,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "CLEAR1",
+		altsyncram_component.outdata_reg_b = "CLOCK1",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.read_during_write_mode_mixed_ports = "DONT_CARE",
+		altsyncram_component.widthad_a = addr_width,
+		altsyncram_component.widthad_b = addr_width,
+		altsyncram_component.width_a = W,
+		altsyncram_component.width_b = W,
+		altsyncram_component.width_byteena_a = 1;
+endmodule
+
+module SCSP_BIT_RAM #(
+	parameter addr_width = 5
+)
+(
+	input                  CLK,
+	input [addr_width-1:0] WRADDR,
+	input                  DATA,
+	input                  WREN,
+	input [addr_width-1:0] RDADDR,
+	output                 Q
+);
+	altdpram	altdpram_component (
+				.data (DATA),
+				.inclock (CLK),
+				.rdaddress (RDADDR),
+				.wraddress (WRADDR),
+				.wren (WREN),
+				.byteena (1'b1),
+				.q (Q),
+				.aclr (1'b0),
+				.inclocken (1'b1),
+				.rdaddressstall (1'b0),
+				.rden (1'b1),
+				.wraddressstall (1'b0));
+	defparam
+		altdpram_component.byte_size = 8,
+		altdpram_component.indata_aclr = "OFF",
+		altdpram_component.indata_reg = "INCLOCK",
+		altdpram_component.intended_device_family = "Cyclone V",
+		altdpram_component.lpm_type = "altdpram",
+		altdpram_component.outdata_aclr = "OFF",
+		altdpram_component.outdata_reg = "UNREGISTERED",
+		altdpram_component.ram_block_type = "MLAB",
+		altdpram_component.rdaddress_aclr = "OFF",
+		altdpram_component.rdaddress_reg = "UNREGISTERED",
+		altdpram_component.rdcontrol_aclr = "OFF",
+		altdpram_component.rdcontrol_reg = "UNREGISTERED",
+		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
+		altdpram_component.width = 1,
+		altdpram_component.widthad = addr_width,
+		altdpram_component.width_byteena = 1,
+		altdpram_component.wraddress_aclr = "OFF",
+		altdpram_component.wraddress_reg = "INCLOCK",
+		altdpram_component.wrcontrol_aclr = "OFF",
+		altdpram_component.wrcontrol_reg = "INCLOCK";
 endmodule
 
 module SCSP_PHASE_RAM (

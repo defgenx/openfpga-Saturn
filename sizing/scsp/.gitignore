@@ -1,0 +1,6 @@
+out_*/
+db/
+incremental_db/
+*.rpt
+snap/*/
+scsp_snap_*
