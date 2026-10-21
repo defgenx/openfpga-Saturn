@@ -14,3 +14,8 @@ output_files/
 sizing/**/*.log
 sizing/**/out/
 sizing/vdp1/ys/ref/
+sizing/vdp1/steps/
+sizing/vdp1/s[0-9]*/
+sizing/vdp1/base_*/
+sizing/vdp1/no_*/
+sizing/vdp1/ramtest/
