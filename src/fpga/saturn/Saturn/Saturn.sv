@@ -108,6 +108,39 @@ module Saturn
 	output             CD_RAM_CS,
 	input      [15: 0] CD_RAM_Q,
 	input              CD_RAM_RDY,
+`ifdef POCKET_CUT_CDB_LLE
+	// HLE CD block: 176.4 kHz word clock and the cd_stream client ports (docs/cdb-hle.md)
+	input              CDD_CE,
+	input              DISC_OK,
+	input              DISC_NEW,
+	input      [ 6: 0] TOC_NTRACKS,
+	input      [ 7: 0] TOC_NTBCD,
+	input      [23: 0] TOC_END,
+	output             LK_GO,
+	output             LK_BYIDX,
+	output     [23: 0] LK_X,
+	output     [ 6: 0] LK_IDX,
+	output             LK_HOLD,
+	input              LK_BUSY,
+	input              LK_ENG_IDLE,
+	input      [ 6: 0] LK_TRACK,
+	input      [ 7: 0] LK_TBCD,
+	input      [23: 0] LK_START,
+	input      [ 7: 0] LK_IDX1,
+	input              LK_DATA,
+	input              LK_S2048,
+	output             PF_FLUSH,
+	output     [23: 0] PF_FAD,
+	output             PF_EN,
+	input              PF_READY,
+	output             SD_GO,
+	output     [ 1: 0] SD_KIND,
+	output             SD_SYNTH,
+	output             SD_SPD2,
+	output     [23: 0] SD_HDR,
+	input              FD_BUSY,
+	input      [17: 0] CD_DATA18,
+`endif
 `endif
 	
 `ifndef STV_BUILD
@@ -1101,6 +1134,27 @@ module Saturn
 	
 	//CD
 `ifndef STV_BUILD
+`ifdef POCKET_CUT_CDB_LLE
+	cdb_hle cdb (
+		.CLK(CLK), .RST_N(RST_N), .RES_N(CDRES_N),
+		.CE_R(SYS_CE_R), .CE_F(SYS_CE_F), .CD_CE(CD_CE), .CDD_CE(CDD_CE),
+		.AA(AA[14:1]), .ADI(ADO), .ADO(CD_DO), .ACS2_N(ACS2_N), .ARD_N(ARD_N), .AWRL_N(AWRL_N), .AWRU_N(AWRU_N),
+		.AWAIT_N(YGR019_AWAIT_N), .ARQT_N(ARQT_N),
+		.RAM_A(CD_RAM_A), .RAM_D(CD_RAM_D), .RAM_WE(CD_RAM_WE), .RAM_RD(CD_RAM_RD), .RAM_CS(CD_RAM_CS),
+		.RAM_Q(CD_RAM_Q), .RAM_RDY(CD_RAM_RDY),
+		.CD_SL(CD_SL), .CD_SR(CD_SR), .FAST(FAST),
+		.disc_ok(DISC_OK), .disc_new(DISC_NEW), .ntracks(TOC_NTRACKS), .ntbcd(TOC_NTBCD), .toc_end(TOC_END),
+		.lk_go(LK_GO), .lk_byidx(LK_BYIDX), .lk_x(LK_X), .lk_idx(LK_IDX), .lk_hold(LK_HOLD), .lk_busy(LK_BUSY),
+		.eng_idle(LK_ENG_IDLE), .lk_track(LK_TRACK), .lk_tbcd(LK_TBCD), .lk_start(LK_START), .lk_idx1(LK_IDX1),
+		.lk_data(LK_DATA), .lk_s2048(LK_S2048),
+		.pf_flush(PF_FLUSH), .pf_fad(PF_FAD), .pf_en(PF_EN), .pf_ready(PF_READY),
+		.sd_go(SD_GO), .sd_kind(SD_KIND), .sd_synth(SD_SYNTH), .sd_spd2(SD_SPD2), .sd_hdr(SD_HDR), .fd_busy(FD_BUSY),
+		.cd_data(CD_DATA18), .cd_ck(CD_CK));
+	bit YGR019_AWAIT_N;
+	assign CD_HDATA = 1'b0;
+	assign CD_COMCLK = 1'b1;
+	assign CD_DEMP = 1'b0;
+`else
 	bit [21:0] SA;
 	bit [15:0] SDI;
 	bit [15:0] SDO;
@@ -1234,6 +1288,7 @@ module Saturn
 	assign CD_RAM_CS = ~SCS1_N;
 	assign CD_RAM_WE = ~{SWRH_N,SWRL_N};
 	assign CD_RAM_RD = ~SRD_N;
+`endif
 `else
 	assign ARQT_N = 1;
 	assign {CD_SL,CD_SR} = '0;
