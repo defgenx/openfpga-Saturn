@@ -1404,20 +1404,12 @@ module VDP1 (
 						FBD_ST <= FBDS_SKIP;
 					end else if (SPR_DATA_READY || CMD.CMDCTRL.COMM >= 4'h4) begin
 						if ((CMD_ST == CMDS_NSPR_DRAW || CMD_ST == CMDS_SSPR_DRAW || CMD_ST == CMDS_LINE_DRAW || CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END)) begin
-							if ((CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END)) begin
-								DRAW_X <= LOC_COORD.X + AA_X;
-								DRAW_Y <= LOC_COORD.Y + AA_Y;
-							end else begin
-								if (LINE_AA_STEP && LINE_S) begin
-									DRAW_X <= LOC_COORD.X + LINE_VERTA.X + {{11{LINE_DIRX}},1'b1};
-								end else begin
-									DRAW_X <= LOC_COORD.X + LINE_VERTA.X;
-								end
-								if (LINE_AA_STEP && !LINE_S) begin
-									DRAW_Y <= LOC_COORD.Y + LINE_VERTA.Y + {{11{LINE_DIRY}},1'b1};
-								end else begin
-									DRAW_Y <= LOC_COORD.Y + LINE_VERTA.Y;
-								end
+							// AA pixels use the pre-computed neighbour; otherwise the line position, advanced by one on the minor axis after an AA step
+							DRAW_X <= LOC_COORD.X + ((CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END) ? AA_X : LINE_VERTA.X) +
+							          ((!(CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END) && LINE_AA_STEP && LINE_S) ? {{11{LINE_DIRX}},1'b1} : 12'd0);
+							DRAW_Y <= LOC_COORD.Y + ((CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END) ? AA_Y : LINE_VERTA.Y) +
+							          ((!(CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END) && LINE_AA_STEP && !LINE_S) ? {{11{LINE_DIRY}},1'b1} : 12'd0);
+							if (!(CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END)) begin
 								if (!(TEXT_X_READ_STEP && EC_FIND && IS_PAT_EC)) begin
 									DRAW_PAT <= PAT;
 									DRAW_GHCOLOR <= RGBFtoI(LINE_GHCOLOR);
