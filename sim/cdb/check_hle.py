@@ -18,6 +18,12 @@ def words(b):
 def user(lba):
     return words(sector(lba)[16:2064])
 
+COOKED = len(sys.argv) > 2
+if COOKED:
+    cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
+    def cuser(lba):
+        return words(cook[lba * 2048:(lba + 1) * 2048])
+
 lines = [l.rstrip("\n") for l in open(sys.argv[1])]
 fails = 0
 checks = 0
@@ -54,6 +60,17 @@ def find_cmd(sec, prefix, nth=0):
 def datas(sec):
     return [[int(x, 16) for x in l.split()[2:]] for l in cmds(sec) if l.startswith("DATA ")]
 
+if COOKED:
+    d = datas("cooked")
+    ok("cooked sectors in partition", find_cmd("cooked", "5100")[3] == 3)
+    ok("cooked 2048 B data", d[0] == cuser(10))
+    r = d[1]
+    ok("synth sync", r[0:6] == [0x00FF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFF00], r[0:6])
+    ok("synth header", r[6:8] == [0x0002, 0x1001], r[6:8])
+    ok("cooked body", r[8:1032] == cuser(10))
+    ok("ECC area zero", all(x == 0 for x in r[1034:1176]))
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
 # --- TOC
 d = datas("session_toc")[0]
 ok("toc length", len(d) == 204)

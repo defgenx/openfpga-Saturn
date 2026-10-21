@@ -25,6 +25,8 @@ test: hle gen
 	./build/hle/Vtb_cdb +SCRIPT=script_cmds.txt +LOG=build/hle_script_cmds.log > build/hle_script_cmds.out
 	python3 check_hle.py build/hle_script_cmds.log
 	./build/hle/Vtb_cdb +SCRIPT=script_nodisc.txt +LOG=build/hle_script_nodisc.log > build/hle_script_nodisc.out
+	./build/hle/Vtb_cdb +SCRIPT=script_cooked.txt +LOG=build/hle_cooked.log +DISC=B > build/hle_cooked.out
+	python3 check_hle.py build/hle_cooked.log cooked
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test
@@ -34,6 +36,8 @@ compare: lle test
 gen: build/C_f0.hex
 build/C_f0.hex: gen_iso.py
 	python3 gen_iso.py
+	cd ../cd && python3 gen_disc.py
+	cp ../cd/build/B_f0.hex ../cd/build/B_f1.hex ../cd/build/B_toc.hex build/
 
 build/hle/Vtb_cdb: $(ALL) $(FWHEX)
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=0 -DFWPATH='"$(FWHEX)"' -Mdir build/hle $(ALL)
