@@ -1,2 +1,13 @@
-%Error: Can't read coverage file: coverage.dat
+Coverage Summary:
+  line      : 95.2% (  551/  579)
+  toggle    : 87.2% (14084/16144)
+  branch    : 99.2% (  988/  996)
+  expr      : 0.0% (    0/    0)
+  fsm_state : 0.0% (    0/    0)
+  fsm_arc   : 0.0% (    0/    0)
+Annotation Summary:
+  lines with all attached points covered : 92.00%  (3541/3826)
+See lines with '%00' in annot
+%Error: Can't read annotation file: ../../src/fpga/saturn/Saturn/VDP1/VDP1.sv
         ... See the manual at https://verilator.org/verilator_doc.html?v=5.052 for more assistance.
+%Error: Exiting due to 1 error(s)

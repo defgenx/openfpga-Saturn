@@ -306,6 +306,13 @@ struct Gen {
 				w[10] = crd(x0 + (r.chance(70) ? sp : -sp / 2) + r.range(-12, 12)); w[11] = crd(y0 + span());
 				w[12] = crd(x0 + r.range(-12, 12)); w[13] = crd(y0 + span());
 				if (kind == 6) { w[10] = crd(x0 + r.range(-sp, sp)); w[11] = crd(y0 + r.range(-sp, sp)); }
+				if (kind != 6 && r.chance(25)) {   // one edge entirely outside the window: exercises the horizontal clip cases
+					int far = r.chance(50);
+					int inside = r.range(0, 120), outside = far ? r.range(330, 480) : -r.range(20, 120);
+					int sidea = r.chance(50);
+					int ax = sidea ? outside : inside, bx = sidea ? inside : outside;
+					w[6] = crd(ax); w[12] = crd(ax + r.range(-3, 3)); w[8] = crd(bx); w[10] = crd(bx + r.range(-3, 3));
+				}
 				break;
 			}
 			case 8: case 0xB:  // user clip
@@ -570,6 +577,7 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 	u64 limit = c.ptm == 2 ? frame0 * 5 : (c.big ? 3000000 : 1500000);
 	u64 ran = 0;
 	bool done = false;
+	bool term = (c.id % 7 == 3);
 	u64 bg_next = 200;
 	while (ran < limit) {
 		if (!cycle(true, true)) return false;
@@ -590,6 +598,8 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 				T->m.q.push_back(o);
 			}
 		}
+		if (term && ran == 3000) T->m.q.push_back(wr16(REG + 0x0C, 2, 0));
+		if (term && ran > 20000) { done = true; break; }
 		if (!a.irq_n.get() && T->m.idle() && ran > 400) { done = true; break; }
 	}
 #ifdef DBGST
@@ -702,6 +712,9 @@ int main(int argc, char** argv) {
 	printf("\n  FB word writes=%llu VRAM writes=%llu reads=%llu bus ops=%llu\n", (unsigned long long)cov.fbw, (unsigned long long)cov.vrw,
 	       (unsigned long long)cov.vrr, (unsigned long long)cov.busops);
 	printf(ok ? "RESULT: PASS\n" : "RESULT: FAIL\n");
+#if VM_COVERAGE
+	Verilated::threadContextp()->coveragep()->write("coverage.dat");
+#endif
 	delete t;
 	return ok ? 0 : 1;
 }
