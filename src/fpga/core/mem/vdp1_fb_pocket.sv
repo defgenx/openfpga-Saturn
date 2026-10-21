@@ -100,7 +100,10 @@ reg [34:0] wf [0:255];             // {index, byte enables, data}, one M10K
 reg  [8:0] wptr = 9'd0;            // clk_sys
 reg  [8:0] rptr = 9'd0;            // clk_ram
 wire       wf_full  = (wptr - rptr) >= 9'd255;
-wire       wf_empty = (wptr == rptr);
+reg  [8:0] wptr_d = 9'd0;          // wptr seen one clk_ram late: wf_q has the entry by then
+wire       wf_empty = (wptr_d == rptr);
+reg [34:0] wf_q;                   // synchronous read, so wf maps to one M10K
+always @(posedge clk_ram) begin wptr_d <= wptr; wf_q <= wf[rptr[7:0]]; end
 assign sr_hint = !wf_empty;
 
 reg        rd_pend = 1'b0;         // set on clk_sys, cleared on clk_ram: toggle handshake
@@ -137,8 +140,8 @@ always @(posedge clk_ram) begin
 	3'd0: begin
 		if (!wf_empty && sr_ready) begin
 			sr_req <= 1'b1; sr_we <= 1'b1;
-			sr_a <= FB_BASE[16:0] + wf[rptr[7:0]][34:18];
-			sr_be <= wf[rptr[7:0]][17:16]; sr_d <= wf[rptr[7:0]][15:0];
+			sr_a <= FB_BASE[16:0] + wf_q[34:18];
+			sr_be <= wf_q[17:16]; sr_d <= wf_q[15:0];
 			rptr <= rptr + 1'd1; es <= 3'd4;           // posted: the next write may follow right away
 		end else if (rd_busy && sr_ready) begin
 			if (rd_idx == 17'h1FFFF) begin FB0_Q <= 16'h0000; rd_ack <= rd_t; end

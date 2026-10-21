@@ -3,17 +3,17 @@
 #
 # Clocks: clk_74a / clk_74b / bridge_spiclk come from apf_constraints.sdc. The system PLL (ic|saturn|pll) is
 # referenced from clk_74a; its four outputs are one synchronous family:
-#   general[0] clk_sys    57.27 MHz at compile time (53.4 .. 57.3 MHz at run time, PLL reconfiguration)
-#   general[1] clk_ram    2 x clk_sys, phase aligned
-#   general[2] clk_vid    clk_sys / 4 (APF pixel clock)
-#   general[3] clk_vid_90 clk_vid + 90 degrees
+#   counter[0] clk_sys    57.27 MHz at compile time (53.4 .. 57.3 MHz at run time, PLL reconfiguration)
+#   counter[1] clk_ram    2 x clk_sys, phase aligned
+#   counter[2] clk_vid    clk_sys / 4 (APF pixel clock)
+#   counter[3] clk_vid_90 clk_vid + 90 degrees
 # Analysis runs at the fastest mode (NTSC, 352 wide); every other mode is slower.
 #
 
-set clk_sys   {ic|saturn|pll|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk}
-set clk_ram   {ic|saturn|pll|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk}
-set clk_vid   {ic|saturn|pll|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk}
-set clk_vid90 {ic|saturn|pll|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk}
+set clk_sys   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk}
+set clk_ram   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk}
+set clk_vid   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk}
+set clk_vid90 {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk}
 
 # clk_74a (bridge, settings, loader, PLL management) and the PLL family are asynchronous to each other. The crossings
 # are 2-flop synchronisers (pads, settings, reset, RTC toggle), the gray-pointer FIFO in load_pocket and held
