@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: [MACROS="ZOOM BITMAP"] [SRC=ref] [SEDX=expr] sizing/vdp2/snap_run.sh <tag> [balanced|area]
+# usage: [REV=<commit>] [MACROS="ZOOM BITMAP"] [SRC=ref] [SEDX=expr] sizing/vdp2/snap_run.sh <tag> [balanced|area]
 # Copies the current VDP2 sources into sizing/vdp2/snap/<tag>/ and runs quartus_map on the copy
 # (so later edits do not disturb the run). Result: snap/<tag>/<tag>.log and output_files/*.map.rpt.
 set -e
@@ -9,7 +9,12 @@ S=$D/sizing/vdp2/snap/$TAG
 rm -rf $S; mkdir -p $S
 # SRC=ref uses the unmodified golden sources; SEDX='<sed expr>' (optional) is applied to the copied VDP2.sv (ablation runs)
 if [ "$SRC" = ref ]; then V=$D/ref/Saturn_MiSTer/rtl/Saturn/VDP2; else V=$D/src/fpga/saturn/Saturn/VDP2; fi
+if [ -n "$REV" ]; then   # sources of an earlier commit
+	for f in VDP2.sv VDP2_pkg.sv VDP2_mem.sv; do git -C $D show $REV:src/fpga/saturn/Saturn/VDP2/$f > $S/$f; done
+	cp $D/sizing/vdp2/vdp2_wrap.sv $D/sizing/vdp2/area.qsf $S/
+else
 cp $V/VDP2.sv $V/VDP2_pkg.sv $V/VDP2_mem.sv $D/sizing/vdp2/vdp2_wrap.sv $D/sizing/vdp2/area.qsf $S/
+fi
 [ -n "$SEDX" ] && sed -i "" "$SEDX" $S/VDP2.sv
 [ -n "$SEDP" ] && sed -i "" "$SEDP" $S/VDP2_pkg.sv
 [ -n "$PYX" ] && python3 "$PYX" $S
