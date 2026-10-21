@@ -1,9 +1,15 @@
 #!/bin/bash
-# usage: mk.sh <name> <ref|src> <area|bal>  -> creates dir <name> with a quartus project for VDP1 standalone
+# usage: mk.sh <name> <ref|src|dir> <area|bal>
+#   creates sizing/vdp1/<name>/ holding a standalone quartus_map project for module VDP1.
+#   ref = golden RTL, src = current src/fpga RTL, or a directory (relative to the worktree root) with VDP1.sv + VDP1_pkg.sv.
 set -e
 n=$1; src=$2; prof=$3
 mkdir -p $n; cd $n
-if [ $src = ref ]; then d=../../../ref/Saturn_MiSTer/rtl/Saturn/VDP1; else d=../../../src/fpga/saturn/Saturn/VDP1; fi
+case $src in
+  ref) d=../../../ref/Saturn_MiSTer/rtl/Saturn/VDP1;;
+  src) d=../../../src/fpga/saturn/Saturn/VDP1;;
+  *)   d=../../../$src;;
+esac
 echo 'QUARTUS_VERSION = "21.1"' > $n.qpf; echo "PROJECT_REVISION = \"$n\"" >> $n.qpf
 cat > $n.qsf <<Q
 set_global_assignment -name FAMILY "Cyclone V"
@@ -21,5 +27,5 @@ set_global_assignment -name SYSTEMVERILOG_FILE $d/VDP1_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE $d/VDP1.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 Q
-[ $prof = area ] && echo 'source ../area_profile.qsf' >> $n.qsf
+[ $prof = area ] && echo "source ../area_profile.qsf" >> $n.qsf
 exit 0
