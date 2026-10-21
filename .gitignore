@@ -2,3 +2,8 @@ release/
 *.zip
 output/
 __pycache__/
+sizing/vdp2/db/
+sizing/vdp2/incremental_db/
+sizing/vdp2/output_files_*/
+sizing/vdp2/*.log
+sim/vdp2/build/
