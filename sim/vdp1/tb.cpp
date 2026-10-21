@@ -580,7 +580,7 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 	bool term = (c.id % 7 == 3);
 	u64 bg_next = 200;
 	while (ran < limit) {
-		if (!cycle(true, true)) return false;
+		if (!cycle(true, !(c.id % 11 == 5 && ran >= 6000 && ran < 6004))) return false;   // soft reset pulse
 		ran++;
 		if (c.bg && T->m.q.empty() && T->m.st == Master::IDLE && ran > bg_next) {
 			bg_next = ran + 50 + sr.u(500);
