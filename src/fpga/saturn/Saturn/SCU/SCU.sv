@@ -229,7 +229,7 @@ module SCU
 		ABUS_DMA_WRITE_WAIT,
 		ABUS_DMA_END
 	} ABUSState_t;
-	ABUSState_t ABUS_ST;
+	(* syn_encoding = "one-hot" *) ABUSState_t ABUS_ST;
 	
 	bit         CPU_ABUS_REQ;
 	
@@ -271,7 +271,7 @@ module SCU
 		BBUS_DMA_PAGE,
 		BBUS_DMA_END
 	} BBUSState_t;
-	BBUSState_t BBUS_ST;
+	(* syn_encoding = "one-hot" *) BBUSState_t BBUS_ST;
 	
 	bit         CPU_BBUS_REQ;
 	wire        BBUS_RDY = ((!BCSS_N && !BRDYS_N) || (!BCS1_N && !BRDY1_N) || (!BCS2_N && !BRDY2_N));
@@ -292,7 +292,7 @@ module SCU
 		CBUS_RELEASE,
 		CBUS_END
 	} CBUSState_t;
-	CBUSState_t CBUS_ST;
+	(* syn_encoding = "one-hot" *) CBUSState_t CBUS_ST;
 	
 	bit  [26: 0] CBUS_A;
 	bit  [31: 0] CBUS_D;
@@ -356,7 +356,7 @@ module SCU
 		DMA_DSP_START,
 		DMA_STOP
 	} DMAState_t;
-	DMAState_t DMA_ST;
+	(* syn_encoding = "one-hot" *) DMAState_t DMA_ST;
 	
 	bit  [26:0] DMA_IA;
 	bit  [26:0] DMA_RA;
