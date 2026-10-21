@@ -19,3 +19,5 @@ sizing/vdp1/s[0-9]*/
 sizing/vdp1/base_*/
 sizing/vdp1/no_*/
 sizing/vdp1/ramtest/
+sim/vdp1/cov/
+sim/vdp1/cov_build.log
