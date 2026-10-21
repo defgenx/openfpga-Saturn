@@ -13,6 +13,8 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___eval_static__TOP__tb_top__D
     __PVT__cache__DOT__AddrToWay__Vstatic__res = 0;
     CData/*0:0*/ __PVT__cache__DOT__unnamedblk1__DOT__DIRTY;
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = 0;
+    CData/*3:0*/ __PVT__cache__DOT__unnamedblk2__DOT__DIRTY;
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0;
     SData/*11:0*/ __PVT__core__DOT__unnamedblk3__DOT__ir_imm;
     __PVT__core__DOT__unnamedblk3__DOT__ir_imm = 0;
     CData/*7:0*/ __PVT__core__DOT__unnamedblk3__DOT__vec;
@@ -74,7 +76,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___eval_static__TOP__tb_top__D
     vlSelfRef.__PVT__cache__DOT__WayToAddr__Vstatic__res = 0U;
     __PVT__cache__DOT__AddrToWay__Vstatic__res = 0U;
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = 0U;
-    vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0U;
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0U;
     vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__CACHE_ADDR_AREA_DATA = 0U;
     vlSelfRef.__PVT__cache__DOT__unnamedblk3__DOT__ARRAY_POS = 0U;
     vlSelfRef.__PVT__core__DOT__unnamedblk1__DOT__SAVE_IR = 0U;
@@ -206,6 +208,8 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
     __PVT__cache__DOT__CRAM_RDWAY = 0;
     CData/*0:0*/ __PVT__cache__DOT__unnamedblk1__DOT__DIRTY;
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = 0;
+    CData/*3:0*/ __PVT__cache__DOT__unnamedblk2__DOT__DIRTY;
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0;
     CData/*0:0*/ __PVT__core__DOT__ALU_T;
     __PVT__core__DOT__ALU_T = 0;
     CData/*0:0*/ __PVT__core__DOT__BUS_STALL;
@@ -2630,25 +2634,38 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
     } else {
         vlSelfRef.__PVT__core__DOT__SR_NEW = vlSelfRef.__PVT__core__DOT__ALU_RES;
     }
-    vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY 
-        = ((0x0cU & (IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY)) 
-           | ((2U & ((IData)((vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[1U] 
-                              >> (0x0000003fU & (vlSelfRef.__PVT__CBUS_A 
-                                                 >> 4U)))) 
-                     << 1U)) | (1U & (IData)((vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[0U] 
-                                              >> (0x0000003fU 
-                                                  & (vlSelfRef.__PVT__CBUS_A 
-                                                     >> 4U)))))));
-    vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY 
-        = ((3U & (IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY)) 
-           | (((2U & ((IData)((vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[3U] 
-                               >> (0x0000003fU & (vlSelfRef.__PVT__CBUS_A 
-                                                  >> 4U)))) 
-                      << 1U)) | (1U & (IData)((vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[2U] 
-                                               >> (0x0000003fU 
-                                                   & (vlSelfRef.__PVT__CBUS_A 
-                                                      >> 4U)))))) 
-              << 2U));
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = ((
+                                                   ((2U 
+                                                     & ((IData)(
+                                                                (vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[3U] 
+                                                                 >> 
+                                                                 (0x0000003fU 
+                                                                  & (vlSelfRef.__PVT__CBUS_A 
+                                                                     >> 4U)))) 
+                                                        << 1U)) 
+                                                    | (1U 
+                                                       & (IData)(
+                                                                 (vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[2U] 
+                                                                  >> 
+                                                                  (0x0000003fU 
+                                                                   & (vlSelfRef.__PVT__CBUS_A 
+                                                                      >> 4U)))))) 
+                                                   << 2U) 
+                                                  | ((2U 
+                                                      & ((IData)(
+                                                                 (vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[1U] 
+                                                                  >> 
+                                                                  (0x0000003fU 
+                                                                   & (vlSelfRef.__PVT__CBUS_A 
+                                                                      >> 4U)))) 
+                                                         << 1U)) 
+                                                     | (1U 
+                                                        & (IData)(
+                                                                  (vlSelfRef.__PVT__cache__DOT__TAG_DIRTY[0U] 
+                                                                   >> 
+                                                                   (0x0000003fU 
+                                                                    & (vlSelfRef.__PVT__CBUS_A 
+                                                                       >> 4U)))))));
     vlSelfRef.__PVT__cache__DOT__WAY_TAG = ((0x0cU 
                                              & (IData)(vlSelfRef.__PVT__cache__DOT__WAY_TAG)) 
                                             | (((vlSelfRef.__PVT__cache__DOT__CTAG_Q[1U] 
@@ -2679,14 +2696,14 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                              & (IData)(vlSelfRef.__PVT__cache__DOT__WAY_HIT)) 
                                             | (((IData)(vlSelfRef.__PVT__cache__DOT__WAY_TAG) 
                                                 & vlSelfRef.__PVT__cache__DOT__CVALID_Q[0U]) 
-                                               & (~ (IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY))));
+                                               & (~ (IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY))));
     vlSelfRef.__PVT__cache__DOT__WAY_HIT = ((0x0dU 
                                              & (IData)(vlSelfRef.__PVT__cache__DOT__WAY_HIT)) 
                                             | (((((IData)(vlSelfRef.__PVT__cache__DOT__WAY_TAG) 
                                                   >> 1U) 
                                                  & vlSelfRef.__PVT__cache__DOT__CVALID_Q[1U]) 
                                                 & (~ 
-                                                   ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                   ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                     >> 1U))) 
                                                << 1U));
     vlSelfRef.__PVT__cache__DOT__WAY_HIT = ((0x0bU 
@@ -2695,7 +2712,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                   >> 2U) 
                                                  & vlSelfRef.__PVT__cache__DOT__CVALID_Q[2U]) 
                                                 & (~ 
-                                                   ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                   ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                     >> 2U))) 
                                                << 2U));
     vlSelfRef.__PVT__cache__DOT__WAY_HIT = ((7U & (IData)(vlSelfRef.__PVT__cache__DOT__WAY_HIT)) 
@@ -2703,7 +2720,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                                   >> 3U) 
                                                  & vlSelfRef.__PVT__cache__DOT__CVALID_Q[3U]) 
                                                 & (~ 
-                                                   ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                   ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                     >> 3U))) 
                                                << 3U));
     if ((3U == (vlSelfRef.__PVT__CBUS_A >> 0x0000001dU))) {
@@ -2715,7 +2732,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                             << 4U) 
                                            | ((vlSelfRef.__PVT__cache__DOT__CVALID_Q[3U] 
                                                & (~ 
-                                                  ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                  ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                    >> 3U))) 
                                               << 2U)))
                     : ((vlSelfRef.__PVT__cache__DOT__CTAG_Q[2U] 
@@ -2723,7 +2740,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                             << 4U) 
                                            | ((vlSelfRef.__PVT__cache__DOT__CVALID_Q[2U] 
                                                & (~ 
-                                                  ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                  ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                    >> 2U))) 
                                               << 2U))))
                 : ((0x00000040U & (IData)(vlSelfRef.__PVT__cache__DOT__CCR))
@@ -2732,14 +2749,14 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___stl_sequent__TOP__tb_top__D
                                             << 4U) 
                                            | ((vlSelfRef.__PVT__cache__DOT__CVALID_Q[1U] 
                                                & (~ 
-                                                  ((IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
+                                                  ((IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY) 
                                                    >> 1U))) 
                                               << 2U)))
                     : ((vlSelfRef.__PVT__cache__DOT__CTAG_Q[0U] 
                         << 0x0000000aU) | (((IData)(vlSelfRef.__PVT__cache__DOT__LRU_DATA) 
                                             << 4U) 
                                            | ((vlSelfRef.__PVT__cache__DOT__CVALID_Q[0U] 
-                                               & (~ (IData)(vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY))) 
+                                               & (~ (IData)(__PVT__cache__DOT__unnamedblk2__DOT__DIRTY))) 
                                               << 2U)))));
         vlSelfRef.__PVT__cache__DOT__CACHE_DATA = (
                                                    (0x0fU 
@@ -6767,6 +6784,8 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___eval_static__TOP__tb_top__D
     __PVT__cache__DOT__AddrToWay__Vstatic__res = 0;
     CData/*0:0*/ __PVT__cache__DOT__unnamedblk1__DOT__DIRTY;
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = 0;
+    CData/*3:0*/ __PVT__cache__DOT__unnamedblk2__DOT__DIRTY;
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0;
     SData/*11:0*/ __PVT__core__DOT__unnamedblk3__DOT__ir_imm;
     __PVT__core__DOT__unnamedblk3__DOT__ir_imm = 0;
     CData/*7:0*/ __PVT__core__DOT__unnamedblk3__DOT__vec;
@@ -6828,7 +6847,7 @@ VL_ATTR_COLD void Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1___eval_static__TOP__tb_top__D
     vlSelfRef.__PVT__cache__DOT__WayToAddr__Vstatic__res = 0U;
     __PVT__cache__DOT__AddrToWay__Vstatic__res = 0U;
     __PVT__cache__DOT__unnamedblk1__DOT__DIRTY = 0U;
-    vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0U;
+    __PVT__cache__DOT__unnamedblk2__DOT__DIRTY = 0U;
     vlSelfRef.__PVT__cache__DOT__unnamedblk2__DOT__CACHE_ADDR_AREA_DATA = 0U;
     vlSelfRef.__PVT__cache__DOT__unnamedblk3__DOT__ARRAY_POS = 0U;
     vlSelfRef.__PVT__core__DOT__unnamedblk1__DOT__SAVE_IR = 0U;

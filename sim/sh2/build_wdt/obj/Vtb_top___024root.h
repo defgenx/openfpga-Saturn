@@ -102,6 +102,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top___024root final {
         IData/*31:0*/ tb_top__DOT__peek;
         IData/*31:0*/ tb_top__DOT__unnamedblk1__DOT__i;
         IData/*31:0*/ tb_top__DOT__unnamedblk2__DOT__i;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__nd;
+        IData/*31:0*/ tb_top__DOT__unnamedblk3__DOT__unnamedblk4__DOT__i;
         IData/*31:0*/ tb_top__DOT__ref0__DOT____VlemCall_9__merge;
         IData/*31:0*/ tb_top__DOT__ref0__DOT____VlemCall_8__merge;
         IData/*31:0*/ tb_top__DOT__ref0__DOT____VlemCall_7__merge;

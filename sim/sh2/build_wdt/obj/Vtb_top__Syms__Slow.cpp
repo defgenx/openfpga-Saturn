@@ -12,7 +12,7 @@ Vtb_top__Syms::Vtb_top__Syms(VerilatedContext* contextp, const char* namep, Vtb_
     , TOP{this, namep}
 {
     // Check resources
-    Verilated::stackCheck(6240);
+    Verilated::stackCheck(6246);
     // Setup sub module instances
     TOP__REF_SH2_PKG.ctor(this, "REF_SH2_PKG");
     TOP__SH2_PKG.ctor(this, "SH2_PKG");

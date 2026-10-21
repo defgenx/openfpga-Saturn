@@ -151,7 +151,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
     };
     struct {
         CData/*0:0*/ __PVT__cache__DOT__IBUS_READARRAY;
-        CData/*3:0*/ __PVT__cache__DOT__unnamedblk2__DOT__DIRTY;
         CData/*1:0*/ __PVT__cache__DOT__unnamedblk3__DOT__ARRAY_POS;
         CData/*0:0*/ cache__DOT____Vcellinpt__lru_a__wren__strong;
         CData/*0:0*/ __PVT__core__DOT__IF_STALL;
@@ -214,9 +213,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         CData/*0:0*/ __PVT__divu__DOT__REG_SEL;
         CData/*0:0*/ __PVT__divu__DOT__DIV64_START;
         CData/*5:0*/ __PVT__divu__DOT__STEP;
+        CData/*0:0*/ __PVT__divu__DOT__DIV64;
     };
     struct {
-        CData/*0:0*/ __PVT__divu__DOT__DIV64;
         CData/*0:0*/ __PVT__divu__DOT__R_SIGN;
         CData/*0:0*/ __PVT__divu__DOT__D_SIGN;
         CData/*0:0*/ __PVT__divu__DOT__T64;
@@ -280,9 +279,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__IS_SDRAM_LATCH;
         CData/*3:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__NEXT_BA;
         CData/*1:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__AREA_SZ;
+        CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__LL;
     };
     struct {
-        CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__LL;
         CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__CBUS_IS_SDRAM;
         CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__DBUS_IS_SDRAM;
         CData/*0:0*/ __PVT__bsc__DOT__unnamedblk1__DOT__BUS_IS_SDRAM;
@@ -346,9 +345,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         CData/*5:0*/ __Vfunc_cache__DOT__LRUSelect__32__lru;
         CData/*1:0*/ __Vfunc_dmac__DOT__BAFromAddr__54__addr;
         CData/*1:0*/ __Vfunc_dmac__DOT__BAFromAddr__54__sz;
+        CData/*1:0*/ __Vfunc_dmac__DOT__BAFromAddr__55__addr;
     };
     struct {
-        CData/*1:0*/ __Vfunc_dmac__DOT__BAFromAddr__55__addr;
         CData/*1:0*/ __Vfunc_dmac__DOT__BAFromAddr__55__sz;
         CData/*4:0*/ __VdfgRegularize_hebeb780c_0_4;
         CData/*4:0*/ __VdfgRegularize_hebeb780c_0_5;
@@ -412,9 +411,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         SData/*15:0*/ __PVT__core__DOT__unnamedblk1__DOT__SAVE_IR;
         SData/*15:0*/ __PVT__core__DOT__unnamedblk1__DOT__NEW_IR;
         SData/*15:0*/ __PVT__frt__DOT__FRC;
+        SData/*15:0*/ __PVT__frt__DOT__OCRA;
     };
     struct {
-        SData/*15:0*/ __PVT__frt__DOT__OCRA;
         SData/*15:0*/ __PVT__frt__DOT__OCRB;
         SData/*15:0*/ __PVT__frt__DOT__ICR;
         SData/*15:0*/ __PVT__frt__DOT__unnamedblk3__DOT__OCR;
@@ -478,9 +477,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         IData/*31:0*/ __PVT__core__DOT__ALU_B;
         IData/*31:0*/ __PVT__core__DOT__MA_ADDR;
         IData/*31:0*/ __PVT__core__DOT__MA_WD;
+        IData/*31:0*/ __PVT__core__DOT__MA_RDATA;
     };
     struct {
-        IData/*31:0*/ __PVT__core__DOT__MA_RDATA;
         IData/*31:0*/ __PVT__core__DOT__MA_WDATA;
         IData/*31:0*/ __PVT__core__DOT__regfile__DOT__WB_D_LATCH;
         IData/*31:0*/ __PVT__core__DOT__regfile__DOT__GR0;
@@ -544,9 +543,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top_SH7604__Uz1_Sz1_Bz2_BBz1 final {
         VlUnpacked<IData/*18:0*/, 64> __PVT__cache__DOT__tag0__DOT__altdpram_component__DOT__mem;
         VlUnpacked<CData/*7:0*/, 1024> __PVT__cache__DOT__ram3__DOT__altsyncram_component__DOT__mem;
         VlUnpacked<CData/*7:0*/, 1024> __PVT__cache__DOT__ram2__DOT__altsyncram_component__DOT__mem;
+        VlUnpacked<CData/*7:0*/, 1024> __PVT__cache__DOT__ram1__DOT__altsyncram_component__DOT__mem;
     };
     struct {
-        VlUnpacked<CData/*7:0*/, 1024> __PVT__cache__DOT__ram1__DOT__altsyncram_component__DOT__mem;
         VlUnpacked<CData/*7:0*/, 1024> __PVT__cache__DOT__ram0__DOT__altsyncram_component__DOT__mem;
         VlUnpacked<CData/*5:0*/, 64> __PVT__cache__DOT__lru_b__DOT__altdpram_component__DOT__mem;
         VlUnpacked<CData/*5:0*/, 64> __PVT__cache__DOT__lru_a__DOT__altdpram_component__DOT__mem;

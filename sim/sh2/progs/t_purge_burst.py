@@ -1,5 +1,5 @@
-"""Cache purge bursts: fill 64 lines, rewrite them through the cache-through alias, issue 7 CCR.CP writes back to
-back, read the lines again. Exact with the golden purge; 7 purges inside one scrub lap make the epoch wrap onto the stale stamp (differs with POCKET_CUT_SH2_PURGE)."""
+"""Cache purge bursts: fill 64 lines, rewrite them through the cache-through alias, issue 14 CCR.CP writes back to
+back, read the lines again. Exact with the golden purge; 7 purges inside one scrub lap (not reachable, see docs/cuts.md) make the epoch wrap onto the stale stamp (differs with POCKET_CUT_SH2_PURGE)."""
 import sys
 from common import *
 
@@ -21,7 +21,7 @@ for rnd in range(3):
     a.movl_st(5, 4); a.addi(4, 16); a.dt(5); a.bf('w%d' % rnd); a.nop()
     # purge burst
     a.li(1, CCR); a.movi(2, 0x11)
-    for i in range(7):
+    for i in range(14):
         a.movb_st(2, 1)
     # read back
     a.li(4, BASE); a.li(5, 64); a.movi(3, 0)

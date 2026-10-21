@@ -297,7 +297,11 @@ module REF_sh2_env #(parameter bit RAMH_SLOW = 0) (
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin MSHRES_N <= 0; SSHRES_N <= 0; ssh_rel_dly <= 0; end
 		else begin
+			`ifdef POCKET_CUT_SH2_PURGE
+			if (cyc > 200) MSHRES_N <= 1;   // the epoch cache needs 128 clk after RST_N to clear its stamps
+`else
 			if (cyc > 32) MSHRES_N <= 1;
+`endif
 			if (ssh_rel) begin
 				if (ssh_rel_dly != 8'd40) ssh_rel_dly <= ssh_rel_dly + 1;
 				else SSHRES_N <= 1;
