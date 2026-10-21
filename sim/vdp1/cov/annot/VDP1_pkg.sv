@@ -215,12 +215,12 @@
         	parameter bit [31:0] RC_NULL = {16'h0000,16'h0000};
         	parameter bit [31:0] RC_ONE = {16'h0001,16'h0000};
         	
- 000064 	function RotCoord_t ScrnStartToRC(ScrnStart_t P);
- 000064 		return { {P.INT[12],P.INT[9:0]}, P.FRAC[9:1]};
+ 000088 	function RotCoord_t ScrnStartToRC(ScrnStart_t P);
+ 000088 		return { {P.INT[12],P.INT[9:0]}, P.FRAC[9:1]};
         	endfunction
         	
- 4594198 	function RotCoord_t ScrnIncToRC(ScrnInc_t P);
- 4594198 		return { {{8{P.INT[2]}},P.INT}, P.FRAC[9:1] };
+ 7137404 	function RotCoord_t ScrnIncToRC(ScrnInc_t P);
+ 7137404 		return { {{8{P.INT[2]}},P.INT}, P.FRAC[9:1] };
         	endfunction
         	
 %000000 	function bit [18:1] SprAddr(input bit [16:3] OFFSY, input CMDSRCA_t CMDSRCA, input bit [2:0] CM);
@@ -237,29 +237,29 @@
 %000000 		return ADDR;
         	endfunction
         	
- 9952887 	function bit [15:0] GetSprData(input bit [15:0] DATA, input bit [2:0] CM, input bit [1:0] OFFSX);
- 9952887 		bit [15:0] D;
+ 15410083 	function bit [15:0] GetSprData(input bit [15:0] DATA, input bit [2:0] CM, input bit [1:0] OFFSX);
+ 15410083 		bit [15:0] D;
         		
- 9952887 		case (CM)
+ 15410083 		case (CM)
         			3'b000,
- 6911808 			3'b001:
- 6911808 				case (OFFSX)
- 5434137 					2'b00: D = {12'h000,DATA[15:12]};
- 693435 					2'b01: D = {12'h000,DATA[11: 8]};
- 132517 					2'b10: D = {12'h000,DATA[ 7: 4]};
- 651719 					2'b11: D = {12'h000,DATA[ 3: 0]};
+ 12016209 			3'b001:
+ 12016209 				case (OFFSX)
+ 10046776 					2'b00: D = {12'h000,DATA[15:12]};
+ 1041275 					2'b01: D = {12'h000,DATA[11: 8]};
+ 233135 					2'b10: D = {12'h000,DATA[ 7: 4]};
+ 695023 					2'b11: D = {12'h000,DATA[ 3: 0]};
         				endcase
         			3'b010,
         			3'b011,
- 2125354 			3'b100:
- 2125354 				case (OFFSX[0])
- 931148 					1'b0: D = {8'h00,DATA[15: 8]};
- 1194206 					1'b1: D = {8'h00,DATA[ 7: 0]};
+ 2058988 			3'b100:
+ 2058988 				case (OFFSX[0])
+ 1045798 					1'b0: D = {8'h00,DATA[15: 8]};
+ 1013190 					1'b1: D = {8'h00,DATA[ 7: 0]};
         				endcase
- 915725 			default: D = DATA;
+ 1334886 			default: D = DATA;
         		endcase
         
- 9952887 		return D;
+ 15410083 		return D;
         	endfunction
         	
         	typedef struct packed
@@ -270,21 +270,21 @@
         	} Pattern_t;
         	parameter Pattern_t PATTERN_NULL = {16'h0000,1'b0,1'b0};
         	
- 9876594 	function Pattern_t GetPattern(input bit [15:0] DATA, input bit [2:0] CM);
- 9876594 		bit [15:0] C;
- 9876594 		bit        TP;
- 9876594 		bit        EC;
+ 15286285 	function Pattern_t GetPattern(input bit [15:0] DATA, input bit [2:0] CM);
+ 15286285 		bit [15:0] C;
+ 15286285 		bit        TP;
+ 15286285 		bit        EC;
         		
- 9876594 		case (CM)
+ 15286285 		case (CM)
         			3'b000,
- 6889931 			3'b001: begin C = {12'h000,DATA[3:0]}; TP = ~|DATA[3:0]; EC = &DATA[3:0]; end
+ 11978910 			3'b001: begin C = {12'h000,DATA[3:0]}; TP = ~|DATA[3:0]; EC = &DATA[3:0]; end
         			3'b010,
         			3'b011,
- 2096010 			3'b100: begin C = {8'h00,DATA[7:0]}; TP = ~|DATA[7:0]; EC = &DATA[7:0]; end
- 890653 			default: begin C = DATA; TP = ~DATA[15]; EC = (DATA == 16'h7FFF); end
+ 2017434 			3'b100: begin C = {8'h00,DATA[7:0]}; TP = ~|DATA[7:0]; EC = &DATA[7:0]; end
+ 1289941 			default: begin C = DATA; TP = ~DATA[15]; EC = (DATA == 16'h7FFF); end
         		endcase
         
- 9876594 		return {C,TP,EC};
+ 15286285 		return {C,TP,EC};
         	endfunction
         	
         	typedef struct packed
@@ -308,84 +308,84 @@
         		ColorFP_t  R;
         	} RGBFP_t;
         	
- 064583 	function RGBFP_t RGBItoF(input RGB_t CI);
- 064583 		RGBFP_t CF;
+ 107765 	function RGBFP_t RGBItoF(input RGB_t CI);
+ 107765 		RGBFP_t CF;
         		
- 064583 		CF.R = {1'b0,CI.R,12'b000000000000};
- 064583 		CF.G = {1'b0,CI.G,12'b000000000000};
- 064583 		CF.B = {1'b0,CI.B,12'b000000000000};
- 064583 		return CF;
+ 107765 		CF.R = {1'b0,CI.R,12'b000000000000};
+ 107765 		CF.G = {1'b0,CI.G,12'b000000000000};
+ 107765 		CF.B = {1'b0,CI.B,12'b000000000000};
+ 107765 		return CF;
         	endfunction
         	
- 17623554 	function RGB_t RGBFtoI(input RGBFP_t CF);
- 17623554 		RGB_t CI;
+ 26735450 	function RGB_t RGBFtoI(input RGBFP_t CF);
+ 26735450 		RGB_t CI;
         		
- 17623554 		CI.R = CF.R.INT;
- 17623554 		CI.G = CF.G.INT;
- 17623554 		CI.B = CF.B.INT;
- 17623554 		return CI;
+ 26735450 		CI.R = CF.R.INT;
+ 26735450 		CI.G = CF.G.INT;
+ 26735450 		CI.B = CF.B.INT;
+ 26735450 		return CI;
         	endfunction
         	
- 1528812 	function RGB_t ColorHalf(input RGB_t CA);
- 1528812 		RGB_t CH;
+ 1751633 	function RGB_t ColorHalf(input RGB_t CA);
+ 1751633 		RGB_t CH;
         		
- 1528812 		CH.R = {1'b0,CA.R[4:1]};
- 1528812 		CH.G = {1'b0,CA.G[4:1]};
- 1528812 		CH.B = {1'b0,CA.B[4:1]};
- 1528812 		return CH;
+ 1751633 		CH.R = {1'b0,CA.R[4:1]};
+ 1751633 		CH.G = {1'b0,CA.G[4:1]};
+ 1751633 		CH.B = {1'b0,CA.B[4:1]};
+ 1751633 		return CH;
         	endfunction
         	
- 4708563 	function RGB_t ColorAdd(input RGB_t CA, input RGB_t CB);
- 4708563 		RGB_t CR;
+ 9980963 	function RGB_t ColorAdd(input RGB_t CA, input RGB_t CB);
+ 9980963 		RGB_t CR;
         		
- 4708563 		CR.R = CA.R + CB.R;
- 4708563 		CR.G = CA.G + CB.G;
- 4708563 		CR.B = CA.B + CB.B;
- 4708563 		return CR;
+ 9980963 		CR.R = CA.R + CB.R;
+ 9980963 		CR.G = CA.G + CB.G;
+ 9980963 		CR.B = CA.B + CB.B;
+ 9980963 		return CR;
         	endfunction
         	
- 4708563 	function RGB_t GouraudAdd(input RGB_t CO, input RGB_t CG);
- 4708563 		bit [6:0] SUMR,SUMG,SUMB;
- 4708563 		RGB_t CR;
+ 9980963 	function RGB_t GouraudAdd(input RGB_t CO, input RGB_t CG);
+ 9980963 		bit [6:0] SUMR,SUMG,SUMB;
+ 9980963 		RGB_t CR;
         		
- 4708563 		SUMR = {2'b00,CO.R} + {2'b00,CG.R} - 7'h10;
- 4708563 		SUMG = {2'b00,CO.G} + {2'b00,CG.G} - 7'h10;
- 4708563 		SUMB = {2'b00,CO.B} + {2'b00,CG.B} - 7'h10;
+ 9980963 		SUMR = {2'b00,CO.R} + {2'b00,CG.R} - 7'h10;
+ 9980963 		SUMG = {2'b00,CO.G} + {2'b00,CG.G} - 7'h10;
+ 9980963 		SUMB = {2'b00,CO.B} + {2'b00,CG.B} - 7'h10;
         		
- 4708563 		CR.R = SUMR[6:5] == 2'b11 ? 5'h00 : SUMR[6:5] == 2'b01 ? 5'h1F : SUMR[4:0];
- 4708563 		CR.G = SUMG[6:5] == 2'b11 ? 5'h00 : SUMG[6:5] == 2'b01 ? 5'h1F : SUMG[4:0];
- 4708563 		CR.B = SUMB[6:5] == 2'b11 ? 5'h00 : SUMB[6:5] == 2'b01 ? 5'h1F : SUMB[4:0];
+ 9980963 		CR.R = SUMR[6:5] == 2'b11 ? 5'h00 : SUMR[6:5] == 2'b01 ? 5'h1F : SUMR[4:0];
+ 9980963 		CR.G = SUMG[6:5] == 2'b11 ? 5'h00 : SUMG[6:5] == 2'b01 ? 5'h1F : SUMG[4:0];
+ 9980963 		CR.B = SUMB[6:5] == 2'b11 ? 5'h00 : SUMB[6:5] == 2'b01 ? 5'h1F : SUMB[4:0];
         		
- 4708563 		return CR;
+ 9980963 		return CR;
         	endfunction
         	
         	// Colour calculation. A is the source (original or gouraud-shaded, optionally halved), B the background.
         	//  CCB[1:0]: 0 replace, 1 shadow (background only), 2 half luminance, 3 half transparent; CCB[2] selects gouraud.
- 4708563 	function bit [15:0] ColorCalc(input bit [15:0] ORIG, input bit [15:0] BACK, input bit [14:0] CG, input bit [2:0] CCB);
- 4708563 		RGB_t      GOUR,BASE,A,B,S;
- 4708563 		bit        H,Z,BH,BZ,BFULL;
+ 9980963 	function bit [15:0] ColorCalc(input bit [15:0] ORIG, input bit [15:0] BACK, input bit [14:0] CG, input bit [2:0] CCB);
+ 9980963 		RGB_t      GOUR,BASE,A,B,S;
+ 9980963 		bit        H,Z,BH,BZ,BFULL;
         		
- 4708563 		GOUR = GouraudAdd(ORIG[14:0],CG);
- 4708563 		BASE = CCB[2] ? GOUR : ORIG[14:0];
- 4708563 		H = CCB[1] & (~CCB[0] | BACK[15]);
- 4708563 		Z = ~CCB[1] & CCB[0];
- 4708563 		BZ = ~CCB[0] | (CCB[1] & ~BACK[15]);
- 4708563 		BH = BACK[15] & (CCB[1] | ~CCB[2]);
- 4708563 		A = Z ? '0 : H ? ColorHalf(BASE) : BASE;
- 4708563 		B = BZ ? '0 : BH ? ColorHalf(BACK[14:0]) : BACK[14:0];
- 4708563 		S = ColorAdd(A,B);
- 4708563 		return {CCB[0] & ~CCB[1] ? BACK[15] : CCB[1] & CCB[0] ? (BACK[15] | ORIG[15]) : ORIG[15], S};
+ 9980963 		GOUR = GouraudAdd(ORIG[14:0],CG);
+ 9980963 		BASE = CCB[2] ? GOUR : ORIG[14:0];
+ 9980963 		H = CCB[1] & (~CCB[0] | BACK[15]);
+ 9980963 		Z = ~CCB[1] & CCB[0];
+ 9980963 		BZ = ~CCB[0] | (CCB[1] & ~BACK[15]);
+ 9980963 		BH = BACK[15] & (CCB[1] | ~CCB[2]);
+ 9980963 		A = Z ? '0 : H ? ColorHalf(BASE) : BASE;
+ 9980963 		B = BZ ? '0 : BH ? ColorHalf(BACK[14:0]) : BACK[14:0];
+ 9980963 		S = ColorAdd(A,B);
+ 9980963 		return {CCB[0] & ~CCB[1] ? BACK[15] : CCB[1] & CCB[0] ? (BACK[15] | ORIG[15]) : ORIG[15], S};
         	endfunction
         
- 9633731 	function bit [12:0] SDiv2(input bit [12:0] C);
- 9633731 		return {C[12],C[12:1]};
+ 14924452 	function bit [12:0] SDiv2(input bit [12:0] C);
+ 14924452 		return {C[12],C[12:1]};
         	endfunction
         	
- 226340 	function bit [11:0] Abs(input bit [12:0] C);
- 226340 		bit [12:0] abs; 
+ 374768 	function bit [11:0] Abs(input bit [12:0] C);
+ 374768 		bit [12:0] abs; 
         		
- 226340 		abs = $signed(C) >= 0 ? $signed(C) : -$signed(C);
- 226340 		return abs[11:0];
+ 374768 		abs = (C ^ {13{C[12]}}) + {12'h000,C[12]};
+ 374768 		return abs[11:0];
         	endfunction
         	
         endpackage

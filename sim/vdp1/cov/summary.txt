@@ -1,12 +1,12 @@
 Coverage Summary:
-  line      : 97.0% (  549/  566)
-  toggle    : 87.5% (14128/16144)
-  branch    : 99.4% ( 1014/ 1020)
+  line      : 97.0% (  555/  572)
+  toggle    : 88.4% (14287/16164)
+  branch    : 99.2% ( 1012/ 1020)
   expr      : 0.0% (    0/    0)
   fsm_state : 0.0% (    0/    0)
   fsm_arc   : 0.0% (    0/    0)
 Annotation Summary:
-  lines with all attached points covered : 94.00%  (3503/3705)
+  lines with all attached points covered : 94.00%  (3530/3719)
 See lines with '%00' in annot
 %Error: Can't read annotation file: ../../src/fpga/saturn/Saturn/VDP1/VDP1.sv
         ... See the manual at https://verilator.org/verilator_doc.html?v=5.052 for more assistance.
