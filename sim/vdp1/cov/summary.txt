@@ -1,0 +1,2 @@
+%Error: Can't read coverage file: coverage.dat
+        ... See the manual at https://verilator.org/verilator_doc.html?v=5.052 for more assistance.

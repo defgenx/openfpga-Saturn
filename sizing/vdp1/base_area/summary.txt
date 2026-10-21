@@ -1,0 +1,8 @@
+Total registers : 2346
+Total pins : 0
+Total virtual pins : 259
+Total block memory bits : 0
+Total DSP Blocks : 1
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0

@@ -177,7 +177,8 @@ module VDP1 (
 		CMDS_END
 	} CMDState_t;
 	CMDState_t CMD_ST;
-	bit  [18: 1] CMD_ADDR;
+	bit  [18: 5] CMD_ADDR_H;   // command tables are 16-word aligned: address bits [4:1] are always 0
+	wire [18: 1] CMD_ADDR = {CMD_ADDR_H,4'b0000};
 	bit          CMD_READ;
 	bit          CMD_READ_DONE;
 	bit  [18: 1] SPR_ADDR;
@@ -464,8 +465,8 @@ module VDP1 (
 	bit  [ 9: 0] PENALTY_CNT;
 	always @(posedge CLK or negedge RST_N) begin
 //	   bit         FRAME_START_PEND;
-		bit [18: 1] NEXT_ADDR;
-		bit [18: 1] CMD_RET_ADDR;
+		bit [18: 5] NEXT_ADDR_H;
+		bit [18: 5] CMD_RET_ADDR_H;
 		bit         CMD_SUB_RUN;
 		bit [12: 0] NEW_LINE_SX;
 		bit [12: 0] NEW_LINE_SY;
@@ -495,7 +496,7 @@ module VDP1 (
 		
 		if (!RST_N) begin
 			CMD_ST <= CMDS_IDLE;
-			CMD_ADDR <= '0;
+			CMD_ADDR_H <= '0;
 			CMD_READ <= 0;
 			SPR_READ <= 0;
 			CLT_READ <= 0;
@@ -508,7 +509,7 @@ module VDP1 (
 			{CMD_SKIP_EN,CMD_PIX_EN,DBG_DRAW_EN} <= '0;
 `endif
 		end else if (FRAME_START) begin
-			CMD_ADDR <= '0;
+			CMD_ADDR_H <= '0;
 			CMD_READ <= 1;
 			SPR_READ <= 0;
 			CLT_READ <= 0;
@@ -1433,12 +1434,12 @@ module VDP1 (
 				end
 				
 				CMDS_END: begin
-					NEXT_ADDR = CMD_ADDR + 18'h10;
+					NEXT_ADDR_H = CMD_ADDR_H + 14'd1;
 					case (CMD.CMDCTRL.JP[1:0])
-						2'b00: begin CMD_ADDR <= NEXT_ADDR; end
-						2'b01: begin CMD_ADDR <= {CMD.CMDLINK[15:2],2'b00,2'b00}; end
-						2'b10: begin CMD_ADDR <= {CMD.CMDLINK[15:2],2'b00,2'b00}; if (!CMD_SUB_RUN) CMD_RET_ADDR <= NEXT_ADDR; CMD_SUB_RUN <= 1; end
-						2'b11: begin CMD_ADDR <= CMD_SUB_RUN ? CMD_RET_ADDR : NEXT_ADDR; CMD_SUB_RUN <= 0; end
+						2'b00: begin CMD_ADDR_H <= NEXT_ADDR_H; end
+						2'b01: begin CMD_ADDR_H <= CMD.CMDLINK[15:2]; end
+						2'b10: begin CMD_ADDR_H <= CMD.CMDLINK[15:2]; if (!CMD_SUB_RUN) CMD_RET_ADDR_H <= NEXT_ADDR_H; CMD_SUB_RUN <= 1; end
+						2'b11: begin CMD_ADDR_H <= CMD_SUB_RUN ? CMD_RET_ADDR_H : NEXT_ADDR_H; CMD_SUB_RUN <= 0; end
 					endcase
 					
 					if (CMD.CMDCTRL.END) begin

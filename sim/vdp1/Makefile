@@ -37,3 +37,12 @@ ppm:
 clean:
 	rm -rf gen obj out
 .PHONY: all run ppm clean
+
+# Line coverage of both designs under the regression: make cov N=40
+cov:
+	rm -rf obj_cov cov
+	mkdir -p cov out
+	verilator $(filter-out -Mdir obj,$(VFLAGS)) -Mdir obj_cov --coverage-line --coverage-toggle $(SRC) tb.cpp
+	cd cov && ../obj_cov/Vdiff_top --n $(N) --seed $(SEED) --ppm 0 --out ../out && verilator_coverage --annotate annot --annotate-min 1 coverage.dat > summary.txt 2>&1 || true
+	@echo "see sim/vdp1/cov/annot"
+.PHONY: cov
