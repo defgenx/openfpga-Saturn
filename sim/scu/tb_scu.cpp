@@ -338,8 +338,8 @@ static void scen_multi() {
 
 static void scen_timers() {
 	wreg(0x90, rng.below(4) ? rng.below(24) : rng.below(1024));       // T0C
-	wreg(0x94, rng.below(4) ? rng.below(300) : rng.below(512));       // T1S
-	wreg(0x98, (rng.below(2) << 8) | rng.below(2));                   // T1MD
+	wreg(0x94, rng.pct(70) ? rng.below(40) : rng.below(512));        // T1S
+	wreg(0x98, (rng.below(2) << 8) | (rng.pct(85) ? 1 : 0));         // T1MD
 	for (int i = 0; i < 4; i++) { gap(rng.range(50, 600)); rreg(0xA4); }
 }
 
@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
 
 	int res_cnt = 0;
 	if (rng.pct(70)) wreg(0xA0, 0);                          // unmask all interrupts
-	if (rng.pct(50)) { wreg(0x94, rng.below(200)); wreg(0x98, 0x101); wreg(0x90, rng.below(30)); }
+	if (rng.pct(50)) { wreg(0x94, rng.below(30)); wreg(0x98, rng.pct(50) ? 0x101 : 1); wreg(0x90, rng.below(30)); }
 	uint64_t idle_cycles = 0;
 	for (cyc = 0; cyc < ncyc; cyc++) {
 		// clock enables
