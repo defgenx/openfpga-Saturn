@@ -44,40 +44,29 @@ module SH7604_DIVU (
 	bit  [63: 0] R64,D64;
 	bit          R_SIGN,D_SIGN;
 	bit          T64;
+	bit  [64: 0] VAL;
+	bit          NEG;
 	bit          OVF;
 	wire [64: 0] SUM = $signed(R) - $signed(D);
 	wire [64: 0] SUM64 = T64 ? $signed({R64[63],R64}) - $unsigned(D64) : $signed({R64[63],R64}) + $unsigned(D64);
+	// Operand of the sign-fix adder per step (registers only change on CE_R, so this equals the value
+	// the former CE_F capture held).
+	always_comb begin
+		case (STEP)
+			6'd1:    begin VAL = {DVDNTH[31],DVDNTH,DVDNTL};   NEG = DVDNTH[31]; end
+			6'd2:    begin VAL = {DVSR[31],DVSR,32'h00000000}; NEG = DVSR[31];   end
+			6'd36:   begin VAL = R;                            NEG = R_SIGN;     end
+			default: begin VAL = {{33{Q[31]}},Q};              NEG = R_SIGN^D_SIGN; end
+		endcase
+	end
+	
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [64: 0] VAL;
-		bit          NEG;
 		bit  [64: 0] NRES;
 		bit          OVF0,OVF64_33;
 		
 		if (!RST_N) begin
 			STEP <= 6'h3F;
 			OVF <= 0;
-		end
-		else if (EN && CE_F) begin
-			if (STEP == 6'd1) begin
-				VAL <= {DVDNTH[31],DVDNTH,DVDNTL};
-				NEG <= DVDNTH[31];
-			end
-			if (STEP == 6'd2) begin
-				VAL <= {DVSR[31],DVSR,32'h00000000};
-				NEG <= DVSR[31];
-			end
-//			if (STEP >= 6'd3 && STEP <= 6'd35) begin
-//				SA <= R;
-//				SB <= D;
-//			end
-			if (STEP == 6'd36) begin
-				VAL <= R;
-				NEG <= R_SIGN;
-			end
-			if (STEP == 6'd37) begin
-				VAL <= {{33{Q[31]}},Q};
-				NEG <= R_SIGN^D_SIGN;
-			end
 		end
 		else if (EN && CE_R) begin
 			if (STEP != 6'h3F) begin

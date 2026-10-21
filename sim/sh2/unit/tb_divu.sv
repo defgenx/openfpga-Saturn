@@ -51,6 +51,12 @@ module tb_divu;
 		end
 	endfunction
 
+	integer nstart = 0, novf2 = 0; reg [5:0] st_prev = 6'h3F; reg ovf_prev = 0;
+	always @(posedge CLK) begin
+		if (ref0.STEP == 6'd0 && st_prev != 6'd0) nstart <= nstart + 1;
+		if (ref0.OVF && !ovf_prev) novf2 <= novf2 + 1;
+		st_prev <= ref0.STEP; ovf_prev <= ref0.OVF;
+	end
 	reg [4:0] regsel;
 	reg [31:0] addr_t;
 	integer mode;
@@ -111,7 +117,7 @@ module tb_divu;
 	// occasional module reset pulse (RES_N) to cover the reset path
 	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rnd32(0) % 4000) != 0;
 	always @(posedge CLK) if (RST_N && cyc >= ncyc) begin
-		$display("PASS divu seed=%0d: %0d clk, %0d requests, final DVDNT: busy=%b", seed, cyc, nreq, busy_r);
+		$display("PASS divu seed=%0d: %0d clk, %0d requests, %0d divisions started, %0d overflows", seed, cyc, nreq, nstart, novf2);
 		$finish;
 	end
 endmodule

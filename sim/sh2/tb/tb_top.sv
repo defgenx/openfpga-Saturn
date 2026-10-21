@@ -19,6 +19,7 @@ module tb_top;
 	reg [31:0] watch_lo, watch_hi;
 	reg watch_hit = 0, watch_hit_s = 0;
 	reg ack_prev = 0; int n_ack = 0;
+	reg [15:0] seen_m = 0, seen_s = 0;
 	reg [31:0] peek;
 
 	initial begin
@@ -61,6 +62,8 @@ module tb_top;
 				$display("INT_ACK clk %0d: SSH LVL=%0d VEC=%02h PC=%08h", cyc, ref0.SSH.INT_LVL, ref0.SSH.INT_VEC, ref0.SSH.core.PC);
 			end
 			ack_prev <= ref0.SSH.INT_ACK;
+			seen_m <= seen_m | (16'd1 << ref0.MSH.bsc.BUS_STATE);
+			seen_s <= seen_s | (16'd1 << ref0.SSH.bsc.BUS_STATE);
 			// coverage counters on the golden side
 			if (ref0.MSHBS_N == 1'b0 && prev_ref[0] !== 1'b0) begin end
 			if (!ref0.MSHBS_N) begin
@@ -84,6 +87,7 @@ module tb_top;
 				if ($test$plusargs("frtdbg")) $display("  MSH frt: FRC=%h OCRA=%h OCRB=%h TIER=%h FTCSR=%h TCR=%h TOCR=%h | IPRB=%h VCRC=%h SR=%h", ref0.MSH.frt.FRC, ref0.MSH.frt.OCRA, ref0.MSH.frt.OCRB, ref0.MSH.frt.TIER, ref0.MSH.frt.FTCSR, ref0.MSH.frt.TCR, ref0.MSH.frt.TOCR, ref0.MSH.intc.IPRB, ref0.MSH.intc.VCRC, ref0.MSH.core.SR);
 				if ($test$plusargs("frtdbg")) $display("  SSH frt: FRC=%h OCRA=%h OCRB=%h TIER=%h FTCSR=%h TCR=%h TOCR=%h ICR=%h | IPRB=%h VCRC=%h SR=%h", ref0.SSH.frt.FRC, ref0.SSH.frt.OCRA, ref0.SSH.frt.OCRB, ref0.SSH.frt.TIER, ref0.SSH.frt.FTCSR, ref0.SSH.frt.TCR, ref0.SSH.frt.TOCR, ref0.SSH.frt.ICR, ref0.SSH.intc.IPRB, ref0.SSH.intc.VCRC, ref0.SSH.core.SR);
 				$display("  PC msh=%08h ssh=%08h  wramh nonzero words=%0d  mem-checksum=%08h", ref0.MSH.core.PC, ref0.SSH.core.PC, nz, chk_r);
+				$display("  BSC states seen (T0,T1,T2,TW,TRAS,TWCAS,TRCAS,TRD,TWNOP,TRFS1,TRFS2,TV1,TV2 from the right): msh=%b ssh=%b", seen_m[12:0], seen_s[12:0]);
 				$display("PASS %s: %0d clk compared; bus-active clk: total-ssh-own=%0d, writes=%0d, vector-fetch clk=%0d, SSH released=%0d", name, cyc, nown_s, nwrite, nvec, ref0.SSHRES_N);
 				$finish;
 			end
