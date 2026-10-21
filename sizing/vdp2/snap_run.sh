@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: [SRC=ref] [SEDX=expr] sizing/vdp2/snap_run.sh <tag> [balanced|area]
+# usage: [MACROS="ZOOM BITMAP"] [SRC=ref] [SEDX=expr] sizing/vdp2/snap_run.sh <tag> [balanced|area]
 # Copies the current VDP2 sources into sizing/vdp2/snap/<tag>/ and runs quartus_map on the copy
 # (so later edits do not disturb the run). Result: snap/<tag>/<tag>.log and output_files/*.map.rpt.
 set -e
@@ -34,5 +34,6 @@ set_global_assignment -name SYSTEMVERILOG_FILE VDP2_mem.sv
 set_global_assignment -name SYSTEMVERILOG_FILE vdp2_wrap.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 Q
+for m in $MACROS; do echo "set_global_assignment -name VERILOG_MACRO \"POCKET_CUT_VDP2_$m=1\"" >> $S/p.qsf; done
 [ "$PROF" = area ] && echo "source area.qsf" >> $S/p.qsf
 docker run --rm --platform linux/amd64 --name vdp2-map-$TAG -v $D:/build -w /build/sizing/vdp2/snap/$TAG raetro/quartus:21.1 sh -c "quartus_map p > $TAG.log 2>&1; quartus_cdb p --vqm=$TAG.vqm >> $TAG.log 2>&1"
