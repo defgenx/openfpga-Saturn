@@ -1,3 +1,7 @@
+// SH7604 divider, area-first rewrite. Same ports and timing as SH7604_DIVU (39 CE_R steps, early finish of overflow
+// cases, BUSY on CE_F, mirror copy one CE_R after the last step); the datapath is one 32-bit add/sub unit used serially
+// on both clock-enable phases. docs/sh2-rewrite.md section 4.3 describes the schedule.
+// Register contents read while a division is in flight are not preserved (the bus is stalled by BUSY then).
 module SH7604P_DIVU (
 	input             CLK,
 	input             RST_N,
@@ -13,238 +17,187 @@ module SH7604P_DIVU (
 	input       [3:0] IBUS_BA,
 	input             IBUS_WE,
 	input             IBUS_REQ,
-	output reg        IBUS_BUSY,
+	output            IBUS_BUSY,
 	output            IBUS_ACT,
 	
 	output            IRQ,
 	output      [7:0] VEC
 );
 
-	import SH7604P_PKG::*;
+	wire REG_SEL = (IBUS_A[31:8] == 24'hFFFFFF) && !IBUS_A[7] && !IBUS_A[6];
+	wire WR = REG_SEL && IBUS_WE && IBUS_REQ;
+	wire RD = REG_SEL && !IBUS_WE && IBUS_REQ;
+	wire [2:0] RA = IBUS_A[4:2];
+	wire START32 = WR && IBUS_A[4:0] == 5'h04;
+	wire START64 = WR && IBUS_A[4:0] == 5'h14;
 	
-	DVSR_t      DVSR;
-	DVDNT_t     DVDNTL;
-	DVDNT_t     DVDNTH;
-	DVCR_t      DVCR;
-	DVDNT_t     DVDNTL2;
-	DVDNT_t     DVDNTH2;
-	VCRDIV_t    VCRDIV;
-	bit         BUSY;
+	reg [31:0] DVSR, H, L, H2, L2;       // DVDNTH = H, DVDNTL = L; H2/L2 mirrors (scratch while operating)
+	reg        OVFIE, OVFF;              // DVCR
+	reg [15:0] VCRDIV;
+	reg  [5:0] STEP;
+	reg        DIV64, OVF, ZF, SX, SD, TF, F3, F4, F5, CC, SND, BUSY, DVSR_CLR, GCLR;
 	
-	wire REG_SEL = (IBUS_A >= 32'hFFFFFF00 && IBUS_A <= 32'hFFFFFF3F);
-	wire DIV32_START = REG_SEL && IBUS_A[4:0] == 5'h04 && IBUS_WE && IBUS_REQ;
-	wire DIV64_START = REG_SEL && IBUS_A[4:0] == 5'h14 && IBUS_WE && IBUS_REQ;
+	wire OPERATE = (STEP != 6'h3F);
+	wire R_EN = EN && CE_R;
+	wire F_EN = EN && CE_F;
 	
+	wire s2 = (STEP == 6'd2), s3 = (STEP == 6'd3), s4 = (STEP == 6'd4), s5 = (STEP == 6'd5), s6 = (STEP == 6'd6);
+	wire s7 = (STEP == 6'd7), s23 = (STEP == 6'd23), s24 = (STEP == 6'd24);
+	wire opZD = F_EN && s2;
+	wire opS1 = R_EN && s2;
+	wire opS2 = F_EN && s3;
+	wire opS3 = R_EN && s3;
+	wire opSH = F_EN && s4;
+	wire opCL = F_EN && s6;
+	wire opCH = R_EN && s6;
+	wire opJ0 = F_EN && s7;
+	wire opRS = (EN && (CE_R || CE_F)) && STEP >= 6'd7 && STEP <= 6'd22 && !opJ0;   // j = 1..22
+	wire opRL = F_EN && s23;                                                          // j = 32
+	wire opFL = F_EN && s24;
+	wire opFH = R_EN && s24;
+	wire isSide = opS1 || opS2 || opS3;
+	wire isRest = opJ0 || opRS || opRL;
+	wire shiftA = opS2 || opS3 || opSH || opRS || opRL;      // adder operand is the shifted H
+	wire useXA  = isSide || opSH || isRest;
+	wire TAP = opS3 ? L[30] : opSH ? L[29] : L[31];
+	wire [31:0] XA = shiftA ? {H[30:0], TAP} : H;
+	wire SXD = SX ^ SD;
+	wire OVF_DEC = ZF || (DIV64 && !(F3 == SXD && F4 == SXD));
+	wire opLS = OVF_DEC && ((F_EN && s4) || (R_EN && s4) || (F_EN && s5));
+	wire LSBIT = (R_EN && s4) ? F4 : (F_EN && s4) ? F3 : F5;
 	
-	bit  [ 5: 0] STEP;
-	bit          DIV64;
-	bit  [64: 0] R;
-	bit  [64: 0] D;
-	bit  [31: 0] Q;
-	bit  [63: 0] R64,D64;
-	bit          R_SIGN,D_SIGN;
-	bit          T64;
-	bit  [64: 0] VAL;
-	bit          NEG;
-	bit          OVF;
-	wire [64: 0] SUM = $signed(R) - $signed(D);
-	wire [64: 0] SUM64 = T64 ? $signed({R64[63],R64}) - $unsigned(D64) : $signed({R64[63],R64}) + $unsigned(D64);
-	// Operand of the sign-fix adder per step (registers only change on CE_R, so this equals the value
-	// the former CE_F capture held).
-	always_comb begin
-		case (STEP)
-			6'd1:    begin VAL = {DVDNTH[31],DVDNTH,DVDNTL};   NEG = DVDNTH[31]; end
-			6'd2:    begin VAL = {DVSR[31],DVSR,32'h00000000}; NEG = DVSR[31];   end
-			6'd36:   begin VAL = R;                            NEG = R_SIGN;     end
-			default: begin VAL = {{33{Q[31]}},Q};              NEG = R_SIGN^D_SIGN; end
-		endcase
-	end
+	wire YEN = !opSH;
+	wire [31:0] YSRC = (opZD || isSide || isRest) ? DVSR : (opCL || opFL) ? L2 : H2;
+	wire YINV = opZD || (isSide && TF) || (isRest && !SD) || ((opCL || opCH || opFH) && SX) || (opFL && SXD);
+	wire CIN  = opZD || (isSide && TF) || (isRest && !SD) || (opCL && SX) || (opCH && CC) || (opFH && SX) || (opFL && SXD);
+	wire [32:0] ADD = {1'b0, useXA ? XA : 32'h0} + {1'b0, YEN ? (YSRC ^ {32{YINV}}) : 32'h0} + {32'h0, CIN};
+	wire [31:0] SUM = ADD[31:0];
+	wire        COUT = ADD[32];
+	wire        TBIT = ~(SUM[31] ^ SD);
+	
+	wire [31:0] SAT = {SXD, {31{~SXD}}};
 	
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [64: 0] NRES;
-		bit          OVF0,OVF64_33;
-		
 		if (!RST_N) begin
 			STEP <= 6'h3F;
 			OVF <= 0;
 		end
-		else if (EN && CE_R) begin
-			if (STEP != 6'h3F) begin
-				STEP <= STEP + 6'd1;
-			end
-			if (STEP == 6'h3F && (DIV32_START || DIV64_START)) begin
+		else if (R_EN) begin
+			if (OPERATE) STEP <= STEP + 6'd1;
+			if (!OPERATE && (START32 || START64)) begin
 				STEP <= 6'd0;
-				DIV64 <= DIV64_START;
-				OVF0 <= 0;
+				DIV64 <= START64;
 				OVF <= 0;
 			end
-			
-			NRES = (VAL^{65{NEG}}) + {{64{1'b0}},NEG};
-			if (STEP == 6'd0) begin
-				Q <= '0;
+			if (STEP == 6'd5 && OVF_DEC) begin
+				OVF <= 1;
+				STEP <= 6'd38;
 			end
-			if (STEP == 6'd1) begin
-				R <= NRES;
-				R_SIGN <= NEG;
-				R64 <= VAL[63:0];
-			end
-			if (STEP == 6'd2) begin
-				D <= NRES;
-				D_SIGN <= NEG;
-				D64 <= VAL[63:0];
-				T64 <= ~(R_SIGN^NEG);
-				
-				if (VAL[63:32] == 32'h00000000) OVF0 <= 1;
-			end
-			if (STEP >= 6'd3 && STEP <= 6'd35) begin
-				R <= !SUM[64] ? SUM : R;
-				Q <= {Q[30:0],~SUM[64]};
-				D <= {D[64],D[64:1]};
-				
-				if (STEP >= 6'd3 && STEP <= 6'd5) begin
-				R64 <= {SUM64[62:0],~(SUM64[63]^D_SIGN)};
-				T64 <= ~(SUM64[63]^D_SIGN);
-				end
-				
-				if (STEP == 6'd4) begin
-					OVF64_33 <= T64; 
-				end
-				if (STEP == 6'd5 && (OVF0 || ((OVF64_33 != T64 || (OVF64_33 != (R_SIGN^D_SIGN) && T64 != (R_SIGN^D_SIGN))) && DIV64))) begin
-					OVF <= 1; 
-					R <= SUM;
-					STEP <= 6'd38;
-				end
-			end
-			if (STEP == 6'd36) begin
-				R <= NRES;
-			end
-			if (STEP == 6'd37) begin
-				Q <= NRES[31:0];
-			end
-			if (STEP == 6'd38) begin
-				STEP <= 6'h3F;
-			end
+			if (STEP == 6'd38) STEP <= 6'h3F;
 		end
 	end
 	
-	wire OPERATE = (STEP != 6'h3F);
-	
-	
-	//Registers
 	always @(posedge CLK or negedge RST_N) begin
-		bit          SND_UPD;
-		
 		if (!RST_N) begin
-			DVSR <= DVSR_INIT;
-			DVDNTL <= DVDNT_INIT;
-			DVDNTH <= DVDNT_INIT;
-			DVCR <= DVCR_INIT;
-			VCRDIV <= VCRDIV_INIT;
-			DVDNTL2 <= DVDNT_INIT;
-			DVDNTH2 <= DVDNT_INIT;
-			// synopsys translate_off
-			
-			// synopsys translate_on
+			DVSR <= '0; H <= '0; L <= '0; H2 <= '0; L2 <= '0;
+			OVFIE <= 0; OVFF <= 0; VCRDIV <= '0;
+			SND <= 0; DVSR_CLR <= 0; GCLR <= 0;
 		end
-		else if (CE_R) begin
-			if (!RES_N) begin
-				DVSR <= DVSR_INIT;
-				DVDNTL <= DVDNT_INIT;
-				DVDNTH <= DVDNT_INIT;
-				DVCR <= DVCR_INIT;
-				VCRDIV <= VCRDIV_INIT;
-				DVDNTL2 <= DVDNT_INIT;
-				DVDNTH2 <= DVDNT_INIT;
+		else begin
+			// datapath, both phases
+			if (opZD) begin
+				ZF <= COUT; SX <= H[31]; SD <= DVSR[31]; TF <= ~(H[31] ^ DVSR[31]);
+				L2 <= L; H2 <= H;
 			end
-			else if (REG_SEL && IBUS_WE && IBUS_REQ && !OPERATE) begin
-				case ({IBUS_A[4:2],2'b00})
-					5'h00: DVSR <= IBUS_DI & DVSR_WMASK;
-					5'h04: {DVDNTH,DVDNTL} <= {{32{IBUS_DI[31]}},IBUS_DI} & {DVDNT_WMASK,DVDNT_WMASK};
-					5'h08: begin
-						if (IBUS_BA[3:2] != 2'b00) DVCR[31:16] <= IBUS_DI[31:16] & DVCR_WMASK[31:16];
-						if (IBUS_BA[1:0] != 2'b00) DVCR[15:0]  <= IBUS_DI[15:0]  & DVCR_WMASK[15:0];
-					end
-					5'h0C: begin
-						if (IBUS_BA[1:0] != 2'b00) VCRDIV[15:0] <= IBUS_DI[15:0] & VCRDIV_WMASK[15:0];
-					end
-					5'h10: DVDNTH <= IBUS_DI & DVDNT_WMASK;
-					5'h14: DVDNTL <= IBUS_DI & DVDNT_WMASK;
-					5'h18: DVDNTH2 <= IBUS_DI & DVDNT_WMASK;
-					5'h1C: DVDNTL2 <= IBUS_DI & DVDNT_WMASK;
-					default:;
-				endcase
+			if (isSide) begin
+				TF <= TBIT;
+				if (opS1) F3 <= TBIT;
+				if (opS2) F4 <= TBIT;
+				if (opS3) F5 <= TBIT;
 			end
+			if (isSide || opSH) H <= SUM;
+			if (isRest && COUT) H <= SUM;
+			else if (isRest && !opJ0) H <= XA;
+			if (opRS || opRL) L <= {L[30:0], COUT};
+			if (opLS) L <= {L[30:0], LSBIT};
+			if (opCL) begin L <= SUM; CC <= COUT; end
+			if (opCH) H <= SUM;
+			if (EN && CE_R && s23) L2 <= L;
+			if (opFL) begin L <= SUM; H2 <= H; end
+			if (opFH) H <= SUM;
 			
-			SND_UPD <= 0;
-			if (STEP >= 6'd3 && STEP <= 6'd35) begin
-				{DVDNTH,DVDNTL} <= {DVDNTH[30:0],DVDNTL,~SUM[64]^R_SIGN};
-			end
-			if (STEP == 6'd37) begin
-				DVDNTH <= R[31:0];
-			end
-			if (STEP == 6'd38) begin
-				if (OVF) begin
-					if (!DVCR.OVFIE) begin
-						DVDNTL <= {R_SIGN^D_SIGN,{31{~(R_SIGN^D_SIGN)}}};
-						if (DIV64) DVDNTH <= R64[63:32];
-					end else  begin
-						if (DIV64) DVDNTL <= R64[31:0];
-						if (DIV64) DVDNTH <= R64[63:32];
-					end
-					DVCR.OVF <= 1;
-				end else begin
-					DVDNTL <= Q;
+			if (CE_F && SND) H2 <= H;
+			
+			if (CE_R) begin
+				SND <= 0;
+				if (!RES_N) begin
+					OVFIE <= 0; OVFF <= 0; VCRDIV <= '0;
+					if (STEP == 6'h3F || STEP == 6'd0 || STEP == 6'd1) DVSR <= '0;
+					else DVSR_CLR <= 1;
+					if (STEP == 6'h3F || STEP == 6'd0) begin H <= '0; L <= '0; end
+					if (STEP == 6'd1 || STEP == 6'd2) GCLR <= 1;
+					if (!OPERATE && !SND) begin H2 <= '0; L2 <= '0; end
 				end
-				SND_UPD <= 1;
-			end
-			
-			if (SND_UPD) begin
-				DVDNTL2 <= DVDNTL;
-				DVDNTH2 <= DVDNTH;
+				else if (WR && !OPERATE) begin
+					case (RA)
+						3'd0: DVSR <= IBUS_DI;
+						3'd1: begin H <= {32{IBUS_DI[31]}}; L <= IBUS_DI; end
+						3'd2: if (|IBUS_BA[1:0]) {OVFIE, OVFF} <= IBUS_DI[1:0];
+						3'd3: if (|IBUS_BA[1:0]) VCRDIV <= IBUS_DI[15:0];
+						3'd4: H <= IBUS_DI;
+						3'd5: L <= IBUS_DI;
+						3'd6: if (!SND) H2 <= IBUS_DI;
+						3'd7: L2 <= IBUS_DI;
+					endcase
+				end
+				if (SND) L2 <= L;
+				if (STEP == 6'd38) begin
+					SND <= 1;
+					GCLR <= 0;
+					if (OVF && !DIV64 && GCLR) begin H <= '0; L <= L & 32'h7; end
+					if (OVF) begin
+						if (!OVFIE) L <= SAT;
+						OVFF <= 1;
+					end
+					if (!RES_N) begin
+						if (!(OVF && DIV64)) H <= '0;
+						if (OVF && OVFIE && !DIV64) L <= '0;
+					end
+					if (DVSR_CLR || !RES_N) DVSR <= '0;
+					DVSR_CLR <= 0;
+				end
 			end
 		end
 	end
 	
-	assign IRQ = DVCR.OVF & DVCR.OVFIE;
+	assign IRQ = OVFF & OVFIE;
 	assign VEC = VCRDIV[7:0];
 	
-	
-	bit [31:0] REG_DO;
+	reg [31:0] REG_DO;
 	always @(posedge CLK or negedge RST_N) begin
-		if (!RST_N) begin
-			REG_DO <= '0;
-		end
-		else if (CE_F) begin
-			if (REG_SEL && !IBUS_WE && IBUS_REQ) begin
-				case ({IBUS_A[4:2],2'b00})
-					5'h00: REG_DO <= DVSR & DVSR_RMASK;
-					5'h04: REG_DO <= DVDNTL & DVDNT_RMASK;
-					5'h08: REG_DO <= DVCR & DVCR_RMASK;
-					5'h0C: REG_DO <= {16'h0000,VCRDIV} & VCRDIV_RMASK;
-					5'h10: REG_DO <= DVDNTH & DVDNT_RMASK;
-					5'h14: REG_DO <= DVDNTL & DVDNT_RMASK;
-					5'h18: REG_DO <= DVDNTH2 & DVDNT_RMASK;
-					5'h1C: REG_DO <= DVDNTL2 & DVDNT_RMASK;
-					default:REG_DO <= '0;
-				endcase
-			end
+		if (!RST_N) REG_DO <= '0;
+		else if (CE_F && RD) begin
+			case (RA)
+				3'd0: REG_DO <= DVSR;
+				3'd1,3'd5: REG_DO <= L;
+				3'd2: REG_DO <= {30'h0, OVFIE, OVFF};
+				3'd3: REG_DO <= {16'h0, VCRDIV};
+				3'd4: REG_DO <= H;
+				3'd6: REG_DO <= H2;
+				3'd7: REG_DO <= L2;
+			endcase
 		end
 	end
 	
 	always @(posedge CLK or negedge RST_N) begin
-		if (!RST_N) begin
-			BUSY <= 0;
-		end
-		else if (EN && CE_F) begin
-			if (REG_SEL && IBUS_REQ && OPERATE && !BUSY) begin
-				BUSY <= 1;
-			end else if (!OPERATE && BUSY) begin
-				BUSY <= 0;
-			end
+		if (!RST_N) BUSY <= 0;
+		else if (F_EN) begin
+			if (REG_SEL && IBUS_REQ && OPERATE && !BUSY) BUSY <= 1;
+			else if (!OPERATE && BUSY) BUSY <= 0;
 		end
 	end
 	
-	assign IBUS_DO = REG_SEL ? (IBUS_BA != 4'b1111 ? {2{REG_DO[15:0]}} : REG_DO) : '0;
+	assign IBUS_DO = REG_SEL ? (IBUS_BA != 4'b1111 ? {2{REG_DO[15:0]}} : REG_DO) : 32'h0;
 	assign IBUS_BUSY = BUSY;
 	assign IBUS_ACT = REG_SEL;
 
