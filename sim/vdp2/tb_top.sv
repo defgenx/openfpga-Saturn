@@ -55,7 +55,7 @@ module tb_top (
 		.HBL_N(r_HBL_N), .VBL_N(r_VBL_N), .FIELD(r_FIELD), .INTERLACE(r_INTERLACE),
 		.HRES(r_HRES), .VRES(r_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
 
-	VDP2 u_dut (
+	VDP2P u_dut (
 		.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .RES_N(RES_N),
 		.DI(DI), .DO(d_DO), .CS_N(CS_N), .AD_N(AD_N), .DTEN_N(DTEN_N), .REQ_N(REQ_N), .RDY_N(d_RDY_N),
 		.VINT_N(d_VINT_N), .HINT_N(d_HINT_N), .DCE_R(d_DCE_R), .DCE_F(d_DCE_F),

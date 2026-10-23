@@ -21,7 +21,7 @@ vdp2: vdp2-build
 	if [ -s $(B)/fails.txt ]; then echo "vdp2 differential test: FAILED"; exit 1; else echo "vdp2 differential test: all $(SEEDS) seeds match"; fi
 
 vdp2-build: $(B)/obj/Vtb_top
-$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/VDP2/*.sv) $(HERE)/prep.sh
+$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/VDP2P/*.sv) $(HERE)/prep.sh
 	@$(HERE)/prep.sh $(B) $(CUT)
 	@rm -f $(B)/run_*.log
 	cd $(HERE) && verilator $(VFLAGS) $(B)/ref/VDP2_pkg.sv $(B)/ref/VDP2.sv $(B)/ref/VDP2_mem.sv \
