@@ -56,6 +56,7 @@ module SH2P_core
 	bit         WB_LDP;
 	bit [ 2: 0] STATE;
 	DecInstr_t  ID_DECI;
+	bit  [ 7:0] ID_CLS;
 	bit         SLP;
 	bit [31: 0] ALU_RES;
 	bit         ALU_T;
@@ -90,7 +91,7 @@ module SH2P_core
 	
 	SH2P_regfile regfile (.CLK(CLK), .RST_N(RST_N), .CE_R(CE), .EN(EN),
 	                      .W1_ADDR(W1_N), .W1_D(W1_D), .W1_E(W1_E), .W2_ADDR(W2_N), .W2_D(W2_D), .W2_E(W2_E),
-	                      .RA_ADDR(PIPE.EX.DI.RA.N), .RA_Q(REGS_RAQ), .RB_ADDR(PIPE.EX.DI.RB.N), .RB_Q(REGS_RBQ), .R0_Q(REGS_R0Q));
+	                      .RA_ADDR(EX_DI.RA.N), .RA_Q(REGS_RAQ), .RB_ADDR(EX_DI.RB.N), .RB_Q(REGS_RBQ), .R0_Q(REGS_R0Q));
 
 	
 	//**********************************************************
@@ -105,7 +106,7 @@ module SH2P_core
 			PC <= '0;
 		end
 		else if (EN && CE) begin
-			if (PIPE.EX.DI.PCW && !EX_STALL) begin
+			if (EX_DI.PCW && !EX_STALL) begin
 				PC <= ALU_RES;
 			end else if (!PC_STALL && !ID_DECI.SLP && !SLP) begin
 				PC <= PC + 2;
@@ -113,10 +114,10 @@ module SH2P_core
 		end
 	end
 
-	wire LOAD_ISSUE = (PIPE.EX.DI.MEM.R | (PIPE.EX.DI.MAC.R & ~PIPE.EX.DI.MEM.W)) & ((PIPE.EX.DI.RA.W & PIPE.EX.DI.RA.N == ID_DECI.RA.N & ID_DECI.RA.R) |
-	                                                                                 (PIPE.EX.DI.RA.W & PIPE.EX.DI.RA.N == ID_DECI.RB.N & ID_DECI.RB.R) |
-	                                                                                 (PIPE.EX.DI.RA.W & PIPE.EX.DI.RA.N ==         5'd0 & ID_DECI.R0R ));
-	wire INST_ISSUE = ((IFID_STALL & ~PC[1]) | ~PIPE.ID.PC[1]) & (PIPE.EX.DI.MEM.R | PIPE.EX.DI.MEM.W | PIPE.EX.DI.MAC.R | PIPE.EX.DI.MAC.W) & ~ID_DECI.IID;
+	wire LOAD_ISSUE = (EX_DI.MEM.R | (EX_DI.MAC.R & ~EX_DI.MEM.W)) & ((EX_DI.RA.W & EX_DI.RA.N == ID_DECI.RA.N & ID_DECI.RA.R) |
+	                                                                                 (EX_DI.RA.W & EX_DI.RA.N == ID_DECI.RB.N & ID_DECI.RB.R) |
+	                                                                                 (EX_DI.RA.W & EX_DI.RA.N ==         5'd0 & ID_DECI.R0R ));
+	wire INST_ISSUE = ((IFID_STALL & ~PC[1]) | ~PIPE.ID.PC[1]) & (EX_DI.MEM.R | EX_DI.MEM.W | EX_DI.MAC.R | EX_DI.MAC.W) & ~ID_DECI.IID;
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -144,7 +145,7 @@ module SH2P_core
 			end
 			// synopsys translate_on
 			
-			if ((PIPE.EX.DI.MEM.R || PIPE.EX.DI.MEM.W || PIPE.EX.DI.MAC.R || PIPE.EX.DI.MAC.W) && !INST_SPLIT && (!IF_ACTIVE || !BUS_WAIT) && !(VECT_ACTIVE && VECT_WAIT)) begin
+			if ((EX_DI.MEM.R || EX_DI.MEM.W || EX_DI.MAC.R || EX_DI.MAC.W) && !INST_SPLIT && (!IF_ACTIVE || !BUS_WAIT) && !(VECT_ACTIVE && VECT_WAIT)) begin
 				MA_ACTIVE <= 1;
 			end else if (!BUS_WAIT && MA_ACTIVE) begin
 				MA_ACTIVE <= 0;
@@ -156,7 +157,7 @@ module SH2P_core
 				IF_ACTIVE <= 0;
 			end
 			
-			if (PIPE.EX.DI.VECR && !INST_SPLIT && (!IF_ACTIVE || !BUS_WAIT) && (!MA_ACTIVE || !BUS_WAIT)) begin
+			if (EX_DI.VECR && !INST_SPLIT && (!IF_ACTIVE || !BUS_WAIT) && (!MA_ACTIVE || !BUS_WAIT)) begin
 				VECT_ACTIVE <= 1;
 			end else if (!VECT_WAIT && VECT_ACTIVE) begin
 				VECT_ACTIVE <= 0;
@@ -240,8 +241,8 @@ module SH2P_core
 	//**********************************************************
 	assign ID_STALL = BUS_STALL | INST_SPLIT;
 	
-	wire INT_BLOCKED = PIPE.EX.DI.IBI;
-	wire ID_DELAY_SLOT = ~PIPE.EX.DI.BR.BI & (PIPE.EX.DI.BR.BT == CB | PIPE.EX.DI.BR.BT == UCB);
+	wire INT_BLOCKED = EX_DI.IBI;
+	wire ID_DELAY_SLOT = ~EX_DI.BR.BI & (EX_DI.BR.BT == CB | EX_DI.BR.BT == UCB);
 	
 	wire INT_EXP = ((INT_REQ && !INT_BLOCKED && !ID_DELAY_SLOT && !IFID_STALL) || INT_REQ_LATCH);
 	always @(posedge CLK or negedge RST_N) begin
@@ -281,12 +282,14 @@ module SH2P_core
 	end
 	
 	wire [15:0] DEC_IR = RES_EXP || INT_EXP ? 16'h0000 : 
-								ID_DELAY_SLOT && !PIPE.EX.DI.BR.BD ? 16'h0009 :
+								ID_DELAY_SLOT && !EX_DI.BR.BD ? 16'h0009 :
 								IFID_STALL ? PIPE.EX.IR : PIPE.ID.IR;
 								
-	assign BR_T = PIPE.EX.DI.CTRL.W && PIPE.EX.DI.CTRL.S == SR_ ? SR_NEW.T : SR.T;
+	assign BR_T = EX_DI.CTRL.W && EX_DI.CTRL.S == SR_ ? SR_NEW.T : SR.T;
 
-	SH2P_dec #(VER) dec (.IR(DEC_IR), .STATE(STATE), .T(BR_T), .DS(ID_DELAY_SLOT), .RES_EXP(RES_EXP), .INT_EXP(INT_REQ_LATCH), .ILI_EXP(ILI_EXP), .ILSI(ILSI), .DECI(ID_DECI));
+	SH2P_dec #(VER) dec (.IR(DEC_IR), .STATE(STATE), .T(BR_T), .DS(ID_DELAY_SLOT), .RES_EXP(RES_EXP), .INT_EXP(INT_REQ_LATCH), .ILI_EXP(ILI_EXP), .ILSI(ILSI), .DECI(ID_DECI), .CLS_O(ID_CLS));
+	DecInstr_t EX_DI;
+	SH2P_decrom decrom (.CLK(CLK), .EN_A(EN && CE && !ID_STALL), .RESET(!RST_N || !RES_N), .CLS_D(ID_CLS), .IR(PIPE.EX.IR), .DI(EX_DI));
 	
 	wire [ 2: 0] NEXT_STATE = STATE == ID_DECI.LST ? 3'd0 : STATE + 3'd1;
 	always @(posedge CLK or negedge RST_N) begin
@@ -295,7 +298,6 @@ module SH2P_core
 		if (!RST_N) begin
 			PIPE.EX.IR <= '0;
 			PIPE.EX.PC <= '0;
-			PIPE.EX.DI <= DECI_RESET;
 			PIPE.EX.BC <= 0;
 			STATE <= '0;
 			IFID_STALL <= 0;
@@ -304,7 +306,6 @@ module SH2P_core
 		else if (!RES_N) begin
 			PIPE.EX.IR <= '0;
 			PIPE.EX.PC <= '0;
-			PIPE.EX.DI <= DECI_RESET;
 			PIPE.EX.BC <= 0;
 			STATE <= '0;
 			IFID_STALL <= 0;
@@ -316,7 +317,6 @@ module SH2P_core
 			if (!ID_STALL) begin
 				PIPE.EX.IR <= DEC_IR;
 				PIPE.EX.PC <= PIPE.ID.PC;
-				PIPE.EX.DI <= ID_DECI;
 				PIPE.EX.BC <= BR_COND;
 				STATE <= NEXT_STATE;
 				IFID_STALL <= |NEXT_STATE;
@@ -338,17 +338,17 @@ module SH2P_core
 	wire MA_WB = PIPE.MA.DI.RB.W & (~PIPE.MA.DI.RA.W | PIPE.MA.DI.RA.N != PIPE.MA.DI.RB.N);
 	
 	//MA instruction already wrote this register (youngest writer wins)
-	wire BP_A_EXEX = PIPE.EX.DI.RA.R & (((PIPE.EX.DI.RA.N == PIPE.MA.DI.RA.N) & MA_WA) | ((PIPE.EX.DI.RA.N == PIPE.MA.DI.RB.N) & MA_WB));
-	wire BP_B_EXEX = PIPE.EX.DI.RB.R & (((PIPE.EX.DI.RB.N == PIPE.MA.DI.RA.N) & MA_WA) | ((PIPE.EX.DI.RB.N == PIPE.MA.DI.RB.N) & MA_WB));
-	wire BP_C_EXEX = PIPE.EX.DI.R0R & (((5'd0            == PIPE.MA.DI.RA.N) & MA_WA) | ((5'd0            == PIPE.MA.DI.RB.N) & MA_WB));
+	wire BP_A_EXEX = EX_DI.RA.R & (((EX_DI.RA.N == PIPE.MA.DI.RA.N) & MA_WA) | ((EX_DI.RA.N == PIPE.MA.DI.RB.N) & MA_WB));
+	wire BP_B_EXEX = EX_DI.RB.R & (((EX_DI.RB.N == PIPE.MA.DI.RA.N) & MA_WA) | ((EX_DI.RB.N == PIPE.MA.DI.RB.N) & MA_WB));
+	wire BP_C_EXEX = EX_DI.R0R & (((5'd0            == PIPE.MA.DI.RA.N) & MA_WA) | ((5'd0            == PIPE.MA.DI.RB.N) & MA_WB));
 	
-	wire BP_A_MALD = (PIPE.EX.DI.RA.N == PIPE.MA.DI.RA.N) & PIPE.EX.DI.RA.R & PIPE.MA.DI.RA.W & MA_LD;
-	wire BP_B_MALD = (PIPE.EX.DI.RB.N == PIPE.MA.DI.RA.N) & PIPE.EX.DI.RB.R & PIPE.MA.DI.RA.W & MA_LD;
-	wire BP_C_MALD = (5'd0            == PIPE.MA.DI.RA.N) & PIPE.EX.DI.R0R  & PIPE.MA.DI.RA.W & MA_LD;
+	wire BP_A_MALD = (EX_DI.RA.N == PIPE.MA.DI.RA.N) & EX_DI.RA.R & PIPE.MA.DI.RA.W & MA_LD;
+	wire BP_B_MALD = (EX_DI.RB.N == PIPE.MA.DI.RA.N) & EX_DI.RB.R & PIPE.MA.DI.RA.W & MA_LD;
+	wire BP_C_MALD = (5'd0            == PIPE.MA.DI.RA.N) & EX_DI.R0R  & PIPE.MA.DI.RA.W & MA_LD;
 	
-	wire BP_A_WBLD = (PIPE.EX.DI.RA.N == PIPE.WB.DI.RA.N) & PIPE.EX.DI.RA.R & PIPE.WB.DI.RA.W & WB_LD;
-	wire BP_B_WBLD = (PIPE.EX.DI.RB.N == PIPE.WB.DI.RA.N) & PIPE.EX.DI.RB.R & PIPE.WB.DI.RA.W & WB_LD;
-	wire BP_C_WBLD = (5'd0            == PIPE.WB.DI.RA.N) & PIPE.EX.DI.R0R  & PIPE.WB.DI.RA.W & WB_LD;
+	wire BP_A_WBLD = (EX_DI.RA.N == PIPE.WB.DI.RA.N) & EX_DI.RA.R & PIPE.WB.DI.RA.W & WB_LD;
+	wire BP_B_WBLD = (EX_DI.RB.N == PIPE.WB.DI.RA.N) & EX_DI.RB.R & PIPE.WB.DI.RA.W & WB_LD;
+	wire BP_C_WBLD = (5'd0            == PIPE.WB.DI.RA.N) & EX_DI.R0R  & PIPE.WB.DI.RA.W & WB_LD;
 	
 	bit [31: 0] REG_A;
 	bit [31: 0] REG_B;
@@ -365,7 +365,7 @@ module SH2P_core
 				ILI_EXP       ? 8'h04 | {6'b000000,ILSI,1'b0} : 
 				                PIPE.EX.IR[7:0];
 		
-		case (PIPE.EX.DI.IMMT)
+		case (EX_DI.IMMT)
 			ZIMM4:  temp = {{28{1'b0}},      ir_imm[ 3:0]};
 			SIMM8:  temp = {{24{ir_imm[ 7]}},ir_imm[ 7:0]};
 			ZIMM8:  temp = {{24{1'b0}},      ir_imm[ 7:0]};
@@ -376,17 +376,17 @@ module SH2P_core
 			default: temp = 32'h00000000;
 		endcase
 		
-		if (PIPE.EX.DI.BR.BI) begin
+		if (EX_DI.BR.BI) begin
 			IMM_VAL = {temp[30:0],1'b0};
 		end else begin
-			case (PIPE.EX.DI.MEM.SZ)
+			case (EX_DI.MEM.SZ)
 				2'b00:   IMM_VAL = temp;
 				2'b01:   IMM_VAL = {temp[30:0],1'b0};
 				default: IMM_VAL = {temp[29:0],2'b00};
 			endcase
 		end
 		
-		case (PIPE.EX.DI.CTRL.S)
+		case (EX_DI.CTRL.S)
 			SR_:  SCR_VAL = SR & 32'h000003F3;
 			GBR_: SCR_VAL = GBR;
 			VBR_: SCR_VAL = VBR;
@@ -396,10 +396,10 @@ module SH2P_core
 		if (!BP_A_EXEX && BP_A_MALD) begin
 			BP_A = RD_SAVE;
 		end
-		else if (PIPE.EX.DI.DP.BPLDA || (!BP_A_EXEX && BP_A_WBLD)) begin
+		else if (EX_DI.DP.BPLDA || (!BP_A_EXEX && BP_A_WBLD)) begin
 			BP_A = PIPE.WB.RD;
 		end
-		else if (PIPE.EX.DI.DP.BPWBA) begin
+		else if (EX_DI.DP.BPWBA) begin
 			BP_A = {31'b0,~WB2_RZ};
 		end
 		else begin
@@ -408,7 +408,7 @@ module SH2P_core
 	
 		REG_A = BP_A;
 		
-		if (PIPE.EX.DI.DP.BPMAB) begin
+		if (EX_DI.DP.BPMAB) begin
 			BP_B = PIPE.MA.RES;
 		end
 		else if (!BP_B_EXEX && BP_B_MALD) begin
@@ -421,9 +421,9 @@ module SH2P_core
 			BP_B = REGS_RBQ;
 		end
 		
-		case (PIPE.EX.DI.DP.RSB)
+		case (EX_DI.DP.RSB)
 			GRX: REG_B = BP_B;
-			BPC: REG_B = {PC[31:2],PC[1:0] & {2{~PIPE.EX.DI.DP.PCM}}};
+			BPC: REG_B = {PC[31:2],PC[1:0] & {2{~EX_DI.DP.PCM}}};
 			TPC: REG_B = SAVE_ID.PC;
 			IPC: REG_B = PIPE.EX.PC;
 			SCR: REG_B = SCR_VAL;
@@ -440,21 +440,21 @@ module SH2P_core
 			BP_C = REGS_R0Q;
 		end
 		
-		case (PIPE.EX.DI.DP.RSC)
+		case (EX_DI.DP.RSC)
 			1'b0: REG_C = BP_C;
 			1'b1: REG_C = IMM_VAL;
 		endcase
 	end
 	
-	wire [31:0] ALU_A = PIPE.EX.DI.ALU.SA ? REG_C : REG_A;
-	wire [31:0] ALU_B = PIPE.EX.DI.ALU.SB ? REG_C : REG_B;
-	SH2P_alu alu (.A(ALU_A), .B(ALU_B), .OP(PIPE.EX.DI.ALU.OP), .CD(PIPE.EX.DI.ALU.CD), .CMP(PIPE.EX.DI.ALU.CMP), .TAS(PIPE.EX.DI.TAS),
+	wire [31:0] ALU_A = EX_DI.ALU.SA ? REG_C : REG_A;
+	wire [31:0] ALU_B = EX_DI.ALU.SB ? REG_C : REG_B;
+	SH2P_alu alu (.A(ALU_A), .B(ALU_B), .OP(EX_DI.ALU.OP), .CD(EX_DI.ALU.CD), .CMP(EX_DI.ALU.CMP), .TAS(EX_DI.TAS),
 	              .T(SR.T), .M(SR.M), .Q(SR.Q), .RES(ALU_RES), .ALU_T(ALU_T));
 	
 	bit [31: 0] MA_ADDR;
 	always_comb begin
 		MA_ADDR = ALU_RES;
-		case (PIPE.EX.DI.MEM.ADDS)
+		case (EX_DI.MEM.ADDS)
 			ALUA:    MA_ADDR = REG_A;
 			ALUB:    MA_ADDR = REG_B;
 			ALURES:  MA_ADDR = ALU_RES;
@@ -465,7 +465,7 @@ module SH2P_core
 	bit [31: 0] MA_WD;
 	always_comb begin
 		MA_WD = ALU_RES;
-		case (PIPE.EX.DI.MEM.WDS)
+		case (EX_DI.MEM.WDS)
 			ALUA: MA_WD = REG_A;
 			ALUB: MA_WD = REG_B;
 			ALURES: MA_WD = ALU_RES;
@@ -495,10 +495,10 @@ module SH2P_core
 		else if (EN && CE) begin
 			if (!EX_STALL) begin
 				PIPE.MA.IR <= PIPE.EX.IR;
-				PIPE.MA.DI <= PIPE.EX.DI;
+				PIPE.MA.DI <= EX_DI;
 				PIPE.MA.PC <= PIPE.EX.PC;
 				PIPE.MA.BC <= PIPE.EX.BC;
-				PIPE.MA.RES <= PIPE.EX.DI.BR.BI ? REG_B : ALU_RES;
+				PIPE.MA.RES <= EX_DI.BR.BI ? REG_B : ALU_RES;
 				PIPE.MA.ADDR <= MA_ADDR;
 				PIPE.MA.WD <= MA_WD;
 			end
@@ -507,9 +507,9 @@ module SH2P_core
 	
 	always_comb begin
 		SR_NEW = SR & 32'h000003F3;
-		case (PIPE.EX.DI.CTRL.SRS)
+		case (EX_DI.CTRL.SRS)
 			LOAD: SR_NEW = ALU_RES;
-			ALU:case (PIPE.EX.DI.ALU.OP)
+			ALU:case (EX_DI.ALU.OP)
 					ADD: SR_NEW.T = ALU_T;
 					LOG: SR_NEW.T = ALU_T;
 					SHIFT: SR_NEW.T = ALU_T;
@@ -548,8 +548,8 @@ module SH2P_core
 		end
 		else if (EN && CE) begin
 			if (!EX_STALL) begin
-				if (PIPE.EX.DI.CTRL.W) begin
-					case (PIPE.EX.DI.CTRL.S)
+				if (EX_DI.CTRL.W) begin
+					case (EX_DI.CTRL.S)
 						SR_:  SR <= SR_NEW & 32'h000003F3;
 						GBR_: GBR <= ALU_RES;
 						VBR_: VBR <= ALU_RES;
@@ -657,12 +657,12 @@ module SH2P_core
 	
 	//Execute results are written when the instruction leaves EX (slot R, live ALU data);
 	//load / MAC-read data when the load has entered WB (slot F, data WB.RD), unless a younger instruction wrote the same register.
-	wire EX_LD = (PIPE.EX.DI.MEM.R & ~PIPE.EX.DI.MAC.W) | (PIPE.EX.DI.MAC.R & ~PIPE.EX.DI.MEM.W);
-	wire EX_WA = PIPE.EX.DI.RA.W & ~EX_LD;
-	wire EX_WB = PIPE.EX.DI.RB.W & (~PIPE.EX.DI.RA.W | PIPE.EX.DI.RA.N != PIPE.EX.DI.RB.N);
+	wire EX_LD = (EX_DI.MEM.R & ~EX_DI.MAC.W) | (EX_DI.MAC.R & ~EX_DI.MEM.W);
+	wire EX_WA = EX_DI.RA.W & ~EX_LD;
+	wire EX_WB = EX_DI.RB.W & (~EX_DI.RA.W | EX_DI.RA.N != EX_DI.RB.N);
 	assign W1_E = (EX_WA | EX_WB) & ~EX_STALL & RES_N;
-	assign W1_N = EX_WA ? PIPE.EX.DI.RA.N : PIPE.EX.DI.RB.N;
-	assign W1_D = PIPE.EX.DI.BR.BI ? REG_B : ALU_RES;
+	assign W1_N = EX_WA ? EX_DI.RA.N : EX_DI.RB.N;
+	assign W1_D = EX_DI.BR.BI ? REG_B : ALU_RES;
 	
 	wire LD_KILL = (MA_WA & (PIPE.MA.DI.RA.N == PIPE.WB.DI.RA.N)) | (MA_WB & (PIPE.MA.DI.RB.N == PIPE.WB.DI.RA.N));
 	assign W2_E = CE_F & WB_LDP & ~LD_KILL;

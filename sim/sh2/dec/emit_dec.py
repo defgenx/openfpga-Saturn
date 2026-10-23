@@ -3,6 +3,10 @@
 import pickle, sys
 exec(open('analyze.py').read().split("rows=[]")[0])
 tree,words,SRC,exw,cid=pickle.load(open('gen.pkl','rb'))
+rows_n={}
+for l in open('dec_dump.txt'):
+    p=l.split()
+    if p[0]=='N' and p[2]=='0' and p[3]=='0' and p[4]=='0' and p[1]=='0009': rows_n[0x0009]=int(p[5],16)
 FIDX={}; sh=W
 for n,w in F:
     sh-=w; FIDX[n]=(sh,w)
@@ -24,7 +28,8 @@ module SH2P_dec #(parameter bit VER=1) (
 	input             INT_EXP,
 	input             ILI_EXP,
 	input             ILSI,
-	output SH2P_PKG::DecInstr_t DECI
+	output SH2P_PKG::DecInstr_t DECI,
+	output      [7:0] CLS_O
 );
 	import SH2P_PKG::*;
 	wire BC = (T == ~IR[9]);
@@ -77,5 +82,51 @@ o.append('''	reg [4:0] RAN, RBN;
 	end''')
 s0,w0=FIDX['RA_N']; s1,w1=FIDX['RB_N']
 o.append("	wire [%d:0] CWN = CW | ({%d'd0,RAN} << %d) | ({%d'd0,RBN} << %d);"%(W-1,W-5,s0,W-5,s1))
-o.append('	assign DECI = CWN;\nendmodule')
+o.append('	assign DECI = CWN;\n	assign CLS_O = CLS;\nendmodule')
+RSTC=cid[setf(setf(rows_n[0x0009],'RA_N',0),'RB_N',0)]
+# ROM module
+o.append('''
+// Control word ROM: registered class address (M10K), RA.N/RB.N completed from the instruction register.
+module SH2P_decrom (
+	input             CLK,
+	input             EN_A,
+	input             RESET,
+	input       [7:0] CLS_D,
+	input      [15:0] IR,
+	output SH2P_PKG::DecInstr_t DI
+);
+	import SH2P_PKG::*;
+	reg [7:0] A;
+	always @(posedge CLK) if (EN_A | RESET) A <= RESET ? 8'd%d : CLS_D;
+	reg [%d:0] ROM [0:255];
+	initial begin''' % (cid[setf(setf(rows[(0x0009,0,0,0)] if False else 0,'RA_N',0),'RB_N',0)] if False else RSTC, W+5))
+for i,w in enumerate(words):
+    ra,rb=SRC[i]
+    rbc={('ir',4):0,('ir',8):1,('const',0):2,('const',15):3,('const',16):4}[rb]
+    o.append("		ROM[%d] = %d'h%x;"%(i,W+6,(w<<6)|(srccode(ra)<<3)|rbc))
+o.append('''	end
+	wire [%d:0] Q = ROM[A];
+	wire [2:0] RAS = Q[5:3], RBS = Q[2:0];
+	reg [4:0] RAN, RBN;
+	always_comb begin
+		case (RAS)
+			3'd0: RAN = {1'b0,IR[11:8]};
+			3'd1: RAN = {1'b0,IR[7:4]};
+			3'd3: RAN = 5'd15;
+			3'd4: RAN = 5'd16;
+			default: RAN = 5'd0;
+		endcase
+		case (RBS)
+			3'd0: RBN = {1'b0,IR[7:4]};
+			3'd1: RBN = {1'b0,IR[11:8]};
+			3'd3: RBN = 5'd15;
+			3'd4: RBN = 5'd16;
+			default: RBN = 5'd0;
+		endcase
+	end
+	assign DI = Q[%d:6] | ({%d'd0,RAN} << %d) | ({%d'd0,RBN} << %d);
+endmodule''' % (W+5, W+5, W-5, s0, W-5, s1))
+# reset class (NOP, state 0)
+import pickle
+
 open(out,'w').write('\n'.join(o)+'\n')
