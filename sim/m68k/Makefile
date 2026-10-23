@@ -29,3 +29,11 @@ obj_pla/Vtb_pla: ref/fx68k.sv tb_pla.sv tb_pla.cpp $(M)/m68kp.sv $(M)/m68kp_plar
 # exhaustive check of the ROM decode against the original PLA
 run_pla: obj_pla/Vtb_pla
 	./obj_pla/Vtb_pla
+
+# Lockstep over generated sound-driver-like programs (short programs, many seeds) and random waits/interrupts.
+run_img: lock
+	cd obj_lock && for s in $$(seq 1 60); do python3 ../gen_prog.py $$s /tmp/m68kp_img_$$s.bin 80 && ./Vtb_lock img /tmp/m68kp_img_$$s.bin 400000 $$((s % 4)) $$s || exit 1; done | awk '{print} /mismatches/ {m += $(NF-1); o += $(NF-3)} END {print "img total: mismatches", m}'
+
+# SingleStepTests through the register loader, lockstep golden/DUT (tests.txt from sst2txt.py)
+run_sst: lock
+	cd obj_lock && ./Vtb_lock sst $(SST)

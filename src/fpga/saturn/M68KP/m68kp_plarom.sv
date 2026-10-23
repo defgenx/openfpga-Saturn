@@ -10,7 +10,7 @@ module mp_uaddrRom(input clk, input [15:0] opcode, output [9:0] a1, a2, a3, outp
 	(* ramstyle = "M10K", rom_style = "M10K" *) reg [6:0] rom1 [0:1023];
 	(* ramstyle = "M10K", rom_style = "M10K" *) reg [9:0] rom2 [0:2047];
 	(* ramstyle = "M10K", rom_style = "M10K" *) reg [29:0] rom3 [0:504];
-	reg [6:0] colId; reg [9:0] r2; reg [29:0] r3; reg [3:0] eaq; reg rawq;
+	reg [6:0] colId; reg [9:0] q2; reg [29:0] r3; reg [3:0] eaq;
 	initial begin
 		rom1[0] = 7'd0;
 		rom1[1] = 7'd0;
@@ -2846,9 +2846,10 @@ module mp_uaddrRom(input clk, input [15:0] opcode, output [9:0] a1, a2, a3, outp
 	always @(posedge clk) begin
 		colId <= rom1[opcode[15:6]];
 		eaq <= eaClass;
-		r2 <= (colId == 7'd88) ? side : rom2[{colId, eaq}];
+		q2 <= rom2[{colId, eaq}];
 		r3 <= rom3[r2[8:0]];
 	end
+	wire [9:0] r2 = (colId == 7'd88) ? side : q2;
 	assign {a1, a2, a3} = r3;
 	assign isIllegal = r2[9];
 endmodule

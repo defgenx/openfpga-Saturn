@@ -1,5 +1,6 @@
 // Lockstep equivalence bench: golden REF_fx68k vs DUT m68kp, every output compared every clk.
 //   tb_lock rand <seed> <cycles> <mode> <maxwait>    random programs, random bus waits and interrupts
+//   tb_lock img  <image.bin> <cycles> <maxwait> <seed>  generated sound-driver-like program (gen_prog.py)
 //   tb_lock sst  <tests.txt> [maxwait]               SingleStepTests cases run through a register loader
 // The SST mode additionally checks the golden core against the suite (bus cycles, timing, final state).
 #include "Vtb_lock.h"
@@ -31,6 +32,7 @@ struct Bench {
 	std::function<void(uint32_t addr, bool rw, int fc, bool uds, bool lds, uint16_t data)> on_cycle_start;
 	uint64_t nbus = 0, nwr = 0;
 	uint64_t half = 0;                                      // strobe count
+	int period = getenv("PERIOD") ? atoi(getenv("PERIOD")) : 0, pc = 0;   // PERIOD=n: fixed strobe spacing in clk (default: Saturn's 2.54)
 	uint64_t freeze_half = 0;                               // no more 68K strobes from this count on
 	bool wrote_this_cycle = false;
 	std::vector<uint32_t> seen = std::vector<uint32_t>(65536 / 32); uint64_t nird = 0; uint16_t lastird = 0;
@@ -39,7 +41,8 @@ struct Bench {
 	bool step() {
 		const uint64_t in_clk = 57272800, out = 22579200;
 		acc += out; bool strobe = false;
-		if (acc >= in_clk) { acc -= in_clk; strobe = true; }
+		if (period) { if (++pc >= period) { pc = 0; strobe = true; } }
+		else if (acc >= in_clk) { acc -= in_clk; strobe = true; }
 		if (freeze_half && half >= freeze_half) strobe = false;
 		t->enPhi1 = 0; t->enPhi2 = 0;
 		bool phi1 = false;
@@ -96,6 +99,22 @@ static int run_rand(uint64_t seed, uint64_t ncyc, int mode, int maxwait) {
 	b.reset_cpu();
 	while (b.cyc < ncyc) b.step();
 	printf("rand seed %llu: %llu cycles, %llu bus cycles (%llu writes), %llu distinct opcodes, %llu mismatches\n", (unsigned long long)seed,
+		(unsigned long long)b.cyc, (unsigned long long)b.nbus, (unsigned long long)b.nwr, (unsigned long long)b.nird, (unsigned long long)b.mism);
+	return b.mism != 0;
+}
+
+// program image mode (gen_prog.py)
+static int run_img(const char* file, uint64_t ncyc, int maxwait, uint64_t seed) {
+	Bench b; b.rng.seed(seed); b.maxwait = maxwait; b.irq_random = true;
+	std::vector<uint8_t> mem(MEMSZ, 0);
+	FILE* f = fopen(file, "rb"); if (!f || fread(mem.data(), 1, MEMSZ, f) != MEMSZ) { perror(file); return 2; } fclose(f);
+	b.rd16 = [&](uint32_t a) { a &= (MEMSZ - 1) & ~1u; return (uint16_t)(mem[a] << 8 | mem[a + 1]); };
+	b.wr16 = [&](uint32_t a, uint16_t d, bool u, bool l) { a &= MEMSZ - 1; if (u) mem[a & ~1u] = d >> 8; if (l) mem[a | 1] = d; };
+	int tr = getenv("TRACE") ? atoi(getenv("TRACE")) : 0;
+	if (tr) b.on_cycle_start = [&](uint32_t a, bool rw, int fc, bool u, bool l, uint16_t d) { if (b.nbus < (uint64_t)tr) printf("%06x %s fc%d %04x\n", a, rw ? "R" : "W", fc, rw ? b.rd16(a) : d); };
+	b.reset_cpu();
+	while (b.cyc < ncyc) b.step();
+	printf("img %s: %llu cycles, %llu bus cycles (%llu writes), %llu distinct opcodes, %llu mismatches\n", file,
 		(unsigned long long)b.cyc, (unsigned long long)b.nbus, (unsigned long long)b.nwr, (unsigned long long)b.nird, (unsigned long long)b.mism);
 	return b.mism != 0;
 }
@@ -240,8 +259,11 @@ static int run_one(const Test& t, int maxwait, bool verbose, uint64_t& refcyc) {
 
 int main(int argc, char** argv) {
 	Verilated::commandArgs(argc, argv);
+	if (!fopen("microrom.mem", "r") || !fopen("nanorom.mem", "r")) { fprintf(stderr, "run from obj_lock/ (microrom.mem, nanorom.mem)\n"); return 2; }
 	if (argc > 1 && !strcmp(argv[1], "rand"))
 		return run_rand(argc > 2 ? strtoull(argv[2], 0, 0) : 1, argc > 3 ? strtoull(argv[3], 0, 0) : 200000, argc > 4 ? atoi(argv[4]) : 0, argc > 5 ? atoi(argv[5]) : 3);
+	if (argc > 2 && !strcmp(argv[1], "img"))
+		return run_img(argv[2], argc > 3 ? strtoull(argv[3], 0, 0) : 2000000, argc > 4 ? atoi(argv[4]) : 1, argc > 5 ? strtoull(argv[5], 0, 0) : 1);
 	if (argc > 2 && !strcmp(argv[1], "sst")) {
 		FILE* f = fopen(argv[2], "r"); if (!f) { perror("tests"); return 2; }
 		int maxwait = argc > 3 ? atoi(argv[3]) : 0;

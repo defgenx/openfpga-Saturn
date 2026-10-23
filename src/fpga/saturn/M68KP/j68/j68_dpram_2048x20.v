@@ -35,8 +35,15 @@ module j68_dpram_2048x20
 );
     parameter RAM_INIT_FILE = "j68_ram_c.mem";
 
-    reg  [19:0] r_mem_blk [0:2047];
-    initial $readmemb(RAM_INIT_FILE, r_mem_blk);
+    // Port B only addresses the register file at 0x7C0-0x7FF; port A only reads microcode.
+    // Split accordingly so each maps to one M10K / MLAB.
+    reg  [19:0] r_rom [0:2047];
+    reg  [15:0] r_reg [0:63];
+    integer i;
+    initial begin
+        $readmemb(RAM_INIT_FILE, r_rom);
+        for (i = 0; i < 64; i = i + 1) r_reg[i] = r_rom[11'h7C0 + i][15:0];
+    end
 
     reg  [19:0] r_q_a;
     reg  [15:0] r_q_b;
@@ -44,10 +51,10 @@ module j68_dpram_2048x20
 
     always @(posedge clock) begin
         if (clocken) begin
-            if (rden_a) r_q_a <= r_mem_blk[address_a];
-            r_q_b <= r_mem_blk[address_b][15:0];
-            if (wren_b[0]) r_mem_blk[address_b][7:0]  <= data_b[7:0];
-            if (wren_b[1]) r_mem_blk[address_b][15:8] <= data_b[15:8];
+            if (rden_a) r_q_a <= r_rom[address_a];
+            r_q_b <= r_reg[address_b[5:0]];
+            if (wren_b[0]) r_reg[address_b[5:0]][7:0]  <= data_b[7:0];
+            if (wren_b[1]) r_reg[address_b[5:0]][15:8] <= data_b[15:8];
         end
     end
 
