@@ -1,5 +1,6 @@
-// MULT: multiplier / MAC unit. One 64-bit adder serves MUL, DMUL, MAC.W and MAC.L (accumulator input forced to 0
-// for the multiplies); the MAC.W 33-bit overflow test is derived from the same sum.
+// MULT: multiplier / MAC unit. One 64-bit sum (accumulator input forced to 0 for the multiplies) serves MUL, DMUL,
+// MAC.W and MAC.L; the MAC.W 33-bit overflow test is derived from the same sum. Saturation constants are all-0/all-1
+// bit groups kept as stored==0 plus FL*/FH* flags (reads as stored | flag), so MACL/MACH need only sclr/sload.
 module SH7604P_MULT (
 	input             CLK,
 	input             RST_N,
@@ -35,7 +36,7 @@ module SH7604P_MULT (
 	reg        MACW_EXEC;
 	reg        MACL_EXEC;
 	reg        SAT;
-	reg        FL31, FL, FHH, FHL;	// saturation constants: register bit group reads as stored | flag
+	reg        FL31, FL, FHH, FHL;	// MACL[31], MACL[30:0], MACH[31:15], MACH[14:0] forced to 1 (stored is 0 then)
 	
 	// 33x33 signed product split into 16-bit halves: DSP blocks form L, M, H; one ternary add folds in the accumulator
 	wire signed [16:0] XH = $signed({MA[31]&SIGNED, MA[31:16]});
@@ -95,8 +96,8 @@ module SH7604P_MULT (
 			// synopsys translate_on
 		end
 		else begin
-			if (WRA) MA <= {{16{EXT_A}} & {16{OPMW | OPAW}} | CBUS_DI[31:16] & {16{OPL}}, HI ? CBUS_DI[31:16] : CBUS_DI[15:0]};
-			if (WRB) MB <= {{16{EXT_B}} & {16{OPMW | OPAW}} | CBUS_DI[31:16] & {16{OPL}}, (OPMW | HI) ? CBUS_DI[31:16] : CBUS_DI[15:0]};
+			if (WRA) MA <= {(OPMW | OPAW) ? {16{EXT_A}} : CBUS_DI[31:16], HI ? CBUS_DI[31:16] : CBUS_DI[15:0]};
+			if (WRB) MB <= {(OPMW | OPAW) ? {16{EXT_B}} : CBUS_DI[31:16], (OPMW | HI) ? CBUS_DI[31:16] : CBUS_DI[15:0]};
 			
 			if (GO) begin
 				MM_DONE <= 1;
@@ -153,7 +154,6 @@ module SH7604P_MULT (
 				MACL_EXEC <= 0;
 			end
 			
-			// saturation constants are all-0/all-1 groups: stored as 0 plus a flag, so MACL/MACH need only sclr/sload
 			if (CLR | OVFW | OVFL) MACL <= '0;
 			else if (LDS & MAC_SEL[0]) MACL <= CBUS_DI;
 			else if (EXEC) MACL <= SUM[31:0];
