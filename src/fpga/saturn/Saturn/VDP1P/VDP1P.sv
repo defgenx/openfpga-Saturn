@@ -449,14 +449,18 @@ module VDP1P (
 	wire         COMM_ACC = !CMD.CMDCTRL.COMM[2] || !(CMD.CMDCTRL.COMM[1] || CMD.CMDCTRL.COMM[0]);   // COMM 0-4: edge colours, 5-7: table
 	bit  [ 3: 0] GSEQ;
 	bit          GP2;
-	wire         GP2_ANY = GP2 || (CMD_ST == CMDS_GRD_CALC_ROW && GRD_ON && COMM_ACC);
+	wire         GP2_ANY = GP2 || (CMD_ST == CMDS_GRD_CALC_ROW && GRD_ON);
 	bit  [ 4: 0] GI[6];             // integer parts of left (0-2) and right (3-5) colour, divider operands
-	wire [11: 0] GK = COL_HEIGHT - COL_D;
+	wire [ 1: 0] POLY_S1 = POLY_S + 2'd1;
+	wire [11: 0] GK = COMM_ACC ? COL_HEIGHT - COL_D : 12'd0;
 	wire [ 2: 0] GIDX = GSEQ < 4'd7 ? (GSEQ[0] ? 3'd0 : 3'd3) + {1'b0,(GSEQ[2:1] - (GSEQ[0] ? 2'd0 : 2'd1))} : (DIR[0] ? 3'd3 : 3'd0) + (GSEQ[2:0] - 3'd7);
 	wire [16: 0] GS_Q;
 	wire [16: 0] GPROD = GK * GS_Q;
-	wire [ 4: 0] GBASE = GIDX < 3'd3 ? (GIDX == 3'd0 ? GRD_TBL[0][4:0] : GIDX == 3'd1 ? GRD_TBL[0][9:5] : GRD_TBL[0][14:10])
-	                                 : (GIDX == 3'd3 ? GRD_TBL[1][4:0] : GIDX == 3'd4 ? GRD_TBL[1][9:5] : GRD_TBL[1][14:10]);
+	wire         GSIDE = GIDX >= 3'd3;
+	wire [ 1: 0] GTW = COMM_ACC ? {1'b0,GSIDE} : (GSIDE ? POLY_S1 : POLY_S);
+	wire [14: 0] GTC = GRD_TBL[GTW][14:0];
+	wire [ 1: 0] GCH = GSIDE ? GIDX[1:0] - 2'd3 : GIDX[1:0];
+	wire [ 4: 0] GBASE = GCH == 2'd0 ? GTC[4:0] : GCH == 2'd1 ? GTC[9:5] : GTC[14:10];
 	wire [16: 0] GSUM = {GBASE,12'd0} + GPROD;
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
@@ -466,7 +470,6 @@ module VDP1P (
 	wire         GL_WE = GSEQ >= 4'd7;
 	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
 	// COMM 5-7 take the left/right colours of the segment straight from the table (POLY_S, POLY_S+1)
-	wire [ 1: 0] POLY_S1 = POLY_S + 2'd1;
 	RGB_t        GRD_TBL_L,GRD_TBL_R;
 	assign GRD_TBL_L = GRD_TBL[POLY_S][14:0];
 	assign GRD_TBL_R = GRD_TBL[POLY_S1][14:0];
@@ -619,25 +622,13 @@ module VDP1P (
 			end
 			if (GSEQ >= 4'd1 && GSEQ <= 4'd6) GI[GIDX] <= GSUM[16:12];
 									
-			if (DIV_RUN && (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT)) begin
-				// the left/right quotients are shifted into the line colour registers (idle until the row start colour is loaded)
-				{LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= SHQ({LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC},DIV_R_QB);
-				{LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= SHQ({LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC},DIV_G_QB);
-				{LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= SHQ({LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC},DIV_B_QB);
-			end
-			if (GL_WE && COMM_ACC) begin
+			if (GL_WE) begin
 				case (GL_CH)
 					2'd0: {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= GSUM;
 					2'd1: {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= GSUM;
 					2'd2: {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= GSUM;
 					default:;
 				endcase
-			end
-			if (!COMM_ACC && CMD_ST == CMDS_GRD_CALC_ROW) begin
-				// COMM 5-7: start colour is the table colour (no fraction)
-				LINE_GHCOLOR.R <= {1'b0,DIR[0] ? GRD_TBL_R.R : GRD_TBL_L.R,12'd0};
-				LINE_GHCOLOR.G <= {1'b0,DIR[0] ? GRD_TBL_R.G : GRD_TBL_L.G,12'd0};
-				LINE_GHCOLOR.B <= {1'b0,DIR[0] ? GRD_TBL_R.B : GRD_TBL_L.B,12'd0};
 			end
 			if (CE_R) DRAW_END <= 0;
 			if (FBD_ST == FBDS_WRITE) DRAW_ENABLE <= 0;
@@ -2496,7 +2487,7 @@ module VDP1P (
 	function automatic [16:0] SHQ(input [16:0] C, input B);
 		SHQ = {C[15:0],B};
 	endfunction
-	always @(posedge CLK) if (DIV_RUN && CMD_ST == CMDS_GRD_CALC_LINE) begin
+	always @(posedge CLK) if (DIV_RUN && (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT || CMD_ST == CMDS_GRD_CALC_LINE)) begin
 		Q_R <= SHQ(Q_R,DIV_R_QB); Q_G <= SHQ(Q_G,DIV_G_QB); Q_B <= SHQ(Q_B,DIV_B_QB);
 	end
 
@@ -2505,7 +2496,7 @@ module VDP1P (
 	bit          GW_B,GW_DIRB,GW_SIDE;
 	wire         GW_PH = CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT;
 	wire         GW_SD = CMD_ST == CMDS_GRD_CALC_RIGHT;
-	wire [16: 0] GW_Q   = GW_B ? {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} : GRD_CALC_STATE == 5'd19 ? {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} : {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC};
+	wire [16: 0] GW_Q   = GW_B ? Q_B : GRD_CALC_STATE == 5'd19 ? Q_R : Q_G;
 	wire         GW_DIR = GW_B ? GW_DIRB : GRD_CALC_STATE == 5'd19 ? DIV_A_R[5] : DIV_A_G[5];
 	always_comb begin
 		GS_WE = GW_B || (GW_PH && (GRD_CALC_STATE == 5'd19 || GRD_CALC_STATE == 5'd20));
