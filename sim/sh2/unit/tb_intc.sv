@@ -111,8 +111,8 @@ module tb_intc;
 
 	integer k, rb = 0;
 	always @(posedge CLK) if (RST_N) begin
-		// bus; every ~15000 clk a reset burst: NMI_N toggles, RES_N pulses and ICR is read back (NMIL during reset)
-		if (rb == 0 && rnd32(0) % 15000 == 0) begin rb <= 8; NMI_N <= ~NMI_N; end
+		// bus; every ~6000 clk a reset burst: NMI_N toggles, RES_N pulses and ICR is read back (NMIL during reset)
+		if (rb == 0 && rnd32(0) % 6000 == 0) begin rb <= 8; NMI_N <= ~NMI_N; end
 		if (rb != 0) rb <= rb - 1;
 		if (CE_F) begin
 			if (REQ) REQ <= 0;
@@ -152,7 +152,7 @@ module tb_intc;
 		VBUS_WAIT <= (rnd32(0) % 3) == 0;
 		EN <= (rnd32(0) % 24) != 0;
 	end
-	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rb == 5 || rb == 3 && rnd32(0) % 2 == 0) ? 1'b0 : (rnd32(0) % 3000) != 0;
+	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rb >= 2 && rb <= 6 && rnd32(0) % 2 == 0) ? 1'b0 : (rnd32(0) % 3000) != 0;
 	initial begin
 		if (!$value$plusargs("seed=%d", seed)) seed = 1;
 		dens = 1 + seed % 3;
