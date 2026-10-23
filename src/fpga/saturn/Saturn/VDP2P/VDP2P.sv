@@ -2789,35 +2789,6 @@ C_NEN[0] = 0;
 	assign RxDC[1] = {RBG_DC[1][3],RBG_DC[1][1],RBG_DC[1][2],RBG_DC[1][0]};
 	assign RxCDP[1] = RBG_CDP[1];
 	
-	//Character parameter ring: three banks of four 18-bit words {hi,lo}; the visible window is bank NDC_P (older cell)
-	//and NDC_P+1 (newer cell) like the cell data. The hidden bank NDC_P+2 receives the assembled parameters one
-	//event before the boundary, one pair per clock, each pair read before the capture visit that rewrites it.
-	bit  [ 2: 0] CPN;
-	wire         CPW = NDC_WE_E | (CPN != 3'd0);
-	assign       CPP = NDC_WE_E ? 2'd3 : (CPN == 3'd1 ? 2'd2 : CPN == 3'd2 ? 2'd1 : 2'd0);
-	always @(posedge CLK) CPN <= NDC_WE_E ? 3'd1 : (CPN == 3'd3 ? 3'd0 : CPN == 3'd0 ? 3'd0 : CPN + 3'd1);
-	wire [ 1: 0] NDC_P1 = NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
-	wire [ 1: 0] NDC_P2 = NDC_P == 2'd0 ? 2'd2 : NDC_P - 2'd1;
-	wire [10: 0] N2I = NCX[2].INT, N3I = NCX[3].INT;
-	wire [ 1: 0] RP0 = N0_QT4 ? {N0I[4],1'b0} : N0_HF8 ? {N0I[3],1'b0} : 2'b00;
-	wire         RH0 = (N0_HF4 | N0_QT4) ? N0I[3] : 1'b0;
-	wire         RB0 = N0_QT4 ? N0I[5] : (N0_HF4 | N0_HF8) ? N0I[4] : N0I[3];
-	wire [ 1: 0] RP1 = N1_QT4 ? {N1I[4],1'b1} : N1_HF8 ? {N1I[3],1'b1} : 2'b01;
-	wire         RH1 = (N1_HF4 | N1_QT4) ? N1I[3] : 1'b0;
-	wire         RB1 = N1_QT4 ? N1I[5] : (N1_HF4 | N1_HF8) ? N1I[4] : N1I[3];
-	wire [17: 0] CR0, CR1, CR2, CR3;
-	VDP2P_CDPRING cdr0(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB0 ? NDC_P1 : NDC_P, RP0, CR0);
-	VDP2P_CDPRING cdr1(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB1 ? NDC_P1 : NDC_P, RP1, CR1);
-	VDP2P_CDPRING cdr2(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N2I[3] ? NDC_P1 : NDC_P, 2'd2, CR2);
-	VDP2P_CDPRING cdr3(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N3I[3] ? NDC_P1 : NDC_P, 2'd3, CR3);
-	CellParam_t N0CDP_W;
-	assign N0CDP_W = {RH0 ? CR0[17:9] : CR0[8:0], 1'b0};
-	CellParam_t N1CDP_W;
-	assign N1CDP_W = {RH1 ? CR1[17:9] : CR1[8:0], 1'b0};
-	CellParam_t N2CDP_W;
-	assign N2CDP_W = {CR2[8:0], 1'b0};
-	CellParam_t N3CDP_W;
-	assign N3CDP_W = {CR3[8:0], 1'b0};
 	
 	ScrollData_t NCX[4];
 	always @(posedge CLK or negedge RST_N) begin
@@ -2882,6 +2853,36 @@ C_NEN[0] = 0;
 	wire [ 63:0] NDC_WD3 = {NBG_CDC[3][7],NBG_CDC[3][6],NBG_CDC[3][5],NBG_CDC[3][4],NBG_CDC[3][3],NBG_CDC[3][2],NBG_CDC[3][1],NBG_CDC[3][0]};
 	wire [  7:0] N0_D0, N0_D1, N0_D2, N0_D3, N1_D1, N1_D3, N2_D2, N3_D3;
 	wire [ 10:0] N0I = NCX[0].INT, N1I = NCX[1].INT;
+	//Character parameter ring: three banks of four 18-bit words {hi,lo}; the visible window is bank NDC_P (older cell)
+	//and NDC_P+1 (newer cell) like the cell data. The hidden bank NDC_P+2 receives the assembled parameters one
+	//event before the boundary, one pair per clock, each pair read before the capture visit that rewrites it.
+	bit  [ 2: 0] CPN;
+	wire         CPW = NDC_WE_E | (CPN != 3'd0);
+	assign       CPP = NDC_WE_E ? 2'd3 : (CPN == 3'd1 ? 2'd2 : CPN == 3'd2 ? 2'd1 : 2'd0);
+	always @(posedge CLK) CPN <= NDC_WE_E ? 3'd1 : (CPN == 3'd3 ? 3'd0 : CPN == 3'd0 ? 3'd0 : CPN + 3'd1);
+	wire [ 1: 0] NDC_P1 = NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
+	wire [ 1: 0] NDC_P2 = NDC_P == 2'd0 ? 2'd2 : NDC_P - 2'd1;
+	wire [10: 0] N2I = NCX[2].INT, N3I = NCX[3].INT;
+	wire [ 1: 0] RP0 = N0_QT4 ? {N0I[4],1'b0} : N0_HF8 ? {N0I[3],1'b0} : 2'b00;
+	wire         RH0 = (N0_HF4 | N0_QT4) ? N0I[3] : 1'b0;
+	wire         RB0 = N0_QT4 ? N0I[5] : (N0_HF4 | N0_HF8) ? N0I[4] : N0I[3];
+	wire [ 1: 0] RP1 = N1_QT4 ? {N1I[4],1'b1} : N1_HF8 ? {N1I[3],1'b1} : 2'b01;
+	wire         RH1 = (N1_HF4 | N1_QT4) ? N1I[3] : 1'b0;
+	wire         RB1 = N1_QT4 ? N1I[5] : (N1_HF4 | N1_HF8) ? N1I[4] : N1I[3];
+	wire [17: 0] CR0, CR1, CR2, CR3;
+	VDP2P_CDPRING cdr0(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB0 ? NDC_P1 : NDC_P, RP0, CR0);
+	VDP2P_CDPRING cdr1(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB1 ? NDC_P1 : NDC_P, RP1, CR1);
+	VDP2P_CDPRING cdr2(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N2I[3] ? NDC_P1 : NDC_P, 2'd2, CR2);
+	VDP2P_CDPRING cdr3(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N3I[3] ? NDC_P1 : NDC_P, 2'd3, CR3);
+	CellParam_t N0CDP_W;
+	assign N0CDP_W = {RH0 ? CR0[17:9] : CR0[8:0], 1'b0};
+	CellParam_t N1CDP_W;
+	assign N1CDP_W = {RH1 ? CR1[17:9] : CR1[8:0], 1'b0};
+	CellParam_t N2CDP_W;
+	assign N2CDP_W = {CR2[8:0], 1'b0};
+	CellParam_t N3CDP_W;
+	assign N3CDP_W = {CR3[8:0], 1'b0};
+
 	//One read port per array. The readers of an array are mutually exclusive in effect: the layer that does not own the
 	//array in the current colour depth / reduction mode is switched off by N1ON/N2ON/N3ON below, so its data is unused.
 	wire         N0_REDUCE_I = (NSxREG[0].CHCN[0] && NSxREG[0].ZMHF) || NSxREG[0].ZMQT;
