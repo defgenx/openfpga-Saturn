@@ -137,6 +137,17 @@ module tb_dmac;
 		RES_N <= (rnd32(0) % 5000) != 0;
 	end
 
+	// occasional RST_N pulse (asynchronous reset of all registers)
+	integer rstcnt = 0, nrst = 0;
+	always @(posedge CLK) begin
+		if (rstcnt > 0) begin
+			rstcnt <= rstcnt - 1;
+			if (rstcnt == 1) RST_N <= 1;
+		end else if (RST_N && cyc > 2000 && (rnd32(0) % 40000) == 0) begin
+			RST_N <= 0; rstcnt <= 1 + rnd32(0) % 5; nrst <= nrst + 1;
+		end
+	end
+
 	// register offsets in FFFFFF80 window
 	function [7:0] regoff(input [3:0] k);
 		case (k)
@@ -272,8 +283,8 @@ module tb_dmac;
 	always @(posedge CLK) if (RST_N && cyc >= ncyc) begin
 		$display("PASS dmac seed=%0d: %0d clk | events %0d (rd %0d wr %0d, wait-stall %0d) TS0/1/2/3 %0d/%0d/%0d/%0d ch1 %0d | dual %0d single %0d (AM0 %0d) TB %0d AR %0d DREQ %0d RXI %0d TXI %0d DS %0d",
 			seed, cyc, c_ev, c_rd, c_wr, c_wait, c_ts[0], c_ts[1], c_ts[2], c_ts[3], c_ch1, c_dual, c_sa, c_sa_am0, c_tb, c_ar, c_dreq, c_rxi, c_txi, c_ds);
-		$display("     TE0/TE1 %0d/%0d irq-clks %0d/%0d burst-clks %0d lock-clks %0d both-req(PR) %0d rr-flip %0d dack-clks %0d SM+/- %0d/%0d DM+/- %0d/%0d ibus rd/wr %0d/%0d nmi %0d res %0d",
-			c_te0, c_te1, c_irq0, c_irq1, c_burst, c_lock, c_both, c_prio, c_dack, c_smi, c_smd, c_dmi, c_dmd, c_ibr, c_ibw, c_nmi, c_res);
+		$display("     TE0/TE1 %0d/%0d irq-clks %0d/%0d burst-clks %0d lock-clks %0d both-req(PR) %0d rr-flip %0d dack-clks %0d SM+/- %0d/%0d DM+/- %0d/%0d ibus rd/wr %0d/%0d nmi %0d res %0d rst %0d",
+			c_te0, c_te1, c_irq0, c_irq1, c_burst, c_lock, c_both, c_prio, c_dack, c_smi, c_smd, c_dmi, c_dmd, c_ibr, c_ibw, c_nmi, c_res, nrst);
 		$finish;
 	end
 endmodule
