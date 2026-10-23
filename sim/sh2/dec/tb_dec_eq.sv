@@ -4,7 +4,7 @@ module tb_dec_eq;
 	import SH2P_PKG::*;
 	reg  [15:0] IR; reg [2:0] ST; reg T, DS, RE, IE, LE, LS;
 	DecInstr_t D_dut, D_ref;
-	SH2P_dec #(1) dut (.IR(IR), .STATE(ST), .T(T), .DS(DS), .RES_EXP(RE), .INT_EXP(IE), .ILI_EXP(LE), .ILSI(LS), .DECI(D_dut));
+	SH2P_dec #(1) dut (.IR(IR), .STATE(ST), .T(T), .DS(DS), .RES_EXP(RE), .INT_EXP(IE), .ILI_EXP(LE), .ILSI(LS), .DECI(D_dut), .CLS_O());
 	integer n = 0, bad = 0;
 	function DecInstr_t mask(DecInstr_t d);
 		DecInstr_t m;

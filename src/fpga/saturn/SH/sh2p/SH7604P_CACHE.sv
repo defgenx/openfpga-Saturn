@@ -141,10 +141,10 @@ module SH7604P_CACHE (
 	wire [18:0] CTAG_D = CACHE_UPDATE ? CACHE_WR_ADDR[28:10] : CACHE_ADDR_WRITE ? CACHE_WR_ADDR[28:10] : '0;
 	wire  [3:0] CTAG_WE = ({4{CACHE_UPDATE}} & CACHE_WR_WAY) | ({4{CACHE_ADDR_WRITE}} & AddrToWay(CCR.W));
 	bit  [18:0] CTAG_Q[4];
-	SH2P_CACHE_TAG tag0(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CTAG_D), .wren(CTAG_WE[0] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q[0]));
-	SH2P_CACHE_TAG tag1(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CTAG_D), .wren(CTAG_WE[1] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q[1]));
-	SH2P_CACHE_TAG tag2(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CTAG_D), .wren(CTAG_WE[2] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q[2]));
-	SH2P_CACHE_TAG tag3(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data(CTAG_D), .wren(CTAG_WE[3] & EN & CE_R), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q[3]));
+	wire [37:0] CTAG_Q01, CTAG_Q23;
+	SH2P_CACHE_TAG2 tag01(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data({2{CTAG_D}}), .wren(CTAG_WE[1:0] & {2{EN & CE_R}}), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q01));
+	SH2P_CACHE_TAG2 tag23(.clock(CLK), .wraddress(CACHE_WR_ADDR[9:4]), .data({2{CTAG_D}}), .wren(CTAG_WE[3:2] & {2{EN & CE_R}}), .rdaddress(CBUS_A[9:4]), .q(CTAG_Q23));
+	assign CTAG_Q = '{CTAG_Q01[18:0], CTAG_Q01[37:19], CTAG_Q23[18:0], CTAG_Q23[37:19]};
 	
 	// Per-set state in one MLAB word {stamp[5:0], valid[3:0], lru[5:0]}. A set is live while stamp == EPOCH; a global
 	// purge (CCR.CP) advances EPOCH, which invalidates every set at once. Port A is read at the write set (second
