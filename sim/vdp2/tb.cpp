@@ -155,7 +155,7 @@ static void gen_cycles(Rng& rng, Cfg& c, int mode) {
 }
 
 #define R_(a) c.r[(a) / 2]
-static const int N_SCENES = 17;
+static const int N_SCENES = 20;
 
 static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	for (int i = 0; i < 0x90; i++) {
@@ -198,6 +198,19 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 		R_(0xEA) = scene == 16 ? (rng.next() & 0x03FF) : R_(0xEA);
 		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);   // not hires: extended calc is a low-res feature
 		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;   // RGB555 color RAM: extended calc applies to palette dots too
+		break; }
+	case 17: case 18: case 19: {   // extended colour calculation with all four NBG opaque: second/third screen blend,
+	                               // line colour insertion (18), line colour + shadow + sprite (19)
+		R_(0x20) = 0x1F0F | (scene == 19 ? 0x0010 : 0);
+		for (int a = 0xF8; a <= 0xFA; a += 2) R_(a) = ((rng.below(4) + 1) << 8) | (rng.below(4) + 1);   // distinct-ish priorities
+		R_(0xF0) = (rng.below(8) << 8) | rng.below(8);
+		R_(0xEC) = 0x0400 | 0x000F | (scene >= 18 ? 0x0020 : 0) | (rng.chance(50) ? 0x0200 : 0) | (rng.chance(50) ? 0x0100 : 0) | (rng.chance(30) ? 0x0040 : 0);
+		R_(0xE8) = scene == 17 ? 0 : (scene == 18 ? 0x3F : (rng.next() & 0x3F));
+		R_(0xEE) = rng.chance(60) ? 0 : (rng.next() & 0x03FF);
+		R_(0xE2) = scene == 19 ? (rng.next() & 0x013F) | 0x003F : R_(0xE2);
+		R_(0xE0) = scene == 19 ? (rng.next() & 0x373F) : R_(0xE0);
+		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);
+		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;
 		break; }
 	default: break;
 	}
@@ -311,7 +324,7 @@ int main(int argc, char** argv) {
 					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
 					else ra = 2 * rng.below(0x90);
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
-						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0x9E) || (ra >= 0xB0 && ra <= 0xBA);
+						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0xAE) || (ra >= 0xB0 && ra <= 0xBE) || (ra >= 0xD8 && ra <= 0xDE) || ra == 0xD6;   // WCTLD: its rotation parameter window bits pick the table for coefficient addresses   // registers that form VRAM addresses: blanking only
 						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
 						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);   // keep RBG1 on/off as programmed
 						Op o{0, (uint32_t)(0x180000 + ra), {wv}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};

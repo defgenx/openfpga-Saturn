@@ -6,7 +6,7 @@ set -e
 cd "$(dirname "$0")"
 OUT=${1:-build}; shift || true
 GOLD=../../ref/Saturn_MiSTer/rtl/Saturn/VDP2
-CUR=../../src/fpga/saturn/Saturn/VDP2P
+CUR=${VDP2P_DIR:-../../src/fpga/saturn/Saturn/VDP2P}
 rm -rf $OUT/ref $OUT/cur; mkdir -p $OUT/ref $OUT/cur
 for f in VDP2.sv VDP2_pkg.sv VDP2_mem.sv; do
 	awk '/synopsys translate_off/{s=1;next} /synopsys translate_on/{s=0;next} !s' $GOLD/$f | \
