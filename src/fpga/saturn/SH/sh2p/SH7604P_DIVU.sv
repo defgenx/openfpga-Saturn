@@ -32,10 +32,10 @@ module SH7604P_DIVU (
 	wire START64 = WR && IBUS_A[4:0] == 5'h14;
 	
 	reg [31:0] H, L;                     // DVDNTH, DVDNTL
-	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] mem [0:3];                // 0 DVSR, 2 DVDNTH2, 3 DVDNTL2 (2 and 3 are scratch while operating)
-	reg        vD, vH2, vL2, PW;         // word holds its value (else reads 0); pending DVSR write
+	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] mem [0:3];                // 0 DVSR, 1 VCRDIV, 2 DVDNTH2, 3 DVDNTL2 (2 and 3 are scratch while operating)
+	reg        vD, vV, vH2, vL2, PW;     // word holds its value (else reads 0); pending DVSR/VCRDIV write
 	reg        OVFIE, OVFF;              // DVCR
-	reg [15:0] VCRDIV;
+	reg  [7:0] VEC8;                     // VCRDIV[7:0] (output); the full register is RAM word 1
 	reg  [5:0] STEP;
 	reg        DIV64, OVF, ZF, SX, SD, TF, F3, F4, F5, CC, SND, BUSY, DVSR_CLR, GCLR;
 	
@@ -65,13 +65,14 @@ module SH7604P_DIVU (
 	wire [31:0] XA = shiftA ? {H[30:0], TAP} : H;
 	wire SXD = SX ^ SD;
 	wire BUSW = CE_R && RES_N && WR && !OPERATE;
+	wire WB1 = BUSW && RA == 3'd3 && |IBUS_BA[1:0] && !SND;
 	wire WB0 = BUSW && RA == 3'd0 && !SND, WB2 = BUSW && RA == 3'd6 && !SND, WB3 = BUSW && RA == 3'd7 && !SND;
 	wire WS3 = opZD || (R_EN && s23) || (CE_R && SND);                // DVDNTL copies
 	wire WS2 = opS1 || opFL || (CE_F && SND);                          // DVDNTH copies
 	wire WPW = CE_F && PW;
-	wire WE_RAM = WB0 || WB2 || WB3 || WS3 || WS2 || WPW;
-	wire [1:0] WA = (WB0 || WPW) ? 2'd0 : (WB3 || WS3) ? 2'd3 : 2'd2;
-	wire [31:0] WD = (WB0 || WB2 || WB3 || WPW) ? IBUS_DI : WA[0] ? L : H;
+	wire WE_RAM = WB0 || WB1 || WB2 || WB3 || WS3 || WS2 || WPW;
+	wire [1:0] WA = WB1 ? 2'd1 : WPW ? {1'b0, RA[0]} : WB0 ? 2'd0 : (WB3 || WS3) ? 2'd3 : 2'd2;
+	wire [31:0] WD = (WB0 || WB1 || WB2 || WB3 || WPW) ? IBUS_DI : WA[0] ? L : H;
 	wire OVF_DEC = ZF || (DIV64 && !(F3 == SXD && F4 == SXD));
 	wire opLS = OVF_DEC && ((F_EN && s4) || (R_EN && s4) || (F_EN && s5));
 	wire LSBIT = (R_EN && s4) ? F4 : (F_EN && s4) ? F3 : F5;
@@ -80,9 +81,10 @@ module SH7604P_DIVU (
 	// Y operand: RAM word; with the divider idle the same read serves the register read mux
 	wire YDV = OPERATE ? (opZD || isSide || isRest) : (RA == 3'd0);
 	wire YL2 = OPERATE ? (opCL || opFL) : (RA == 3'd7);
-	wire [1:0] RAD = YDV ? 2'd0 : YL2 ? 2'd3 : 2'd2;
-	wire GV = YDV ? vD : OPERATE ? 1'b1 : YL2 ? vL2 : vH2;
-	wire [31:0] YSRC = mem[RAD] & {32{GV}};
+	wire [1:0] RAD = OPERATE ? (YDV ? 2'd0 : YL2 ? 2'd3 : 2'd2) : {RA[2], RA[0]};
+	wire GV = OPERATE ? (RAD != 2'd0 || vD) : RAD[1] ? (RAD[0] ? vL2 : vH2) : (RAD[0] ? vV : vD);
+	wire [31:0] YW = mem[RAD];
+	wire [31:0] YSRC = {YW[31:16] & {16{GV && RAD != 2'd1}}, YW[15:0] & {16{GV}}};
 	wire YINV = opZD || (isSide && TF) || (isRest && !SD) || ((opCL || opCH || opFH) && SX) || (opFL && SXD);
 	wire CIN  = opZD || (isSide && TF) || (isRest && !SD) || (opCL && SX) || (opCH && CC) || (opFH && SX) || (opFL && SXD);
 	wire [32:0] ADD = {1'b0, useXA ? XA : 32'h0} + {1'b0, YEN ? (YSRC ^ {32{YINV}}) : 32'h0} + {32'h0, CIN};
@@ -91,6 +93,50 @@ module SH7604P_DIVU (
 	wire        TBIT = ~(SUM[31] ^ SD);
 	
 	wire [31:0] SAT = {SXD, {31{~SXD}}};
+	
+	// DVDNTH / DVDNTL: one source select per register, so each bit is a single 4-way mux
+	wire AT38  = CE_R && STEP == 6'd38;
+	wire CLR0  = CE_R && !RES_N && (STEP == 6'h3F || STEP == 6'd0);
+	wire HBUS  = BUSW && (RA == 3'd4 || RA == 3'd1);
+	wire HSUM  = isSide || opSH || opCH || opFH || (isRest && COUT);
+	wire HSHF  = isRest && !opJ0 && !COUT;
+	wire H_EN  = HBUS || HSUM || HSHF;
+	wire [1:0] H_SEL = HBUS ? {1'b0, RA == 3'd1} : HSUM ? 2'd2 : 2'd3;
+	wire H_CLR = CLR0 || (AT38 && !RES_N && !(OVF && DIV64)) || (AT38 && OVF && !DIV64 && GCLR);
+	wire LBUS  = BUSW && (RA == 3'd5 || RA == 3'd1);
+	wire LSUM  = opCL || opFL;
+	wire LSHF  = opRS || opRL || opLS;
+	wire LSAT  = AT38 && OVF && !OVFIE;
+	wire L_EN  = LBUS || LSUM || LSHF || LSAT;
+	wire [1:0] L_SEL = LBUS ? 2'd0 : LSUM ? 2'd1 : LSHF ? 2'd2 : 2'd3;
+	wire L_CLR = CLR0 || (AT38 && !RES_N && OVF && OVFIE && !DIV64);
+	wire L_GC  = AT38 && OVF && !DIV64 && GCLR;
+	reg [31:0] HN, LN;
+	always @* begin
+		case (H_SEL)
+			2'd0: HN = IBUS_DI;
+			2'd1: HN = {32{IBUS_DI[31]}};
+			2'd2: HN = SUM;
+			default: HN = {H[30:0], TAP};
+		endcase
+		case (L_SEL)
+			2'd0: LN = IBUS_DI;
+			2'd1: LN = SUM;
+			2'd2: LN = {L[30:0], opLS ? LSBIT : COUT};
+			default: LN = SAT;
+		endcase
+	end
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			H <= '0; L <= '0;
+		end else begin
+			if (H_CLR) H <= '0;
+			else if (H_EN) H <= HN;
+			if (L_CLR) L <= '0;
+			else if (L_EN) L <= LN;
+			else if (L_GC) L[31:3] <= '0;
+		end
+	end
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -114,9 +160,8 @@ module SH7604P_DIVU (
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
-			H <= '0; L <= '0;
-			OVFIE <= 0; OVFF <= 0; VCRDIV <= '0;
-			SND <= 0; DVSR_CLR <= 0; GCLR <= 0; vD <= 0; vH2 <= 0; vL2 <= 0; PW <= 0;
+			OVFIE <= 0; OVFF <= 0; VEC8 <= '0;
+			SND <= 0; DVSR_CLR <= 0; GCLR <= 0; vD <= 0; vV <= 0; vH2 <= 0; vL2 <= 0; PW <= 0;
 		end
 		else begin
 			// datapath, both phases
@@ -129,38 +174,26 @@ module SH7604P_DIVU (
 				if (opS2) F4 <= TBIT;
 				if (opS3) F5 <= TBIT;
 			end
-			if (isSide || opSH) H <= SUM;
-			if (isRest && COUT) H <= SUM;
-			else if (isRest && !opJ0) H <= XA;
-			if (opRS || opRL) L <= {L[30:0], COUT};
-			if (opLS) L <= {L[30:0], LSBIT};
-			if (opCL) begin L <= SUM; CC <= COUT; end
-			if (opCH) H <= SUM;
-			if (opFL) L <= SUM;
-			if (opFH) H <= SUM;
+			if (opCL) CC <= COUT;
 			
 			if (CE_F) begin
 				if (SND) vH2 <= 1;
-				if (PW) begin PW <= 0; vD <= 1; end
+				if (PW) begin PW <= 0; if (RA[0]) vV <= 1; else vD <= 1; end
 			end
 			if (CE_R) begin
 				SND <= 0;
 				if (!RES_N) begin
-					OVFIE <= 0; OVFF <= 0; VCRDIV <= '0;
+					OVFIE <= 0; OVFF <= 0; VEC8 <= '0; vV <= 0;
 					if (STEP == 6'h3F || STEP == 6'd0 || STEP == 6'd1) vD <= 0;
 					else DVSR_CLR <= 1;
-					if (STEP == 6'h3F || STEP == 6'd0) begin H <= '0; L <= '0; end
 					if (STEP == 6'd1 || STEP == 6'd2) GCLR <= 1;
 					if (!OPERATE && !SND) begin vH2 <= 0; vL2 <= 0; end
 				end
 				else if (WR && !OPERATE) begin
 					case (RA)
 						3'd0: if (SND) PW <= 1; else vD <= 1;
-						3'd1: begin H <= {32{IBUS_DI[31]}}; L <= IBUS_DI; end
 						3'd2: if (|IBUS_BA[1:0]) {OVFIE, OVFF} <= IBUS_DI[1:0];
-						3'd3: if (|IBUS_BA[1:0]) VCRDIV <= IBUS_DI[15:0];
-						3'd4: H <= IBUS_DI;
-						3'd5: L <= IBUS_DI;
+						3'd3: if (|IBUS_BA[1:0]) begin VEC8 <= IBUS_DI[7:0]; if (SND) PW <= 1; else vV <= 1; end
 						3'd6: if (!SND) vH2 <= 1;
 						3'd7: if (!SND) vL2 <= 1;
 					endcase
@@ -169,14 +202,8 @@ module SH7604P_DIVU (
 				if (STEP == 6'd38) begin
 					SND <= 1;
 					GCLR <= 0;
-					if (OVF && !DIV64 && GCLR) begin H <= '0; L <= L & 32'h7; end
 					if (OVF) begin
-						if (!OVFIE) L <= SAT;
 						OVFF <= 1;
-					end
-					if (!RES_N) begin
-						if (!(OVF && DIV64)) H <= '0;
-						if (OVF && OVFIE && !DIV64) L <= '0;
 					end
 					if (DVSR_CLR || !RES_N) vD <= 0;
 					DVSR_CLR <= 0;
@@ -189,17 +216,16 @@ module SH7604P_DIVU (
 		if (WE_RAM) mem[WA] <= WD;
 	end
 	assign IRQ = OVFF & OVFIE;
-	assign VEC = VCRDIV[7:0];
+	assign VEC = VEC8;
 	
 	reg [31:0] REG_DO;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) REG_DO <= '0;
 		else if (CE_F && RD) begin
 			case (RA)
-				3'd0,3'd6,3'd7: REG_DO <= YSRC;
+				3'd0,3'd3,3'd6,3'd7: REG_DO <= YSRC;
 				3'd1,3'd5: REG_DO <= L;
 				3'd2: REG_DO <= {30'h0, OVFIE, OVFF};
-				3'd3: REG_DO <= {16'h0, VCRDIV};
 				3'd4: REG_DO <= H;
 			endcase
 		end
