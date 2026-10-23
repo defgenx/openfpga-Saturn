@@ -35,13 +35,24 @@ module SH7604P_MULT (
 	reg        MACW_EXEC;
 	reg        MACL_EXEC;
 	reg        SAT;
+	reg        FL31, FL, FHH, FHL;	// saturation constants: register bit group reads as stored | flag
 	
-	wire [63:0] SRES = $signed({MA[31]&SIGNED,MA}) * $signed({MB[31]&SIGNED,MB});
+	// 33x33 signed product split into 16-bit halves: DSP blocks form L, M, H; one ternary add folds in the accumulator
+	wire signed [16:0] XH = $signed({MA[31]&SIGNED, MA[31:16]});
+	wire signed [16:0] YH = $signed({MB[31]&SIGNED, MB[31:16]});
+	wire signed [16:0] XL = $signed({1'b0, MA[15:0]});
+	wire signed [16:0] YL = $signed({1'b0, MB[15:0]});
+	wire signed [33:0] PL = XL * YL;
+	wire signed [34:0] PM = XH * YL + XL * YH;
+	wire signed [33:0] PH = XH * YH;
 	wire        ACC  = MACW_EXEC | MACL_EXEC;
-	wire [63:0] SUM  = ({MACH,MACL} & {64{ACC}}) + SRES;
+	wire [31:0] RL = MACL | {FL31, {31{FL}}};
+	wire [31:0] RH = MACH | {{17{FHH}}, {15{FHL}}};
+	wire signed [63:0] AM = {RH,RL} & {64{ACC}};
+	wire        [63:0] SUM = AM + PL + (PM <<< 16) + (PH <<< 32);
 	
 	// MAC.W: bit 32 of {MACL[31],MACL}+SRES[32:0] equals MACL[31]^MACH[0]^SUM[32]
-	wire        W32  = MACL[31] ^ MACH[0] ^ SUM[32];
+	wire        W32  = RL[31] ^ RH[0] ^ SUM[32];
 	wire        OVFW = MACW_EXEC & SAT & (W32 != SUM[31]);
 	wire        OVFL = MACL_EXEC & SAT & (SUM[63:48] != {16{SUM[47]}});
 	wire        SGN  = MA[31] ^ MB[31];
@@ -61,8 +72,8 @@ module SH7604P_MULT (
 	wire        EXEC  = MUL_EXEC | DMUL_EXEC | MACW_EXEC | MACL_EXEC;
 	
 	wire        KN    = MACW_EXEC ? W32 : SGN;
-	wire        WRL   = LDS & MAC_SEL[0] | CLR | EXEC;
-	wire        WRH   = LDS & MAC_SEL[1] | CLR | DMUL_EXEC | MACL_EXEC | (MACW_EXEC & (~SAT | OVFW));
+	wire        WRL   = LDS & MAC_SEL[0] | EXEC;
+	wire        WRH   = LDS & MAC_SEL[1] | DMUL_EXEC | MACL_EXEC | (MACW_EXEC & (~SAT | OVFW));
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -77,6 +88,7 @@ module SH7604P_MULT (
 			MACW_EXEC <= 0;
 			MACL_EXEC <= 0;
 			SIGNED <= 0;
+			{FL31, FL, FHH, FHL} <= '0;
 			// synopsys translate_off
 			MACL <= 32'h01234567;
 			MACH <= 32'h89ABCDEF;
@@ -141,18 +153,20 @@ module SH7604P_MULT (
 				MACL_EXEC <= 0;
 			end
 			
-			if (WRL) begin
-				if (EXEC) MACL <= (OVFW | OVFL) ? {~(KN ^ MACW_EXEC), {31{~KN}}} : SUM[31:0];
-				else      MACL <= CLR ? 32'd0 : CBUS_DI;
-			end
-			if (WRH) begin
-				if (EXEC) MACH <= OVFL ? {{17{SGN}},{15{~SGN}}} : {SUM[63:33], SUM[32] | OVFW};
-				else      MACH <= CLR ? 32'd0 : CBUS_DI;
-			end
+			// saturation constants are all-0/all-1 groups: stored as 0 plus a flag, so MACL/MACH need only sclr/sload
+			if (CLR | OVFW | OVFL) MACL <= '0;
+			else if (LDS & MAC_SEL[0]) MACL <= CBUS_DI;
+			else if (EXEC) MACL <= SUM[31:0];
+			if (WRL | CLR) {FL31, FL} <= (OVFW | OVFL) ? {~(KN ^ MACW_EXEC), ~KN} : 2'b00;
+			
+			if (CLR | OVFL) MACH <= '0;
+			else if (LDS & MAC_SEL[1]) MACH <= CBUS_DI;
+			else if (WRH) MACH <= {SUM[63:33], SUM[32] | OVFW};
+			if (WRH | CLR) {FHH, FHL} <= {OVFL & SGN, OVFL & ~SGN};
 		end
 	end
 	
-	assign CBUS_DO = MAC_SEL[1] ? MACH : MACL;
+	assign CBUS_DO = MAC_SEL[1] ? RH : RL;
 	assign CBUS_BUSY = ~MM_DONE && (!MAC_OP[2] ? MAC_SEL[0] : |MAC_SEL);
 
 endmodule
