@@ -2502,7 +2502,30 @@ endmodule
 // Might be more efficient to use vendor specific features such as clock enable.
 //
 
-// Register file storage: 32 x N async-read RAM, one write port (MLAB)
+// Register file storage: 32 x N RAM, one write port.
+// MLAB (default): asynchronous read. M68KP_REGS_M10K: registered read address (one clk later, needed at enT1 only,
+// at least four clk after the address registers change), no ALMs, two more M10K.
+`ifdef M68KP_REGS_M10K
+module mp_regram8( input clk, input we, input [4:0] wa, input [7:0] wd, input [4:0] ra, output [7:0] rd);
+	(* ramstyle = "M10K, no_rw_check" *) reg [7:0] m [32];
+	reg [4:0] rar;
+	always_ff @( posedge clk) begin
+		if( we) m[wa] <= wd;
+		rar <= ra;
+	end
+	assign rd = m[rar];
+endmodule
+
+module mp_regram16( input clk, input we, input [4:0] wa, input [15:0] wd, input [4:0] ra, output [15:0] rd);
+	(* ramstyle = "M10K, no_rw_check" *) reg [15:0] m [32];
+	reg [4:0] rar;
+	always_ff @( posedge clk) begin
+		if( we) m[wa] <= wd;
+		rar <= ra;
+	end
+	assign rd = m[rar];
+endmodule
+`else
 module mp_regram8( input clk, input we, input [4:0] wa, input [7:0] wd, input [4:0] ra, output [7:0] rd);
 	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] m [32];
 	always_ff @( posedge clk) if( we) m[wa] <= wd;
@@ -2514,6 +2537,7 @@ module mp_regram16( input clk, input we, input [4:0] wa, input [15:0] wd, input 
 	always_ff @( posedge clk) if( we) m[wa] <= wd;
 	assign rd = m[ra];
 endmodule
+`endif
 
 module mp_uRom( input clk, input [mp_UADDR_WIDTH-1:0] microAddr, output logic [mp_UROM_WIDTH-1:0] microOutput);
 	reg [mp_UROM_WIDTH-1:0] uRam[ mp_UROM_DEPTH];		

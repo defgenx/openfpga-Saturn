@@ -30,3 +30,5 @@ set_global_assignment -name SYSTEMVERILOG_FILE snap_rom2/m68kp_pla.sv
 set_global_assignment -name SYSTEMVERILOG_FILE snap_rom2/m68kp_plarom.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name SYSTEMVERILOG_FILE m68k_wrap.sv
+
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"

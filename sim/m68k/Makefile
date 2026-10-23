@@ -1,7 +1,7 @@
 # Lockstep equivalence bench: golden REF_fx68k vs m68kp. `make lock` builds, `make run_lock` sweeps seeds.
 F  = ../../ref/Saturn_MiSTer/rtl/FX68K
 M  = ../../src/fpga/saturn/M68KP
-VFLAGS = --cc --exe --build -Wno-fatal -Wno-lint -O2 -CFLAGS -O2 --structs-packed --no-assert --public-flat-rw --top-module tb_lock
+VFLAGS = $(DEFS) --cc --exe --build -Wno-fatal -Wno-lint -O2 -CFLAGS -O2 --structs-packed --no-assert --public-flat-rw --top-module tb_lock
 
 ref/fx68k.sv: rename.py $(F)/fx68k.sv
 	python3 rename.py REF_ ref $(F)/fx68k.sv $(F)/fx68kAlu.sv $(F)/uaddrPla.sv

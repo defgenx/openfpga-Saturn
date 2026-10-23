@@ -28,3 +28,5 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/FX68K/fx68k
 set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/FX68K/uaddrPla.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name SYSTEMVERILOG_FILE m68k_wrap.sv
+
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"
