@@ -1,3 +1,6 @@
+// MULT: multiplier / MAC unit. One 64-bit sum (accumulator input forced to 0 for the multiplies) serves MUL, DMUL,
+// MAC.W and MAC.L; the MAC.W 33-bit overflow test is derived from the same sum. Saturation constants are all-0/all-1
+// bit groups kept as stored==0 plus FL*/FH* flags (reads as stored | flag), so MACL/MACH need only sclr/sload.
 module SH7604P_MULT (
 	input             CLK,
 	input             RST_N,
@@ -21,28 +24,59 @@ module SH7604P_MULT (
 	input             MAC_WE
 );
 
-	import SH7604P_PKG::*;
+	reg [31:0] MACL;
+	reg [31:0] MACH;
+	reg [31:0] MA;
+	reg [31:0] MB;
+	reg        MM_DONE;
+	reg        SIGNED;
+	reg [ 2:0] MM_CYC;
+	reg        MUL_EXEC;
+	reg        DMUL_EXEC;
+	reg        MACW_EXEC;
+	reg        MACL_EXEC;
+	reg        SAT;
+	reg        FL31, FL, FHH, FHL;	// MACL[31], MACL[30:0], MACH[31:15], MACH[14:0] forced to 1 (stored is 0 then)
 	
-	bit [31:0] MACL;
-	bit [31:0] MACH;
-	bit [31:0] MA;
-	bit [31:0] MB;
-	bit        MM_DONE;
-	bit         SIGNED;
+	// 33x33 signed product split into 16-bit halves: DSP blocks form L, M, H; one ternary add folds in the accumulator
+	wire signed [16:0] XH = $signed({MA[31]&SIGNED, MA[31:16]});
+	wire signed [16:0] YH = $signed({MB[31]&SIGNED, MB[31:16]});
+	wire signed [16:0] XL = $signed({1'b0, MA[15:0]});
+	wire signed [16:0] YL = $signed({1'b0, MB[15:0]});
+	wire signed [33:0] PL = XL * YL;
+	wire signed [34:0] PM = XH * YL + XL * YH;
+	wire signed [33:0] PH = XH * YH;
+	wire        ACC  = MACW_EXEC | MACL_EXEC;
+	wire [31:0] RL = MACL | {FL31, {31{FL}}};
+	wire [31:0] RH = MACH | {{17{FHH}}, {15{FHL}}};
+	wire signed [63:0] AM = {RH,RL} & {64{ACC}};
+	wire        [63:0] SUM = AM + PL + (PM <<< 16) + (PH <<< 32);
 	
-	wire [64:0] SRES =   $signed({MA[31]&SIGNED,MA}) *   $signed({MB[31]&SIGNED,MB});
-	wire [63:0] ACC64  = $signed({MACH,MACL}) + $signed(SRES[63:0]);
-	wire [32:0] ACC32  = $signed({MACL[31],MACL}) + $signed(SRES[32:0]);
+	// MAC.W: bit 32 of {MACL[31],MACL}+SRES[32:0] equals MACL[31]^MACH[0]^SUM[32]
+	wire        W32  = RL[31] ^ RH[0] ^ SUM[32];
+	wire        OVFW = MACW_EXEC & SAT & (W32 != SUM[31]);
+	wire        OVFL = MACL_EXEC & SAT & (SUM[63:48] != {16{SUM[47]}});
+	wire        SGN  = MA[31] ^ MB[31];
+	
+	wire        GO    = (MAC_SEL != 2'b00) && MAC_WE && EN && CE_R;
+	wire        LDS   = GO && (MAC_OP == 4'b0100 || MAC_OP == 4'b1000);
+	wire        CLR   = GO && MAC_OP == 4'b1111;
+	wire        OPL   = MAC_OP == 4'b0001 || MAC_OP == 4'b0010 || MAC_OP == 4'b0011 || MAC_OP == 4'b1001;
+	wire        OPMW  = MAC_OP == 4'b0110 || MAC_OP == 4'b0111;
+	wire        OPAW  = MAC_OP == 4'b1011;
+	wire        HI    = OPAW & ~CBUS_A[1];
+	wire        DW15  = CBUS_A[1] ? CBUS_DI[15] : CBUS_DI[31];
+	wire        EXT_A = OPAW ? DW15 : (CBUS_DI[15] & MAC_OP[0]);
+	wire        EXT_B = OPAW ? DW15 : (CBUS_DI[31] & MAC_OP[0]);
+	wire        WRA   = GO && ((OPL | OPAW) ? MAC_SEL[1] : OPMW);
+	wire        WRB   = GO && ((OPL | OPAW) ? MAC_SEL[0] : OPMW);
+	wire        EXEC  = MUL_EXEC | DMUL_EXEC | MACW_EXEC | MACL_EXEC;
+	
+	wire        KN    = MACW_EXEC ? W32 : SGN;
+	wire        WRL   = LDS & MAC_SEL[0] | EXEC;
+	wire        WRH   = LDS & MAC_SEL[1] | DMUL_EXEC | MACL_EXEC | (MACW_EXEC & (~SAT | OVFW));
 	
 	always @(posedge CLK or negedge RST_N) begin
-		bit [ 2: 0] MM_CYC;
-		bit         MUL_EXEC;
-		bit         DMUL_EXEC;
-		bit         MACW_EXEC;
-		bit         MACL_EXEC;
-		bit         SAT;
-		bit [15: 0] DW;
-		
 		if (!RST_N) begin
 			MACL <= '0;
 			MACH <= '0;
@@ -55,26 +89,23 @@ module SH7604P_MULT (
 			MACW_EXEC <= 0;
 			MACL_EXEC <= 0;
 			SIGNED <= 0;
+			{FL31, FL, FHH, FHL} <= '0;
 			// synopsys translate_off
 			MACL <= 32'h01234567;
 			MACH <= 32'h89ABCDEF;
 			// synopsys translate_on
 		end
 		else begin
-			if ((MAC_SEL != 2'b00) && MAC_WE && EN && CE_R) begin
+			if (WRA) MA <= {(OPMW | OPAW) ? {16{EXT_A}} : CBUS_DI[31:16], HI ? CBUS_DI[31:16] : CBUS_DI[15:0]};
+			if (WRB) MB <= {(OPMW | OPAW) ? {16{EXT_B}} : CBUS_DI[31:16], (OPMW | HI) ? CBUS_DI[31:16] : CBUS_DI[15:0]};
+			
+			if (GO) begin
 				MM_DONE <= 1;
 				case (MAC_OP) 
-					4'b0100,			//LDS Rm,MACx
-					4'b1000: begin	//LDS @Rm+,MACx
-						if (MAC_SEL[0]) MACL <= CBUS_DI;
-						if (MAC_SEL[1]) MACH <= CBUS_DI;
-					end
-					4'b0001,				//MUL.L
-					4'b0010,				//DMULU.L
-					4'b0011: begin		//DMULS.L
-						if (MAC_SEL[1]) MA <= CBUS_DI;
+					4'b0001,
+					4'b0010,
+					4'b0011: begin
 						if (MAC_SEL[0]) begin
-							MB <= CBUS_DI;
 							MUL_EXEC <= ~MAC_OP[1];
 							DMUL_EXEC <= MAC_OP[1];
 							SIGNED <= MAC_OP[0] & MAC_OP[1];
@@ -82,39 +113,31 @@ module SH7604P_MULT (
 							MM_DONE <= 0;
 						end
 					end
-					4'b0110,				//MULU.W
-					4'b0111: begin		//MULS.W
-						MA <= {{16{CBUS_DI[15]&MAC_OP[0]}},CBUS_DI[15:0]};
-						MB <= {{16{CBUS_DI[31]&MAC_OP[0]}},CBUS_DI[31:16]};
+					4'b0110,
+					4'b0111: begin
 						MUL_EXEC <= MAC_SEL[1];
 						SIGNED <= MAC_OP[0];
 						MM_CYC <= 3'd1;
 						MM_DONE <= 0;
 					end
-					4'b1001: begin		//MAC.L @Rm+,@Rn+
-						if (MAC_SEL[1]) MA <= CBUS_DI;
+					4'b1001: begin
 						if (MAC_SEL[0]) begin
-							MB <= CBUS_DI;
 							MACL_EXEC <= 1;
-							SIGNED <= MAC_OP[0];
+							SIGNED <= 1;
 							SAT <= MAC_S;
 							MM_CYC <= 3'd4;
 							MM_DONE <= 0;
 						end
 					end
-					4'b1011: begin		//MAC.W @Rm+,@Rn+
-						DW = !CBUS_A[1] ? CBUS_DI[31:16] : CBUS_DI[15:0];
-						if (MAC_SEL[1]) MA <= {{16{DW[15]&MAC_OP[0]}},DW};
+					4'b1011: begin
 						if (MAC_SEL[0]) begin
-							MB <= {{16{DW[15]&MAC_OP[0]}},DW};
 							MACW_EXEC <= 1;
-							SIGNED <= MAC_OP[0];
+							SIGNED <= 1;
 							SAT <= MAC_S;
 							MM_CYC <= 3'd2;
 							MM_DONE <= 0;
 						end
 					end
-					4'b1111: {MACH,MACL} <= '0;
 					default:;
 				endcase
 			end
@@ -124,47 +147,26 @@ module SH7604P_MULT (
 				if (MM_CYC == 3'd1) MM_DONE <= 1;
 			end
 			
-			if (MUL_EXEC) begin
-				MACL <= SRES[31:0];
+			if (EXEC) begin
 				MUL_EXEC <= 0;
-			end
-			
-			if (DMUL_EXEC) begin
-				{MACH,MACL} <= SRES[63:0];
 				DMUL_EXEC <= 0;
-			end
-			
-			if (MACW_EXEC) begin
-				if (!SAT) begin
-					{MACH,MACL} <= ACC64;
-				end else begin
-					if (ACC32[32] != ACC32[31]) begin
-						MACL <= {ACC32[32],{31{~ACC32[32]}}};
-						MACH <= ACC64[63:32] | 32'h00000001;
-					end else begin
-						MACL <= ACC32[31:0];
-//						MACH <= 32'h00000000;//??
-					end
-				end
 				MACW_EXEC <= 0;
-			end
-			
-			if (MACL_EXEC) begin
-				if (!SAT) begin
-					{MACH,MACL} <= ACC64;
-				end else begin
-					if (ACC64[63:48] != {16{ACC64[47]}}) begin
-						{MACH,MACL} <= {{17{MA[31]^MB[31]}},{47{~(MA[31]^MB[31])}}};
-					end else begin
-						{MACH,MACL} <= ACC64;
-					end
-				end
 				MACL_EXEC <= 0;
 			end
+			
+			if (CLR | OVFW | OVFL) MACL <= '0;
+			else if (LDS & MAC_SEL[0]) MACL <= CBUS_DI;
+			else if (EXEC) MACL <= SUM[31:0];
+			if (WRL | CLR) {FL31, FL} <= (OVFW | OVFL) ? {~(KN ^ MACW_EXEC), ~KN} : 2'b00;
+			
+			if (CLR | OVFL) MACH <= '0;
+			else if (LDS & MAC_SEL[1]) MACH <= CBUS_DI;
+			else if (WRH) MACH <= {SUM[63:33], SUM[32] | OVFW};
+			if (WRH | CLR) {FHH, FHL} <= {OVFL & SGN, OVFL & ~SGN};
 		end
 	end
 	
-	assign CBUS_DO = MAC_SEL[1] ? MACH : MACL;
+	assign CBUS_DO = MAC_SEL[1] ? RH : RL;
 	assign CBUS_BUSY = ~MM_DONE && (!MAC_OP[2] ? MAC_SEL[0] : |MAC_SEL);
 
 endmodule
