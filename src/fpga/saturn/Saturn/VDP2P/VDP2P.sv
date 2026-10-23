@@ -2154,7 +2154,6 @@ module VDP2P (
 	
 	PNPipe_t        PN_PIPE;
 	CellDotsColor_t NBG_CDC[4];
-	CellParam_t     NBG_CDP[8];
 	RPNPipe_t       RBG_PN_PIPE;
 	bit             RBG_TP_PIPE[2];
 	bit  [ 7: 0]    RBG_DC[2][4];
@@ -2658,9 +2657,15 @@ C_NEN[0] = 0;
 			if (EL[l]) NBG_CDC[CAI][l][3:0] <= IL[l];
 			if (EH[l]) NBG_CDC[CAI][l][7:4] <= IH[l];
 		end
-		if (C_DPL[CAI]) NBG_CDP[CAI]            <= {C_PR[CAI],         C_CC[CAI],         C_PALN[CAI],         1'b0};
-		if (C_DPH[CAI]) NBG_CDP[{1'b1,CAI}]     <= {C_PR[{1'b1,CAI}],  C_CC[{1'b1,CAI}],  C_PALN[{1'b1,CAI}],  1'b0};
 	end
+	//Character parameters (priority, colour calculation flag, palette number) of the cell being assembled: entry n=CAI is the
+	//low part (written when C_DPL), n+4 the high part (C_DPH). Words of 9 bits in two small RAMs.
+	wire [ 8: 0] CDP_LO_D = {C_PR[CAI],         C_CC[CAI],         C_PALN[CAI]};
+	wire [ 8: 0] CDP_HI_D = {C_PR[{1'b1,CAI}],  C_CC[{1'b1,CAI}],  C_PALN[{1'b1,CAI}]};
+	wire [ 1: 0] CPP;
+	wire [ 8: 0] CDPA_LO_Q, CDPA_HI_Q;
+	VDP2P_SDP #(2,9) cdpa_lo(CLK, CVIS & C_DPL[CAI], CAI, CDP_LO_D, CPP, CDPA_LO_Q);
+	VDP2P_SDP #(2,9) cdpa_hi(CLK, CVIS & C_DPH[CAI], CAI, CDP_HI_D, CPP, CDPA_HI_Q);
 
 	//Pipeline taps: stage 2, 3 and 4 of the access pipelines are read back from block RAM (see VDP2P_DTAP)
 	always_comb begin
@@ -2765,8 +2770,6 @@ C_NEN[0] = 0;
 	
 	//Dots data
 	bit  [ 1: 0] NDC_P;
-	CellParam_t NCDPH[8];
-	CellParam_t NCDP0[2], NCDP1[2], NCDP2[2], NCDP3[2], NCDP4[2], NCDP5[2], NCDP6[2], NCDP7[2];
 	bit [31: 0] RxDC[2];
 	CellParam_t RxCDP[2];
 	always @(posedge CLK or negedge RST_N) begin
@@ -2776,20 +2779,8 @@ C_NEN[0] = 0;
 			// synopsys translate_on
 		end
 		else if (DOT_CE_R) begin
-			//cell boundary: the golden copies NBG_CDC/NBG_CDP at the event with (CELLX|..)==7. The copy of the data
-			//is done at the event before (NDC_WE_E, into the hidden bank) and made visible here; the parameters are
-			//held in NCDPH for the same reason.
-			if (NDC_WE_E) NCDPH <= '{NBG_CDP[0],NBG_CDP[1],NBG_CDP[2],NBG_CDP[3],NBG_CDP[4],NBG_CDP[5],NBG_CDP[6],NBG_CDP[7]};
 			if ((CELLX[2:0] | {HRES[1],2'b00}) == 3'd7) begin
 				NDC_P <= NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
-				NCDP0[0] <= NCDP0[1]; NCDP0[1] <= NCDPH[0];
-				NCDP1[0] <= NCDP1[1]; NCDP1[1] <= NCDPH[1];
-				NCDP2[0] <= NCDP2[1]; NCDP2[1] <= NCDPH[2];
-				NCDP3[0] <= NCDP3[1]; NCDP3[1] <= NCDPH[3];
-				NCDP4[0] <= NCDP4[1]; NCDP4[1] <= NCDPH[4];
-				NCDP5[0] <= NCDP5[1]; NCDP5[1] <= NCDPH[5];
-				NCDP6[0] <= NCDP6[1]; NCDP6[1] <= NCDPH[6];
-				NCDP7[0] <= NCDP7[1]; NCDP7[1] <= NCDPH[7];
 			end
 		end
 	end
@@ -2797,6 +2788,36 @@ C_NEN[0] = 0;
 	assign RxCDP[0] = RBG_CDP[0];
 	assign RxDC[1] = {RBG_DC[1][3],RBG_DC[1][1],RBG_DC[1][2],RBG_DC[1][0]};
 	assign RxCDP[1] = RBG_CDP[1];
+	
+	//Character parameter ring: three banks of four 18-bit words {hi,lo}; the visible window is bank NDC_P (older cell)
+	//and NDC_P+1 (newer cell) like the cell data. The hidden bank NDC_P+2 receives the assembled parameters one
+	//event before the boundary, one pair per clock, each pair read before the capture visit that rewrites it.
+	bit  [ 2: 0] CPN;
+	wire         CPW = NDC_WE_E | (CPN != 3'd0);
+	assign       CPP = NDC_WE_E ? 2'd3 : (CPN == 3'd1 ? 2'd2 : CPN == 3'd2 ? 2'd1 : 2'd0);
+	always @(posedge CLK) CPN <= NDC_WE_E ? 3'd1 : (CPN == 3'd3 ? 3'd0 : CPN == 3'd0 ? 3'd0 : CPN + 3'd1);
+	wire [ 1: 0] NDC_P1 = NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
+	wire [ 1: 0] NDC_P2 = NDC_P == 2'd0 ? 2'd2 : NDC_P - 2'd1;
+	wire [10: 0] N2I = NCX[2].INT, N3I = NCX[3].INT;
+	wire [ 1: 0] RP0 = N0_QT4 ? {N0I[4],1'b0} : N0_HF8 ? {N0I[3],1'b0} : 2'b00;
+	wire         RH0 = (N0_HF4 | N0_QT4) ? N0I[3] : 1'b0;
+	wire         RB0 = N0_QT4 ? N0I[5] : (N0_HF4 | N0_HF8) ? N0I[4] : N0I[3];
+	wire [ 1: 0] RP1 = N1_QT4 ? {N1I[4],1'b1} : N1_HF8 ? {N1I[3],1'b1} : 2'b01;
+	wire         RH1 = (N1_HF4 | N1_QT4) ? N1I[3] : 1'b0;
+	wire         RB1 = N1_QT4 ? N1I[5] : (N1_HF4 | N1_HF8) ? N1I[4] : N1I[3];
+	wire [17: 0] CR0, CR1, CR2, CR3;
+	VDP2P_CDPRING cdr0(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB0 ? NDC_P1 : NDC_P, RP0, CR0);
+	VDP2P_CDPRING cdr1(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB1 ? NDC_P1 : NDC_P, RP1, CR1);
+	VDP2P_CDPRING cdr2(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N2I[3] ? NDC_P1 : NDC_P, 2'd2, CR2);
+	VDP2P_CDPRING cdr3(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N3I[3] ? NDC_P1 : NDC_P, 2'd3, CR3);
+	CellParam_t N0CDP_W;
+	assign N0CDP_W = {RH0 ? CR0[17:9] : CR0[8:0], 1'b0};
+	CellParam_t N1CDP_W;
+	assign N1CDP_W = {RH1 ? CR1[17:9] : CR1[8:0], 1'b0};
+	CellParam_t N2CDP_W;
+	assign N2CDP_W = {CR2[8:0], 1'b0};
+	CellParam_t N3CDP_W;
+	assign N3CDP_W = {CR3[8:0], 1'b0};
 	
 	ScrollData_t NCX[4];
 	always @(posedge CLK or negedge RST_N) begin
@@ -2907,59 +2928,59 @@ C_NEN[0] = 0;
 					N0DOTCDP <= RxCDP[1];
 				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMHF) begin
 					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= NCDP0[NCX[0].INT[4]]; end
-						1'b1: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= NCDP4[NCX[0].INT[4]]; end
+						1'b0: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
+						1'b1: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
 					endcase
 				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) begin
 					case (NCX[0].INT[4:3])
-						2'b00: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= NCDP0[NCX[0].INT[5]]; end
-						2'b01: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= NCDP4[NCX[0].INT[5]]; end
-						2'b10: begin N0DOTDC <= {28'h0000000,N0_D2[ 3: 0]}; N0DOTCDP <= NCDP2[NCX[0].INT[5]]; end
-						2'b11: begin N0DOTDC <= {28'h0000000,N0_D2[ 7: 4]}; N0DOTCDP <= NCDP6[NCX[0].INT[5]]; end
+						2'b00: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
+						2'b01: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
+						2'b10: begin N0DOTDC <= {28'h0000000,N0_D2[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
+						2'b11: begin N0DOTDC <= {28'h0000000,N0_D2[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
 					endcase
 				end else if (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF) begin
 					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {24'h000000,N0_D0[ 7: 0]}; N0DOTCDP <= NCDP0[NCX[0].INT[4]]; end
-						1'b1: begin N0DOTDC <= {24'h000000,N0_D2[ 7: 0]}; N0DOTCDP <= NCDP2[NCX[0].INT[4]]; end
+						1'b0: begin N0DOTDC <= {24'h000000,N0_D0[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
+						1'b1: begin N0DOTDC <= {24'h000000,N0_D2[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
 					endcase
 				end else begin
 					N0DOTDC <= {N0_D3[ 7: 0],N0_D1[ 7: 0],N0_D2[ 7: 0],N0_D0[ 7: 0]};
-					N0DOTCDP <= NCDP0[NCX[0].INT[3]];
+					N0DOTCDP <= N0CDP_W;
 				end
 			end
 			
 			if (NxDOT_FETCH[1]) begin
 				if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMHF) begin
 					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= NCDP1[NCX[1].INT[4]]; end
-						1'b1: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= NCDP5[NCX[1].INT[4]]; end
+						1'b0: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
+						1'b1: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
 					endcase
 				end else if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) begin
 					case (NCX[1].INT[4:3])
-						2'b00: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= NCDP1[NCX[1].INT[5]]; end
-						2'b01: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= NCDP5[NCX[1].INT[5]]; end
-						2'b10: begin N1DOTDC <= {28'h0000000,N1_D3[ 3: 0]}; N1DOTCDP <= NCDP3[NCX[1].INT[5]]; end
-						2'b11: begin N1DOTDC <= {28'h0000000,N1_D3[ 7: 4]}; N1DOTCDP <= NCDP7[NCX[1].INT[5]]; end
+						2'b00: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
+						2'b01: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
+						2'b10: begin N1DOTDC <= {28'h0000000,N1_D3[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
+						2'b11: begin N1DOTDC <= {28'h0000000,N1_D3[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
 					endcase
 				end else if (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
 					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {24'h000000,N1_D1[ 7: 0]}; N1DOTCDP <= NCDP1[NCX[1].INT[4]]; end
-						1'b1: begin N1DOTDC <= {24'h000000,N1_D3[ 7: 0]}; N1DOTCDP <= NCDP3[NCX[1].INT[4]]; end
+						1'b0: begin N1DOTDC <= {24'h000000,N1_D1[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
+						1'b1: begin N1DOTDC <= {24'h000000,N1_D3[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
 					endcase
 				end else begin
 					N1DOTDC <= {16'h0000,N1_D3[ 7: 0],N1_D1[ 7: 0]};
-					N1DOTCDP <= NCDP1[NCX[1].INT[3]];
+					N1DOTCDP <= N1CDP_W;
 				end
 			end
 				
 			if (NxDOT_FETCH[2]) begin
 				N2DOTDC <= {24'h000000,N2_D2[ 7: 0]};
-				N2DOTCDP <= NCDP2[NCX[2].INT[3]];
+				N2DOTCDP <= N2CDP_W;
 			end
 			
 			if (NxDOT_FETCH[3]) begin
 				N3DOTDC <= {24'h000000,N3_D3[ 7: 0]};
-				N3DOTCDP <= NCDP3[NCX[3].INT[3]];
+				N3DOTCDP <= N3CDP_W;
 			end
 			
 			if (R0DOT_FETCH) begin
@@ -3970,7 +3991,6 @@ C_NEN[0] = 0;
 	assign NBG_CDC1_DBG = NBG_CDC[1];
 	assign NBG_CDC2_DBG = NBG_CDC[2];
 	assign NBG_CDC3_DBG = NBG_CDC[3];
-	assign NBG_CDP0_DBG = NBG_CDP[0];
 	assign RBG0_CDC0_DBG = RBG_DC[0][0];
 	assign RBG0_CDC1_DBG = RBG_DC[0][1];
 	assign RBG0_CDC2_DBG = RBG_DC[0][2];

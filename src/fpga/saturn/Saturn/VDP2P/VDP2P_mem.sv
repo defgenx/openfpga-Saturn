@@ -225,6 +225,22 @@ module VDP2P_NDCRD #(
 	assign Q = w[{IDX[2:0],3'b000} +: 8];
 endmodule
 
+// Character parameter ring: 16 words (bank, pair), one write port, one asynchronous read port.
+module VDP2P_CDPRING (
+	input         CLK,
+	input         WE,
+	input  [ 1:0] WB,
+	input  [ 1:0] WP,
+	input  [17:0] WD,
+	input  [ 1:0] RB,
+	input  [ 1:0] RP,
+	output [17:0] Q
+);
+	(* ramstyle = "MLAB, no_rw_check" *) reg [17:0] mem [0:15];
+	always @(posedge CLK) if (WE) mem[{WB,WP}] <= WD;
+	assign Q = mem[{RB,RP}];
+endmodule
+
 // 2**AW x DW simple dual port RAM, one write port, one read port.
 module VDP2P_SDP #(
 	parameter AW = 1,
