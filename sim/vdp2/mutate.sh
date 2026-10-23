@@ -1,8 +1,8 @@
 #!/bin/sh
 # Mutation check of the differential test: apply one sed expression to a VDP2 source, rebuild, run seeds,
-# restore the file from git. usage: mutate.sh <VDP2.sv|VDP2_pkg.sv|VDP2_mem.sv> '<sed expr>' ['<seed list command>']
+# restore the file from git. usage: mutate.sh <VDP2P.sv|VDP2P_pkg.sv|VDP2P_mem.sv> '<sed expr>' ['<seed list command>']
 # Prints the failing seeds (empty output = mutation not detected). Requires the file to be committed.
-F=../../src/fpga/saturn/Saturn/VDP2/$1
+F=../../src/fpga/saturn/Saturn/VDP2P/$1
 cd "$(dirname "$0")" || exit 1
 trap 'git checkout -q -- $F' EXIT
 sed -i '' "$2" $F

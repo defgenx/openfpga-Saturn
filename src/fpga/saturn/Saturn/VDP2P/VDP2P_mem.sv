@@ -193,30 +193,32 @@ module VDP2P_DTAP #(
 	end endgenerate
 endmodule
 
-// One read copy of a layer's two-bank cell data buffer. PTR is the bank holding logical bytes 0-7;
-// a write (WE) fills the other half of the logical window and the caller flips PTR. IDX is the logical
-// byte index 0-15.
+// One read copy of a layer's cell data buffer: three banks of 8 bytes. The visible window of 16 logical bytes is
+// bank P (bytes 0-7) and bank P+1 (bytes 8-15); WE fills the hidden bank P+2 one event before the caller advances P.
 module VDP2P_NDCRD #(
 	parameter ML = 1
 ) (
 	input         CLK,
 	input         WE,
-	input         PTR,
+	input  [ 1:0] PTR,
 	input  [63:0] D,
 	input  [ 3:0] IDX,
 	output [ 7:0] Q
 );
+	wire [ 1:0] p1 = PTR == 2'd2 ? 2'd0 : PTR + 2'd1;
+	wire [ 1:0] p2 = PTR == 2'd0 ? 2'd2 : PTR - 2'd1;
+	wire [ 1:0] ra = IDX[3] ? p1 : PTR;
 	wire [63:0] w;
 	generate if (ML) begin : g_ml
-		(* ramstyle = "MLAB, no_rw_check" *) reg [63:0] mem [0:1];
-		always @(posedge CLK) if (WE) mem[PTR] <= D;
-		assign w = mem[IDX[3] ^ PTR];
+		(* ramstyle = "MLAB, no_rw_check" *) reg [63:0] mem [0:3];
+		always @(posedge CLK) if (WE) mem[p2] <= D;
+		assign w = mem[ra];
 	end else begin : g_m10k
-		(* ramstyle = "M10K, no_rw_check" *) reg [63:0] mem [0:1];
+		(* ramstyle = "M10K, no_rw_check" *) reg [63:0] mem [0:3];
 		reg [63:0] q = '0;
 		always @(posedge CLK) begin
-			if (WE) mem[PTR] <= D;
-			q <= mem[IDX[3] ^ PTR];
+			if (WE) mem[p2] <= D;
+			q <= mem[ra];
 		end
 		assign w = q;
 	end endgenerate
