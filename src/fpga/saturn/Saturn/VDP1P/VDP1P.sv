@@ -440,6 +440,10 @@ module VDP1P (
 	wire [12: 0] SYS_CLIP_Y1 = (CLIP_USR ? {{2{USR_CLIP.Y1[10]}},USR_CLIP.Y1} : 13'd0) - LOC_Y13;
 	wire [12: 0] SYS_CLIP_X2 = (CLIP_USR ? {{2{USR_CLIP.X2[10]}},USR_CLIP.X2} : {{2{SYS_CLIP.X2[10]}},SYS_CLIP.X2}) - LOC_X13;
 	wire [12: 0] SYS_CLIP_Y2 = (CLIP_USR ? {{2{USR_CLIP.Y2[10]}},USR_CLIP.Y2} : {{2{SYS_CLIP.Y2[10]}},SYS_CLIP.Y2}) - LOC_Y13;
+	wire [13: 0] DX14_L1 = {LEFT_VERT.X[12],LEFT_VERT.X}   - {SYS_CLIP_X1[12],SYS_CLIP_X1};
+	wire [13: 0] DX14_L2 = {LEFT_VERT.X[12],LEFT_VERT.X}   - {SYS_CLIP_X2[12],SYS_CLIP_X2};
+	wire [13: 0] DX14_R1 = {RIGHT_VERT.X[12],RIGHT_VERT.X} - {SYS_CLIP_X1[12],SYS_CLIP_X1};
+	wire [13: 0] DX14_R2 = {RIGHT_VERT.X[12],RIGHT_VERT.X} - {SYS_CLIP_X2[12],SYS_CLIP_X2};
 	bit  [ 8: 0] CMD_DELAY;
 	bit  [ 9: 0] PENALTY_CNT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -506,10 +510,10 @@ module VDP1P (
 		end else if (EN) begin
 			SPR_OFFSY_NEXT = SPR_OFFSY + ({14{TEXT_DIRY}} ^ {8'd0,ORIG_WIDTH[8:3]}) + {13'd0,TEXT_DIRY};
 			
-			LINE_DIFF_LEFT_CLIPX1 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X1);
-			LINE_DIFF_LEFT_CLIPX2 = $signed(LEFT_VERT.X) - $signed(SYS_CLIP_X2);
-			LINE_DIFF_RIGHT_CLIPX1 = $signed(RIGHT_VERT.X) - $signed(SYS_CLIP_X1);
-			LINE_DIFF_RIGHT_CLIPX2 = $signed(RIGHT_VERT.X) - $signed(SYS_CLIP_X2);
+			LINE_DIFF_LEFT_CLIPX1 = DX14_L1[12:0];
+			LINE_DIFF_LEFT_CLIPX2 = DX14_L2[12:0];
+			LINE_DIFF_RIGHT_CLIPX1 = DX14_R1[12:0];
+			LINE_DIFF_RIGHT_CLIPX2 = DX14_R2[12:0];
 			LINE_EQ_LEFT_CLIPX1 = !LINE_DIFF_LEFT_CLIPX1;
 			LINE_EQ_LEFT_CLIPX2 = !LINE_DIFF_LEFT_CLIPX2;
 			LINE_EQ_RIGHT_CLIPX1 = !LINE_DIFF_RIGHT_CLIPX1;
@@ -523,8 +527,9 @@ module VDP1P (
 			LINE_LT_RIGHT_CLIPX1 = LINE_DIFF_RIGHT_CLIPX1[12];
 			LINE_LT_RIGHT_CLIPX2 = LINE_DIFF_RIGHT_CLIPX2[12];
 																							  
-			LINE_LEFT_OVER <= ($signed(LEFT_VERT.X) < $signed(SYS_CLIP_X1) && $signed(RIGHT_VERT.X) < $signed(SYS_CLIP_X1));
-			LINE_RIGHT_OVER <= ($signed(LEFT_VERT.X) > $signed(SYS_CLIP_X2) && $signed(RIGHT_VERT.X) > $signed(SYS_CLIP_X2));
+			// exact (14-bit) comparisons from the same differences
+			LINE_LEFT_OVER <= (DX14_L1[13] && DX14_R1[13]);
+			LINE_RIGHT_OVER <= (!DX14_L2[13] && !LINE_EQ_LEFT_CLIPX2 && !DX14_R2[13] && !LINE_EQ_RIGHT_CLIPX2);
 			LINE_TOP_OVER <= ($signed(LEFT_VERT.Y) < $signed(SYS_CLIP_Y1) && $signed(RIGHT_VERT.Y) < $signed(SYS_CLIP_Y1));
 			LINE_BOTTOM_OVER <= ($signed(LEFT_VERT.Y) > $signed(SYS_CLIP_Y2) && $signed(RIGHT_VERT.Y) > $signed(SYS_CLIP_Y2));
 			
