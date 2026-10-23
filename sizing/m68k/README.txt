@@ -12,3 +12,6 @@ Revisions used for the numbers in docs/m68k.md:
   sysfx / sysmp   SCSP + FX68K / m68kp as wired in Saturn.sv (scsp68_wrap.sv)
   j68raw tg68raw ao68   raw third-party cores
 microrom.mem / nanorom.mem are symlinks (FX68K's $readmemb files are project-relative).
+tg68raw / ao68: after fetch_cores.sh, e.g.
+  TOP=tg68_raw ./mkproj.sh tg68raw - <tg68k dir>/TG68K_Pack.vhd <tg68k dir>/TG68K_ALU.vhd <tg68k dir>/TG68KdotC_Kernel.vhd tg68_raw.vhd
+  TOP=ao68000 ./mkproj.sh ao68 - <ao68000 dir>/rtl/ao68000.v        (ao68000_microcode.mif next to it, in the project directory)
