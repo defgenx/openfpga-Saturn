@@ -49,6 +49,7 @@ struct Cfg {
 	int frames_after = 2;
 	int res_pulse = 0;
 	int fbinit = 1;
+	int relaxed = 0;       // outputs not compared per clock (VDP1P may stall in FAST mode); memories are
 	int noinit = 0;        // leave the clip/local-coordinate registers at their reset values
 };
 
@@ -390,6 +391,7 @@ struct Top {
 	int dce_cnt = 0;
 	bool failed = false;
 	bool tainted = false;
+	bool relaxed = false;
 	u64 taint_cyc = 0;
 	int n_tainted = 0;
 	int scen = -1;
@@ -413,11 +415,11 @@ struct Top {
 	S.fb_mode3 = SG(t->FB_MODE3_##sfx);
 
 static Top* T;
-static int g_nz = 0, g_show = 0;
+static int g_nz = 0, g_show = 0, g_strict_fast = 1;
 static int g_dbg = 0, g_dbg_cnt = 0, g_dbgfb = 0, g_dbgfb_cnt = 0;
 
 static bool compare_outputs(const char* phase) {
-	if (T->tainted) return true;
+	if (T->tainted || T->relaxed) return true;
 	Side &a = T->r, &b = T->n;
 	struct E { const char* nm; u32 x, y; };
 	E es[] = {
@@ -465,7 +467,7 @@ static bool cycle(bool rst_n, bool res_n) {
 	      unsigned long long LL = r->diff_top__DOT__u_r__DOT__LINE_GHCOLOR, NL = r->diff_top__DOT__u_n__DOT__LINE_GHCOLOR;
 	      printf("  [%llu] %s GOLD int %x %x %x %x %x %x  NEW %x %x %x %x %x %x GK=%d dir0=%d LINE g=%014llx n=%014llx\n", (unsigned long long)T->cyc, bad ? "BAD" : "ok ", g[0],g[1],g[2],g[3],g[4],g[5], n[0],n[1],n[2],n[3],n[4],n[5], (int)r->diff_top__DOT__u_n__DOT__GK, (int)r->diff_top__DOT__u_n__DOT__DIR, LL, NL);
 	  } }
-	  if ((st != last || stn != lastn) && nprint < DBGST) { nprint++; printf("  [%llu] CMD_ST gold=%d new=%d\n", (unsigned long long)T->cyc, st, stn); last = st; lastn = stn; } }
+	  if ((st != last || stn != lastn) && nprint < DBGST && (!getenv("DBGSCEN") || atoi(getenv("DBGSCEN")) == T->scen)) { nprint++; printf("  [%llu] CMD_ST gold=%d new=%d\n", (unsigned long long)T->cyc, st, stn); last = st; lastn = stn; } }
 #endif
 	bool rdy = !a.rdy_n.get();
 	u16 dout = (u16)a.dout.get();
@@ -677,6 +679,7 @@ static Cfg make_cfg(int id, u64 seed_base) {
 		c.ewlr = (u16)((x1 << 9) | y1); c.ewrr = (u16)((x3 << 9) | y3);
 	}
 	c.fast = r.chance(30); c.blur = r.chance(30);
+	if (c.fast && !g_strict_fast) { c.relaxed = 1; c.ptm = 1; c.fcm = 1; c.vbe = 0; }
 	c.vlat = id % 3;
 	c.fbrdy = (id % 7 == 6);
 	c.dce_p = (id % 4 == 3) ? 6 : 4;
@@ -685,6 +688,7 @@ static Cfg make_cfg(int id, u64 seed_base) {
 	c.big = (id % 9 == 8);
 	if (c.big) c.ncmd = r.range(4, 10);
 	c.bg = !(id % 6 == 5);
+	if (c.relaxed) c.bg = 0;
 	c.frames_after = 2;
 	c.noinit = (id % 16 == 15);
 	c.fbinit = (id % 5 != 4);
@@ -702,6 +706,7 @@ int main(int argc, char** argv) {
 		else if (!strcmp(argv[i], "--seed") && i + 1 < argc) seed = strtoull(argv[++i], 0, 0);
 		else if (!strcmp(argv[i], "--first") && i + 1 < argc) first = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--show")) g_show = 1;
+		else if (!strcmp(argv[i], "--relax-fast")) g_strict_fast = 0;
 		else if (!strcmp(argv[i], "--dbg") && i + 1 < argc) g_dbg = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--dbgfb") && i + 1 < argc) g_dbgfb = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--out") && i + 1 < argc) outdir = argv[++i];
@@ -714,6 +719,7 @@ int main(int argc, char** argv) {
 	for (int i = first; i < first + nscen && ok; i++) {
 		Cfg c = make_cfg(i, seed);
 		T->tainted = false;
+		T->relaxed = c.relaxed;
 		ok = run_scenario(c, ppm_n, outdir);
 		printf("scenario %3d  tvm=%d mix=%d ptm=%d cmds=%2d upload=%d vlat=%d  nz=%d  %s  (%llu clocks)\n", i, c.tvm, c.mix, c.ptm, c.ncmd, c.bus_upload,
 		       c.vlat, g_nz, ok ? (T->tainted ? "match(tainted)" : "match") : "FAIL", (unsigned long long)T->cyc);

@@ -44,6 +44,9 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable37[];
 extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable38[];
 extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable39[];
 extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable40[];
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable41[];
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable42[];
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable43[];
 extern const VlScopeTableEntry Vdiff_top__Syms__VpiScopeTable[];
 
 
@@ -275,7 +278,6 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"COL_D", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COL_D), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {12, 0, 0, 0, 0, 0}},
     {"COL_DIRY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COL_DIRY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"COL_DRAW_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COL_DRAW_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"COL_D_ERROR_ADJ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COL_D_ERROR_ADJ), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"COL_HEIGHT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COL_HEIGHT), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"COMM_ACC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COMM_ACC), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"COPR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__COPR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -321,6 +323,11 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"DRAW_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__DRAW_Y), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"DTEN_N", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__DTEN_N), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"EC_FIND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EC_FIND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"EDGE_BUSY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE_BUSY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"EDGE_INIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE_INIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"EDGE_PS", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE_PS), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {3, 0, 0, 0, 0, 0}},
+    {"EDGE_START", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE_START), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"EDGE_ST_STALL", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE_ST_STALL), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"EDSR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDSR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"EN", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EN), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"ERASE_HIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__ERASE_HIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -370,6 +377,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"FRAME_ODD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__FRAME_ODD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"FRAME_START", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__FRAME_START), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GBASE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GBASE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {4, 0, 0, 0, 0, 0}},
+    {"GCH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GCH), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {1, 0, 0, 0, 0, 0}},
     {"GE_TRIG", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GE_TRIG), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GHCOLOR_A", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GHCOLOR_A), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {14, 0, 0, 0, 0, 0}},
     {"GHCOLOR_B", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GHCOLOR_B), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {14, 0, 0, 0, 0, 0}},
@@ -381,6 +389,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"GL_CH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GL_CH), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {1, 0, 0, 0, 0, 0}},
     {"GL_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GL_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GP2", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GP2), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"GP2_ANY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GP2_ANY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GPROD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GPROD), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {16, 0, 0, 0, 0, 0}},
     {"GRD_CALC_1", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_CALC_1), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {14, 0, 0, 0, 0, 0}},
     {"GRD_CALC_2", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_CALC_2), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {14, 0, 0, 0, 0, 0}},
@@ -394,11 +403,14 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"GRD_TBL_R", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_TBL_R), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {14, 0, 0, 0, 0, 0}},
     {"GRD_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GSEQ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSEQ), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {3, 0, 0, 0, 0, 0}},
+    {"GSIDE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSIDE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GSUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSUM), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {16, 0, 0, 0, 0, 0}},
     {"GS_Q", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GS_Q), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {16, 0, 0, 0, 0, 0}},
     {"GS_WD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GS_WD), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {16, 0, 0, 0, 0, 0}},
     {"GS_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GS_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GS_WI", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GS_WI), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"GTC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GTC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {14, 0, 0, 0, 0, 0}},
+    {"GTW", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GTW), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {1, 0, 0, 0, 0, 0}},
     {"GW_B", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GW_B), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GW_DIR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GW_DIR), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GW_DIRB", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GW_DIRB), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -418,18 +430,6 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"LD_TEMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LD_TEMP), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {12, 0, 0, 0, 0, 0}},
     {"LD_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LD_Y), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"LD_Z", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LD_Z), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {1, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_ADJ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_ADJ), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_X", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_X_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_X_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_Y_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_Y_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_X_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_X_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_Y_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_COL_Y_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_D_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_D_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_D_ERROR_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_D_ERROR_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_D_ERROR_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_D_ERROR_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"LEFT_HEIGHT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_HEIGHT), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"LEFT_VERT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LEFT_VERT), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {25, 0, 0, 0, 0, 0}},
     {"LINE_AA_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LINE_AA_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -451,13 +451,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"LOPR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__LOPR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"MEM_DO", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__MEM_DO), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"MODR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__MODR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
-    {"NEXT_LEFT_COL_ERROR_X", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_LEFT_COL_ERROR_X), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"NEXT_LEFT_COL_ERROR_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_LEFT_COL_ERROR_Y), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"NEXT_LEFT_D_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_LEFT_D_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"NEXT_LINE_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_LINE_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"NEXT_RIGHT_COL_ERROR_X", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_RIGHT_COL_ERROR_X), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"NEXT_RIGHT_COL_ERROR_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_RIGHT_COL_ERROR_Y), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"NEXT_RIGHT_D_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_RIGHT_D_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"NEXT_TEXT_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_TEXT_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"NEXT_TEXT_Y_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NEXT_TEXT_Y_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"NS_DIR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__NS_DIR), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {2, 0, 0, 0, 0, 0}},
@@ -513,18 +507,6 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable4[] = {
     {"REG_SEL", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__REG_SEL), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"REQ_N", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__REQ_N), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RES_N", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RES_N), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_ADJ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_ADJ), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_X", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_X_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_X_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_Y", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_Y_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_Y_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_X_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_X_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_Y_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_COL_Y_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_D_ERROR", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_D_ERROR), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_D_ERROR_CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_D_ERROR_CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"RIGHT_D_ERROR_INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_D_ERROR_INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"RIGHT_HEIGHT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_HEIGHT), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"RIGHT_VERT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__RIGHT_VERT), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {25, 0, 0, 0, 0, 0}},
     {"ROW_WIDTH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__ROW_WIDTH), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
@@ -630,6 +612,68 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable6[] = {
     {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
 extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable7[] = {
+    {"ACC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"ADJ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ADJ), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"BUSY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__BUSY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"CH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__CH), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"CMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__CMP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"DX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__DX), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"DY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__DY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"EN", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__EN), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"H", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__H), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"HIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__HIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"INC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__INC), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"INIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__INIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"K", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__K), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {1, 0, 0, 0, 0, 0}},
+    {"LDX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__LDX), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"LDY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__LDY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"LH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__LH), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"LSX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__LSX), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"LSY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__LSY), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"MODE_INIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__MODE_INIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"NXT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__NXT), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"OPC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__OPC), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"PS", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__PS), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {3, 0, 0, 0, 0, 0}},
+    {"RDX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RDX), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"RDY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RDY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"RH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RH), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"RSX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RSX), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"RSY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RSY), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"RUN", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__RUN), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"S", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__S), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"SIDE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__SIDE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"START", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__START), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"SX", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__SX), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"SY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__SY), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
+    {"WD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__WD), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"ZERO", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ZERO), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {13, 0, 0, 0, 0, 0}},
+};
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable8[] = {
+    {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"D", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__D), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"Q", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__Q), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"RA", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__RA), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"WA", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__WA), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+};
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable9[] = {
+    {"aclr", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__aclr), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"byteena", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__byteena), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"data", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__data), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"i", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__i), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED), 0, 1, {31, 0, 0, 0, 0, 0}},
+    {"inclock", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__inclock), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"inclocken", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__inclocken), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"mem", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__mem), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW), 1, 1, {0, 7, 13, 0, 0, 0}},
+    {"q", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__q), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {13, 0, 0, 0, 0, 0}},
+    {"rdaddress", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"rdaddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"rden", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rden), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"wraddress", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {2, 0, 0, 0, 0, 0}},
+    {"wraddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+    {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
+};
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable10[] = {
     {"A", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_B__DOT__A), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {4, 0, 0, 0, 0, 0}},
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_B__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DB", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_B__DOT__DB), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -643,7 +687,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable7[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_B__DOT__SUM), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_B__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable8[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable11[] = {
     {"A", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__A), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {4, 0, 0, 0, 0, 0}},
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DB", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__DB), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -657,7 +701,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable8[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__SUM), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable9[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable12[] = {
     {"A", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_R__DOT__A), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {4, 0, 0, 0, 0, 0}},
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_R__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DB", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_R__DOT__DB), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -671,7 +715,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable9[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_R__DOT__SUM), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {11, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GRD_DIV_R__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable10[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable13[] = {
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"D", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__D), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {16, 0, 0, 0, 0, 0}},
     {"Q", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__Q), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {16, 0, 0, 0, 0, 0}},
@@ -679,7 +723,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable10[] = {
     {"WA", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__WA), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {2, 0, 0, 0, 0, 0}},
     {"WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable11[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable14[] = {
     {"aclr", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__aclr), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"byteena", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__byteena), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"data", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__data), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {16, 0, 0, 0, 0, 0}},
@@ -695,7 +739,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable11[] = {
     {"wraddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__wraddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable12[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable15[] = {
     {"AMOUNT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__AMOUNT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {1, 0, 0, 0, 0, 0}},
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DATA", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__DATA), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -710,7 +754,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable12[] = {
     {"WRREQ", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__WRREQ), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"sub_wire0", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__sub_wire0), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {15, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable13[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable16[] = {
     {"aclr", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__aclr), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"byteena", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__byteena), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"data", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__data), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -726,19 +770,13 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable13[] = {
     {"wraddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable14[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable17[] = {
     {"COL_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__COL_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_X_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_X_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_COL_ERROR_Y_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_Y_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"LEFT_D_ERROR_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_D_ERROR_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"LINE_ERROR_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LINE_ERROR_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_X_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_COL_ERROR_X_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_COL_ERROR_Y_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_COL_ERROR_Y_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
-    {"RIGHT_D_ERROR_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_D_ERROR_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"TEXT_ERROR_ADJUSTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__TEXT_ERROR_ADJUSTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"TEXT_Y_ERROR_ADJUSTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk1__DOT__TEXT_Y_ERROR_ADJUSTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable15[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable18[] = {
     {"AA_DRAW", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk2__DOT__AA_DRAW), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CLIP_DELAY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk2__DOT__CLIP_DELAY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {3, 0, 0, 0, 0, 0}},
     {"CLIP_H", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk2__DOT__CLIP_H), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -788,22 +826,22 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable15[] = {
     {"NEXT_ADDR_H", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk2__DOT__NEXT_ADDR_H), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {18, 5, 0, 0, 0, 0}},
     {"SPR_OFFSY_NEXT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk2__DOT__SPR_OFFSY_NEXT), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {16, 3, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable16[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable19[] = {
     {"RAS_DELAY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk3__DOT__RAS_DELAY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {1, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable17[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable20[] = {
     {"CALC_C", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk4__DOT__CALC_C), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"EC", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk4__DOT__EC), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"IDRAW", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk4__DOT__IDRAW), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"MESH", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk4__DOT__MESH), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable18[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable21[] = {
     {"HTIM_N_OLD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk5__DOT__HTIM_N_OLD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RP_FIRST", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk5__DOT__RP_FIRST), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RP_POS", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk5__DOT__RP_POS), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {2, 0, 0, 0, 0, 0}},
     {"VTIM_N_OLD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk5__DOT__VTIM_N_OLD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable19[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable22[] = {
     {"CLT_READ_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk6__DOT__CLT_READ_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CMD_READ_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk6__DOT__CMD_READ_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CPU_ACCESS_WAIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk6__DOT__CPU_ACCESS_WAIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {4, 0, 0, 0, 0, 0}},
@@ -825,19 +863,19 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable19[] = {
     {"VRAM_FIFO_EMPTY", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk6__DOT__VRAM_FIFO_EMPTY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"VRAM_FIFO_FULL", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk6__DOT__VRAM_FIFO_FULL), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable20[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable23[] = {
     {"CMD_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk7__DOT__CMD_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GRD_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk7__DOT__GRD_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"TEMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk7__DOT__TEMP), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {12, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable21[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable24[] = {
     {"FRAME_CHANGE", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk8__DOT__FRAME_CHANGE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"MANUAL_ERASECHANGE_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk8__DOT__MANUAL_ERASECHANGE_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"START_DRAW_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk8__DOT__START_DRAW_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"VBERASE_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk8__DOT__VBERASE_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"VTIM_N_OLD", offsetof(Vdiff_top___024root, diff_top__DOT__u_n__DOT__unnamedblk8__DOT__VTIM_N_OLD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable22[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable25[] = {
     {"A", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__A), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {20, 1, 0, 0, 0, 0}},
     {"AA", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__AA), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"AA_X", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__AA_X), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {11, 0, 0, 0, 0, 0}},
@@ -1132,7 +1170,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable22[] = {
     {"VTIM_N", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__VTIM_N), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"WE_N", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__WE_N), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable23[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable26[] = {
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DATA", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__DATA), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"Q", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__Q), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -1141,7 +1179,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable23[] = {
     {"WREN", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__WREN), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"sub_wire0", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__sub_wire0), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {15, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable24[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable27[] = {
     {"aclr", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__aclr), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"byteena", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__byteena), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"data", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__data), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -1157,7 +1195,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable24[] = {
     {"wraddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wraddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable25[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable28[] = {
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"D", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__D), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"DONE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__DONE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -1168,10 +1206,10 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable25[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__SUM), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable26[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable29[] = {
     {"STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__unnamedblk1__DOT__STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {4, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable27[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable30[] = {
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"D", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__D), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"DONE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__DONE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -1182,10 +1220,10 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable27[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__SUM), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable28[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable31[] = {
     {"STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__unnamedblk1__DOT__STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {4, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable29[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable32[] = {
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"D", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__D), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"DONE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__DONE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -1196,10 +1234,10 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable29[] = {
     {"SUM", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__SUM), VLVT_UINT32, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {28, 0, 0, 0, 0, 0}},
     {"T", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__T), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable30[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable33[] = {
     {"STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__unnamedblk1__DOT__STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {4, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable31[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable34[] = {
     {"AMOUNT", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__AMOUNT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {1, 0, 0, 0, 0, 0}},
     {"CLK", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__CLK), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"DATA", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__DATA), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -1214,7 +1252,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable31[] = {
     {"WRREQ", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__WRREQ), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"sub_wire0", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__sub_wire0), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY|VLVF_NET), 0, 1, {15, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable32[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable35[] = {
     {"aclr", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__aclr), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"byteena", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__byteena), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"data", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__data), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 1, {15, 0, 0, 0, 0, 0}},
@@ -1230,7 +1268,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable32[] = {
     {"wraddressstall", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddressstall), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"wren", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wren), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_CONTINUOUSLY), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable33[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable36[] = {
     {"COL_STEP", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk1__DOT__COL_STEP), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"LEFT_COL_ERROR_X_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_X_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"LEFT_COL_ERROR_Y_ICREMENTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_Y_ICREMENTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
@@ -1242,7 +1280,7 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable33[] = {
     {"TEXT_ERROR_ADJUSTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk1__DOT__TEXT_ERROR_ADJUSTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
     {"TEXT_Y_ERROR_ADJUSTED", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk1__DOT__TEXT_Y_ERROR_ADJUSTED), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {13, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable34[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable37[] = {
     {"AA_DRAW", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk2__DOT__AA_DRAW), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CLIP_DELAY", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk2__DOT__CLIP_DELAY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {3, 0, 0, 0, 0, 0}},
     {"CLIP_H", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk2__DOT__CLIP_H), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -1294,23 +1332,23 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable34[] = {
     {"SYS_CLIP_Y1", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk2__DOT__SYS_CLIP_Y1), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {12, 0, 0, 0, 0, 0}},
     {"SYS_CLIP_Y2", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk2__DOT__SYS_CLIP_Y2), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {12, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable35[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable38[] = {
     {"FBD_RAS", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk3__DOT__FBD_RAS), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RAS_DELAY", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk3__DOT__RAS_DELAY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {1, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable36[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable39[] = {
     {"CALC_C", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk4__DOT__CALC_C), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {15, 0, 0, 0, 0, 0}},
     {"EC", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk4__DOT__EC), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"IDRAW", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk4__DOT__IDRAW), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"MESH", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk4__DOT__MESH), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable37[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable40[] = {
     {"HTIM_N_OLD", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk5__DOT__HTIM_N_OLD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RP_FIRST", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk5__DOT__RP_FIRST), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"RP_POS", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk5__DOT__RP_POS), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {2, 0, 0, 0, 0, 0}},
     {"VTIM_N_OLD", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk5__DOT__VTIM_N_OLD), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable38[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable41[] = {
     {"CLT_READ_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk6__DOT__CLT_READ_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CMD_READ_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk6__DOT__CMD_READ_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"CPU_ACCESS_WAIT", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk6__DOT__CPU_ACCESS_WAIT), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {4, 0, 0, 0, 0, 0}},
@@ -1339,12 +1377,12 @@ extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable38[] = {
     {"VRAM_FIFO_EMPTY", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk6__DOT__VRAM_FIFO_EMPTY), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"VRAM_FIFO_FULL", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk6__DOT__VRAM_FIFO_FULL), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable39[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable42[] = {
     {"CMD_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk7__DOT__CMD_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"GRD_WE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk7__DOT__GRD_WE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"TEMP", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk7__DOT__TEMP), VLVT_UINT16, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 1, {12, 0, 0, 0, 0, 0}},
 };
-extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable40[] = {
+extern const VlVarTableEntry Vdiff_top___024root__VpiVarTable43[] = {
     {"FRAME_CHANGE", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk8__DOT__FRAME_CHANGE), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"MANUAL_ERASECHANGE_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk8__DOT__MANUAL_ERASECHANGE_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
     {"START_DRAW_PEND", offsetof(Vdiff_top___024root, diff_top__DOT__u_r__DOT__unnamedblk8__DOT__START_DRAW_PEND), VLVT_UINT8, (VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR), 0, 0, {0, 0, 0, 0, 0, 0}},
@@ -1359,6 +1397,9 @@ extern const VlScopeTableEntry Vdiff_top__Syms__VpiScopeTable[] = {
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n), "diff_top.u_n", "u_n", "<null>", 0, VerilatedScope::SCOPE_OTHER},
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__CLT), "diff_top.u_n.CLT", "CLT", "<null>", 0, VerilatedScope::SCOPE_OTHER},
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__CLT__altdpram0), "diff_top.u_n.CLT.altdpram0", "altdpram0", "<null>", 0, VerilatedScope::SCOPE_OTHER},
+    {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__EDGE), "diff_top.u_n.EDGE", "EDGE", "<null>", 0, VerilatedScope::SCOPE_OTHER},
+    {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__EDGE__ACCS), "diff_top.u_n.EDGE.ACCS", "ACCS", "<null>", 0, VerilatedScope::SCOPE_OTHER},
+    {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component), "diff_top.u_n.EDGE.ACCS.altdpram_component", "altdpram_component", "<null>", 0, VerilatedScope::SCOPE_OTHER},
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__GRD_DIV_B), "diff_top.u_n.GRD_DIV_B", "GRD_DIV_B", "<null>", 0, VerilatedScope::SCOPE_OTHER},
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__GRD_DIV_G), "diff_top.u_n.GRD_DIV_G", "GRD_DIV_G", "<null>", 0, VerilatedScope::SCOPE_OTHER},
     {offsetof(Vdiff_top__Syms, __Vscopep_diff_top__u_n__GRD_DIV_R), "diff_top.u_n.GRD_DIV_R", "GRD_DIV_R", "<null>", 0, VerilatedScope::SCOPE_OTHER},
@@ -1406,7 +1447,7 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     , TOP{this, namep}
 {
     // Check resources
-    Verilated::stackCheck(1143);
+    Verilated::stackCheck(1135);
     // Setup sub module instances
     TOP__REF_VDP1_PKG.ctor(this, "REF_VDP1_PKG");
     TOP__VDP1P_PKG.ctor(this, "VDP1P_PKG");
@@ -1421,7 +1462,7 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     TOP__REF_VDP1_PKG.__Vconfigure(true);
     TOP__VDP1P_PKG.__Vconfigure(true);
     // Setup scopes
-    VerilatedScope::scopesConstructFromTable(Vdiff_top__Syms__VpiScopeTable, 41, this);
+    VerilatedScope::scopesConstructFromTable(Vdiff_top__Syms__VpiScopeTable, 44, this);
     // Setup export functions - final: 0
     // Setup export functions - final: 1
     // Setup public variables
@@ -1501,7 +1542,7 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_VDP1P_PKG->varInsert("TVMR_MASK", const_cast<void*>(static_cast<const void*>(&(TOP__VDP1P_PKG.TVMR_MASK))), true, VLVT_UINT16, VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR, 0, 1 ,15,0);
     __Vscopep_VDP1P_PKG->varInsert("VERT_NULL", const_cast<void*>(static_cast<const void*>(&(TOP__VDP1P_PKG.VERT_NULL))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_DPI_CLAY|VLVF_BITVAR, 0, 1 ,25,0);
     __Vscopep_diff_top->varsInsertFromTable(Vdiff_top___024root__VpiVarTable3, 67, &(TOP));
-    __Vscopep_diff_top__u_n->varsInsertFromTable(Vdiff_top___024root__VpiVarTable4, 360, &(TOP));
+    __Vscopep_diff_top__u_n->varsInsertFromTable(Vdiff_top___024root__VpiVarTable4, 339, &(TOP));
     __Vscopep_diff_top__u_n__CLT->varsInsertFromTable(Vdiff_top___024root__VpiVarTable5, 7, &(TOP));
     __Vscopep_diff_top__u_n__CLT__altdpram0->varsInsertFromTable(Vdiff_top___024root__VpiVarTable6, 14, &(TOP));
     __Vscopep_diff_top__u_n__CLT__altdpram0->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
@@ -1523,13 +1564,37 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_diff_top__u_n__CLT__altdpram0->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_n__CLT__altdpram0->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_n__CLT__altdpram0->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
-    __Vscopep_diff_top__u_n__GRD_DIV_B->varsInsertFromTable(Vdiff_top___024root__VpiVarTable7, 12, &(TOP));
-    __Vscopep_diff_top__u_n__GRD_DIV_G->varsInsertFromTable(Vdiff_top___024root__VpiVarTable8, 12, &(TOP));
-    __Vscopep_diff_top__u_n__GRD_DIV_R->varsInsertFromTable(Vdiff_top___024root__VpiVarTable9, 12, &(TOP));
-    __Vscopep_diff_top__u_n__GSTEP->varsInsertFromTable(Vdiff_top___024root__VpiVarTable10, 6, &(TOP));
+    __Vscopep_diff_top__u_n__EDGE->varsInsertFromTable(Vdiff_top___024root__VpiVarTable7, 36, &(TOP));
+    __Vscopep_diff_top__u_n__EDGE__ACCS->varsInsertFromTable(Vdiff_top___024root__VpiVarTable8, 6, &(TOP));
+    __Vscopep_diff_top__u_n__EDGE__ACCS->varInsert("AW", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__AW))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS->varInsert("W", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__W))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable9, 14, &(TOP));
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("indata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__indata_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("intended_device_family", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__intended_device_family))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,71,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("lpm_type", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__lpm_type))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,63,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("outdata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__outdata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("outdata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__outdata_reg))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,95,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("ram_block_type", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__ram_block_type))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("rdaddress_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("rdaddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress_reg))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,95,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("rdcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("rdcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdcontrol_reg))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,95,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("read_during_write_mode_mixed_ports", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__read_during_write_mode_mixed_ports))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,167,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("width", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__width))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("width_byteena", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__width_byteena))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("widthad", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__widthad))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("wraddress_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
+    __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
+    __Vscopep_diff_top__u_n__GRD_DIV_B->varsInsertFromTable(Vdiff_top___024root__VpiVarTable10, 12, &(TOP));
+    __Vscopep_diff_top__u_n__GRD_DIV_G->varsInsertFromTable(Vdiff_top___024root__VpiVarTable11, 12, &(TOP));
+    __Vscopep_diff_top__u_n__GRD_DIV_R->varsInsertFromTable(Vdiff_top___024root__VpiVarTable12, 12, &(TOP));
+    __Vscopep_diff_top__u_n__GSTEP->varsInsertFromTable(Vdiff_top___024root__VpiVarTable13, 6, &(TOP));
     __Vscopep_diff_top__u_n__GSTEP->varInsert("AW", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__AW))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
     __Vscopep_diff_top__u_n__GSTEP->varInsert("W", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__W))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
-    __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable11, 14, &(TOP));
+    __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable14, 14, &(TOP));
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("indata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__indata_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("intended_device_family", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__intended_device_family))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,71,0);
@@ -1549,9 +1614,9 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_n__GSTEP__altdpram_component->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
-    __Vscopep_diff_top__u_n__PAT_FIFO->varsInsertFromTable(Vdiff_top___024root__VpiVarTable12, 13, &(TOP));
+    __Vscopep_diff_top__u_n__PAT_FIFO->varsInsertFromTable(Vdiff_top___024root__VpiVarTable15, 13, &(TOP));
     __Vscopep_diff_top__u_n__PAT_FIFO->varInsert("l", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__l))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
-    __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable13, 14, &(TOP));
+    __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable16, 14, &(TOP));
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("indata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__indata_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("intended_device_family", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__intended_device_family))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,71,0);
@@ -1571,17 +1636,17 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
-    __Vscopep_diff_top__u_n__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable14, 10, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk2->varsInsertFromTable(Vdiff_top___024root__VpiVarTable15, 48, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk3->varsInsertFromTable(Vdiff_top___024root__VpiVarTable16, 1, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk4->varsInsertFromTable(Vdiff_top___024root__VpiVarTable17, 4, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk5->varsInsertFromTable(Vdiff_top___024root__VpiVarTable18, 4, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk6->varsInsertFromTable(Vdiff_top___024root__VpiVarTable19, 20, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk7->varsInsertFromTable(Vdiff_top___024root__VpiVarTable20, 3, &(TOP));
-    __Vscopep_diff_top__u_n__unnamedblk8->varsInsertFromTable(Vdiff_top___024root__VpiVarTable21, 5, &(TOP));
-    __Vscopep_diff_top__u_r->varsInsertFromTable(Vdiff_top___024root__VpiVarTable22, 293, &(TOP));
-    __Vscopep_diff_top__u_r__CLT->varsInsertFromTable(Vdiff_top___024root__VpiVarTable23, 7, &(TOP));
-    __Vscopep_diff_top__u_r__CLT__altdpram0->varsInsertFromTable(Vdiff_top___024root__VpiVarTable24, 14, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable17, 4, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk2->varsInsertFromTable(Vdiff_top___024root__VpiVarTable18, 48, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk3->varsInsertFromTable(Vdiff_top___024root__VpiVarTable19, 1, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk4->varsInsertFromTable(Vdiff_top___024root__VpiVarTable20, 4, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk5->varsInsertFromTable(Vdiff_top___024root__VpiVarTable21, 4, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk6->varsInsertFromTable(Vdiff_top___024root__VpiVarTable22, 20, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk7->varsInsertFromTable(Vdiff_top___024root__VpiVarTable23, 3, &(TOP));
+    __Vscopep_diff_top__u_n__unnamedblk8->varsInsertFromTable(Vdiff_top___024root__VpiVarTable24, 5, &(TOP));
+    __Vscopep_diff_top__u_r->varsInsertFromTable(Vdiff_top___024root__VpiVarTable25, 293, &(TOP));
+    __Vscopep_diff_top__u_r__CLT->varsInsertFromTable(Vdiff_top___024root__VpiVarTable26, 7, &(TOP));
+    __Vscopep_diff_top__u_r__CLT__altdpram0->varsInsertFromTable(Vdiff_top___024root__VpiVarTable27, 14, &(TOP));
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("indata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__indata_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("intended_device_family", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__intended_device_family))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,71,0);
@@ -1601,15 +1666,15 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_r__CLT__altdpram0->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
-    __Vscopep_diff_top__u_r__GRD_DIV_B->varsInsertFromTable(Vdiff_top___024root__VpiVarTable25, 9, &(TOP));
-    __Vscopep_diff_top__u_r__GRD_DIV_B__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable26, 1, &(TOP));
-    __Vscopep_diff_top__u_r__GRD_DIV_G->varsInsertFromTable(Vdiff_top___024root__VpiVarTable27, 9, &(TOP));
-    __Vscopep_diff_top__u_r__GRD_DIV_G__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable28, 1, &(TOP));
-    __Vscopep_diff_top__u_r__GRD_DIV_R->varsInsertFromTable(Vdiff_top___024root__VpiVarTable29, 9, &(TOP));
-    __Vscopep_diff_top__u_r__GRD_DIV_R__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable30, 1, &(TOP));
-    __Vscopep_diff_top__u_r__PAT_FIFO->varsInsertFromTable(Vdiff_top___024root__VpiVarTable31, 13, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_B->varsInsertFromTable(Vdiff_top___024root__VpiVarTable28, 9, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_B__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable29, 1, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_G->varsInsertFromTable(Vdiff_top___024root__VpiVarTable30, 9, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_G__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable31, 1, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_R->varsInsertFromTable(Vdiff_top___024root__VpiVarTable32, 9, &(TOP));
+    __Vscopep_diff_top__u_r__GRD_DIV_R__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable33, 1, &(TOP));
+    __Vscopep_diff_top__u_r__PAT_FIFO->varsInsertFromTable(Vdiff_top___024root__VpiVarTable34, 13, &(TOP));
     __Vscopep_diff_top__u_r__PAT_FIFO->varInsert("l", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__l))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW|VLVF_SIGNED, 0, 1 ,31,0);
-    __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable32, 14, &(TOP));
+    __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varsInsertFromTable(Vdiff_top___024root__VpiVarTable35, 14, &(TOP));
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("indata_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__indata_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("indata_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__indata_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("intended_device_family", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__intended_device_family))), true, VLVT_WDATA, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,71,0);
@@ -1629,14 +1694,14 @@ Vdiff_top__Syms::Vdiff_top__Syms(VerilatedContext* contextp, const char* namep, 
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("wraddress_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddress_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("wrcontrol_aclr", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wrcontrol_aclr))), true, VLVT_UINT32, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,23,0);
     __Vscopep_diff_top__u_r__PAT_FIFO__altdpram_component->varInsert("wrcontrol_reg", const_cast<void*>(static_cast<const void*>(&(TOP.diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wrcontrol_reg))), true, VLVT_UINT64, VLVD_NODIR|VLVF_PUB_RW, 0, 1 ,55,0);
-    __Vscopep_diff_top__u_r__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable33, 10, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk2->varsInsertFromTable(Vdiff_top___024root__VpiVarTable34, 50, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk3->varsInsertFromTable(Vdiff_top___024root__VpiVarTable35, 2, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk4->varsInsertFromTable(Vdiff_top___024root__VpiVarTable36, 4, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk5->varsInsertFromTable(Vdiff_top___024root__VpiVarTable37, 4, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk6->varsInsertFromTable(Vdiff_top___024root__VpiVarTable38, 27, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk7->varsInsertFromTable(Vdiff_top___024root__VpiVarTable39, 3, &(TOP));
-    __Vscopep_diff_top__u_r__unnamedblk8->varsInsertFromTable(Vdiff_top___024root__VpiVarTable40, 5, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk1->varsInsertFromTable(Vdiff_top___024root__VpiVarTable36, 10, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk2->varsInsertFromTable(Vdiff_top___024root__VpiVarTable37, 50, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk3->varsInsertFromTable(Vdiff_top___024root__VpiVarTable38, 2, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk4->varsInsertFromTable(Vdiff_top___024root__VpiVarTable39, 4, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk5->varsInsertFromTable(Vdiff_top___024root__VpiVarTable40, 4, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk6->varsInsertFromTable(Vdiff_top___024root__VpiVarTable41, 27, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk7->varsInsertFromTable(Vdiff_top___024root__VpiVarTable42, 3, &(TOP));
+    __Vscopep_diff_top__u_r__unnamedblk8->varsInsertFromTable(Vdiff_top___024root__VpiVarTable43, 5, &(TOP));
 }
 
 Vdiff_top__Syms::~Vdiff_top__Syms() {
@@ -1648,6 +1713,9 @@ Vdiff_top__Syms::~Vdiff_top__Syms() {
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n, __Vscopep_diff_top__u_n = nullptr);
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__CLT, __Vscopep_diff_top__u_n__CLT = nullptr);
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__CLT__altdpram0, __Vscopep_diff_top__u_n__CLT__altdpram0 = nullptr);
+    VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__EDGE, __Vscopep_diff_top__u_n__EDGE = nullptr);
+    VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__EDGE__ACCS, __Vscopep_diff_top__u_n__EDGE__ACCS = nullptr);
+    VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component, __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component = nullptr);
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__GRD_DIV_B, __Vscopep_diff_top__u_n__GRD_DIV_B = nullptr);
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__GRD_DIV_G, __Vscopep_diff_top__u_n__GRD_DIV_G = nullptr);
     VL_DO_CLEAR(delete __Vscopep_diff_top__u_n__GRD_DIV_R, __Vscopep_diff_top__u_n__GRD_DIV_R = nullptr);

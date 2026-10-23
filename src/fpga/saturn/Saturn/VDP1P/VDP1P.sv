@@ -239,8 +239,6 @@ module VDP1P (
 	bit          COL_DRAW_STEP;
 	bit          TEXT_X_READ_STEP;
 	bit          TEXTY_READ_STEP, TEXT_Y_READ_STEP;
-	bit          LEFT_COL_X_STEP, LEFT_COL_Y_STEP;
-	bit          RIGHT_COL_X_STEP,RIGHT_COL_Y_STEP;
 	bit  [ 4: 0] GRD_CALC_STATE;
 	
 	bit  [ 8: 0] ORIG_WIDTH;
@@ -250,23 +248,14 @@ module VDP1P (
 	wire         IS_PAT_EC = (CMD.CMDCTRL.COMM <= 4'h3 && !CMD.CMDPMOD.ECD && PAT.EC && !HSS_EN);
 	
 	bit  [12: 0] COL_D;
-	bit  [13: 0] NEXT_LEFT_COL_ERROR_X, NEXT_LEFT_COL_ERROR_Y, LEFT_COL_ERROR_X, LEFT_COL_ERROR_Y;
-	bit  [13: 0] NEXT_RIGHT_COL_ERROR_X, NEXT_RIGHT_COL_ERROR_Y, RIGHT_COL_ERROR_X, RIGHT_COL_ERROR_Y;
-	bit  [13: 0] NEXT_LEFT_D_ERROR, LEFT_D_ERROR;
-	bit  [13: 0] NEXT_RIGHT_D_ERROR, RIGHT_D_ERROR;
-	// The edge-step increments and adjusts are fixed per command and equal to (twice) the edge extents captured in
-	// POLY_*S?, LEFT/RIGHT_HEIGHT and COL_HEIGHT, which are written only by the edge setup states; they are not stored again.
-	wire [13: 0] LEFT_COL_ERROR_X_INC  = {1'b0,POLY_LSX,1'b0};
-	wire [13: 0] LEFT_COL_ERROR_Y_INC  = {1'b0,POLY_LSY,1'b0};
-	wire [13: 0] RIGHT_COL_ERROR_X_INC = {1'b0,POLY_RSX,1'b0};
-	wire [13: 0] RIGHT_COL_ERROR_Y_INC = {1'b0,POLY_RSY,1'b0};
-	wire [13: 0] LEFT_D_ERROR_INC      = {1'b0,LEFT_HEIGHT,1'b0};
-	wire [13: 0] RIGHT_D_ERROR_INC     = {1'b0,RIGHT_HEIGHT,1'b0};
-	wire [13: 0] LEFT_COL_ERROR_ADJ    = -{1'b0,LEFT_HEIGHT,1'b0};
-	wire [13: 0] RIGHT_COL_ERROR_ADJ   = -{1'b0,RIGHT_HEIGHT,1'b0};
-	wire [13: 0] COL_D_ERROR_ADJ       = -{1'b0,COL_HEIGHT,1'b0};
-	bit          LEFT_D_ERROR_CMP, RIGHT_D_ERROR_CMP, LEFT_COL_ERROR_X_CMP, LEFT_COL_ERROR_Y_CMP, RIGHT_COL_ERROR_X_CMP, RIGHT_COL_ERROR_Y_CMP;
-					 
+	// Edge accumulators and their steps are in VDP1P_EDGE (MLAB, one accumulator per cycle), stepping one row ahead.
+	wire         EDGE_BUSY;
+	wire [ 3: 0] EDGE_PS;
+	wire         EDGE_ST_STALL = EDGE_BUSY && COMM_ACC;
+	wire         EDGE_START = EN && !EDGE_ST_STALL && COMM_ACC && (CMD_ST == CMDS_NSPR_CALCX || CMD_ST == CMDS_SSPR_CALCX || CMD_ST == CMDS_LINE_CALC);
+	wire         EDGE_INIT  = EN && CMD_ST == CMDS_POLYGON_CALCTY;
+	VDP1P_EDGE EDGE(CLK, EN, EDGE_INIT, EDGE_START, LEFT_HEIGHT, RIGHT_HEIGHT, COL_HEIGHT, POLY_LSX, POLY_LSY, POLY_RSX, POLY_RSY,
+	                POLY_LDIRX, POLY_LDIRY, POLY_RDIRX, POLY_RDIRY, EDGE_BUSY, EDGE_PS);
 	bit  [13: 0] NEXT_LINE_ERROR, LINE_ERROR, LINE_ERROR_INC, LINE_ERROR_ADJ;
 	// Texture error set-up shared by the scaled-sprite and line row set-up states.
 	// W = texture width, R = row width in pixels; HSS half-size mode only applies below the texture width.
@@ -300,27 +289,17 @@ module VDP1P (
 		bit COL_STEP;
 		bit  [13: 0] TEXT_ERROR_ADJUSTED,LINE_ERROR_ICREMENTED;
 		bit  [13: 0] TEXT_Y_ERROR_ADJUSTED;
-		bit  [13: 0] LEFT_D_ERROR_ICREMENTED,LEFT_COL_ERROR_X_ICREMENTED,LEFT_COL_ERROR_Y_ICREMENTED;
-		bit  [13: 0] RIGHT_D_ERROR_ICREMENTED,RIGHT_COL_ERROR_X_ICREMENTED,RIGHT_COL_ERROR_Y_ICREMENTED;
 		
 		LINE_DRAW_STEP = 0;
 		LINE_AA_STEP = 0;
 		COL_DRAW_STEP = 0;
 		TEXT_X_READ_STEP = 0;
 		TEXT_Y_READ_STEP = 0;
-		{LEFT_COL_X_STEP,LEFT_COL_Y_STEP} = '0;
-		{RIGHT_COL_X_STEP,RIGHT_COL_Y_STEP} = '0;
 		
 		
 		NEXT_TEXT_ERROR = '0;
 		NEXT_LINE_ERROR = '0;
 		NEXT_TEXT_Y_ERROR = '0;
-		NEXT_LEFT_D_ERROR = '0;
-		NEXT_LEFT_COL_ERROR_X = '0;
-		NEXT_LEFT_COL_ERROR_Y = '0;
-		NEXT_RIGHT_D_ERROR = '0;
-		NEXT_RIGHT_COL_ERROR_X = '0;
-		NEXT_RIGHT_COL_ERROR_Y = '0;
 		case (CMD_ST) 
 			CMDS_NSPR_DRAW: begin		
 				LINE_DRAW_STEP = 1;		
@@ -366,43 +345,6 @@ module VDP1P (
 				end
 			end
 			
-			CMDS_LINE_NEXT: begin
-				// Error accumulators: add the increment, subtract the extent when the compare hits (operand gating, one adder).
-				LEFT_D_ERROR_ICREMENTED = LEFT_D_ERROR + LEFT_D_ERROR_INC;
-				if ($signed(LEFT_D_ERROR_ICREMENTED) >= $signed({14{LEFT_D_ERROR_CMP}})) begin
-					NEXT_LEFT_D_ERROR = LEFT_D_ERROR_ICREMENTED + COL_D_ERROR_ADJ;
-					
-					LEFT_COL_ERROR_X_ICREMENTED = LEFT_COL_ERROR_X + LEFT_COL_ERROR_X_INC;
-					LEFT_COL_X_STEP = $signed(LEFT_COL_ERROR_X_ICREMENTED) >= $signed({14{LEFT_COL_ERROR_X_CMP}});
-					NEXT_LEFT_COL_ERROR_X = LEFT_COL_ERROR_X_ICREMENTED + (LEFT_COL_X_STEP ? LEFT_COL_ERROR_ADJ : 14'd0);
-					
-					LEFT_COL_ERROR_Y_ICREMENTED = LEFT_COL_ERROR_Y + LEFT_COL_ERROR_Y_INC;
-					LEFT_COL_Y_STEP = $signed(LEFT_COL_ERROR_Y_ICREMENTED) >= $signed({14{LEFT_COL_ERROR_Y_CMP}});
-					NEXT_LEFT_COL_ERROR_Y = LEFT_COL_ERROR_Y_ICREMENTED + (LEFT_COL_Y_STEP ? LEFT_COL_ERROR_ADJ : 14'd0);
-				end else begin
-					NEXT_LEFT_D_ERROR = LEFT_D_ERROR_ICREMENTED;
-					NEXT_LEFT_COL_ERROR_X = LEFT_COL_ERROR_X;
-					NEXT_LEFT_COL_ERROR_Y = LEFT_COL_ERROR_Y;
-				end
-				
-				RIGHT_D_ERROR_ICREMENTED = RIGHT_D_ERROR + RIGHT_D_ERROR_INC;
-				if ($signed(RIGHT_D_ERROR_ICREMENTED) >= $signed({14{RIGHT_D_ERROR_CMP}})) begin
-					NEXT_RIGHT_D_ERROR = RIGHT_D_ERROR_ICREMENTED + COL_D_ERROR_ADJ;
-					
-					RIGHT_COL_ERROR_X_ICREMENTED = RIGHT_COL_ERROR_X + RIGHT_COL_ERROR_X_INC;
-					RIGHT_COL_X_STEP = $signed(RIGHT_COL_ERROR_X_ICREMENTED) >= $signed({14{RIGHT_COL_ERROR_X_CMP}});
-					NEXT_RIGHT_COL_ERROR_X = RIGHT_COL_ERROR_X_ICREMENTED + (RIGHT_COL_X_STEP ? RIGHT_COL_ERROR_ADJ : 14'd0);
-					
-					RIGHT_COL_ERROR_Y_ICREMENTED = RIGHT_COL_ERROR_Y + RIGHT_COL_ERROR_Y_INC;
-					RIGHT_COL_Y_STEP = $signed(RIGHT_COL_ERROR_Y_ICREMENTED) >= $signed({14{RIGHT_COL_ERROR_Y_CMP}});
-					NEXT_RIGHT_COL_ERROR_Y = RIGHT_COL_ERROR_Y_ICREMENTED + (RIGHT_COL_Y_STEP ? RIGHT_COL_ERROR_ADJ : 14'd0);
-				end else begin
-					NEXT_RIGHT_D_ERROR = RIGHT_D_ERROR_ICREMENTED;
-					NEXT_RIGHT_COL_ERROR_X = RIGHT_COL_ERROR_X;
-					NEXT_RIGHT_COL_ERROR_Y = RIGHT_COL_ERROR_Y;
-				end
-			end
-
 			default:;
 		endcase
 	end
@@ -622,6 +564,11 @@ module VDP1P (
 			end
 			if (GSEQ >= 4'd1 && GSEQ <= 4'd6) GI[GIDX] <= GSUM[16:12];
 									
+			// edge position steps issued by the edge engine (one row ahead)
+			if (EDGE_PS[0]) LEFT_VERT.X  <= LEFT_VERT.X  + {{12{POLY_LDIRX}},1'b1};
+			if (EDGE_PS[1]) LEFT_VERT.Y  <= LEFT_VERT.Y  + {{12{POLY_LDIRY}},1'b1};
+			if (EDGE_PS[2]) RIGHT_VERT.X <= RIGHT_VERT.X + {{12{POLY_RDIRX}},1'b1};
+			if (EDGE_PS[3]) RIGHT_VERT.Y <= RIGHT_VERT.Y + {{12{POLY_RDIRY}},1'b1};
 			if (GL_WE) begin
 				case (GL_CH)
 					2'd0: {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= GSUM;
@@ -890,22 +837,6 @@ module VDP1P (
 				CMDS_POLYGON_CALCTY: begin
 					TEXT_Y_ERROR <= TY_ERR;
 					
-					LEFT_COL_ERROR_X <= ~LEFT_HEIGHT;
-					LEFT_COL_ERROR_Y <= ~LEFT_HEIGHT;
-					LEFT_COL_ERROR_X_CMP <= POLY_LDIRY;
-					LEFT_COL_ERROR_Y_CMP <= POLY_LDIRX;
-					
-					LEFT_D_ERROR <= ~COL_HEIGHT;
-					LEFT_D_ERROR_CMP <= POLY_LSY > POLY_LSX ? POLY_LDIRY : POLY_LDIRX;
-					
-					RIGHT_COL_ERROR_X <= ~RIGHT_HEIGHT;
-					RIGHT_COL_ERROR_Y <= ~RIGHT_HEIGHT;
-					RIGHT_COL_ERROR_X_CMP <= POLY_RDIRY;
-					RIGHT_COL_ERROR_Y_CMP <= POLY_RDIRX;
-					
-					RIGHT_D_ERROR <= ~COL_HEIGHT;
-					RIGHT_D_ERROR_CMP <= POLY_RSY > POLY_RSX ? POLY_RDIRY : POLY_RDIRX;
-					
 					COL_D <= COL_HEIGHT;
 					
 					SPR_OFFSY <= TEXT_DIRY ? (ORIG_HEIGHT - 8'd1) * ORIG_WIDTH[8:3] : '0;
@@ -957,7 +888,7 @@ module VDP1P (
 				// have a vertical direction. The line error values are also written for sprites, where they are never read.
 				CMDS_NSPR_CALCX,
 				CMDS_SSPR_CALCX,
-				CMDS_LINE_CALC: begin
+				CMDS_LINE_CALC: if (!EDGE_ST_STALL) begin
 					NEW_LINE_SX = RIGHT_VERT.X - LEFT_VERT.X;
 					NEW_LINE_SY = RIGHT_VERT.Y - LEFT_VERT.Y;
 					NEW_LINE_ASX = Abs(NEW_LINE_SX);
@@ -1155,26 +1086,6 @@ module VDP1P (
 					TEXT_X <= '0;
 					
 					if (CMD.CMDCTRL.COMM == 4'h0 || CMD.CMDCTRL.COMM == 4'h1 || CMD.CMDCTRL.COMM == 4'h2 || CMD.CMDCTRL.COMM == 4'h3 || CMD.CMDCTRL.COMM == 4'h4) begin 
-						if (LEFT_COL_X_STEP) begin
-							LEFT_VERT.X <= LEFT_VERT.X + {{12{POLY_LDIRX}},1'b1};
-						end
-						if (LEFT_COL_Y_STEP) begin
-							LEFT_VERT.Y <= LEFT_VERT.Y + {{12{POLY_LDIRY}},1'b1};
-						end
-						if (RIGHT_COL_X_STEP) begin
-							RIGHT_VERT.X <= RIGHT_VERT.X + {{12{POLY_RDIRX}},1'b1};
-						end
-						if (RIGHT_COL_Y_STEP) begin
-							RIGHT_VERT.Y <= RIGHT_VERT.Y + {{12{POLY_RDIRY}},1'b1};
-						end
-						
-						LEFT_D_ERROR <= NEXT_LEFT_D_ERROR;
-						LEFT_COL_ERROR_X <= NEXT_LEFT_COL_ERROR_X;
-						LEFT_COL_ERROR_Y <= NEXT_LEFT_COL_ERROR_Y;
-						RIGHT_D_ERROR <= NEXT_RIGHT_D_ERROR;
-						RIGHT_COL_ERROR_X <= NEXT_RIGHT_COL_ERROR_X;
-						RIGHT_COL_ERROR_Y <= NEXT_RIGHT_COL_ERROR_Y;
-						
 						CMD_ST <= !CMD.CMDPMOD.PCLP && !FAST ? CMDS_ROW_CLIP : CMDS_ROW_DRAW;
 						COL_D <= COL_D - 12'd1;
 						if (COL_D == 12'd0) begin
@@ -2712,4 +2623,75 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
 		altdpram_component.wraddress_reg = "INCLOCK",
 		altdpram_component.wrcontrol_aclr = "OFF",
 		altdpram_component.wrcontrol_reg = "INCLOCK";
+endmodule
+
+
+// Edge stepper of polygons and sprites. Each of the left and right edges has a lane with its D, X and Y error accumulators
+// (14 bit) in a 3-word MLAB; both lanes step in parallel, D then X then Y (X and Y only when D hit), 3 cycles after each row
+// set-up, ready for the next row. Position steps leave as strobes {RY,RX,LY,LX}.
+module VDP1P_EDGE (
+	input         CLK,
+	input         EN,
+	input         INIT,
+	input         START,
+	input  [11:0] LH,
+	input  [11:0] RH,
+	input  [11:0] CH,
+	input  [11:0] LSX,
+	input  [11:0] LSY,
+	input  [11:0] RSX,
+	input  [11:0] RSY,
+	input         LDX,
+	input         LDY,
+	input         RDX,
+	input         RDY,
+	output        BUSY,
+	output [ 3:0] PS
+);
+	bit          RUN,MODE_INIT;
+	bit  [ 1: 0] K;
+	wire [ 1: 0] LPS,RPS;
+	assign BUSY = RUN;
+	assign PS = {RPS,LPS};
+	always @(posedge CLK) if (EN) begin
+		if (INIT) begin
+			RUN <= 1; MODE_INIT <= 1; K <= 0;
+		end else if (START) begin
+			RUN <= 1; MODE_INIT <= 0; K <= 0;
+		end else if (RUN) begin
+			K <= K + 2'd1;
+			if (K == 2'd2) RUN <= 0;
+		end
+	end
+	wire         ACT = RUN && EN;
+	VDP1P_EDGE_LANE LANE_L(CLK, ACT, MODE_INIT, K, LH, CH, LSX, LSY, LDX, LDY, LPS);
+	VDP1P_EDGE_LANE LANE_R(CLK, ACT, MODE_INIT, K, RH, CH, RSX, RSY, RDX, RDY, RPS);
+endmodule
+
+module VDP1P_EDGE_LANE (
+	input         CLK,
+	input         ACT,
+	input         MODE_INIT,
+	input  [ 1: 0] K,
+	input  [11:0] H,
+	input  [11:0] CH,
+	input  [11:0] SX,
+	input  [11:0] SY,
+	input         DX,
+	input         DY,
+	output [ 1:0] PS		// {Y,X} position steps
+);
+	bit          DHIT;
+	wire [13: 0] INC = K == 2'd0 ? {1'b0,H,1'b0} : K == 2'd1 ? {1'b0,SX,1'b0} : {1'b0,SY,1'b0};
+	wire [13: 0] ADJ = K == 2'd0 ? {1'b0,CH,1'b0} : {1'b0,H,1'b0};
+	wire         CMP = K == 2'd0 ? (SY > SX ? DY : DX) : K == 2'd1 ? DY : DX;
+	wire [13: 0] ACC;
+	wire [13: 0] S = ACC + INC;
+	wire         HIT = $signed(S) >= $signed({14{CMP}});
+	wire [13: 0] NXT = S - (HIT ? ADJ : 14'd0);
+	wire [13: 0] INIT_V = {2'b11,~(K == 2'd0 ? CH : H)};
+	wire         WE = ACT && (MODE_INIT || K == 2'd0 || DHIT);
+	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
+	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
+	VDP1P_MLAB #(.W(14),.AW(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
 endmodule

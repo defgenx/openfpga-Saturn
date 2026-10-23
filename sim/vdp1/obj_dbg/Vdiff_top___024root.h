@@ -184,21 +184,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TEXT_X_READ_STEP;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TEXTY_READ_STEP;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TEXT_Y_READ_STEP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_X_STEP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_Y_STEP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_X_STEP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_Y_STEP;
         CData/*4:0*/ diff_top__DOT__u_n__DOT__GRD_CALC_STATE;
         CData/*7:0*/ diff_top__DOT__u_n__DOT__ORIG_HEIGHT;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TEXT_DIRX;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TEXT_DIRY;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__IS_PAT_EC;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__LEFT_D_ERROR_CMP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__RIGHT_D_ERROR_CMP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X_CMP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y_CMP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X_CMP;
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y_CMP;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE_BUSY;
+        CData/*3:0*/ diff_top__DOT__u_n__DOT__EDGE_PS;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE_ST_STALL;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE_START;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE_INIT;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TX_F;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TX_HSS;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__TX_SMALL;
@@ -217,16 +212,20 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__COMM_ACC;
         CData/*3:0*/ diff_top__DOT__u_n__DOT__GSEQ;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GP2;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__GP2_ANY;
+        CData/*1:0*/ diff_top__DOT__u_n__DOT__POLY_S1;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__GIDX;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__GSIDE;
+        CData/*1:0*/ diff_top__DOT__u_n__DOT__GTW;
     };
     struct {
-        CData/*2:0*/ diff_top__DOT__u_n__DOT__GIDX;
+        CData/*1:0*/ diff_top__DOT__u_n__DOT__GCH;
         CData/*4:0*/ diff_top__DOT__u_n__DOT__GBASE;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GS_WE;
         CData/*2:0*/ diff_top__DOT__u_n__DOT__GS_WI;
         CData/*1:0*/ diff_top__DOT__u_n__DOT__GL_CH;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GL_WE;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GE_TRIG;
-        CData/*1:0*/ diff_top__DOT__u_n__DOT__POLY_S1;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__CLIP_USR;
         CData/*2:0*/ diff_top__DOT__u_n__DOT__FBD_ST;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__CPU_VRAM_BUSY;
@@ -283,9 +282,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__REG_REQ;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__VBOUT;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_B;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_DIRB;
     };
     struct {
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_DIRB;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_SIDE;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_PH;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GW_SD;
@@ -349,11 +348,44 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk7__DOT__GRD_WE;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__VTIM_N_OLD;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__FRAME_CHANGE;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__MANUAL_ERASECHANGE_PEND;
     };
     struct {
-        CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__MANUAL_ERASECHANGE_PEND;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__START_DRAW_PEND;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__unnamedblk8__DOT__VBERASE_PEND;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__CLK;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__EN;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__INIT;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__START;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__LDX;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__LDY;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RDX;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RDY;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__BUSY;
+        CData/*3:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__PS;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RUN;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__MODE_INIT;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__OPC;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__SIDE;
+        CData/*1:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__K;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__DX;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__DY;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__CMP;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__HIT;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__CLK;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__WE;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__WA;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__RA;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__inclock;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress;
+        CData/*2:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wren;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__aclr;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__byteena;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__inclocken;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddressstall;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rden;
+        CData/*0:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddressstall;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__CLK;
         CData/*3:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__WRADDR;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__WREN;
@@ -383,6 +415,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddress;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wren;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__aclr;
+    };
+    struct {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__byteena;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__inclocken;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__rdaddressstall;
@@ -415,8 +449,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*4:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__A;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__START;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__QBIT;
-    };
-    struct {
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__RUN;
         CData/*0:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__T;
         CData/*4:0*/ diff_top__DOT__u_n__DOT__GRD_DIV_G__DOT__STEP;
@@ -449,6 +481,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__VTIM_N;
         CData/*1:0*/ diff_top__DOT__u_r__DOT__VRAM_WE;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__VRAM_RD;
+    };
+    struct {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__VRAM_RDY;
         CData/*1:0*/ diff_top__DOT__u_r__DOT__FB0_WE;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__FB0_RD;
@@ -481,8 +515,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CMD_READ_DONE;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__SPR_READ;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__SPR_DATA_READY;
-    };
-    struct {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CLT_READ;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CLT_READ_DONE;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_READ;
@@ -515,6 +547,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__LEFT_COL_Y_STEP;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__RIGHT_COL_X_STEP;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__RIGHT_COL_Y_STEP;
+    };
+    struct {
         CData/*4:0*/ diff_top__DOT__u_r__DOT__GRD_CALC_STATE;
         CData/*7:0*/ diff_top__DOT__u_r__DOT__ORIG_HEIGHT;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__TEXT_DIRX;
@@ -547,8 +581,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CPU_VRAM_REQ;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CPU_FB_REQ;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__WE_N;
-    };
-    struct {
         CData/*1:0*/ diff_top__DOT__u_r__DOT__DQM;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__BURST;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__READY;
@@ -581,6 +613,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__VBOUT;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk1__DOT__COL_STEP;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__CMD_SUB_RUN;
+    };
+    struct {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__LINE_VERTA_X_OVR;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__LINE_VERTA_Y_OVR;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__AA_DRAW;
@@ -613,8 +647,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk4__DOT__MESH;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk4__DOT__IDRAW;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk5__DOT__HTIM_N_OLD;
-    };
-    struct {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk5__DOT__VTIM_N_OLD;
         CData/*2:0*/ diff_top__DOT__u_r__DOT__unnamedblk5__DOT__RP_POS;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__unnamedblk5__DOT__RP_FIRST;
@@ -647,6 +679,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__WREN;
         CData/*3:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__RDADDR;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__inclock;
+    };
+    struct {
         CData/*3:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__rdaddress;
         CData/*3:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wraddress;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__wren;
@@ -679,8 +713,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__CLK;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__START;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__DONE;
-    };
-    struct {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__T;
         CData/*4:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__unnamedblk1__DOT__STEP;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__CLK;
@@ -693,9 +725,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__DONE;
         CData/*0:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__T;
         CData/*4:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__unnamedblk1__DOT__STEP;
-        CData/*2:0*/ __Vfunc_ColorCalc__11__CCB;
-        CData/*2:0*/ __Vfunc_SprAddr__50__CM;
-        CData/*2:0*/ __Vfunc_ColorCalc__51__CCB;
+        CData/*2:0*/ __Vfunc_ColorCalc__8__CCB;
+        CData/*2:0*/ __Vfunc_SprAddr__47__CM;
+        CData/*2:0*/ __Vfunc_ColorCalc__48__CCB;
         CData/*5:0*/ __Vdly__diff_top__DOT__u_r__DOT__CMD_ST;
         CData/*0:0*/ __Vtrigprevexpr___TOP__CLK__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__RST_N__0;
@@ -713,6 +745,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ __Vtrigprevexpr___TOP__CS_N__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__AD_N__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__DTEN_N__0;
+    };
+    struct {
         CData/*0:0*/ __Vtrigprevexpr___TOP__REQ_N__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__VRAM_RDY_r__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__FB_RDY_r__0;
@@ -722,6 +756,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__CLK__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__CLK__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__RST_N__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__EDGE__DOT__CLK__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__inclock__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__inclock__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__CLK__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__inclock__0;
@@ -745,8 +781,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         VL_OUT16(DO_r,15,0);
         VL_OUT16(VOUTO_r,15,0);
         VL_OUT16(VRAM_D_r,15,0);
-    };
-    struct {
         VL_OUT16(VRAM_BLEN_r,8,0);
         VL_OUT16(FB0_D_r,15,0);
         VL_OUT16(FB1_D_r,15,0);
@@ -777,9 +811,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*15:0*/ diff_top__DOT__VOUTO_n;
         SData/*15:0*/ diff_top__DOT__VRAM_D_n;
         SData/*8:0*/ diff_top__DOT__VRAM_BLEN_n;
+    };
+    struct {
         SData/*15:0*/ diff_top__DOT__FB0_D_n;
         SData/*15:0*/ diff_top__DOT__FB1_D_n;
-        SData/*15:0*/ diff_top__DOT__u_n__DOT____VlemCall_3__ColorCalc;
+        SData/*15:0*/ diff_top__DOT__u_n__DOT____VlemCall_0__ColorCalc;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__DI;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__DO;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__VOUTI;
@@ -811,8 +847,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*13:0*/ diff_top__DOT__u_n__DOT__SPR_OFFSY;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__POLY_LSX;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__POLY_LSY;
-    };
-    struct {
         SData/*11:0*/ diff_top__DOT__u_n__DOT__POLY_RSX;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__POLY_RSY;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__ROW_WIDTH;
@@ -825,27 +859,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*11:0*/ diff_top__DOT__u_n__DOT__AA_Y_INC;
         SData/*8:0*/ diff_top__DOT__u_n__DOT__ORIG_WIDTH;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__COL_D;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_LEFT_COL_ERROR_X;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_LEFT_COL_ERROR_Y;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_RIGHT_COL_ERROR_X;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_RIGHT_COL_ERROR_Y;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_LEFT_D_ERROR;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_D_ERROR;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_RIGHT_D_ERROR;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_D_ERROR;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_X_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_Y_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_X_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_Y_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_D_ERROR_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_D_ERROR_INC;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__LEFT_COL_ERROR_ADJ;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__RIGHT_COL_ERROR_ADJ;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__COL_D_ERROR_ADJ;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_LINE_ERROR;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__LINE_ERROR;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__LINE_ERROR_INC;
@@ -864,6 +877,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_TEXT_ERROR;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__TEXT_ERROR;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__TEXT_ERROR_INC;
+    };
+    struct {
         SData/*13:0*/ diff_top__DOT__u_n__DOT__TEXT_ERROR_ADJ;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__NEXT_TEXT_Y_ERROR;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__TEXT_Y_ERROR;
@@ -877,8 +892,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*14:0*/ diff_top__DOT__u_n__DOT__GHCOLOR_C;
         SData/*14:0*/ diff_top__DOT__u_n__DOT__GHCOLOR_D;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__GK;
-    };
-    struct {
+        SData/*14:0*/ diff_top__DOT__u_n__DOT__GTC;
         SData/*14:0*/ diff_top__DOT__u_n__DOT__GRD_TBL_L;
         SData/*14:0*/ diff_top__DOT__u_n__DOT__GRD_TBL_R;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__LOC_X13;
@@ -917,12 +931,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__TEXT_ERROR_ADJUSTED;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LINE_ERROR_ICREMENTED;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__TEXT_Y_ERROR_ADJUSTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_D_ERROR_ICREMENTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_X_ICREMENTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__LEFT_COL_ERROR_Y_ICREMENTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_D_ERROR_ICREMENTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_COL_ERROR_X_ICREMENTED;
-        SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk1__DOT__RIGHT_COL_ERROR_Y_ICREMENTED;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__NEXT_ADDR_H;
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__CMD_RET_ADDR_H;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__NEW_LINE_SX;
@@ -935,6 +943,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*12:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__NEW_POLY_RSY;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__LN_MAJ;
         SData/*11:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__LN_MIN;
+    };
+    struct {
         SData/*13:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__SPR_OFFSY_NEXT;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__LINE_DIFF_LEFT_CLIPX1;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__unnamedblk2__DOT__LINE_DIFF_LEFT_CLIPX2;
@@ -943,10 +953,29 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*15:0*/ diff_top__DOT__u_n__DOT__unnamedblk4__DOT__CALC_C;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__unnamedblk6__DOT__CPU_D;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__unnamedblk6__DOT__SAVE_D;
-    };
-    struct {
         SData/*8:0*/ diff_top__DOT__u_n__DOT__unnamedblk6__DOT__FB_Y;
         SData/*12:0*/ diff_top__DOT__u_n__DOT__unnamedblk7__DOT__TEMP;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__LH;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RH;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__CH;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__LSX;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__LSY;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RSX;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__RSY;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__H;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__SX;
+        SData/*11:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__SY;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__INC;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ADJ;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACC;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__S;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__NXT;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ZERO;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__WD;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__D;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__Q;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__data;
+        SData/*13:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__q;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__DATA;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__Q;
         SData/*15:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__sub_wire0;
@@ -980,6 +1009,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*15:0*/ diff_top__DOT__u_r__DOT__VOUTI;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__VOUTO;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__VRAM_D;
+    };
+    struct {
         SData/*15:0*/ diff_top__DOT__u_r__DOT__VRAM_Q;
         SData/*8:0*/ diff_top__DOT__u_r__DOT__VRAM_BLEN;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__FB0_D;
@@ -1009,8 +1040,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*11:0*/ diff_top__DOT__u_r__DOT__POLY_RSY;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__ROW_WIDTH;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__COL_HEIGHT;
-    };
-    struct {
         SData/*11:0*/ diff_top__DOT__u_r__DOT__LEFT_HEIGHT;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__RIGHT_HEIGHT;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__AA_X;
@@ -1046,6 +1075,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*13:0*/ diff_top__DOT__u_r__DOT__RIGHT_D_ERROR_ADJ;
         SData/*13:0*/ diff_top__DOT__u_r__DOT__NEXT_LINE_ERROR;
         SData/*13:0*/ diff_top__DOT__u_r__DOT__LINE_ERROR;
+    };
+    struct {
         SData/*13:0*/ diff_top__DOT__u_r__DOT__LINE_ERROR_INC;
         SData/*13:0*/ diff_top__DOT__u_r__DOT__LINE_ERROR_ADJ;
         SData/*13:0*/ diff_top__DOT__u_r__DOT__NEXT_TEXT_ERROR;
@@ -1075,8 +1106,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*15:0*/ diff_top__DOT__u_r__DOT__HTIM_PIPE;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__PAT_FIFO_D;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__PAT_FIFO_Q;
-    };
-    struct {
         SData/*15:0*/ diff_top__DOT__u_r__DOT__MEM_DO;
         SData/*8:0*/ diff_top__DOT__u_r__DOT__PAT_CNT;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__CMD_DAT;
@@ -1112,6 +1141,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*12:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__LINE_DIFF_RIGHT_CLIPX2;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__unnamedblk4__DOT__CALC_C;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__unnamedblk6__DOT__CPU_D;
+    };
+    struct {
         SData/*15:0*/ diff_top__DOT__u_r__DOT__unnamedblk6__DOT__CPU_FB_D;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__unnamedblk6__DOT__SAVE_D;
         SData/*15:0*/ diff_top__DOT__u_r__DOT__unnamedblk6__DOT__SAVE_FB_D;
@@ -1130,43 +1161,41 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*11:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_B__DOT__DVSR;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__DVSR;
         SData/*11:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__DVSR;
-        SData/*15:0*/ __Vfunc_ColorCalc__11__ORIG;
-        SData/*15:0*/ __Vfunc_ColorCalc__11__BACK;
-        SData/*14:0*/ __Vfunc_ColorCalc__11__CG;
-        SData/*14:0*/ __Vfunc_ColorCalc__11____VlefCond_4;
-        SData/*14:0*/ __Vfunc_ColorCalc__11____VlefCond_3;
-        SData/*14:0*/ __Vfunc_ColorCalc__11____VlefCall_2__ColorHalf;
-        SData/*14:0*/ __Vfunc_ColorCalc__11____VlefCond_1;
-        SData/*14:0*/ __Vfunc_ColorCalc__11____VlefCall_0__ColorHalf;
-        SData/*14:0*/ __Vfunc_GouraudAdd__12__Vfuncout;
-        SData/*14:0*/ __Vfunc_GouraudAdd__12__CO;
-        SData/*14:0*/ __Vfunc_GouraudAdd__12__CG;
-    };
-    struct {
-        SData/*14:0*/ __Vfunc_ColorHalf__13__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorHalf__13__CA;
-        SData/*14:0*/ __Vfunc_ColorHalf__14__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorHalf__14__CA;
-        SData/*14:0*/ __Vfunc_ColorAdd__15__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorAdd__15__CA;
-        SData/*14:0*/ __Vfunc_ColorAdd__15__CB;
-        SData/*13:0*/ __Vfunc_SprAddr__50__OFFSY;
-        SData/*15:0*/ __Vfunc_SprAddr__50__CMDSRCA;
-        SData/*15:0*/ __Vfunc_ColorCalc__51__ORIG;
-        SData/*15:0*/ __Vfunc_ColorCalc__51__BACK;
-        SData/*14:0*/ __Vfunc_ColorCalc__51__CG;
-        SData/*14:0*/ __Vfunc_GouraudAdd__52__Vfuncout;
-        SData/*14:0*/ __Vfunc_GouraudAdd__52__CO;
-        SData/*14:0*/ __Vfunc_GouraudAdd__52__CG;
-        SData/*14:0*/ __Vfunc_ColorHalf__53__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorHalf__53__CA;
-        SData/*14:0*/ __Vfunc_ColorHalf__54__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorHalf__54__CA;
-        SData/*14:0*/ __Vfunc_ColorHalf__55__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorHalf__55__CA;
-        SData/*14:0*/ __Vfunc_ColorAdd__56__Vfuncout;
-        SData/*14:0*/ __Vfunc_ColorAdd__56__CA;
-        SData/*14:0*/ __Vfunc_ColorAdd__56__CB;
+        SData/*15:0*/ __Vfunc_ColorCalc__8__ORIG;
+        SData/*15:0*/ __Vfunc_ColorCalc__8__BACK;
+        SData/*14:0*/ __Vfunc_ColorCalc__8__CG;
+        SData/*14:0*/ __Vfunc_ColorCalc__8____VlefCond_4;
+        SData/*14:0*/ __Vfunc_ColorCalc__8____VlefCond_3;
+        SData/*14:0*/ __Vfunc_ColorCalc__8____VlefCall_2__ColorHalf;
+        SData/*14:0*/ __Vfunc_ColorCalc__8____VlefCond_1;
+        SData/*14:0*/ __Vfunc_ColorCalc__8____VlefCall_0__ColorHalf;
+        SData/*14:0*/ __Vfunc_GouraudAdd__9__Vfuncout;
+        SData/*14:0*/ __Vfunc_GouraudAdd__9__CO;
+        SData/*14:0*/ __Vfunc_GouraudAdd__9__CG;
+        SData/*14:0*/ __Vfunc_ColorHalf__10__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorHalf__10__CA;
+        SData/*14:0*/ __Vfunc_ColorHalf__11__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorHalf__11__CA;
+        SData/*14:0*/ __Vfunc_ColorAdd__12__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorAdd__12__CA;
+        SData/*14:0*/ __Vfunc_ColorAdd__12__CB;
+        SData/*13:0*/ __Vfunc_SprAddr__47__OFFSY;
+        SData/*15:0*/ __Vfunc_SprAddr__47__CMDSRCA;
+        SData/*15:0*/ __Vfunc_ColorCalc__48__ORIG;
+        SData/*15:0*/ __Vfunc_ColorCalc__48__BACK;
+        SData/*14:0*/ __Vfunc_ColorCalc__48__CG;
+        SData/*14:0*/ __Vfunc_GouraudAdd__49__Vfuncout;
+        SData/*14:0*/ __Vfunc_GouraudAdd__49__CO;
+        SData/*14:0*/ __Vfunc_GouraudAdd__49__CG;
+        SData/*14:0*/ __Vfunc_ColorHalf__50__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorHalf__50__CA;
+        SData/*14:0*/ __Vfunc_ColorHalf__51__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorHalf__51__CA;
+        SData/*14:0*/ __Vfunc_ColorHalf__52__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorHalf__52__CA;
+        SData/*14:0*/ __Vfunc_ColorAdd__53__Vfuncout;
+        SData/*14:0*/ __Vfunc_ColorAdd__53__CA;
+        SData/*14:0*/ __Vfunc_ColorAdd__53__CB;
         SData/*8:0*/ __Vdly__diff_top__DOT__u_r__DOT__OUT_X;
         SData/*15:0*/ __Vtrigprevexpr___TOP__VOUTI__0;
         SData/*15:0*/ __Vtrigprevexpr___TOP__DI__0;
@@ -1178,6 +1207,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         SData/*15:0*/ __Vtrigprevexpr___TOP__FB1_Q_n__0;
         VL_OUT(VRAM_A_r,18,1);
         VL_OUT(FB0_A_r,17,1);
+    };
+    struct {
         VL_OUT(FB1_A_r,17,1);
         VL_OUT(VRAM_A_n,18,1);
         VL_OUT(FB0_A_n,17,1);
@@ -1188,13 +1219,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         IData/*17:0*/ diff_top__DOT__VRAM_A_n;
         IData/*16:0*/ diff_top__DOT__FB0_A_n;
         IData/*16:0*/ diff_top__DOT__FB1_A_n;
-        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_7__ScrnIncToRC;
-        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_6__ScrnIncToRC;
-        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_5__ScrnIncToRC;
         IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_4__ScrnIncToRC;
-        IData/*16:0*/ diff_top__DOT__u_n__DOT____VlemCall_2__SHQ;
-        IData/*16:0*/ diff_top__DOT__u_n__DOT____VlemCall_1__SHQ;
-        IData/*16:0*/ diff_top__DOT__u_n__DOT____VlemCall_0__SHQ;
+        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_3__ScrnIncToRC;
+        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_2__ScrnIncToRC;
+        IData/*19:0*/ diff_top__DOT__u_n__DOT____VlemCall_1__ScrnIncToRC;
         IData/*17:0*/ diff_top__DOT__u_n__DOT__VRAM_A;
         IData/*16:0*/ diff_top__DOT__u_n__DOT__FB0_A;
         IData/*16:0*/ diff_top__DOT__u_n__DOT__FB1_A;
@@ -1207,8 +1235,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         IData/*23:0*/ diff_top__DOT__u_n__DOT__LOC_COORD;
         IData/*25:0*/ diff_top__DOT__u_n__DOT__VERTA;
         IData/*25:0*/ diff_top__DOT__u_n__DOT__VERTB;
-    };
-    struct {
         IData/*25:0*/ diff_top__DOT__u_n__DOT__VERTC;
         IData/*25:0*/ diff_top__DOT__u_n__DOT__VERTD;
         IData/*17:0*/ diff_top__DOT__u_n__DOT__PAT;
@@ -1242,10 +1268,13 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         IData/*16:0*/ diff_top__DOT__u_n__DOT__GW_Q;
         IData/*17:0*/ diff_top__DOT__u_n__DOT__unnamedblk6__DOT__CPU_WA;
         IData/*17:0*/ diff_top__DOT__u_n__DOT__unnamedblk6__DOT__SAVE_WA;
+        IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__i;
         IData/*31:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__i;
         IData/*31:0*/ diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__i;
         IData/*16:0*/ diff_top__DOT__u_n__DOT__GSTEP__DOT__D;
         IData/*16:0*/ diff_top__DOT__u_n__DOT__GSTEP__DOT__Q;
+    };
+    struct {
         IData/*16:0*/ diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__data;
         IData/*16:0*/ diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__q;
         IData/*31:0*/ diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__i;
@@ -1273,8 +1302,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         IData/*25:0*/ diff_top__DOT__u_r__DOT__VERTD;
         IData/*17:0*/ diff_top__DOT__u_r__DOT__PAT;
         IData/*23:0*/ diff_top__DOT__u_r__DOT__LINE_VERTA;
-    };
-    struct {
         IData/*23:0*/ diff_top__DOT__u_r__DOT__LINE_VERTB;
         IData/*25:0*/ diff_top__DOT__u_r__DOT__LEFT_VERT;
         IData/*25:0*/ diff_top__DOT__u_r__DOT__RIGHT_VERT;
@@ -1312,6 +1339,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         IData/*28:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__D;
         IData/*28:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_G__DOT__SUM;
         IData/*16:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__DVDNT;
+    };
+    struct {
         IData/*16:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__QUOT;
         IData/*28:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__D;
         IData/*28:0*/ diff_top__DOT__u_r__DOT__GRD_DIV_R__DOT__SUM;
@@ -1335,12 +1364,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
         QData/*53:0*/ diff_top__DOT__u_r__DOT__unnamedblk2__DOT__GRD_CALC_STEP;
         VlUnpacked<SData/*15:0*/, 4> diff_top__DOT__u_n__DOT__GRD_TBL;
         VlUnpacked<CData/*4:0*/, 6> diff_top__DOT__u_n__DOT__GI;
+        VlUnpacked<SData/*13:0*/, 8> diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__mem;
         VlUnpacked<SData/*15:0*/, 16> diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__mem;
         VlUnpacked<SData/*15:0*/, 2> diff_top__DOT__u_n__DOT__PAT_FIFO__DOT__altdpram_component__DOT__mem;
         VlUnpacked<IData/*16:0*/, 8> diff_top__DOT__u_n__DOT__GSTEP__DOT__altdpram_component__DOT__mem;
         VlUnpacked<SData/*15:0*/, 4> diff_top__DOT__u_r__DOT__GRD_TBL;
-    };
-    struct {
         VlUnpacked<SData/*15:0*/, 16> diff_top__DOT__u_r__DOT__CLT__DOT__altdpram0__DOT__mem;
         VlUnpacked<SData/*15:0*/, 2> diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__mem;
         VlUnpacked<QData/*63:0*/, 1> __VstlTriggered;
@@ -1354,6 +1382,26 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
     const char* vlNamep;
 
     // PARAMETERS
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__W = 0x0000000eU;
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__AW = 3U;
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__width = 0x0000000eU;
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__widthad = 3U;
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__width_byteena = 1U;
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__indata_aclr = 0x004f4646U;
+    static constexpr VlWide<3>/*71:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__intended_device_family = VlWide<3>{{0x6e652056, 0x79636c6f, 0x00000043}};
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__outdata_aclr = 0x004f4646U;
+    static constexpr VlWide<3>/*95:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__outdata_reg = VlWide<3>{{0x45524544, 0x47495354, 0x554e5245}};
+    static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__ram_block_type = 0x4d4c4142U;
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress_aclr = 0x004f4646U;
+    static constexpr VlWide<3>/*95:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdaddress_reg = VlWide<3>{{0x45524544, 0x47495354, 0x554e5245}};
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdcontrol_aclr = 0x004f4646U;
+    static constexpr VlWide<3>/*95:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__rdcontrol_reg = VlWide<3>{{0x45524544, 0x47495354, 0x554e5245}};
+    static constexpr VlWide<6>/*167:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__read_during_write_mode_mixed_ports = VlWide<6>{{
+            0x43415245, 0x4f4e545f, 0x45445f44, 0x5241494e,
+            0x4f4e5354, 0x00000043
+    }};
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress_aclr = 0x004f4646U;
+    static constexpr IData/*23:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wrcontrol_aclr = 0x004f4646U;
     static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__width = 0x00000010U;
     static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__widthad = 4U;
     static constexpr IData/*31:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__width_byteena = 1U;
@@ -1448,6 +1496,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top___024root final {
     }};
     static constexpr IData/*23:0*/ diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wraddress_aclr = 0x004f4646U;
     static constexpr IData/*23:0*/ diff_top__DOT__u_r__DOT__PAT_FIFO__DOT__altdpram_component__DOT__wrcontrol_aclr = 0x004f4646U;
+    static constexpr QData/*55:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__indata_reg = 0x00494e434c4f434bULL;
+    static constexpr QData/*63:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__lpm_type = 0x616c74647072616dULL;
+    static constexpr QData/*55:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wraddress_reg = 0x00494e434c4f434bULL;
+    static constexpr QData/*55:0*/ diff_top__DOT__u_n__DOT__EDGE__DOT__ACCS__DOT__altdpram_component__DOT__wrcontrol_reg = 0x00494e434c4f434bULL;
     static constexpr QData/*55:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__indata_reg = 0x00494e434c4f434bULL;
     static constexpr QData/*63:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__lpm_type = 0x616c74647072616dULL;
     static constexpr QData/*55:0*/ diff_top__DOT__u_n__DOT__CLT__DOT__altdpram0__DOT__wraddress_reg = 0x00494e434c4f434bULL;

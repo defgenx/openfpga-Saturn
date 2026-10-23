@@ -41,6 +41,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top__Syms final : public VerilatedSyms 
     VerilatedScope* __Vscopep_diff_top__u_n;
     VerilatedScope* __Vscopep_diff_top__u_n__CLT;
     VerilatedScope* __Vscopep_diff_top__u_n__CLT__altdpram0;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE__ACCS;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_B;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_G;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_R;
