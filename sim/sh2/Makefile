@@ -6,14 +6,28 @@ SRC     := $(ROOT)/src/fpga/saturn
 GOLD    := $(ROOT)/ref/Saturn_MiSTer/rtl
 # CUTS="POCKET_CUT_A POCKET_CUT_B" builds the DUT with those macros; use BUILD=build_x to keep it apart.
 CUTS    ?=
+# DUT=sh2p builds the rewrite (src/fpga/saturn/SH/sh2p, module SH7604P); default is the old core in src/.../SH/{core,SH7604}
+DUT     ?= old
+ifeq ($(DUT),sh2p)
+BUILD   := build_p
+DUT_INC ?= $(BUILD)/sh_pair_inst_p.inc
+else
 BUILD   := build
 DUT_INC ?= $(if $(findstring DIVU_SHARED,$(CUTS)),tb/sh_pair_inst_divs.inc,tb/sh_pair_inst.inc)
+endif
 
 SH_FILES := SH/core/SH_pkg.sv SH/core/SH_regfile.sv SH/core/SH_core.sv \
             SH/SH7604/SH7604_pkg.sv SH/SH7604/CACHE.sv SH/SH7604/BSC.sv SH/SH7604/DMAC.sv SH/SH7604/UBC.sv \
             SH/SH7604/INTC.sv SH/SH7604/FRT.sv SH/SH7604/WDT.sv SH/SH7604/SCI.sv SH/SH7604/DIVU.sv \
             SH/SH7604/MULT.sv SH/SH7604/MSBY.sv SH/SH7604/SH7604.sv SH7604_mem.sv SH_mem.sv
+SH2P_FILES := SH2P_pkg.sv SH2P_mem.sv SH2P_regfile.sv SH2P_core.sv SH7604P_pkg.sv SH7604P_mem.sv SH7604P_CACHE.sv SH7604P_BSC.sv \
+              SH7604P_DMAC.sv SH7604P_UBC.sv SH7604P_INTC.sv SH7604P_FRT.sv SH7604P_WDT.sv SH7604P_SCI.sv SH7604P_DIVU.sv \
+              SH7604P_MULT.sv SH7604P_MSBY.sv SH7604P.sv $(notdir $(wildcard $(SRC)/SH/sh2p/SH2P_x_*.sv)) $(notdir $(wildcard $(SRC)/SH/sh2p/SH7604P_x_*.sv))
+ifeq ($(DUT),sh2p)
+DUT_SRCS := $(addprefix $(SRC)/SH/sh2p/,$(SH2P_FILES))
+else
 DUT_SRCS := $(addprefix $(SRC)/,$(SH_FILES)) $(wildcard $(SRC)/SH/SH7604_dual/*.sv) $(SRC)/SH/SH7604/DIVU_SHARED.sv
+endif
 GOLD_SRCS := $(addprefix $(GOLD)/,$(SH_FILES))
 
 TESTS := $(basename $(notdir $(wildcard progs/t_*.py)))
@@ -26,6 +40,9 @@ $(BUILD)/ref/.stamp: $(GOLD_SRCS) tools/ref_rename.py
 	rm -rf $(BUILD)/ref && mkdir -p $(BUILD)/ref
 	for f in $(SH_FILES); do python3 tools/ref_rename.py $(GOLD)/$$f $(BUILD)/ref/$$(echo $$f | sed 's|/|__|g'); done
 	touch $@
+
+$(BUILD)/sh_pair_inst_p.inc: tb/sh_pair_inst.inc
+	mkdir -p $(BUILD) && perl -pe 's/\bSH7604 #\(/SH7604P #(/' $< > $@
 
 $(BUILD)/env_dut.sv: tb/env.sv.in $(DUT_INC) tools/gen_env.py
 	mkdir -p $(BUILD) && python3 tools/gen_env.py tb/env.sv.in $(DUT_INC) $@
@@ -48,6 +65,14 @@ test: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 	@fail=0; for t in $(TESTS); do for cfg in $(CFGS); do set -- $$cfg; \
 	  $(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$t.hex +name=$$t/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) | grep -E "^(PASS|FAIL|MISMATCH)" || fail=1; done; done; \
 	  [ $$fail = 0 ] && echo "ALL PASS" || { echo "SOME FAILED"; exit 1; }
+
+# Parallel version of test (JOBS processes); prints one line per run and ALL PASS / SOME FAILED.
+JOBS ?= 6
+ptest: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
+	@for t in $(TESTS); do for cfg in $(CFGS); do set -- $$cfg; echo "$$t $$1 $$2 $$3"; done; done | \
+	  xargs -P $(JOBS) -L1 sh -c '$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$$0.hex +name=$$0/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(CYCLES) | grep -E "^(PASS|FAIL|MISMATCH)" || echo "FAIL $$0 $$1 $$2 $$3 (no result)"' > $(BUILD)/ptest.log; \
+	  sort $(BUILD)/ptest.log | cut -c1-100; echo "$$(grep -c '^PASS' $(BUILD)/ptest.log) PASS, $$(grep -c -E '^(FAIL|MISMATCH)' $(BUILD)/ptest.log) FAIL"; \
+	  ! grep -q -E '^(FAIL|MISMATCH)' $(BUILD)/ptest.log
 
 # Like test, but counts: every run is listed and the summary shows how many matched exactly (for cut builds).
 report: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
@@ -74,4 +99,4 @@ unit-divu: $(BUILD)/Vtb_divu
 
 clean:
 	rm -rf $(BUILD)
-.PHONY: all test report one clean unit-divu
+.PHONY: all test ptest report one clean unit-divu
