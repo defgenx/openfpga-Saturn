@@ -86,7 +86,7 @@ o.append('	assign DECI = CWN;\n	assign CLS_O = CLS;\nendmodule')
 RSTC=cid[setf(setf(rows_n[0x0009],'RA_N',0),'RB_N',0)]
 # ROM module
 o.append('''
-// Control word ROM: registered class address (M10K), RA.N/RB.N completed from the instruction register.
+// Control word ROM: output-registered case ROM (M10K), RA.N/RB.N completed from the instruction register.
 module SH2P_decrom (
 	input             CLK,
 	input             EN_A,
@@ -96,17 +96,16 @@ module SH2P_decrom (
 	output SH2P_PKG::DecInstr_t DI
 );
 	import SH2P_PKG::*;
-	reg [7:0] A;
-	always @(posedge CLK) if (EN_A | RESET) A <= RESET ? 8'd%d : CLS_D;
-	reg [%d:0] ROM [0:255];
-	initial begin''' % (cid[setf(setf(rows[(0x0009,0,0,0)] if False else 0,'RA_N',0),'RB_N',0)] if False else RSTC, W+5))
+	wire [7:0] AD = RESET ? 8'd%d : CLS_D;
+	(* romstyle = "M10K" *) reg [%d:0] Q;
+	always @(posedge CLK) if (EN_A | RESET) begin
+		case (AD)''' % (RSTC, W+5))
 for i,w in enumerate(words):
     ra,rb=SRC[i]
     rbc={('ir',4):0,('ir',8):1,('const',0):2,('const',15):3,('const',16):4}[rb]
-    o.append("		ROM[%d] = %d'h%x;"%(i,W+6,(w<<6)|(srccode(ra)<<3)|rbc))
-o.append('''	end
-	wire [%d:0] Q = ROM[A];
-	wire [2:0] RAS = Q[5:3], RBS = Q[2:0];
+    o.append("			8'd%d: Q <= %d'h%x;"%(i,W+6,(w<<6)|(srccode(ra)<<3)|rbc))
+o.append("			default: Q <= %d'h0;\n		endcase\n	end"%(W+6))
+o.append('''	wire [2:0] RAS = Q[5:3], RBS = Q[2:0];
 	reg [4:0] RAN, RBN;
 	always_comb begin
 		case (RAS)
@@ -125,7 +124,7 @@ o.append('''	end
 		endcase
 	end
 	assign DI = Q[%d:6] | ({%d'd0,RAN} << %d) | ({%d'd0,RBN} << %d);
-endmodule''' % (W+5, W+5, W-5, s0, W-5, s1))
+endmodule''' % (W+5, W-5, s0, W-5, s1))
 # reset class (NOP, state 0)
 import pickle
 
