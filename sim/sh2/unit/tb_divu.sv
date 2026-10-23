@@ -17,7 +17,7 @@ module tb_divu;
 	wire busy_d, busy_r, act_d, act_r, irq_d, irq_r;
 	wire [7:0] vec_d, vec_r;
 
-	SH7604_DIVU dut (.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .EN(1'b1), .RES_N(RES_N),
+	`DUT_MOD dut (.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .EN(1'b1), .RES_N(RES_N),
 		.IBUS_A(A), .IBUS_DI(DI), .IBUS_DO(do_d), .IBUS_BA(BA), .IBUS_WE(WE), .IBUS_REQ(REQ), .IBUS_BUSY(busy_d), .IBUS_ACT(act_d), .IRQ(irq_d), .VEC(vec_d));
 	REF_SH7604_DIVU ref0 (.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .EN(1'b1), .RES_N(RES_N),
 		.IBUS_A(A), .IBUS_DI(DI), .IBUS_DO(do_r), .IBUS_BA(BA), .IBUS_WE(WE), .IBUS_REQ(REQ), .IBUS_BUSY(busy_r), .IBUS_ACT(act_r), .IRQ(irq_r), .VEC(vec_r));

@@ -34,6 +34,7 @@ TESTS := $(basename $(notdir $(wildcard progs/t_*.py)))
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE \
           -Wno-UNOPTFLAT -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -j 4 $(addprefix -D,$(CUTS))
 
+.SECONDARY:
 all: test
 
 $(BUILD)/ref/.stamp: $(GOLD_SRCS) tools/ref_rename.py
@@ -90,13 +91,15 @@ contend-mem: $(BUILD)/Vtb_top $(BUILD)/prog_t_divu_both.hex
 one: $(BUILD)/Vtb_top $(BUILD)/prog_$(T).hex
 	$(BUILD)/Vtb_top +prog=$(BUILD)/prog_$(T).hex +name=$(T) +wait=$(or $(WAIT),0) +irq=$(or $(IRQ),0) +fast=$(or $(FAST),0) +cycles=$(CYCLES)
 
-# block-level DIVU test (golden vs DUT module, random register traffic)
-$(BUILD)/Vtb_divu: $(BUILD)/ref/.stamp $(DUT_SRCS) unit/tb_divu.sv tb/altera_models.sv
-	verilator $(VFLAGS) --top-module tb_divu --Mdir $(BUILD)/obj_divu -o ../Vtb_divu tb/altera_models.sv \
-	  $(REF_ORDER) $(DUT_SRCS) unit/tb_divu.sv
-unit-divu: $(BUILD)/Vtb_divu
-	@for s in 1 2 3 4 5 6; do $(BUILD)/Vtb_divu +seed=$$s +cycles=$(or $(UCYCLES),600000) | grep -E "^(PASS|FAIL|MISMATCH)" || exit 1; done
+# Block-level tests: unit/tb_<blk>.sv instantiates `DUT_MOD (the new block) and REF_SH7604_<BLK> (golden) and compares every output
+# every clk_sys.  make [DUT=sh2p] unit-<blk> [UCYCLES=n]; the DUT block is SH7604P_<BLK> (DUT=sh2p) or SH7604_<BLK> (old).
+UNIT_PFX = $(if $(filter sh2p,$(DUT)),SH7604P_,SH7604_)
+$(BUILD)/Vtb_%: $(BUILD)/ref/.stamp $(DUT_SRCS) unit/tb_%.sv tb/altera_models.sv
+	verilator $(VFLAGS) -DDUT_MOD=$(UNIT_PFX)$(shell echo $* | tr a-z A-Z) --top-module tb_$* --Mdir $(BUILD)/obj_$* -o ../Vtb_$* tb/altera_models.sv \
+	  $(REF_ORDER) $(DUT_SRCS) unit/tb_$*.sv
+unit-%: $(BUILD)/Vtb_%
+	@for s in 1 2 3 4 5 6; do $(BUILD)/Vtb_$* +seed=$$s +cycles=$(or $(UCYCLES),600000) | grep -E "^(PASS|FAIL|MISMATCH)" || exit 1; done
 
 clean:
 	rm -rf $(BUILD)
-.PHONY: all test ptest report one clean unit-divu
+.PHONY: all test ptest report one clean
