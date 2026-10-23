@@ -55,7 +55,7 @@ struct Bench {
 		if (strobe) {
 			if (as) { t->DTACKn = 1; waitleft = -1; }
 			else {
-				if (waitleft < 0) waitleft = maxwait ? (int)(rng() % (maxwait + 1)) : 0;
+				if (waitleft < 0) waitleft = maxwait ? (int)(rng() % (4 * maxwait + 1)) : 0;   // half clocks; DTACK up to S4 gives no wait state
 				if (waitleft == 0) t->DTACKn = 0; else waitleft--;
 			}
 			t->VPAn = (fc == 7 && !as) ? 0 : 1;
