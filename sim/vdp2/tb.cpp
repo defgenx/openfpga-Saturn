@@ -155,7 +155,7 @@ static void gen_cycles(Rng& rng, Cfg& c, int mode) {
 }
 
 #define R_(a) c.r[(a) / 2]
-static const int N_SCENES = 20;
+static const int N_SCENES = 21;
 
 static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	for (int i = 0; i < 0x90; i++) {
@@ -211,6 +211,16 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 		R_(0xE0) = scene == 19 ? (rng.next() & 0x373F) : R_(0xE0);
 		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);
 		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;
+		break; }
+	case 20: {   // NBG0/NBG1 reduction (1/2, 1/4) at 4 and 8 bits per dot, NBG2/NBG3 on: the layers that lose their cell data lanes
+		R_(0x20) = 0x0F0F & (rng.next() | 0x0F03);
+		R_(0x28) = (R_(0x28) & 0xFF8F) | (rng.below(2) << 4);
+		R_(0x28) = (R_(0x28) & 0x8FFF) | (rng.below(2) << 12);
+		R_(0x2A) &= 0xFFCC;
+		R_(0x98) = 0x0300 | (0x0003 & rng.next());
+		R_(0x98) = (R_(0x98) & ~0x0300) | ((rng.next() & 3) << 8);
+		R_(0x98) = rng.chance(50) ? (R_(0x98) & 0x0303) : (0x0100 << rng.below(2)) | (1 << rng.below(2));
+		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);
 		break; }
 	default: break;
 	}
