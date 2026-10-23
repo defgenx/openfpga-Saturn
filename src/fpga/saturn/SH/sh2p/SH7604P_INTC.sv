@@ -53,14 +53,14 @@ module SH7604P_INTC (
 	input             FRT_OVI_IRQ
 );
 
-	// Source codes (INT_ACTIVE / INT_ACCEPTED).
-	localparam [3:0] NMI_INT = 4'd1, UBC_INT = 4'd2, IRL_INT = 4'd3, DIVU_INT = 4'd4, DMAC0_INT = 4'd5, DMAC1_INT = 4'd6,
-	                 WDT_INT = 4'd7, BSC_INT = 4'd8, SCI_ERI_INT = 4'd9, SCI_RXI_INT = 4'd10, SCI_TXI_INT = 4'd11,
-	                 SCI_TEI_INT = 4'd12, FRT_ICI_INT = 4'd13, FRT_OCI_INT = 4'd14, FRT_OVI_INT = 4'd15;
+	// Source codes (INT_ACTIVE / INT_ACCEPTED). A vector-register source is {word index, hi}.
+	localparam [3:0] FRT_OVI_INT = 4'd1, FRT_OCI_INT = 4'd2, FRT_ICI_INT = 4'd3, SCI_RXI_INT = 4'd4, SCI_ERI_INT = 4'd5,
+	                 SCI_TEI_INT = 4'd6, SCI_TXI_INT = 4'd7, BSC_INT = 4'd8, WDT_INT = 4'd9, DMAC0_INT = 4'd10, DMAC1_INT = 4'd11,
+	                 NMI_INT = 4'd12, UBC_INT = 4'd13, IRL_INT = 4'd14, DIVU_INT = 4'd15;
 	
 	// Registers. Unimplemented bits are not stored: IPRB[7:0], IPRA[3:0], VCR bits 15/7 (VCRD [7:0]) and ICR except NMIL/NMIE/VECMD read 0.
+	// The 9 vector bytes live in MLABs: copy A is read by the accepted source, copy B by the bus address.
 	reg  [3:0] SCIIP, FRTIP, DIVUIP, DMACIP, WDTIP;
-	reg  [6:0] V_WITV, V_BCMV, V_SERV, V_SRXV, V_STXV, V_STEV, V_FICV, V_FOCV, V_FOVV;
 	reg        NMIL, NMIE, VECMD;
 	
 	//Registers: FFFFFE60-69 and FFFFFEE0-E5
@@ -142,20 +142,18 @@ module SH7604P_INTC (
 	assign INT_REQ = |INT_ACTIVE;
 	
 	always_comb begin
-		case (INT_ACTIVE)
-			NMI_INT, UBC_INT:                            INT_LVL = 4'hF;
-			IRL_INT:                                     INT_LVL = IRL_LVL;
-			DIVU_INT:                                    INT_LVL = DIVUIP;
-			DMAC0_INT, DMAC1_INT:                        INT_LVL = DMACIP;
-			WDT_INT, BSC_INT:                            INT_LVL = WDTIP;
-			SCI_ERI_INT, SCI_RXI_INT, SCI_TXI_INT, SCI_TEI_INT: INT_LVL = SCIIP;
-			FRT_ICI_INT, FRT_OCI_INT, FRT_OVI_INT:       INT_LVL = FRTIP;
-			default:                                     INT_LVL = 4'h0;
+		case (INT_ACTIVE[3:2])
+			2'd0:    INT_LVL = |INT_ACTIVE[1:0] ? FRTIP : 4'h0;
+			2'd1:    INT_LVL = SCIIP;
+			2'd2:    INT_LVL = INT_ACTIVE[1] ? DMACIP : WDTIP;
+			default: INT_LVL = !INT_ACTIVE[1] ? 4'hF : INT_ACTIVE[0] ? DIVUIP : IRL_LVL;
 		endcase
 	end
 	
 	reg  [2:0] IRL_LVL_SAVE;
 	wire [7:0] IRL_VEC = !VECMD ? {5'b01000,IRL_LVL_SAVE} : VBUS_DI;
+	wire [2:0] CI = INT_ACCEPTED[3:1];
+	wire [6:0] VEC_RAM = !VV[CI] ? 7'h00 : INT_ACCEPTED[0] ? VHA[CI] : VLA[CI];
 	always_comb begin
 		case (INT_ACCEPTED)
 			NMI_INT:     INT_VEC = 8'd11;
@@ -164,16 +162,7 @@ module SH7604P_INTC (
 			DIVU_INT:    INT_VEC = DIVU_VEC;
 			DMAC0_INT:   INT_VEC = DMAC0_VEC;
 			DMAC1_INT:   INT_VEC = DMAC1_VEC;
-			WDT_INT:     INT_VEC = {1'b0,V_WITV};
-			BSC_INT:     INT_VEC = {1'b0,V_BCMV};
-			SCI_ERI_INT: INT_VEC = {1'b0,V_SERV};
-			SCI_RXI_INT: INT_VEC = {1'b0,V_SRXV};
-			SCI_TXI_INT: INT_VEC = {1'b0,V_STXV};
-			SCI_TEI_INT: INT_VEC = {1'b0,V_STEV};
-			FRT_ICI_INT: INT_VEC = {1'b0,V_FICV};
-			FRT_OCI_INT: INT_VEC = {1'b0,V_FOCV};
-			FRT_OVI_INT: INT_VEC = {1'b0,V_FOVV};
-			default:     INT_VEC = 8'd0;
+			default:     INT_VEC = {1'b0,VEC_RAM};
 		endcase
 	end
 	
@@ -207,34 +196,50 @@ module SH7604P_INTC (
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			{SCIIP, FRTIP, DIVUIP, DMACIP, WDTIP} <= '0;
-			{V_WITV, V_BCMV, V_SERV, V_SRXV, V_STXV, V_STEV, V_FICV, V_FOCV, V_FOVV} <= '0;
 			{NMIL, NMIE, VECMD} <= '0;
 		end
 		else if (CE_R) begin
 			NMIL <= NMI_N;
 			if (!RES_N) begin
 				{SCIIP, FRTIP, DIVUIP, DMACIP, WDTIP} <= '0;
-				{V_WITV, V_BCMV, V_SERV, V_SRXV, V_STXV, V_STEV, V_FICV, V_FOCV, V_FOVV} <= '0;
-				{NMIE, VECMD} <= '0;
+					{NMIE, VECMD} <= '0;
 			end
 			else if (WR) begin
 				if (R60 && WB[1]) {SCIIP, FRTIP} <= WD[15:8];
-				if (R62 && WB[1]) V_SERV <= WD[14:8];
-				if (R62 && WB[0]) V_SRXV <= WD[6:0];
-				if (R64 && WB[1]) V_STXV <= WD[14:8];
-				if (R64 && WB[0]) V_STEV <= WD[6:0];
-				if (R66 && WB[1]) V_FICV <= WD[14:8];
-				if (R66 && WB[0]) V_FOCV <= WD[6:0];
-				if (R68 && WB[1]) V_FOVV <= WD[14:8];
 				if (RE0 && WB[1]) NMIE <= WD[8];
 				if (RE0 && WB[0]) VECMD <= WD[0];
 				if (RE2 && WB[1]) {DIVUIP, DMACIP} <= WD[15:8];
 				if (RE2 && WB[0]) WDTIP <= WD[7:4];
-				if (RE4 && WB[1]) V_WITV <= WD[14:8];
-				if (RE4 && WB[0]) V_BCMV <= WD[6:0];
 			end
 		end
 	end
+	
+	wire       VW   = CE_R && RES_N && WR && (R62 || R64 || R66 || R68 || RE4);
+	wire [2:0] WIDX = IBUS_A[7] ? 3'd4 : IBUS_A[3] ? 3'd0 : IBUS_A[2:1] == 2'd3 ? 3'd1 : IBUS_A[2:1] == 2'd1 ? 3'd2 : 3'd3;
+	// A register reads as 0 until its first write after reset; that write also zero-fills the byte it does not carry.
+	reg  [7:0] VV;
+	wire       WEH  = VW && (WB[1] || !VV[WIDX]);
+	wire       WEL  = VW && (WB[0] || !VV[WIDX]);
+	wire [6:0] WDH  = WB[1] ? WD[14:8] : 7'h00;
+	wire [6:0] WDL  = (WB[0] && !R68) ? WD[6:0] : 7'h00;
+	(* ramstyle = "MLAB, no_rw_check" *) reg [6:0] VHA [0:7];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [6:0] VLA [0:7];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [6:0] VHB [0:7];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [6:0] VLB [0:7];
+	always @(posedge CLK) begin
+		if (WEH) begin VHA[WIDX] <= WDH; VHB[WIDX] <= WDH; end
+		if (WEL) begin VLA[WIDX] <= WDL; VLB[WIDX] <= WDL; end
+	end
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) VV <= 8'h00;
+		else if (CE_R) begin
+			if (!RES_N) VV <= 8'h00;
+			else if (VW) VV[WIDX] <= 1'b1;
+		end
+	end
+	wire [2:0] RIDX = WIDX;
+	wire [6:0] RDH = VV[RIDX] ? VHB[RIDX] : 7'h00;
+	wire [6:0] RDL = VV[RIDX] ? VLB[RIDX] : 7'h00;
 	
 	reg [15:0] BUS_DO;
 	always @(posedge CLK or negedge RST_N) begin
@@ -245,13 +250,9 @@ module SH7604P_INTC (
 			if (REG_SEL && !IBUS_WE && IBUS_REQ) begin
 				case ({IBUS_A[7],IBUS_A[3:1]})
 					4'h0: BUS_DO <= {SCIIP, FRTIP, 8'h00};
-					4'h1: BUS_DO <= {1'b0, V_SERV, 1'b0, V_SRXV};
-					4'h2: BUS_DO <= {1'b0, V_STXV, 1'b0, V_STEV};
-					4'h3: BUS_DO <= {1'b0, V_FICV, 1'b0, V_FOCV};
-					4'h4: BUS_DO <= {1'b0, V_FOVV, 8'h00};
+					4'h1, 4'h2, 4'h3, 4'h4, 4'hA: BUS_DO <= {1'b0, RDH, 1'b0, RDL};
 					4'h8: BUS_DO <= {NMIL, 6'b0, NMIE, 7'b0, VECMD};
 					4'h9: BUS_DO <= {DIVUIP, DMACIP, WDTIP, 4'h0};
-					4'hA: BUS_DO <= {1'b0, V_WITV, 1'b0, V_BCMV};
 					default: BUS_DO <= '0;
 				endcase
 			end

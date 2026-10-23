@@ -106,6 +106,8 @@ module tb_frt;
 			endcase
 		end
 	endfunction
+	reg quiet = 0;
+	always @(posedge CLK) if (RST_N && cyc % 15000 == 0) quiet <= rnd32(0) % 3 != 0;
 	task newreq;
 		reg [15:0] t;
 		reg [3:0] ad;
@@ -115,11 +117,11 @@ module tb_frt;
 			if (nextv && r[7:4] < 12) begin ad = nexta; nextv = 0; end
 			else nextv = 0;
 			if (r[3:0] == 15) ad = r[15:12];
-			WE <= (rnd32(0) % 5) < 3;
+			WE <= !quiet && (rnd32(0) % 5) < 3;
 			case (r[11:8])
 				0: A <= 32'hFFFFFE0F;
 				1: A <= 32'hFFFFFE1A + (r[19:16] % 6);
-				2: A <= 32'hFFFFFE10 ^ (32'h1 << (4 + r[19:16] % 28));
+				2: A <= 32'hFFFFFE10 + (r[3:0] % 10) ^ (32'h1 << (4 + (rnd32(0) >> 3) % 28));
 				3: A <= rnd32(0);
 				default: A <= 32'hFFFFFE10 + ad;
 			endcase
@@ -151,11 +153,11 @@ module tb_frt;
 			else if (!REQ && (rnd32(0) % 3 != 0)) begin REQ <= 1; newreq; end
 		end
 		EN <= (rnd32(0) % 40) != 0;
-		if (rnd32(0) % 3000 == 0) SBY <= 1; else if (SBY && rnd32(0) % 30 == 0) SBY <= 0;
+		if (rnd32(0) % 40000 == 0) SBY <= 1; else if (SBY && rnd32(0) % 30 == 0) SBY <= 0;
 		if (rnd32(0) % 25 == 0) FTCI <= ~FTCI;
 		if (rnd32(0) % 60 == 0) FTI <= ~FTI;
 	end
-	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rnd32(0) % 6000) != 0;
+	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rnd32(0) % 20000) != 0;
 	initial begin
 		if (!$value$plusargs("seed=%d", seed)) seed = 1;
 		mode = seed % 3;

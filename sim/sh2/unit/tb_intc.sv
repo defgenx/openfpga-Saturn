@@ -99,7 +99,7 @@ module tb_intc;
 				1: A <= 32'hFFFFFE6A + (r[19:16] % 6);
 				2: A <= 32'hFFFFFEE6 + (r[19:16] % 4);
 				3: A <= 32'hFFFFFEDF;
-				4: A <= (r[12] ? 32'hFFFFFE60 : 32'hFFFFFEE0) ^ (32'h1 << (8 + r[19:16] % 24));
+				4: A <= (r[12] ? 32'hFFFFFE60 + (r[15:13] % 5) : 32'hFFFFFEE0 + (r[15:13] % 3)) ^ (32'h1 << (8 + (rnd32(0) >> 3) % 24));
 				5: A <= rnd32(0);
 				6: A <= 32'hFFFFFE60 + (r[19:16] % 10);
 				default: A <= r[12] ? 32'hFFFFFE60 + (r[19:16] % 10) : 32'hFFFFFEE0 + (r[19:16] % 6);
@@ -109,11 +109,14 @@ module tb_intc;
 		end
 	endtask
 
-	integer k;
+	integer k, rb = 0;
 	always @(posedge CLK) if (RST_N) begin
-		// bus
+		// bus; every ~15000 clk a reset burst: NMI_N toggles, RES_N pulses and ICR is read back (NMIL during reset)
+		if (rb == 0 && rnd32(0) % 15000 == 0) begin rb <= 8; NMI_N <= ~NMI_N; end
+		if (rb != 0) rb <= rb - 1;
 		if (CE_F) begin
 			if (REQ) REQ <= 0;
+			else if (rb != 0) begin REQ <= 1; A <= 32'hFFFFFEE0; WE <= 0; BA <= 4'hF; end
 			else if (rnd32(0) % 3 != 0) begin REQ <= 1; newreq; end
 		end
 		// IRL: levels held for random sample counts, with short glitches
@@ -149,7 +152,7 @@ module tb_intc;
 		VBUS_WAIT <= (rnd32(0) % 3) == 0;
 		EN <= (rnd32(0) % 24) != 0;
 	end
-	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rnd32(0) % 3000) != 0;
+	always @(posedge CLK) if (RST_N && CE_R) RES_N <= (rb == 5 || rb == 3 && rnd32(0) % 2 == 0) ? 1'b0 : (rnd32(0) % 3000) != 0;
 	initial begin
 		if (!$value$plusargs("seed=%d", seed)) seed = 1;
 		dens = 1 + seed % 3;
