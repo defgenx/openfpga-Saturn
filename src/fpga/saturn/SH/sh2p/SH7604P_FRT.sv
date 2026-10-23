@@ -33,26 +33,22 @@ module SH7604P_FRT (
 	output            OVI_IRQ
 );
 
-	import SH7604P_PKG::*;
-	
-	FRC_t       FRC;
-	OCR_t       OCRA;
-	OCR_t       OCRB;
-	FICR_t      ICR;
-	TIER_t      TIER;
-	FTCSR_t     FTCSR;
-	TCR_t       TCR;
-	TOCR_t      TOCR;
+	// Stored bits only: TIER[7:1], FTCSR = {ICF,OCFA,OCFB,OVF,CCLRA}, TCR = {IEDG,CKS}, TOCR[4:0].
+	reg  [15:0] FRC, OCRA, OCRB, FICR;
+	reg  [7:1]  TIER;
+	reg         ICF, OCFA, OCFB, OVF, CCLRA;
+	reg         IEDG;
+	reg  [1:0]  CKS;
+	reg  [4:0]  TOCR;
+	wire        OCRS = TOCR[4];
 	
 	//Clock selector
-	bit         FTCI_OLD;
-	always @(posedge CLK) begin
-		FTCI_OLD <= FTCI;
-	end
+	reg         FTCI_OLD;
+	always @(posedge CLK) FTCI_OLD <= FTCI;
 	
-	bit         FRC_CE;
+	reg         FRC_CE;
 	always_comb begin
-		case (TCR.CKS)
+		case (CKS)
 			2'b00: FRC_CE = CLK8_CE;
 			2'b01: FRC_CE = CLK32_CE;
 			2'b10: FRC_CE = CLK128_CE;
@@ -60,68 +56,61 @@ module SH7604P_FRT (
 		endcase
 	end
 	
-	wire REG_SEL = (IBUS_A >= 32'hFFFFFE10 && IBUS_A <= 32'hFFFFFE19);
-	wire FTCSR_WRITE = REG_SEL && IBUS_A[3:0] == 4'h1 && IBUS_WE && IBUS_REQ;
-	wire FTCSR_READ = REG_SEL && IBUS_A[3:0] == 4'h1 && !IBUS_WE && IBUS_REQ;
+	// FFFFFE10-19
+	wire HIT     = IBUS_A[31:4] == 28'hFFFFFE1;
+	wire REG_SEL = HIT && (!IBUS_A[3] || (!IBUS_A[2] && !IBUS_A[1]));
+	wire A_ODD   = IBUS_A[0];
+	wire WR      = REG_SEL && IBUS_WE && IBUS_REQ;
+	wire RD      = REG_SEL && !IBUS_WE && IBUS_REQ;
+	wire FTCSR_WRITE = WR && IBUS_A[3:0] == 4'h1;
+	wire FTCSR_READ  = RD && IBUS_A[3:0] == 4'h1;
+	wire ICR_READ    = RD && IBUS_A[3:0] == 4'h9;
+	wire CLR         = !RES_N || SBY;
+	
+	wire EQA = FRC == OCRA;
+	wire EQB = FRC == OCRB;
+	wire [16:0] FRC_INC = {1'b0,FRC} + 17'd1;
+	
+	reg OCFA_SET, OCFB_SET, OVF_SET, ICF_SET;
 	always @(posedge CLK or negedge RST_N) begin
-		bit         OCFA_SET,OCFB_SET,OVF_SET;
-		
 		if (!RST_N) begin
-			FTCSR.OCFA <= 0;
-			FTCSR.OCFB <= 0;
-			FTCSR.OVF <= 0;
+			OCFA <= 0; OCFB <= 0; OVF <= 0;
 		end
 		else if (CE_F) begin
 			if (!RES_N) begin
 				{OCFA_SET,OCFB_SET,OVF_SET} <= '0;
 			end else if (EN) begin
 				if (FTCSR_READ) begin
-					if (FTCSR.OCFA) OCFA_SET <= 1;
-					if (FTCSR.OCFB) OCFB_SET <= 1;
-					if (FTCSR.OVF) OVF_SET <= 1;
+					if (OCFA) OCFA_SET <= 1;
+					if (OCFB) OCFB_SET <= 1;
+					if (OVF) OVF_SET <= 1;
 				end
 			end
 		end
 		else if (CE_R) begin
-			if (!RES_N || SBY) begin
-				FTCSR.OCFA <= 0;
-				FTCSR.OCFB <= 0;
-				FTCSR.OVF <= 0;
+			if (CLR) begin
+				OCFA <= 0; OCFB <= 0; OVF <= 0;
 			end else if (EN) begin
 				if (FRC_CE) begin
-					if (FRC == OCRA) begin
-						FTOA <= TOCR.OLVLA;
-						FTCSR.OCFA <= 1;
-					end
-					if (FRC == OCRB) begin
-						FTOB <= TOCR.OLVLB;
-						FTCSR.OCFB <= 1;
-					end
-					
-					if (FRC == 16'hFFFF) begin
-						FTCSR.OVF <= 1;
-					end
+					if (EQA) begin FTOA <= TOCR[1]; OCFA <= 1; end
+					if (EQB) begin FTOB <= TOCR[0]; OCFB <= 1; end
+					if (FRC_INC[16]) OVF <= 1;
 				end
 				
 				if (FTCSR_WRITE) begin
-					if (!IBUS_DI[19] && OCFA_SET && FTCSR.OCFA) begin FTCSR.OCFA <= 0; OCFA_SET <= 0; end
-					if (!IBUS_DI[18] && OCFB_SET && FTCSR.OCFB) begin FTCSR.OCFB <= 0; OCFB_SET <= 0; end
-					if (!IBUS_DI[17] && OVF_SET  && FTCSR.OVF ) begin FTCSR.OVF <= 0;  OVF_SET <= 0; end
+					if (!IBUS_DI[19] && OCFA_SET && OCFA) begin OCFA <= 0; OCFA_SET <= 0; end
+					if (!IBUS_DI[18] && OCFB_SET && OCFB) begin OCFB <= 0; OCFB_SET <= 0; end
+					if (!IBUS_DI[17] && OVF_SET  && OVF ) begin OVF <= 0;  OVF_SET <= 0; end
 				end
 			end
 		end
 	end
 	
-	wire ICR_READ = REG_SEL && IBUS_A[3:0] == 4'h9 && !IBUS_WE && IBUS_REQ;
+	reg CAPT, FTI_OLD, ICR_READ_OLD;
 	always @(posedge CLK or negedge RST_N) begin
-		bit         CAPT;
-		bit         FTI_OLD;
-		bit         ICR_READ_OLD;
-		bit         ICF_SET;
-		
 		if (!RST_N) begin
-			ICR <= 16'h0000;
-			FTCSR.ICF <= 0;
+			FICR <= 16'h0000;
+			ICF <= 0;
 			CAPT <= 0;
 			FTI_OLD <= 0;
 			ICR_READ_OLD <= 0;
@@ -131,112 +120,106 @@ module SH7604P_FRT (
 				ICF_SET <= 0;
 			end else if (EN) begin
 				if (FTCSR_READ) begin
-					if (FTCSR.ICF) ICF_SET <= 1;
+					if (ICF) ICF_SET <= 1;
 				end
 			end
 		end
 		else if (CE_R) begin
-			if (!RES_N || SBY) begin
-				ICR <= 16'h0000;
-				FTCSR.ICF <= 0;
+			if (CLR) begin
+				FICR <= 16'h0000;
+				ICF <= 0;
 				CAPT <= 0;
 				FTI_OLD <= 0;
 				ICR_READ_OLD <= 0;
 			end else if (EN) begin
 				FTI_OLD <= FTI;
-				CAPT <= ~(FTI ^ TCR.IEDG) & (FTI_OLD ^ TCR.IEDG);
+				CAPT <= ~(FTI ^ IEDG) & (FTI_OLD ^ IEDG);
 				
 				ICR_READ_OLD <= ICR_READ;
 				if (ICR_READ && !ICR_READ_OLD && CAPT) begin
 					CAPT <= 1;
 				end
 				else if (CAPT) begin
-					ICR <= FRC;
-					FTCSR.ICF <= 1;
+					FICR <= FRC;
+					ICF <= 1;
 				end
 				
 				if (FTCSR_WRITE) begin
-					if (!IBUS_DI[23] && ICF_SET && FTCSR.ICF) begin FTCSR.ICF <= 0; ICF_SET <= 0; end
+					if (!IBUS_DI[23] && ICF_SET && ICF) begin ICF <= 0; ICF_SET <= 0; end
 				end
 			end
 		end
 	end
 
 	
-	assign ICI_IRQ = FTCSR.ICF & TIER.ICIE;
-	assign OCIA_IRQ = FTCSR.OCFA & TIER.OCIAE;
-	assign OCIB_IRQ = FTCSR.OCFB & TIER.OCIBE;
-	assign OVI_IRQ = FTCSR.OVF & TIER.OVIE;
+	assign ICI_IRQ = ICF & TIER[7];
+	assign OCIA_IRQ = OCFA & TIER[3];
+	assign OCIB_IRQ = OCFB & TIER[2];
+	assign OVI_IRQ = OVF & TIER[1];
 	
 	//Registers
-	bit [ 7: 0] TEMP;
-	bit [ 7: 0] REG_DO;
-	bit         BUSY;
+	reg [ 7: 0] TEMP;
+	reg [ 7: 0] REG_DO;
+	reg         BUSY;
+	wire [15:0] OCR = !OCRS ? OCRA : OCRB;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [15: 0] OCR;
-		
 		if (!RST_N) begin
-			TIER <= TIER_INIT;
-			FRC  <= FRC_INIT;
-			OCRA <= OCR_INIT;
-			OCRB <= OCR_INIT;
-			TCR  <= TCR_INIT;
-			TOCR <= TOCR_INIT;
-			FTCSR.CCLRA <= 0;
-			FTCSR.UNUSED <= '0;
+			TIER <= '0;
+			FRC  <= 16'h0000;
+			OCRA <= 16'hFFFF;
+			OCRB <= 16'hFFFF;
+			IEDG <= 0; CKS <= 0;
+			TOCR <= '0;
+			CCLRA <= 0;
 			REG_DO <= '0;
 			BUSY <= 0;
-			// synopsys translate_off
 			TEMP <= 8'h00;
-			// synopsys translate_on
 		end
 		else if (CE_R) begin
 			if (FRC_CE) begin
-				FRC <= FRC + 16'd1;
+				FRC <= FRC_INC[15:0];
 			end
 			
-			if (!RES_N || SBY) begin
-				TIER <= TIER_INIT;
-				FRC  <= FRC_INIT;
-				OCRA <= OCR_INIT;
-				OCRB <= OCR_INIT;
-				TCR  <= TCR_INIT;
-				TOCR <= TOCR_INIT;
-				FTCSR.CCLRA <= 0;
-				FTCSR.UNUSED <= '0;
+			if (CLR) begin
+				TIER <= '0;
+				FRC  <= 16'h0000;
+				OCRA <= 16'hFFFF;
+				OCRB <= 16'hFFFF;
+				IEDG <= 0; CKS <= 0;
+				TOCR <= '0;
+				CCLRA <= 0;
 			end
-			else if (REG_SEL && IBUS_WE && IBUS_REQ) begin
+			else if (WR) begin
 				case (IBUS_A[3:0])
-					4'h0: TIER <= IBUS_DI[31:24] & TIER_WMASK;
-					4'h1: FTCSR.CCLRA <= IBUS_DI[16];
+					4'h0: TIER <= IBUS_DI[31:25];
+					4'h1: CCLRA <= IBUS_DI[16];
 					4'h2: TEMP <= IBUS_DI[15:8];
-					4'h3: FRC <= {TEMP,IBUS_DI[7:0]} & FRC_WMASK;
+					4'h3: FRC <= {TEMP,IBUS_DI[7:0]};
 					4'h4: TEMP <= IBUS_DI[31:24];
-					4'h5: if (!TOCR.OCRS) OCRA <= {TEMP,IBUS_DI[23:16]} & OCR_WMASK; 
-					      else OCRB <= {TEMP,IBUS_DI[23:16]} & OCR_WMASK;
-					4'h6: TCR <= IBUS_DI[15:8] & TCR_WMASK;
-					4'h7: TOCR <= (IBUS_DI[7:0] & TOCR_WMASK);
+					4'h5: if (!OCRS) OCRA <= {TEMP,IBUS_DI[23:16]}; 
+					      else OCRB <= {TEMP,IBUS_DI[23:16]};
+					4'h6: begin IEDG <= IBUS_DI[15]; CKS <= IBUS_DI[9:8]; end
+					4'h7: TOCR <= IBUS_DI[4:0];
 					default:;
 				endcase
 			end
 			
-			if (FRC == OCRA && FTCSR.CCLRA && FRC_CE) begin
+			if (EQA && CCLRA && FRC_CE) begin
 				FRC <= 16'h0000;
 			end
 		end
 		else if (CE_F) begin
-			if (REG_SEL && !IBUS_WE && IBUS_REQ) begin
-				OCR = !TOCR.OCRS ? OCRA : OCRB;
+			if (RD) begin
 				case (IBUS_A[3:0])
-					4'h0:       REG_DO <= (TIER | 8'h01) & TIER_RMASK;
-					4'h1:       REG_DO <= FTCSR & FTCSR_RMASK; 
+					4'h0:       REG_DO <= {TIER,1'b1};
+					4'h1:       REG_DO <= {ICF,3'b000,OCFA,OCFB,OVF,CCLRA}; 
 					4'h2: begin {REG_DO,TEMP} <= FRC; BUSY <= 1; end
 					4'h3:       REG_DO <= TEMP; 
 					4'h4:       REG_DO <= OCR[15:8];
 					4'h5:       REG_DO <= OCR[7:0];
-					4'h6:       REG_DO <= TCR & TCR_RMASK;
-					4'h7:       REG_DO <= (TOCR | 8'hE0) & TOCR_RMASK;
-					4'h8:       {REG_DO,TEMP} <= ICR;
+					4'h6:       REG_DO <= {IEDG,5'b00000,CKS};
+					4'h7:       REG_DO <= {3'b111,TOCR};
+					4'h8:       {REG_DO,TEMP} <= FICR;
 					4'h9:       REG_DO <= TEMP; 
 					default:;
 				endcase
