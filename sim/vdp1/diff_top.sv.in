@@ -5,7 +5,13 @@ module diff_top (
 	input FAST, input BLUR_MESH, input [7:0] DBG_EXT,
 	input DCE_R, input DCE_F, input HTIM_N, input VTIM_N, input [15:0] VOUTI,
 	input [15:0] DI, input CS_N, input AD_N, input DTEN_N, input REQ_N,
+	output TAINT,
 	@PORTS@
 );
 @INSTS@
+	// A line phase entered with a stale step counter (draw aborted inside a gouraud divide): the golden core then runs on
+	// stale divider registers (undefined shading) that neither the previous shrink nor VDP1P reproduce. Compare stops there.
+	reg [5:0] st_d;
+	always @(posedge CLK) st_d <= u_r.CMD_ST;
+	assign TAINT = (u_r.CMD_ST == 6'd10) && (st_d != 6'd10) && (u_r.GRD_CALC_STATE != 5'd0);
 endmodule

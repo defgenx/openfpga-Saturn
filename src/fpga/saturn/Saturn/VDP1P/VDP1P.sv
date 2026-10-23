@@ -417,7 +417,7 @@ module VDP1P (
 		case (CMD_ST)
 			CMDS_GRD_CALC_LEFT:  begin GRD_CALC_1 = GHCOLOR_A; GRD_CALC_2 = GHCOLOR_D; end
 			CMDS_GRD_CALC_RIGHT: begin GRD_CALC_1 = GHCOLOR_B; GRD_CALC_2 = GHCOLOR_C; end
-			default:             begin GRD_CALC_1 = RGBFtoI(LEFT_GHCOLOR); GRD_CALC_2 = RGBFtoI(RIGHT_GHCOLOR); end
+			default:             begin GRD_CALC_1 = COMM_ACC ? {GI[2],GI[1],GI[0]} : GRD_TBL_L; GRD_CALC_2 = COMM_ACC ? {GI[5],GI[4],GI[3]} : GRD_TBL_R; end
 		endcase
 	end
 	assign GRD_CALC_S = CMD_ST == CMDS_GRD_CALC_LINE ? ROW_WIDTH : COL_HEIGHT + 12'd1;
@@ -434,15 +434,42 @@ module VDP1P (
 	
 	RGB_t        GHCOLOR_A,GHCOLOR_B,GHCOLOR_C,GHCOLOR_D;
 	assign {GHCOLOR_A,GHCOLOR_B,GHCOLOR_C,GHCOLOR_D} = {GRD_TBL[0][14:0],GRD_TBL[1][14:0],GRD_TBL[2][14:0],GRD_TBL[3][14:0]};
-	RGBFP_t      LEFT_GHCOLOR,RIGHT_GHCOLOR,LINE_GHCOLOR;
+	RGBFP_t      LINE_GHCOLOR;
 	// Gouraud steps: the quotient bits are shifted into the step registers of the running phase while the dividers
 	// iterate (see GRD_STEP_SHIFT); the direction bits are stored when the phase ends.
-	RGBFP_t      LEFT_GHCOLOR_STEP,RIGHT_GHCOLOR_STEP,LINE_GHCOLOR_STEP;
-	bit  [16: 0] LS_Q_R,LS_Q_G,LS_Q_B,RS_Q_R,RS_Q_G,RS_Q_B,NS_Q_R,NS_Q_G,NS_Q_B;
-	bit  [ 2: 0] LS_DIR,RS_DIR,NS_DIR;
-	assign LEFT_GHCOLOR_STEP  = {{LS_DIR[2],LS_Q_B},{LS_DIR[1],LS_Q_G},{LS_DIR[0],LS_Q_R}};
-	assign RIGHT_GHCOLOR_STEP = {{RS_DIR[2],RS_Q_B},{RS_DIR[1],RS_Q_G},{RS_DIR[0],RS_Q_R}};
-	assign LINE_GHCOLOR_STEP  = {{NS_DIR[2],NS_Q_B},{NS_DIR[1],NS_Q_G},{NS_DIR[0],NS_Q_R}};
+	RGBFP_t      LINE_GHCOLOR_STEP;
+	bit  [16: 0] Q_R,Q_G,Q_B;       // quotient shift registers: the line step while a row is drawn
+	bit  [ 2: 0] NS_DIR;
+	assign LINE_GHCOLOR_STEP  = {{NS_DIR[2],Q_B},{NS_DIR[1],Q_G},{NS_DIR[0],Q_R}};
+
+	// Edge colours: the left/right colour of row k is the table colour plus k times the step (modulo 2^17), the
+	// value the golden accumulators hold after k row steps. The steps live in an MLAB as signed words; one
+	// multiplier, one adder and one read port compute the six colours per row in the cycles after LINE_NEXT.
+	wire         GRD_ON   = CMD.CMDPMOD.CCB[2];
+	wire         COMM_ACC = !CMD.CMDCTRL.COMM[2] || !(CMD.CMDCTRL.COMM[1] || CMD.CMDCTRL.COMM[0]);   // COMM 0-4: edge colours, 5-7: table
+	bit  [ 3: 0] GSEQ;
+	bit          GP2;
+	wire         GP2_ANY = GP2 || (CMD_ST == CMDS_GRD_CALC_ROW && GRD_ON && COMM_ACC);
+	bit  [ 4: 0] GI[6];             // integer parts of left (0-2) and right (3-5) colour, divider operands
+	wire [11: 0] GK = COL_HEIGHT - COL_D;
+	wire [ 2: 0] GIDX = GSEQ < 4'd7 ? (GSEQ[0] ? 3'd0 : 3'd3) + {1'b0,(GSEQ[2:1] - (GSEQ[0] ? 2'd0 : 2'd1))} : (DIR[0] ? 3'd3 : 3'd0) + (GSEQ[2:0] - 3'd7);
+	wire [16: 0] GS_Q;
+	wire [16: 0] GPROD = GK * GS_Q;
+	wire [ 4: 0] GBASE = GIDX < 3'd3 ? (GIDX == 3'd0 ? GRD_TBL[0][4:0] : GIDX == 3'd1 ? GRD_TBL[0][9:5] : GRD_TBL[0][14:10])
+	                                 : (GIDX == 3'd3 ? GRD_TBL[1][4:0] : GIDX == 3'd4 ? GRD_TBL[1][9:5] : GRD_TBL[1][14:10]);
+	wire [16: 0] GSUM = {GBASE,12'd0} + GPROD;
+	bit          GS_WE;
+	bit  [ 2: 0] GS_WI;
+	bit  [16: 0] GS_WD;
+	VDP1P_MLAB #(.W(17),.AW(3)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
+	wire [ 1: 0] GL_CH = GSEQ - 4'd7;
+	wire         GL_WE = GSEQ >= 4'd7;
+	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
+	// COMM 5-7 take the left/right colours of the segment straight from the table (POLY_S, POLY_S+1)
+	wire [ 1: 0] POLY_S1 = POLY_S + 2'd1;
+	RGB_t        GRD_TBL_L,GRD_TBL_R;
+	assign GRD_TBL_L = GRD_TBL[POLY_S][14:0];
+	assign GRD_TBL_R = GRD_TBL[POLY_S1][14:0];
 	
 `ifdef DEBUG
 	assign DBG_GHCOLOR_C = GRD_TBL[2][14:0];
@@ -509,6 +536,8 @@ module VDP1P (
 			CLT_READ <= 0;
 			GRD_READ <= 0;
 			CMD_SUB_RUN <= 0;
+			GSEQ <= 0;
+			GP2 <= 0;
 			
 `ifdef DEBUG
 			CMD_SKIP <= '1;
@@ -576,7 +605,40 @@ module VDP1P (
 			if (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT || CMD_ST == CMDS_GRD_CALC_LINE) begin
 				GRD_CALC_STATE <= GRD_CALC_STATE + 5'd1;
 			end
+			// pass 1 (GSEQ 1-6): the six edge colours for the divider operands; pass 2 (7-9): the row start colour,
+			// once the row is at GRD_CALC_ROW (the side depends on DIR[0], known from the row set-up)
+			if (GE_TRIG) begin GSEQ <= 4'd1; GP2 <= 0; end
+			else begin
+				GP2 <= GP2_ANY;
+				if (GSEQ == 4'd6) begin
+					if (GP2_ANY) begin GSEQ <= 4'd7; GP2 <= 0; end else GSEQ <= 4'd0;
+				end
+				else if (GSEQ == 4'd9) GSEQ <= 4'd0;
+				else if (GSEQ != 4'd0) GSEQ <= GSEQ + 4'd1;
+				else if (GP2_ANY) begin GSEQ <= 4'd7; GP2 <= 0; end
+			end
+			if (GSEQ >= 4'd1 && GSEQ <= 4'd6) GI[GIDX] <= GSUM[16:12];
 									
+			if (DIV_RUN && (CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT)) begin
+				// the left/right quotients are shifted into the line colour registers (idle until the row start colour is loaded)
+				{LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= SHQ({LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC},DIV_R_QB);
+				{LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= SHQ({LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC},DIV_G_QB);
+				{LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= SHQ({LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC},DIV_B_QB);
+			end
+			if (GL_WE && COMM_ACC) begin
+				case (GL_CH)
+					2'd0: {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= GSUM;
+					2'd1: {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= GSUM;
+					2'd2: {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= GSUM;
+					default:;
+				endcase
+			end
+			if (!COMM_ACC && CMD_ST == CMDS_GRD_CALC_ROW) begin
+				// COMM 5-7: start colour is the table colour (no fraction)
+				LINE_GHCOLOR.R <= {1'b0,DIR[0] ? GRD_TBL_R.R : GRD_TBL_L.R,12'd0};
+				LINE_GHCOLOR.G <= {1'b0,DIR[0] ? GRD_TBL_R.G : GRD_TBL_L.G,12'd0};
+				LINE_GHCOLOR.B <= {1'b0,DIR[0] ? GRD_TBL_R.B : GRD_TBL_L.B,12'd0};
+			end
 			if (CE_R) DRAW_END <= 0;
 			if (FBD_ST == FBDS_WRITE) DRAW_ENABLE <= 0;
 			case (CMD_ST) 
@@ -806,8 +868,6 @@ module VDP1P (
 					RIGHT_VERT <= VERTB;
 					POLY_S <= 2'b00;
 					TEXT_X <= '0;
-					LEFT_GHCOLOR <= RGBItoF(GHCOLOR_A);
-					RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_B);
 					CMD_ST <= CMDS_LINE_CALC;
 				end
 				
@@ -865,9 +925,6 @@ module VDP1P (
 				end
 				
 				CMDS_GRD_CALC_COL: begin
-					LEFT_GHCOLOR <= RGBItoF(GHCOLOR_A);
-					RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_B);
-					
 					GRD_CALC_STATE <= '0;
 					CMD_ST <= CMDS_GRD_CALC_LEFT;
 				end
@@ -875,7 +932,6 @@ module VDP1P (
 				CMDS_GRD_CALC_LEFT: begin
 					if (GRD_CALC_STATE == 5'd20) begin
 						GRD_CALC_STATE <= '0;
-						LS_DIR <= {DIV_A_B[5],DIV_A_G[5],DIV_A_R[5]};
 						
 						CMD_ST <= CMDS_GRD_CALC_RIGHT;
 					end
@@ -884,7 +940,6 @@ module VDP1P (
 				CMDS_GRD_CALC_RIGHT: begin
 					if (GRD_CALC_STATE == 5'd20) begin
 						GRD_CALC_STATE <= '0;
-						RS_DIR <= {DIV_A_B[5],DIV_A_G[5],DIV_A_R[5]};
 						CMD_ST <= CMDS_ROW_DRAW;
 					end
 				end
@@ -991,7 +1046,6 @@ module VDP1P (
 				end
 				
 				CMDS_GRD_CALC_ROW: begin
-					LINE_GHCOLOR <= DIR[0] ? RIGHT_GHCOLOR : LEFT_GHCOLOR;
 					CMD_ST <= CMDS_GRD_CALC_LINE;
 				end
 				
@@ -1130,13 +1184,6 @@ module VDP1P (
 						RIGHT_COL_ERROR_X <= NEXT_RIGHT_COL_ERROR_X;
 						RIGHT_COL_ERROR_Y <= NEXT_RIGHT_COL_ERROR_Y;
 						
-						{LEFT_GHCOLOR.R.INT, LEFT_GHCOLOR.R.FRAC } <= {LEFT_GHCOLOR.R.INT, LEFT_GHCOLOR.R.FRAC } + ({LEFT_GHCOLOR_STEP.R.INT, LEFT_GHCOLOR_STEP.R.FRAC }^{17{LEFT_GHCOLOR_STEP.R.DIR }}) + LEFT_GHCOLOR_STEP.R.DIR;
-						{LEFT_GHCOLOR.G.INT, LEFT_GHCOLOR.G.FRAC } <= {LEFT_GHCOLOR.G.INT, LEFT_GHCOLOR.G.FRAC } + ({LEFT_GHCOLOR_STEP.G.INT, LEFT_GHCOLOR_STEP.G.FRAC }^{17{LEFT_GHCOLOR_STEP.G.DIR }}) + LEFT_GHCOLOR_STEP.G.DIR;
-						{LEFT_GHCOLOR.B.INT, LEFT_GHCOLOR.B.FRAC } <= {LEFT_GHCOLOR.B.INT, LEFT_GHCOLOR.B.FRAC } + ({LEFT_GHCOLOR_STEP.B.INT, LEFT_GHCOLOR_STEP.B.FRAC }^{17{LEFT_GHCOLOR_STEP.B.DIR }}) + LEFT_GHCOLOR_STEP.B.DIR;
-						{RIGHT_GHCOLOR.R.INT,RIGHT_GHCOLOR.R.FRAC} <= {RIGHT_GHCOLOR.R.INT,RIGHT_GHCOLOR.R.FRAC} + ({RIGHT_GHCOLOR_STEP.R.INT,RIGHT_GHCOLOR_STEP.R.FRAC}^{17{RIGHT_GHCOLOR_STEP.R.DIR}}) + RIGHT_GHCOLOR_STEP.R.DIR;
-						{RIGHT_GHCOLOR.G.INT,RIGHT_GHCOLOR.G.FRAC} <= {RIGHT_GHCOLOR.G.INT,RIGHT_GHCOLOR.G.FRAC} + ({RIGHT_GHCOLOR_STEP.G.INT,RIGHT_GHCOLOR_STEP.G.FRAC}^{17{RIGHT_GHCOLOR_STEP.G.DIR}}) + RIGHT_GHCOLOR_STEP.G.DIR;
-						{RIGHT_GHCOLOR.B.INT,RIGHT_GHCOLOR.B.FRAC} <= {RIGHT_GHCOLOR.B.INT,RIGHT_GHCOLOR.B.FRAC} + ({RIGHT_GHCOLOR_STEP.B.INT,RIGHT_GHCOLOR_STEP.B.FRAC}^{17{RIGHT_GHCOLOR_STEP.B.DIR}}) + RIGHT_GHCOLOR_STEP.B.DIR;
-						
 						CMD_ST <= !CMD.CMDPMOD.PCLP && !FAST ? CMDS_ROW_CLIP : CMDS_ROW_DRAW;
 						COL_D <= COL_D - 12'd1;
 						if (COL_D == 12'd0) begin
@@ -1144,23 +1191,19 @@ module VDP1P (
 						end
 					end else if (CMD.CMDCTRL.COMM == 4'h5 || CMD.CMDCTRL.COMM == 4'h7) begin
 						// Each polyline segment starts where the previous one ended: the right point/colour moves to the left;
-						// RIGHT_VERT/RIGHT_GHCOLOR are not stepped for polylines, so they still hold the previous segment end.
+						// RIGHT_VERT is not stepped for polylines, so it still holds the previous segment end.
 						LEFT_VERT <= RIGHT_VERT;
-						LEFT_GHCOLOR <= RIGHT_GHCOLOR;
 						case (POLY_S)
 							2'd0: begin
 								RIGHT_VERT <= VERTC;
-								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_C);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
 							2'd1: begin
 								RIGHT_VERT <= VERTD;
-								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_D);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
 							2'd2: begin
 								RIGHT_VERT <= VERTA;
-								RIGHT_GHCOLOR <= RGBItoF(GHCOLOR_A);
 								CMD_ST <= CMDS_ROW_DRAW;
 							end
 							2'd3: begin
@@ -2453,21 +2496,28 @@ module VDP1P (
 	function automatic [16:0] SHQ(input [16:0] C, input B);
 		SHQ = {C[15:0],B};
 	endfunction
-	always @(posedge CLK) if (DIV_RUN) begin
-		case (CMD_ST)
-			CMDS_GRD_CALC_LEFT: begin
-				LS_Q_R <= SHQ(LS_Q_R,DIV_R_QB); LS_Q_G <= SHQ(LS_Q_G,DIV_G_QB); LS_Q_B <= SHQ(LS_Q_B,DIV_B_QB);
-			end
-			CMDS_GRD_CALC_RIGHT: begin
-				RS_Q_R <= SHQ(RS_Q_R,DIV_R_QB); RS_Q_G <= SHQ(RS_Q_G,DIV_G_QB); RS_Q_B <= SHQ(RS_Q_B,DIV_B_QB);
-			end
-			CMDS_GRD_CALC_LINE: begin
-				NS_Q_R <= SHQ(NS_Q_R,DIV_R_QB); NS_Q_G <= SHQ(NS_Q_G,DIV_G_QB); NS_Q_B <= SHQ(NS_Q_B,DIV_B_QB);
-			end
-			default:;
-		endcase
+	always @(posedge CLK) if (DIV_RUN && CMD_ST == CMDS_GRD_CALC_LINE) begin
+		Q_R <= SHQ(Q_R,DIV_R_QB); Q_G <= SHQ(Q_G,DIV_G_QB); Q_B <= SHQ(Q_B,DIV_B_QB);
 	end
-	
+
+	// Left/right steps, stored as signed words ((Q ^ dir) + dir), go to the step MLAB in the three cycles after the
+	// last quotient bit (the next shift is two cycles later).
+	bit          GW_B,GW_DIRB,GW_SIDE;
+	wire         GW_PH = CMD_ST == CMDS_GRD_CALC_LEFT || CMD_ST == CMDS_GRD_CALC_RIGHT;
+	wire         GW_SD = CMD_ST == CMDS_GRD_CALC_RIGHT;
+	wire [16: 0] GW_Q   = GW_B ? {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} : GRD_CALC_STATE == 5'd19 ? {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} : {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC};
+	wire         GW_DIR = GW_B ? GW_DIRB : GRD_CALC_STATE == 5'd19 ? DIV_A_R[5] : DIV_A_G[5];
+	always_comb begin
+		GS_WE = GW_B || (GW_PH && (GRD_CALC_STATE == 5'd19 || GRD_CALC_STATE == 5'd20));
+		GS_WI = GW_B ? (GW_SIDE ? 3'd5 : 3'd2) : (GRD_CALC_STATE == 5'd19 ? 3'd0 : 3'd1) + (GW_SD ? 3'd3 : 3'd0);
+		GS_WD = (GW_Q ^ {17{GW_DIR}}) + {16'd0,GW_DIR};
+	end
+	always @(posedge CLK) begin
+		GW_B <= 0;
+		if (GW_PH && GRD_CALC_STATE == 5'd20) begin
+			GW_B <= 1; GW_DIRB <= DIV_A_B[5]; GW_SIDE <= GW_SD;
+		end
+	end
 endmodule
 
 
@@ -2637,4 +2687,38 @@ module VDP1P_DIV_STEP
 			if (STEP == 5'd17) DONE <= 1;
 		end
 	end
+endmodule
+
+
+module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
+	input          CLK,
+	input          WE,
+	input [AW-1:0] WA,
+	input [W-1:0]  D,
+	input [AW-1:0] RA,
+	output [W-1:0] Q
+);
+	altdpram altdpram_component (
+		.data (D), .inclock (CLK), .rdaddress (RA), .wraddress (WA), .wren (WE), .q (Q),
+		.aclr (1'b0), .byteena (1'b1), .inclocken (1'b1), .rdaddressstall (1'b0), .rden (1'b1), .wraddressstall (1'b0));
+	defparam
+		altdpram_component.indata_aclr = "OFF",
+		altdpram_component.indata_reg = "INCLOCK",
+		altdpram_component.intended_device_family = "Cyclone V",
+		altdpram_component.lpm_type = "altdpram",
+		altdpram_component.outdata_aclr = "OFF",
+		altdpram_component.outdata_reg = "UNREGISTERED",
+		altdpram_component.ram_block_type = "MLAB",
+		altdpram_component.rdaddress_aclr = "OFF",
+		altdpram_component.rdaddress_reg = "UNREGISTERED",
+		altdpram_component.rdcontrol_aclr = "OFF",
+		altdpram_component.rdcontrol_reg = "UNREGISTERED",
+		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
+		altdpram_component.width = W,
+		altdpram_component.widthad = AW,
+		altdpram_component.width_byteena = 1,
+		altdpram_component.wraddress_aclr = "OFF",
+		altdpram_component.wraddress_reg = "INCLOCK",
+		altdpram_component.wrcontrol_aclr = "OFF",
+		altdpram_component.wrcontrol_reg = "INCLOCK";
 endmodule

@@ -36,3 +36,5 @@ sim/sh2/build_*/
 sim/vdp1/gen/
 sim/vdp1/obj*/
 sim/vdp1/out/
+sim/vdp1/obj_orig/
+sim/vdp1/gen_orig/

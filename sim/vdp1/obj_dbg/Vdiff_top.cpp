@@ -27,6 +27,7 @@ Vdiff_top::Vdiff_top(VerilatedContext* _vcontextp__, const char* _vcname__)
     , AD_N{vlSymsp->TOP.AD_N}
     , DTEN_N{vlSymsp->TOP.DTEN_N}
     , REQ_N{vlSymsp->TOP.REQ_N}
+    , TAINT{vlSymsp->TOP.TAINT}
     , VRAM_RDY_r{vlSymsp->TOP.VRAM_RDY_r}
     , FB_RDY_r{vlSymsp->TOP.FB_RDY_r}
     , RDY_N_r{vlSymsp->TOP.RDY_N_r}
@@ -76,7 +77,7 @@ Vdiff_top::Vdiff_top(VerilatedContext* _vcontextp__, const char* _vcname__)
     , FB0_A_n{vlSymsp->TOP.FB0_A_n}
     , FB1_A_n{vlSymsp->TOP.FB1_A_n}
     , __PVT__REF_VDP1_PKG{vlSymsp->TOP.__PVT__REF_VDP1_PKG}
-    , __PVT__VDP1_PKG{vlSymsp->TOP.__PVT__VDP1_PKG}
+    , __PVT__VDP1P_PKG{vlSymsp->TOP.__PVT__VDP1P_PKG}
     , rootp{&(vlSymsp->TOP)}
 {
     // Register model with the context

@@ -14,7 +14,7 @@
 class Vdiff_top__Syms;
 class Vdiff_top___024root;
 class Vdiff_top_REF_VDP1_PKG;
-class Vdiff_top_VDP1_PKG;
+class Vdiff_top_VDP1P_PKG;
 
 
 // This class is the main interface to the Verilated model
@@ -52,6 +52,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top VL_NOT_FINAL : public VerilatedMode
     VL_IN8(&AD_N,0,0);
     VL_IN8(&DTEN_N,0,0);
     VL_IN8(&REQ_N,0,0);
+    VL_OUT8(&TAINT,0,0);
     VL_IN8(&VRAM_RDY_r,0,0);
     VL_IN8(&FB_RDY_r,0,0);
     VL_OUT8(&RDY_N_r,0,0);
@@ -105,7 +106,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top VL_NOT_FINAL : public VerilatedMode
     // Public to allow access to /* verilator public */ items.
     // Otherwise the application code can consider these internals.
     Vdiff_top_REF_VDP1_PKG* const __PVT__REF_VDP1_PKG;
-    Vdiff_top_VDP1_PKG* const __PVT__VDP1_PKG;
+    Vdiff_top_VDP1P_PKG* const __PVT__VDP1P_PKG;
 
     // Root instance pointer to allow access to model internals,
     // including inlined /* verilator public_flat_* */ items.
