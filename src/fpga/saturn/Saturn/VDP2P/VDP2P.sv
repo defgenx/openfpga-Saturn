@@ -1,8 +1,7 @@
 // altera message_off 10027
 
-import VDP2P_PKG::*;
-	
-module VDP2P (
+//the package is imported in the module header: VDP2.sv imports its own package at file scope
+module VDP2P import VDP2P_PKG::*; (
 	input             CLK,
 	input             RST_N,
 	input             CE_R,

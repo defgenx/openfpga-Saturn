@@ -178,6 +178,44 @@ preserved by construction and checked by the harness rather than re-derived.
 - Mutation script (`mutate.sh`) must still detect one-line damage in each new unit.
 - Timing: `quartus_sta` on a registered wrapper at 57.27 MHz after steps 1, 4 and 7.
 
-## 8. Status
+## 8. Status (measured)
 
-(filled in as steps land)
+Area-profile `quartus_map`, standalone VDP2P (`sizing/vdp2p/map.sh`); baseline = shrunk VDP2, 5,732 ALMs.
+
+| step | change | ALMs | ALUT | regs | note |
+|---|---|---|---|---|---|
+| 0 | scaffold = shrunk VDP2 | 5,732 | 7,686 | 4,841 | |
+| 1 | NBG cell data capture serialised through one lane network, early copy into a three-bank buffer | 5,363 | 7,115 | 4,953 | -369 |
+| 2 | one cell data read port per array (readers are mutually exclusive in effect), one write-data register | 5,221 | 7,009 | 4,890 | -142 |
+| 3 | character parameters in small RAMs (assembly words + three-bank ring) | 5,181 | 6,963 | 4,603 | -40 only: flip-flops that share ALMs with logic are not free to remove |
+| 4 | cell data read ports in M10K | 5,105 | 6,966 | 4,603 | -76 |
+| 5 | rotation per-table state in M10K | **5,016** | 6,982 | 4,597 | -89 |
+
+Fitter (`sizing/vdp2p/sta.sh`, registered wrapper, 456 virtual pins): 5,030 ALMs, 31 M10K (baseline 14: +17), 12 DSP. Setup
+slack at 17.46 ns single cycle: -1.47 ns (slow 85C); the failing paths are clock-enable (2-clock) paths, no multicycle
+constraints were written. Fitter figures are about 2.5% above map (5,350 vs 5,221 at step 2).
+
+Ablations of the step-2 design: RBG0+RBG1 removed 5,221 -> 4,042 (RBG is 1,179 ALMs); rotation coordinates and coefficient
+addresses tied to 0 (parameter engine, per-dot arithmetic, parameter RAMs): 4,340 (-881, 12 -> 3 DSP).
+
+Verification: 400 seeds x 1.5 M clocks, 21 scenes (3 new: extended colour calc with line colour and shadow, and
+NBG0/1 reduction), 0 mismatches. VRAM request bus, CPU read data, sync/interrupt outputs every clock; R,G,B in visible lines;
+write data under a write enable. Integration: `quartus_map ap_core` with `POCKET_VDP2P` elaborates (the package import
+had to move into the module header because VDP2.sv imports its package at file scope).
+
+Harness changes and deviations (all):
+1. RGB is not compared while VBL_N is low: a colour-depth/reduction register changed in blanking leaves stale bytes in the
+   shared read-port data for the first dots of the next line.
+2. RA_D/RB_D are compared only when the bank has a write enable (one data register).
+3. Address-forming registers (0xA0-0xAE, 0xBC-0xBE, 0xD6-0xDE) are written in blanking only; with random timing the shrunk base
+   also fails (seed 35, 127 of the 20-scene set), the same write-skew deviation as in vdp2.md.
+4. A cell-data lane after a colour-depth change keeps golden behaviour (lanes unchanged); only the shared read port differs
+   (deviation 1).
+
+Why 3,500 is not reached: the remaining ~7,000 ALUTs are wide muxes and per-layer arithmetic in the fetch/address unit
+(1,600), priority/colour (1,100), rotation (1,300 with its RAM write cones), scroll counters (600), pipelines (500), cell data
+(950). Removing flip-flops changes ALMs little (step 3); time-sharing a narrow adder or mux between layers costs as much in
+operand muxes as it saves (rank selection, 4:1 mux per operand) unless the state itself sits in RAM and is visited in
+sequence. Identified but not done: register file to MLAB with sequential readers (~970 flip-flops), rotation microcode on one
+multiplier with single parameter RAM, scroll counters in RAM with two adders, PN pipelines in RAM. Estimated total about
+-600 to -900 ALMs on top (4,100-4,400), still above 3,500; reaching 3,500 needs a clean-sheet fetch/address and dot pipeline.
