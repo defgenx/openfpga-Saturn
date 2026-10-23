@@ -20,7 +20,7 @@ SH_FILES := SH/core/SH_pkg.sv SH/core/SH_regfile.sv SH/core/SH_core.sv \
             SH/SH7604/SH7604_pkg.sv SH/SH7604/CACHE.sv SH/SH7604/BSC.sv SH/SH7604/DMAC.sv SH/SH7604/UBC.sv \
             SH/SH7604/INTC.sv SH/SH7604/FRT.sv SH/SH7604/WDT.sv SH/SH7604/SCI.sv SH/SH7604/DIVU.sv \
             SH/SH7604/MULT.sv SH/SH7604/MSBY.sv SH/SH7604/SH7604.sv SH7604_mem.sv SH_mem.sv
-SH2P_FILES := SH2P_pkg.sv SH2P_mem.sv SH2P_regfile.sv SH2P_core.sv SH7604P_pkg.sv SH7604P_mem.sv SH7604P_CACHE.sv SH7604P_BSC.sv \
+SH2P_FILES := SH2P_pkg.sv SH2P_mem.sv SH2P_regfile.sv SH2P_dec.sv SH2P_alu.sv SH2P_core.sv SH7604P_pkg.sv SH7604P_mem.sv SH7604P_CACHE.sv SH7604P_BSC.sv \
               SH7604P_DMAC.sv SH7604P_UBC.sv SH7604P_INTC.sv SH7604P_FRT.sv SH7604P_WDT.sv SH7604P_SCI.sv SH7604P_DIVU.sv \
               SH7604P_MULT.sv SH7604P_MSBY.sv SH7604P.sv $(notdir $(wildcard $(SRC)/SH/sh2p/SH2P_x_*.sv)) $(notdir $(wildcard $(SRC)/SH/sh2p/SH7604P_x_*.sv))
 ifeq ($(DUT),sh2p)
@@ -75,6 +75,15 @@ ptest: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 	  sort $(BUILD)/ptest.log | cut -c1-100; echo "$$(grep -c '^PASS' $(BUILD)/ptest.log) PASS, $$(grep -c -E '^(FAIL|MISMATCH)' $(BUILD)/ptest.log) FAIL"; \
 	  ! grep -q -E '^(FAIL|MISMATCH)' $(BUILD)/ptest.log
 
+# Soak: random instruction soup with more seeds (SEEDS=first..last as "a b"): make DUT=sh2p soak SEED0=100 SEED1=160
+SEED0 ?= 100
+SEED1 ?= 140
+soak: $(BUILD)/Vtb_top
+	@mkdir -p $(BUILD)/soak; for s in $$(seq $(SEED0) $(SEED1)); do python3 -c "import sys; sys.path.insert(0,'progs'); from rand_gen import gen; gen($$s, '$(BUILD)/soak/p$$s.hex')" || exit 1; done
+	@for s in $$(seq $(SEED0) $(SEED1)); do for cfg in $(CFGS); do set -- $$cfg; echo "$$s $$1 $$2 $$3"; done; done | \
+	  xargs -P $(JOBS) -L1 sh -c '$(BUILD)/Vtb_top +prog=$(BUILD)/soak/p$$0.hex +name=soak$$0/wait$$1,irq$$2,fast$$3 +wait=$$1 +irq=$$2 +fast=$$3 +cycles=$(or $(SOAKCYC),400000) | grep -E "^(PASS|FAIL|MISMATCH)" || echo "FAIL soak$$0 $$1 $$2 $$3 (no result)"' > $(BUILD)/soak.log; \
+	  echo "$$(grep -c '^PASS' $(BUILD)/soak.log) PASS, $$(grep -c -E '^(FAIL|MISMATCH)' $(BUILD)/soak.log) FAIL"; grep -E '^(FAIL|MISMATCH)' $(BUILD)/soak.log | head; ! grep -q -E '^(FAIL|MISMATCH)' $(BUILD)/soak.log
+
 # Like test, but counts: every run is listed and the summary shows how many matched exactly (for cut builds).
 report: $(BUILD)/Vtb_top $(addprefix $(BUILD)/prog_,$(addsuffix .hex,$(TESTS)))
 	@pass=0; bad=0; for t in $(TESTS); do for cfg in $(CFGS); do set -- $$cfg; \
@@ -102,4 +111,4 @@ unit-%: $(BUILD)/Vtb_%
 
 clean:
 	rm -rf $(BUILD)
-.PHONY: all test ptest report one clean
+.PHONY: all test ptest soak report one clean

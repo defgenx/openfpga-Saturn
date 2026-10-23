@@ -1341,9 +1341,6 @@ package SH2P_PKG;
 		DecInstr_t DI;			//Decoded instruction
 		bit [31:0] PC;
 		bit        BC;			//Branch condition
-		bit [31:0] RA;
-		bit [31:0] RB;
-		bit [31:0] R0;
 	} IDtoEX_t;
 
 	typedef struct
@@ -1362,20 +1359,9 @@ package SH2P_PKG;
 		bit [15:0] IR;
 		DecInstr_t DI;			//Decoded instruction
 		bit [31:0] PC;
-		bit [31:0] RES;
 		bit [31:0] RD;			//Read data
 		bit        LOCK;
 	} MAtoWB_t;
-	
-	typedef struct
-	{
-		bit [15:0] IR;
-		DecInstr_t DI;			//Decoded instruction
-		bit [31:0] PC;
-		bit [31:0] RESA;
-		bit [31:0] RESB;
-		bit        LOCK;
-	} WB_t;
 	
 	typedef struct
 	{
@@ -1383,7 +1369,6 @@ package SH2P_PKG;
 		IDtoEX_t EX;
 		EXtoMA_t MA;
 		MAtoWB_t WB;
-		WB_t     WB2;
 	} PipelineState_t;
 	
 	function bit[31:0] ByteShiftRigth(input bit[31:0] val, input bit[1:0] s);

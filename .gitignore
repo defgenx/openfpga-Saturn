@@ -38,3 +38,15 @@ sizing/sh2p/probe/out_*/
 sizing/sh2p/*.log
 sizing/sh2p/probe/*.log
 sizing/sh2p/gen/
+sim/sh2/dec/obj/
+sim/sh2/dec/obj_eq/
+sim/sh2/dec/*.pkl
+sim/sh2/dec/dec_dump.txt
+sizing/sh2p/alu/out_*/
+sizing/sh2p/alu/*.log
+sizing/sh2p/incremental_db/
+sizing/sh2p/db/
+sizing/sh2p/probe/db/
+sizing/sh2p/alu/db/
+sizing/sh2p/probe/incremental_db/
+sizing/sh2p/alu/incremental_db/

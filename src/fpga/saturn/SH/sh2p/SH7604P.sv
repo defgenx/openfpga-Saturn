@@ -217,6 +217,7 @@ module SH7604P
 		.CLK(CLK),
 		.RST_N(RST_N),
 		.CE(CE_R),
+		.CE_F(CE_F),
 		.EN(EN),
 		
 		.RES_N(RES_SYNC_N),
