@@ -27,7 +27,7 @@ for m in inst_re.finditer(txt):
     insts.append((typ, name, ports))
 
 def group(netname):
-    n = netname.lstrip('\\').replace('VDP2:u|', '')
+    n = netname.lstrip('\\').replace('VDP2:u|', '').replace('VDP2P:u|', '')
     n = re.sub(r'~.*$', '', n)
     n = re.sub(r'\[\d+\]', '[]', n)
     n = re.sub(r'\[\]$', '', n)
@@ -67,7 +67,7 @@ for name, p in flops:
         if port in ('q', 'clk'): continue
         add_sink(net, ('grp', g))
 for typ, name, p in others:
-    g = 'RAM/DSP:' + re.sub(r'~.*$', '', re.sub(r'\[\d+\]', '[]', name.replace('VDP2:u|', '').lstrip('\\')))[:60]
+    g = 'RAM/DSP:' + re.sub(r'~.*$', '', re.sub(r'\[\d+\]', '[]', name.replace('VDP2:u|', '').replace('VDP2P:u|', '').lstrip('\\')))[:60]
     for port, net in p.items():
         add_sink(net, ('grp', g))
 # outputs

@@ -165,7 +165,7 @@ module VDP2P (
 	
 	bit  [17: 1] VRAMA0_A, VRAMB0_A;
 	bit  [16: 1] VRAMA1_A, VRAMB1_A;
-	bit  [63: 0] VRAMA_D, VRAMB_D;
+	bit  [63: 0] VRAMA_D;   //write data of both banks (the bus is only used with a write enable)
 	bit  [ 7: 0] VRAMA_WE, VRAMB_WE;
 	bit          VRAMA0_RD, VRAMA1_RD, VRAMB0_RD, VRAMB1_RD;
 	bit  [15: 0] VRAMA0_Q, VRAMA1_Q, VRAMB0_Q, VRAMB1_Q;
@@ -1203,7 +1203,6 @@ module VDP2P (
 						VRAMB0_A <= {VRAM_WA[17:2],1'b0};
 						VRAMB1_A <= {VRAM_WA[16:2],1'b0};
 						VRAMA_D <= VRAM_D;
-						VRAMB_D <= VRAM_D;
 						VRAMA_WE <= VRAM_WE & {8{~VRAM_WA[18]}};
 						VRAMB_WE <= VRAM_WE & {8{ VRAM_WA[18]}};
 						VRAM_WRITE_PEND_CLR = 1;
@@ -1269,7 +1268,6 @@ module VDP2P (
 							if (VRAM_WRITE_PEND) begin
 								VRAMB0_A <= {VRAM_WA[17:2],1'b0};
 								VRAMA_D <= VRAM_D;//////////////////////
-								VRAMB_D <= VRAM_D;
 								VRAMB_WE <= VRAM_WE;
 								VRAM_WRITE_PEND_CLR = 1;
 							end else if (VRAM_READ_PEND) begin
@@ -1499,7 +1497,7 @@ module VDP2P (
 	
 	assign RB0_A = VRAMB0_A;
 	assign RB1_A = VRAMB1_A;
-	assign RB_D = VRAMB_D;
+	assign RB_D = VRAMA_D;
 	assign RB_WE = VRAMB_WE;
 	assign RB_RD = VRAMB0_RD | VRAMB1_RD;
 
@@ -2863,14 +2861,21 @@ C_NEN[0] = 0;
 	wire [ 63:0] NDC_WD3 = {NBG_CDC[3][7],NBG_CDC[3][6],NBG_CDC[3][5],NBG_CDC[3][4],NBG_CDC[3][3],NBG_CDC[3][2],NBG_CDC[3][1],NBG_CDC[3][0]};
 	wire [  7:0] N0_D0, N0_D1, N0_D2, N0_D3, N1_D1, N1_D3, N2_D2, N3_D3;
 	wire [ 10:0] N0I = NCX[0].INT, N1I = NCX[1].INT;
-	VDP2P_NDCRD n0d0(CLK, NDC_WE_E, NDC_P, NDC_WD0, {(N0_HF4|N0_HF8) ? N0I[4] : N0_QT4 ? N0I[5] : N0I[3], N0I[2:0]}, N0_D0);
-	VDP2P_NDCRD n0d1(CLK, NDC_WE_E, NDC_P, NDC_WD1, N0I[3:0], N0_D1);
-	VDP2P_NDCRD n0d2(CLK, NDC_WE_E, NDC_P, NDC_WD2, {N0_QT4 ? N0I[5] : N0_HF8 ? N0I[4] : N0I[3], N0I[2:0]}, N0_D2);
-	VDP2P_NDCRD n0d3(CLK, NDC_WE_E, NDC_P, NDC_WD3, N0I[3:0], N0_D3);
-	VDP2P_NDCRD n1d1(CLK, NDC_WE_E, NDC_P, NDC_WD1, {(N1_HF4|N1_HF8) ? N1I[4] : N1_QT4 ? N1I[5] : N1I[3], N1I[2:0]}, N1_D1);
-	VDP2P_NDCRD n1d3(CLK, NDC_WE_E, NDC_P, NDC_WD3, {N1_QT4 ? N1I[5] : N1_HF8 ? N1I[4] : N1I[3], N1I[2:0]}, N1_D3);
-	VDP2P_NDCRD n2d2(CLK, NDC_WE_E, NDC_P, NDC_WD2, NCX[2].INT[3:0], N2_D2);
-	VDP2P_NDCRD n3d3(CLK, NDC_WE_E, NDC_P, NDC_WD3, NCX[3].INT[3:0], N3_D3);
+	//One read port per array. The readers of an array are mutually exclusive in effect: the layer that does not own the
+	//array in the current colour depth / reduction mode is switched off by N1ON/N2ON/N3ON below, so its data is unused.
+	wire         N0_REDUCE_I = (NSxREG[0].CHCN[0] && NSxREG[0].ZMHF) || NSxREG[0].ZMQT;
+	wire         N1_REDUCE_I = (NSxREG[1].CHCN[0] && NSxREG[1].ZMHF) || NSxREG[1].ZMQT;
+	wire [  3:0] NDI0 = {(N0_HF4|N0_HF8) ? N0I[4] : N0_QT4 ? N0I[5] : N0I[3], N0I[2:0]};
+	wire [  3:0] NDI1 = NSxREG[0].CHCN[2] ? N0I[3:0] : {(N1_HF4|N1_HF8) ? N1I[4] : N1_QT4 ? N1I[5] : N1I[3], N1I[2:0]};
+	wire [  3:0] NDI2 = (NSxREG[0].CHCN[2] | NSxREG[0].CHCN[1] | N0_REDUCE_I) ? {N0_QT4 ? N0I[5] : N0_HF8 ? N0I[4] : N0I[3], N0I[2:0]} : NCX[2].INT[3:0];
+	wire [  3:0] NDI3 = NSxREG[0].CHCN[2] ? N0I[3:0] : (NSxREG[1].CHCN[1] | N1_REDUCE_I) ? {N1_QT4 ? N1I[5] : N1_HF8 ? N1I[4] : N1I[3], N1I[2:0]} : NCX[3].INT[3:0];
+	wire [  7:0] ND0, ND1, ND2, ND3;
+	VDP2P_NDCRD nd0(CLK, NDC_WE_E, NDC_P, NDC_WD0, NDI0, ND0);
+	VDP2P_NDCRD nd1(CLK, NDC_WE_E, NDC_P, NDC_WD1, NDI1, ND1);
+	VDP2P_NDCRD nd2(CLK, NDC_WE_E, NDC_P, NDC_WD2, NDI2, ND2);
+	VDP2P_NDCRD nd3(CLK, NDC_WE_E, NDC_P, NDC_WD3, NDI3, ND3);
+	assign N0_D0 = ND0; assign N0_D1 = ND1; assign N0_D2 = ND2; assign N0_D3 = ND3;
+	assign N1_D1 = ND1; assign N1_D3 = ND3; assign N2_D2 = ND2; assign N3_D3 = ND3;
 	DotData_t R0DOT, N0DOT, N1DOT, N2DOT, N3DOT;
 	bit [31:0] N0DOTDC, N1DOTDC, N2DOTDC, N3DOTDC;
 	bit [31:0] R0DOTDC;

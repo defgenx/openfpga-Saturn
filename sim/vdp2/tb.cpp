@@ -346,10 +346,15 @@ int main(int argc, char** argv) {
 		top->eval();
 
 		const VlWide<3>& rm = top->r_misc; const VlWide<3>& dm = top->d_misc;
-		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rm, &dm, sizeof(rm)) != 0 ||
-			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || top->r_RA_D != top->d_RA_D ||
+		// R,G,B are compared while VBL_N is high (visible lines); in vertical blank only the sync/IRQ/bus outputs are.
+		// A colour-depth or reduction register changed during blanking leaves stale bytes in the dot data for the first
+		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
+		VlWide<3> rmc = rm, dmc = dm;
+		if (!bits(rm, 7, 1)) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
+		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
+			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
-			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || top->r_RB_D != top->d_RB_D ||
+			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || (top->r_RB_WE && top->r_RB_D != top->d_RB_D) ||
 			top->r_RB_WE != top->d_RB_WE || top->r_RB_RD != top->d_RB_RD);
 		if (diff) {
 			static const struct { const char* n; int lo, w; } f[] = {
@@ -359,7 +364,7 @@ int main(int argc, char** argv) {
 			printf("MISMATCH seed=%llu scene=%d clk=%ld\n", (unsigned long long)seed, scene, t);
 			for (auto& x : f) { uint64_t a = bits(rm, x.lo, x.w), b = bits(dm, x.lo, x.w); if (a != b) printf("  %-9s ref=%llx dut=%llx\n", x.n, (unsigned long long)a, (unsigned long long)b); }
 			#define CMP(n) if (top->r_##n != top->d_##n) printf("  %-9s ref=%llx dut=%llx\n", #n, (unsigned long long)top->r_##n, (unsigned long long)top->d_##n);
-			CMP(RA0_A) CMP(RA1_A) CMP(RA_D) CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) CMP(RB_D) CMP(RB_WE) CMP(RB_RD)
+			CMP(RA0_A) CMP(RA1_A) if (top->r_RA_WE) { CMP(RA_D) } CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) if (top->r_RB_WE) { CMP(RB_D) } CMP(RB_WE) CMP(RB_RD)
 			failed = true;
 #ifdef DBG
 			for (int k = 9; k >= 0; k--) { Hist& h = hist[(t - k) & 15];

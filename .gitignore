@@ -33,3 +33,4 @@ sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
+sizing/vdp2p/snap/
