@@ -33,3 +33,8 @@ sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
+sizing/sh2p/out_*/
+sizing/sh2p/probe/out_*/
+sizing/sh2p/*.log
+sizing/sh2p/probe/*.log
+sizing/sh2p/gen/
