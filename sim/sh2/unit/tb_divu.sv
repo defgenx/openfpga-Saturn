@@ -60,14 +60,14 @@ module tb_divu;
 	endfunction
 
 	// ---- structured operands
-	function [31:0] cls_div(input integer dummy);
+	function [31:0] cls_div(input integer sel);
 		reg [31:0] p, s;
 		integer k;
 		begin
 			k = rn(32);
 			p = 32'h1 << k;
 			s = rnd32(0) >> rn(32);
-			case (rn(26))
+			case (sel < 0 ? rn(26) : sel)
 				0: cls_div = 0;
 				1: cls_div = 1;
 				2: cls_div = 32'hFFFFFFFF;
@@ -98,13 +98,13 @@ module tb_divu;
 		end
 	endfunction
 
-	function [65:0] cls_q(input integer dummy);   // quotient magnitude
+	function [65:0] cls_q(input integer sel);   // quotient magnitude
 		reg [65:0] one, k;
 		integer e;
 		begin
 			one = 66'd1;
 			e = rn(41);
-			case (rn(24))
+			case (sel < 0 ? rn(24) : sel)
 				0: cls_q = 0;
 				1: cls_q = 1;
 				2: cls_q = 2;
@@ -133,18 +133,43 @@ module tb_divu;
 		end
 	endfunction
 
+	integer sweep = 0, swc = 0;
 	reg [63:0] gen_x;
 	reg [31:0] gen_d;
 	reg        gen_64;
+	task gen_sweep;   // deterministic cross product of operand classes
+		reg [127:0] qq, dd, rr, xx;
+		integer w, di, qi, ri, de, ng;
+		begin
+			w = swc; swc = swc + 1;
+			di = w % 26; w = w / 26; qi = w % 24; w = w / 24; ri = w % 4; w = w / 4; de = w % 3; w = w / 3; ng = w % 2; w = w / 2;
+			gen_64 = (w % 2) == 0;
+			gen_d = cls_div(di);
+			dd = gen_d[31] ? (128'h1_0000_0000 - {96'h0, gen_d}) : {96'h0, gen_d};
+			qq = {62'h0, cls_q(qi)};
+			case (ri)
+				0: rr = 0;
+				1: rr = (dd == 0) ? 128'h0 : (dd - 1);
+				2: rr = (dd == 0) ? 128'h0 : (rnd32(0) % dd);
+				default: rr = (dd > 1) ? 128'h1 : 128'h0;
+			endcase
+			xx = qq * dd + rr;
+			if (de == 1) xx = xx + 1;
+			if (de == 2) xx = xx - 1;
+			if (ng) xx = -xx;
+			gen_x = gen_64 ? xx[63:0] : {{32{xx[31]}}, xx[31:0]};
+		end
+	endtask
 	task gen_operands;
 		reg [127:0] qq, dd, rr, xx;
 		reg [31:0] lo;
 		begin
-			gen_d = cls_div(0);
+			if (sweep) begin gen_sweep; end else begin
+			gen_d = cls_div(-1);
 			gen_64 = (rn(5) != 0);
 			if (!gen_64) begin
 				case (rn(4))
-					0: lo = cls_div(0);
+					0: lo = cls_div(-1);
 					1: lo = interesting(rnd32(0));
 					2: lo = gen_d * rn(4) + rn(3) - 1;
 					default: lo = rnd32(0);
@@ -154,7 +179,7 @@ module tb_divu;
 				gen_x = {interesting(rnd32(0)), interesting(rnd32(0))};
 			end else begin
 				dd = gen_d[31] ? (128'h1_0000_0000 - {96'h0, gen_d}) : {96'h0, gen_d};
-				qq = {62'h0, cls_q(0)};
+				qq = {62'h0, cls_q(-1)};
 				case (rn(4))
 					0: rr = 0;
 					1: rr = (dd == 0) ? 128'h0 : (dd - 1);
@@ -169,6 +194,7 @@ module tb_divu;
 				endcase
 				if (rn(2) == 0) xx = -xx;
 				gen_x = xx[63:0];
+			end
 			end
 		end
 	endtask
@@ -290,7 +316,7 @@ module tb_divu;
 				end else if (rn(4) != 0) begin
 					r = rnd32(0);
 					mode = rn(16);
-					if (mode < 5) push_div;
+					if (mode < (sweep ? 16 : 5)) push_div;
 					else begin
 						REQ <= 1;
 						BA <= 4'hF;
@@ -328,6 +354,7 @@ module tb_divu;
 		if (!$value$plusargs("seed=%d", seed)) seed = 1;
 		xs = 32'h9E3779B9 ^ (seed * 32'h85EBCA6B);
 		if (!$value$plusargs("cycles=%d", ncyc)) ncyc = 400000;
+		if (!$value$plusargs("sweep=%d", sweep)) sweep = 0;
 		cyc = 0; nreq = 0;
 		#37 RST_N = 1;
 	end
