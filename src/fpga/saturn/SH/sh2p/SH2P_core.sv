@@ -47,6 +47,7 @@ module SH2P_core
 	SR_t        SR;
 	
 	PipelineState_t PIPE;
+	DecInstr_t  EX_DI;
 	bit         IF_STALL;
 	bit         ID_STALL;
 	bit         EX_STALL;
@@ -288,7 +289,6 @@ module SH2P_core
 	assign BR_T = EX_DI.CTRL.W && EX_DI.CTRL.S == SR_ ? SR_NEW.T : SR.T;
 
 	SH2P_dec #(VER) dec (.IR(DEC_IR), .STATE(STATE), .T(BR_T), .DS(ID_DELAY_SLOT), .RES_EXP(RES_EXP), .INT_EXP(INT_REQ_LATCH), .ILI_EXP(ILI_EXP), .ILSI(ILSI), .DECI(ID_DECI), .CLS_O(ID_CLS));
-	DecInstr_t EX_DI;
 	SH2P_decrom decrom (.CLK(CLK), .EN_A(EN && CE && !ID_STALL), .RESET(!RST_N || !RES_N), .CLS_D(ID_CLS), .IR(PIPE.EX.IR), .DI(EX_DI));
 	
 	wire [ 2: 0] NEXT_STATE = STATE == ID_DECI.LST ? 3'd0 : STATE + 3'd1;
