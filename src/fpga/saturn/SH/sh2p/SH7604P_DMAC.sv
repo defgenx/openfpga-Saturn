@@ -44,7 +44,9 @@ module SH7604P_DMAC (
 
 	import SH7604P_PKG::*;
 
-	// CE_R and CE_F are never high in the same clk_sys.
+	// Same ports and cycle-exact behaviour as SH7604_DMAC. CE_R and CE_F are never high in the same clk_sys.
+	// SAR/DAR live in MLABs (_ADR), TCR in flops (_TCR), the burst buffer is a pointer ring in an MLAB,
+	// _RDO holds the IBUS read snapshot, _DBO the DBUS_DO byte/word mux.
 	CHCRx_t     CHCR[2];
 	wire [23:0] TCR0, TCR1;
 	bit   [1:0] DRCR_RS[2];
@@ -180,6 +182,7 @@ module SH7604P_DMAC (
 		.EVW(TCR_EVW), .TCR0(TCR0), .TCR1(TCR1), .NEXT_0(TCR_NEXT_0), .NEXT_1(TCR_NEXT_1));
 	
 	// SAR/DAR of both channels (word {channel, DAR}) in two MLAB copies: A follows the DMA datapath, B serves IBUS reads.
+	// AR_SUB, AR_INC and MW_IB are kept as nets so the mapper does not duplicate them into every adder bit.
 	wire  [1:0] ADDR_A = {DMA_CH, ~DMA_RD};
 	wire  [1:0] ADDR_B = {IA[2], IA[0]};
 	wire [31:0] QA, QB;
@@ -414,6 +417,8 @@ module SH7604P_DMAC (
 endmodule
 
 
+// SAR/DAR storage and the shared +/-1/2/4 adder. Words 4..7 are never written and read as 0: a word is read through
+// them until it has been written, which reproduces the reset value of SAR/DAR without clearing the MLAB.
 module SH7604P_DMAC_ADR (
 	input         CLK,
 	input         RST_N,
@@ -429,8 +434,8 @@ module SH7604P_DMAC_ADR (
 	output [31:0] QB
 );
 	bit   [3:0] SV;
-	wire  [2:0] RADDR_A = (ACCESS & SV[ADDR_A]) ? {1'b0,ADDR_A} : 3'd4;
-	wire  [2:0] RADDR_B = SV[ADDR_B] ? {1'b0,ADDR_B} : 3'd4;
+	wire  [2:0] RADDR_A = {~(ACCESS & SV[ADDR_A]), ADDR_A};
+	wire  [2:0] RADDR_B = {~SV[ADDR_B], ADDR_B};
 	wire        MW_EN   = MW_IB | MW_EV;
 	wire  [1:0] MW_ADDR = MW_IB ? ADDR_B : ADDR_A;
 	// IBUS data passes through the adder as A + 0.
@@ -461,6 +466,7 @@ module SH7604P_DMAC_ADR (
 	end
 endmodule
 
+// TCR of both channels; NEXT_0/NEXT_1 flag TCR-1 == 0 / 1 of the active channel.
 module SH7604P_DMAC_TCR (
 	input         CLK,
 	input         RST_N,
@@ -492,6 +498,7 @@ module SH7604P_DMAC_TCR (
 	end
 endmodule
 
+// IBUS read data snapshot (captured on CE_F) and its output gating.
 module SH7604P_DMAC_RDO (
 	input         CLK,
 	input         RST_N,
@@ -543,6 +550,7 @@ module SH7604P_DMAC_RDO (
 	assign IBUS_ACT = REG1_SEL | REG2_SEL;
 endmodule
 
+// DBUS_DO: byte/word replication of DBUS_DI by transfer size, or the oldest burst buffer word.
 module SH7604P_DMAC_DBO (
 	input   [1:0] TS,
 	input   [1:0] SA_BA,
