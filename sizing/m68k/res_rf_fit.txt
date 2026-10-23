@@ -1,0 +1,2 @@
+rf: mapALM= ALUT= REG= MEMbits=N/AuntilPartitionMerge MLAB=
+grep: /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/m68k-small/sizing/m68k/out_rf/m68k_rf.fit.summary: No such file or directory
