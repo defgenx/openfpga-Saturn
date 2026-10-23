@@ -37,3 +37,17 @@ run_img: lock
 # SingleStepTests through the register loader, lockstep golden/DUT (tests.txt from sst2txt.py)
 run_sst: lock
 	cd obj_lock && ./Vtb_lock sst $(SST)
+
+# System lockstep: golden SCSP + 68K as in Saturn.sv, golden FX68K vs m68kp. SCSP from the golden submodule.
+S  = ../../ref/Saturn_MiSTer/rtl/Saturn/SCSP
+FILTER = perl -ne 'if (/synopsys translate_off/) {$$s=1} if (!$$s && !/^`define SIM/) {s/OP2\.PHASE = PHASE;/OP2.PHASE <= PHASE;/; print} if (/synopsys translate_on/) {$$s=0}'
+build_sys/SCSP.sv: $(S)/SCSP.sv
+	mkdir -p build_sys && $(FILTER) $< > $@
+	cp $(S)/SCSP_pkg.sv build_sys/SCSP_pkg.sv
+obj_sys/Vtb_sys: build_sys/SCSP.sv ref/fx68k.sv tb_sys.sv tb_sys.cpp $(wildcard $(M)/*.sv)
+	verilator --cc --exe --build -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -O2 -CFLAGS -O2 --structs-packed --no-assert --public-flat-rw --top-module tb_sys -Mdir obj_sys \
+	  build_sys/SCSP_pkg.sv ../scsp/altsyncram.v build_sys/SCSP.sv ref/fx68k.sv ref/fx68kAlu.sv ref/uaddrPla.sv $(M)/m68kp.sv $(M)/m68kp_alu.sv $(M)/m68kp_pla.sv $(M)/m68kp_plarom.sv tb_sys.sv tb_sys.cpp -o Vtb_sys
+	cd obj_sys && for f in microrom nanorom; do ln -sf ../$(F)/$$f.mem .; done
+sys: obj_sys/Vtb_sys
+run_sys: sys
+	cd obj_sys && for s in 1 2 3 4 5 6; do GEN_SND=1 python3 ../gen_prog.py $$s /tmp/m68kp_snd_$$s.bin 120 && ./Vtb_sys /tmp/m68kp_snd_$$s.bin 3000000 || exit 1; done

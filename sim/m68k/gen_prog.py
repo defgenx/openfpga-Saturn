@@ -4,7 +4,9 @@ code, bit tests, table lookups through (An)/(An)+/d8(An,Xn), short loops (DBRA),
 shifts, interrupt handlers with RTE, TRAP, MOVE SR. Writes a 64 KiB memory image (big endian).
 usage: gen_prog.py <seed> <out.bin> [instructions]"""
 import random, struct, sys
+import os
 seed, out = int(sys.argv[1]), sys.argv[2]
+SND = os.environ.get('GEN_SND') == '1'     # SCSP system profile: timer A interrupt, slot register traffic
 n = int(sys.argv[3]) if len(sys.argv) > 3 else 600
 R = random.Random(seed)
 mem = bytearray(0x10000)
@@ -49,6 +51,11 @@ def op_ea(base, e, *pre):           # base opcode word with EA in low six bits
 def dn(): return R.randrange(8)
 
 def gen_one():
+    if SND and R.random() < 0.08:
+        a = 0x100000 + R.choice([R.randrange(0, 0x100) * 4 + 0x20 * R.randrange(32) * 0, 0x20 * R.randrange(32) + R.randrange(0, 16) * 2, 0x400, 0x408 + 2 * R.randrange(4)])
+        if R.random() < 0.7: emit(0x33FC, R.randrange(0x10000), a >> 16, a & 0xffff)     # MOVE.W #imm,abs.l
+        else: emit(0x3039 | dn() << 9, a >> 16, a & 0xffff)                                # MOVE.W abs.l,Dn
+        return
     c = R.random()
     sz = R.choice(['b', 'w', 'w', 'l'])
     s = SZ[sz]
@@ -161,12 +168,19 @@ w16(0x200, 0x4e71); w16(0x202, 0x4e73)
 w16(0x210, 0x54af); w16(0x212, 0x0002); w16(0x214, 0x4e73)               # ADDQ.L #2,2(A7) ; RTE
 w16(0x240, 0x2e7c); w32(0x242, 0xf000)                                  # MOVEA.L #stack,A7 ; JMP loop (patched below)
 w16(0x280, 0x52b9); w32(0x282, DATA + 0x3ffc); w16(0x286, 0x4e73)         # ADDQ.L #1,$xxxx.L ; RTE
+if SND:                                                                  # timer A interrupt: clear SCIPD, reload TIMA, count
+    p = 0x280
+    for w in (0x33FC, 0x0040, 0x0010, 0x0422, 0x33FC, 0x00F8, 0x0010, 0x0418, 0x52B9): w16(p, w); p += 2
+    w32(p, DATA + 0x3ffc); p += 4; w16(p, 0x4E73)
 # helpers at 0x300,0x308,0x310,0x318: short subroutines ending in RTS
 helpers = [[0xd041, 0x4e75], [0x4a58, 0x4e75], [0xe349, 0x4e75], [0x2018, 0x4e75]]
 for i, h in enumerate(helpers):
     for j, x in enumerate(h): w16(0x300 + 8 * i + 2 * j, x)
 pc = 0x400
 emit(0x2E7C); emit32(0xf000)                                    # MOVEA.L #stack,A7
+if SND:
+    for reg, val in ((0x100418, 0x00F0), (0x10041E, 0x0040), (0x100424, 0x0040), (0x100426, 0x0040), (0x100400, 0x000F)):
+        emit(0x33FC, val, reg >> 16, reg & 0xffff)                          # TIMA near overflow, enable timer A, level 3, volume
 loop = pc
 for a in range(6):                                              # A0-A5 into the data area
     emit(0x207C | a << 9); emit32(DATA + 0x400 + a * 0x400 + R.randrange(0, 0x100) * 2)

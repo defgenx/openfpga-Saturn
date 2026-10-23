@@ -2,3 +2,6 @@ ref/
 obj_*/
 pla/pla_table.txt
 pla/obj_pla/
+obj_sys/
+obj_pla/
+build_sys/
