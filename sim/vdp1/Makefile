@@ -3,14 +3,14 @@
 #   make -C sim vdp1-ppm      same, dump every scenario's framebuffers as PPM
 #   make -C sim/vdp1 N=200 SEED=7 run    custom run
 REF  := ../../ref/Saturn_MiSTer/rtl/Saturn/VDP1
-DUT  := ../../src/fpga/saturn/Saturn/VDP1
+DUT  := ../../src/fpga/saturn/Saturn/VDP1P
 N    ?= 40
 SEED ?= 1
 PPM  ?= 6
 VFLAGS = --cc --exe --build -j 4 --top-module diff_top -Mdir obj -Wno-fatal -Wno-lint -Wno-style \
          -Wno-PROCASSWIRE -Wno-COMBDLY -Wno-WIDTH -Wno-UNOPTFLAT --x-initial 0 --x-assign 0 -O3 \
          -CFLAGS "-O2 -std=c++17" $(VEXTRA)
-SRC = gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1_pkg.sv $(DUT)/VDP1.sv altdpram.v gen/diff_top.sv
+SRC = gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1P_pkg.sv $(DUT)/VDP1P.sv altdpram.v gen/diff_top.sv
 
 all: run divtest
 
@@ -50,6 +50,6 @@ cov:
 # Exhaustive divider equivalence (all 5-bit dividends x all 12-bit divisors)
 divtest: gen/REF_VDP1.sv
 	verilator --cc --exe --build -j 4 --top-module divtest -Mdir obj_div -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-COMBDLY -Wno-WIDTH --x-initial 0 -CFLAGS "-O2" \
-	  gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1_pkg.sv $(DUT)/VDP1.sv altdpram.v divtest.sv divtest.cpp
+	  gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1P_pkg.sv $(DUT)/VDP1P.sv altdpram.v divtest.sv divtest.cpp
 	./obj_div/Vdivtest
 .PHONY: divtest

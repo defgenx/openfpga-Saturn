@@ -882,7 +882,11 @@ module Saturn
 	);
 `endif
 	
+`ifdef POCKET_VDP1P
+	VDP1P VDP1
+`else
 	VDP1 VDP1
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),

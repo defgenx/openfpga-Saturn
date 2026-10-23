@@ -33,3 +33,6 @@ sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
+sim/vdp1/gen/
+sim/vdp1/obj*/
+sim/vdp1/out/
