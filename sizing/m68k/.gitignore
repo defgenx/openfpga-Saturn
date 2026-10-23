@@ -3,3 +3,4 @@ out_*.log
 db/
 incremental_db/
 snap_*/
+sta_*.tcl
