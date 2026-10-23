@@ -1772,14 +1772,14 @@ module VDP2P (
 			SPY_WE = 1; SPY_WA = DOTCLK_DIV[1]; SPY_WD = $signed(SPY_Q) + $signed(DY_Q);
 		end
 	end
-	VDP2P_SDP #(1,32) r_xst(CLK, XST_WE, RPN, XST_WD, RPN, XST_Q);
-	VDP2P_SDP #(1,32) r_yst(CLK, YST_WE, RPN, YST_WD, RPN, YST_Q);
-	VDP2P_SDP #(1,32) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, DOTCLK_DIV[1], DX_Q);
-	VDP2P_SDP #(1,32) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, DOTCLK_DIV[1], DY_Q);
-	VDP2P_SDP #(1,32) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, DOTCLK_DIV[1], XP_Q);
-	VDP2P_SDP #(1,32) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, DOTCLK_DIV[1], YP_Q);
-	VDP2P_SDP #(1,32) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, DOTCLK_DIV[1], SPX_Q);
-	VDP2P_SDP #(1,32) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, DOTCLK_DIV[1], SPY_Q);
+	VDP2P_SDP #(1,32,0) r_xst(CLK, XST_WE, RPN, XST_WD, RPN, XST_Q);
+	VDP2P_SDP #(1,32,0) r_yst(CLK, YST_WE, RPN, YST_WD, RPN, YST_Q);
+	VDP2P_SDP #(1,32,0) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, DOTCLK_DIV[1], DX_Q);
+	VDP2P_SDP #(1,32,0) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, DOTCLK_DIV[1], DY_Q);
+	VDP2P_SDP #(1,32,0) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, DOTCLK_DIV[1], XP_Q);
+	VDP2P_SDP #(1,32,0) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, DOTCLK_DIV[1], YP_Q);
+	VDP2P_SDP #(1,32,0) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, DOTCLK_DIV[1], SPX_Q);
+	VDP2P_SDP #(1,32,0) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, DOTCLK_DIV[1], SPY_Q);
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [31: 0] RP_WD,RCT_WD;
 		bit          CT_RP, CT_USE, CT_SEL;
