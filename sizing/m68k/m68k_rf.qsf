@@ -24,8 +24,10 @@ set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
 set_global_assignment -name TOP_LEVEL_ENTITY m68k_wrap
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_rf
 set_global_assignment -name VERILOG_MACRO "POCKET_M68KP=1"
-set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/M68KP/m68kp.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/M68KP/m68kp_alu.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/M68KP/m68kp_pla.sv
+set_global_assignment -name VERILOG_MACRO "M68KP_PLA_LOGIC=1"
+set_global_assignment -name SYSTEMVERILOG_FILE snap_rf/m68kp.sv
+set_global_assignment -name SYSTEMVERILOG_FILE snap_rf/m68kp_alu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE snap_rf/m68kp_pla.sv
+set_global_assignment -name SYSTEMVERILOG_FILE snap_rf/m68kp_plarom.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name SYSTEMVERILOG_FILE m68k_wrap.sv

@@ -12,9 +12,14 @@ for t in src.values():
         names |= set(re.findall(r'(\w+)\s*=', m.group(1)))
 names -= {'fx68kTop'}
 pat = re.compile(r'\b(' + '|'.join(sorted(names, key=len, reverse=True)) + r')\b')
+macros = set()
+for t in src.values():
+    macros |= set(re.findall(r'^`define\s+(\w+)', t, re.M))
+mpat = re.compile(r'`(define\s+|undef\s+|)(' + '|'.join(sorted(macros, key=len, reverse=True)) + r')\b')
 os.makedirs(outdir, exist_ok=True)
 for f, t in src.items():
     # keep $readmemb file names and `define macros untouched
     t = pat.sub(lambda m: prefix + m.group(1), t)
+    t = mpat.sub(lambda m: '`' + m.group(1) + prefix + m.group(2), t)
     open(os.path.join(outdir, os.path.basename(f)), 'w').write(t)
 print(len(names), 'identifiers prefixed')

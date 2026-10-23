@@ -46,21 +46,21 @@ module mp_fx68kAlu ( input clk, pwrUp, enT1, enT3, enT4,
 	output [15:0] aluOut);
 
 
-`define ALU_ROW_01		16'h0002
-`define ALU_ROW_02		16'h0004
-`define ALU_ROW_03		16'h0008
-`define ALU_ROW_04		16'h0010
-`define ALU_ROW_05		16'h0020
-`define ALU_ROW_06		16'h0040
-`define ALU_ROW_07		16'h0080
-`define ALU_ROW_08		16'h0100
-`define ALU_ROW_09		16'h0200
-`define ALU_ROW_10		16'h0400
-`define ALU_ROW_11		16'h0800
-`define ALU_ROW_12		16'h1000
-`define ALU_ROW_13		16'h2000
-`define ALU_ROW_14		16'h4000
-`define ALU_ROW_15		16'h8000
+`define MP_ALU_ROW_01		16'h0002
+`define MP_ALU_ROW_02		16'h0004
+`define MP_ALU_ROW_03		16'h0008
+`define MP_ALU_ROW_04		16'h0010
+`define MP_ALU_ROW_05		16'h0020
+`define MP_ALU_ROW_06		16'h0040
+`define MP_ALU_ROW_07		16'h0080
+`define MP_ALU_ROW_08		16'h0100
+`define MP_ALU_ROW_09		16'h0200
+`define MP_ALU_ROW_10		16'h0400
+`define MP_ALU_ROW_11		16'h0800
+`define MP_ALU_ROW_12		16'h1000
+`define MP_ALU_ROW_13		16'h2000
+`define MP_ALU_ROW_14		16'h4000
+`define MP_ALU_ROW_15		16'h8000
 	
 	
 	// Bit positions for flags in CCR
@@ -652,29 +652,29 @@ module mp_rowDecoder( input [15:0] ird,
 
 		'h4:  begin
 				if( ird[8])
-					row = `ALU_ROW_06;			// chk (or lea)
+					row = `MP_ALU_ROW_06;			// chk (or lea)
 				else case( ird[11:9])
-					'b000: row = `ALU_ROW_10;	// negx
-					'b001: row = `ALU_ROW_04;	// clr
-					'b010: row = `ALU_ROW_05;	// neg
-					'b011: row = `ALU_ROW_11;	// not
-					'b100: row = (ird[7]) ? `ALU_ROW_08 : `ALU_ROW_09;	// nbcd/swap/ext(or pea)
-					'b101: row = `ALU_ROW_15;	// tst & tas
+					'b000: row = `MP_ALU_ROW_10;	// negx
+					'b001: row = `MP_ALU_ROW_04;	// clr
+					'b010: row = `MP_ALU_ROW_05;	// neg
+					'b011: row = `MP_ALU_ROW_11;	// not
+					'b100: row = (ird[7]) ? `MP_ALU_ROW_08 : `MP_ALU_ROW_09;	// nbcd/swap/ext(or pea)
+					'b101: row = `MP_ALU_ROW_15;	// tst & tas
 					default: row = 0;
 				endcase
 			end
 
 		'h0: begin
 				if( ird[8])                       // dynamic bit
-					row = ird[7] ? `ALU_ROW_14 : `ALU_ROW_13;
+					row = ird[7] ? `MP_ALU_ROW_14 : `MP_ALU_ROW_13;
 				else case( ird[ 11:9])
-					'b000:   row = `ALU_ROW_14;	// ori
-					'b001:   row = `ALU_ROW_04;	// andi
-					'b010:   row = `ALU_ROW_05;	// subi
-					'b011:   row = `ALU_ROW_02;	// addi
-					'b100:   row = ird[7] ? `ALU_ROW_14 : `ALU_ROW_13;   // static bit
-					'b101:   row = `ALU_ROW_13;	// eori
-					'b110:   row = `ALU_ROW_06;	// cmpi
+					'b000:   row = `MP_ALU_ROW_14;	// ori
+					'b001:   row = `MP_ALU_ROW_04;	// andi
+					'b010:   row = `MP_ALU_ROW_05;	// subi
+					'b011:   row = `MP_ALU_ROW_02;	// addi
+					'b100:   row = ird[7] ? `MP_ALU_ROW_14 : `MP_ALU_ROW_13;   // static bit
+					'b101:   row = `MP_ALU_ROW_13;	// eori
+					'b110:   row = `MP_ALU_ROW_06;	// cmpi
 					default: row = 0;
 					endcase
 				end
@@ -683,44 +683,44 @@ module mp_rowDecoder( input [15:0] ird,
 		// move.b originally also rows 5 & 15. Only because IRD bit 14 is not decoded.
 		// It's the same for move the operations performed by MOVE.B
 
-		'h1,'h2,'h3:   row = `ALU_ROW_02;
+		'h1,'h2,'h3:   row = `MP_ALU_ROW_02;
 		
 		'h5:
 			if( size11)										
-               row = `ALU_ROW_15;								// As originally and easier to decode
+               row = `MP_ALU_ROW_15;								// As originally and easier to decode
 			else
-				row = ird[8] ? `ALU_ROW_05 : `ALU_ROW_02;     // addq/subq
+				row = ird[8] ? `MP_ALU_ROW_05 : `MP_ALU_ROW_02;     // addq/subq
 		'h6:	row = 0;						//bcc/bra/bsr
-		'h7:	row = `ALU_ROW_02;				// moveq
+		'h7:	row = `MP_ALU_ROW_02;				// moveq
 		'h8:
 			if( size11)						// div
-				row = `ALU_ROW_01;
+				row = `MP_ALU_ROW_01;
 			else if( ird[8] & eaRdir)		// sbcd
-				row = `ALU_ROW_09;
+				row = `MP_ALU_ROW_09;
 			else
-				row = `ALU_ROW_14;			// or
+				row = `MP_ALU_ROW_14;			// or
 		'h9:
 			if( ird[8] & ~size11 & eaRdir)
-				row = `ALU_ROW_10;			// subx
+				row = `MP_ALU_ROW_10;			// subx
 			else
-				row = `ALU_ROW_05;			// sub/suba
+				row = `MP_ALU_ROW_05;			// sub/suba
 		'hb:
 			if( ird[8] & ~size11 & ~eaAdir)
-				row = `ALU_ROW_13;			// eor
+				row = `MP_ALU_ROW_13;			// eor
 			else
-				row = `ALU_ROW_06;			// cmp/cmpa/cmpm
+				row = `MP_ALU_ROW_06;			// cmp/cmpa/cmpm
 		'hc:
 			if( size11)
-				row = `ALU_ROW_07;			// mul
+				row = `MP_ALU_ROW_07;			// mul
 			else if( ird[8] & eaRdir)		// abcd
-				row = `ALU_ROW_03;
+				row = `MP_ALU_ROW_03;
 			else
-				row = `ALU_ROW_04;			// and
+				row = `MP_ALU_ROW_04;			// and
 		'hd:
 			if( ird[8] & ~size11 & eaRdir)
-				row = `ALU_ROW_12;			// addx
+				row = `MP_ALU_ROW_12;			// addx
 			else
-				row = `ALU_ROW_02;			// add/adda
+				row = `MP_ALU_ROW_02;			// add/adda
 		'he:
 			begin
 				reg [1:0] stype;
@@ -731,14 +731,14 @@ module mp_rowDecoder( input [15:0] ird,
 					stype = ird[ 4:3];
 
 				case( {stype, ird[8]})
-				0: row = `ALU_ROW_02;	// ASR
-				1: row = `ALU_ROW_03;	// ASL
-				2: row = `ALU_ROW_05;	// LSR
-				3: row = `ALU_ROW_04;	// LSL
-				4: row = `ALU_ROW_08;	// ROXR
-				5: row = `ALU_ROW_11;	// ROXL
-				6: row = `ALU_ROW_10;	// ROR
-				7: row = `ALU_ROW_09;	// ROL
+				0: row = `MP_ALU_ROW_02;	// ASR
+				1: row = `MP_ALU_ROW_03;	// ASL
+				2: row = `MP_ALU_ROW_05;	// LSR
+				3: row = `MP_ALU_ROW_04;	// LSL
+				4: row = `MP_ALU_ROW_08;	// ROXR
+				5: row = `MP_ALU_ROW_11;	// ROXL
+				6: row = `MP_ALU_ROW_10;	// ROR
+				7: row = `MP_ALU_ROW_09;	// ROL
 				endcase
 			end
 			
@@ -815,16 +815,16 @@ module mp_ccrTable(
 			// 1: DIV, only n (4n & 6n)
 			// 14: BCLR 4n
 			// 6,12,13,15	// not used
-			`ALU_ROW_02,
-			`ALU_ROW_03,							// ASL    (originally ANZVA)
-			`ALU_ROW_04,
-			`ALU_ROW_05:	ccrMask = CUPDALL;		// Shifts (originally ANZ0A)
+			`MP_ALU_ROW_02,
+			`MP_ALU_ROW_03,							// ASL    (originally ANZVA)
+			`MP_ALU_ROW_04,
+			`MP_ALU_ROW_05:	ccrMask = CUPDALL;		// Shifts (originally ANZ0A)
 			
-			`ALU_ROW_07:	ccrMask = KNZ00;		// MUL (originally KNZ0A)
-			`ALU_ROW_09,
-			`ALU_ROW_10:	ccrMask = KNZ00;		// RO[lr] (originally KNZ0A)
-			`ALU_ROW_08,							// ROXR (originally ANZ0A)
-			`ALU_ROW_11:	ccrMask = CUPDALL;		// ROXL (originally ANZ0A)
+			`MP_ALU_ROW_07:	ccrMask = KNZ00;		// MUL (originally KNZ0A)
+			`MP_ALU_ROW_09,
+			`MP_ALU_ROW_10:	ccrMask = KNZ00;		// RO[lr] (originally KNZ0A)
+			`MP_ALU_ROW_08,							// ROXR (originally ANZ0A)
+			`MP_ALU_ROW_11:	ccrMask = CUPDALL;		// ROXL (originally ANZ0A)
 			default:	ccrMask = CUNUSED;
 			endcase
 		

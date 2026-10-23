@@ -16,8 +16,9 @@ set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
 set_global_assignment -name TOP_LEVEL_ENTITY ${TOP:-m68k_wrap}
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_$rev
 Q
-[ "$def" != "-" ] && echo "set_global_assignment -name VERILOG_MACRO \"$def=1\""
-for f in "$@"; do case $f in *.vhd) t=VHDL_FILE;; *.v) t=VERILOG_FILE;; *) t=SYSTEMVERILOG_FILE;; esac; echo "set_global_assignment -name $t $f"; done
+for d in $(echo $def | tr "," " "); do [ "$d" != "-" ] && echo "set_global_assignment -name VERILOG_MACRO \"$d=1\""; done
+rm -rf $H/snap_$rev; mkdir -p $H/snap_$rev
+for f in "$@"; do case $f in *.sv|*.v|*.vhd) cp $f $H/snap_$rev/; f=snap_$rev/$(basename $f);; esac; case $f in *.vhd) t=VHDL_FILE;; *.v) t=VERILOG_FILE;; *) t=SYSTEMVERILOG_FILE;; esac; echo "set_global_assignment -name $t $f"; done
 echo "set_instance_assignment -name VIRTUAL_PIN ON -to *"
 [ -z "$TOP" ] && echo "set_global_assignment -name SYSTEMVERILOG_FILE m68k_wrap.sv"
 } > $H/m68k_$rev.qsf

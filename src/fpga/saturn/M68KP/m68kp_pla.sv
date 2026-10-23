@@ -9,36 +9,36 @@
 
 `timescale 1 ns / 1 ns
 
-`define NMA_BITS   10
+`define MP_NMA_BITS   10
 
-`define SFTM1 'h3C7
-`define SRRW1 'h382
-`define SRIW1 'h381
-`define SRRL1 'h386
-`define SRIL1 'h385
-`define BSRI1 'h089
-`define BSRW1 'h0A9
-`define BBCI1 'h308
-`define BBCW1 'h068
-`define RLQL1 'h23B
-`define ADRW1 'h006
-`define PINW1 'h21C
-`define PDCW1 'h103
-`define ADSW1 'h1C2
-`define AIXW0 'h1E3
-`define ABWW1 'h00A
-`define ABLW1 'h1E2
-`define TRAP1 'h1D0
-`define LINK1 'h30B
-`define UNLK1 'h119
-`define LUSP1 'h2F5
-`define SUSP1 'h230
-`define TRPV1 'h06D
-`define RSET1 'h3A6
-`define B 'h363
-`define STOP1 'h3A2
-`define RTR1 'h12A
-`define RTS1 'h126
+`define MP_SFTM1 'h3C7
+`define MP_SRRW1 'h382
+`define MP_SRIW1 'h381
+`define MP_SRRL1 'h386
+`define MP_SRIL1 'h385
+`define MP_BSRI1 'h089
+`define MP_BSRW1 'h0A9
+`define MP_BBCI1 'h308
+`define MP_BBCW1 'h068
+`define MP_RLQL1 'h23B
+`define MP_ADRW1 'h006
+`define MP_PINW1 'h21C
+`define MP_PDCW1 'h103
+`define MP_ADSW1 'h1C2
+`define MP_AIXW0 'h1E3
+`define MP_ABWW1 'h00A
+`define MP_ABLW1 'h1E2
+`define MP_TRAP1 'h1D0
+`define MP_LINK1 'h30B
+`define MP_UNLK1 'h119
+`define MP_LUSP1 'h2F5
+`define MP_SUSP1 'h230
+`define MP_TRPV1 'h06D
+`define MP_RSET1 'h3A6
+`define MP_B 'h363
+`define MP_STOP1 'h3A2
+`define MP_RTR1 'h12A
+`define MP_RTS1 'h126
 
 
 module mp_pla_lined(
@@ -49,24 +49,24 @@ module mp_pla_lined(
    input [15:0] lineBmap,
    
    output palIll,
-   output logic [`NMA_BITS-1:0] plaA1,
-   output logic [`NMA_BITS-1:0] plaA2,
-   output logic [`NMA_BITS-1:0] plaA3
+   output logic [`MP_NMA_BITS-1:0] plaA1,
+   output logic [`MP_NMA_BITS-1:0] plaA2,
+   output logic [`MP_NMA_BITS-1:0] plaA3
    );
 
    wire [3:0] line = opcode[ 15:12];
    wire [2:0] row86 = opcode[8:6];
    
    logic [15:0] arIll;
-   logic [`NMA_BITS-1:0] arA1[ 15:0];
-   logic [`NMA_BITS-1:0] arA23[ 15:0];
-   logic [`NMA_BITS-1:0] scA3;
+   logic [`MP_NMA_BITS-1:0] arA1[ 15:0];
+   logic [`MP_NMA_BITS-1:0] arA23[ 15:0];
+   logic [`MP_NMA_BITS-1:0] scA3;
 
    logic illMisc;
-   logic [`NMA_BITS-1:0] a1Misc;
+   logic [`MP_NMA_BITS-1:0] a1Misc;
    
    /*
-   reg [`NMA_BITS-1:0] lineMask[ 15:0];  
+   reg [`MP_NMA_BITS-1:0] lineMask[ 15:0];  
    always_comb begin
        integer i;
        for( i = 0; i < 16; i = i + 1)
@@ -88,14 +88,14 @@ module mp_pla_lined(
       arIll[ 'h6] = 1'b0;
       arA23[ 'h6] = 'X;
       if( opcode[ 11:8] == 4'h1)
-         arA1[ 'h6] = (| opcode[7:0]) ? `BSRI1 : `BSRW1;
+         arA1[ 'h6] = (| opcode[7:0]) ? `MP_BSRI1 : `MP_BSRW1;
       else
-         arA1[ 'h6] = (| opcode[7:0]) ? `BBCI1 : `BBCW1;
+         arA1[ 'h6] = (| opcode[7:0]) ? `MP_BBCI1 : `MP_BBCW1;
                          
       // Line 7: moveq
       arIll[ 'h7] = opcode[ 8];
       arA23[ 'h7] = 'X;
-      arA1[ 'h7] = `RLQL1;
+      arA1[ 'h7] = `MP_RLQL1;
 
       // Line A & F      
       arIll[ 'ha] = 1'b1;       arIll[ 'hf] = 1'b1;
@@ -110,15 +110,15 @@ module mp_pla_lined(
    always_comb begin
       if( ~opcode[11] & opcode[7] & opcode[6])
       begin
-         arA23[ 'he] = `SFTM1;
+         arA23[ 'he] = `MP_SFTM1;
          unique case( col)
-            2: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `ADRW1; end
-            3: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `PINW1; end
-            4: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `PDCW1; end
-            5: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `ADSW1; end
-            6: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `AIXW0; end
-            7: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `ABWW1; end
-            8: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `ABLW1; end
+            2: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_ADRW1; end
+            3: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_PINW1; end
+            4: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_PDCW1; end
+            5: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_ADSW1; end
+            6: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_AIXW0; end
+            7: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_ABWW1; end
+            8: begin arIll[ 'he] = 1'b0; arA1[ 'he] = `MP_ABLW1; end
             default: begin arIll[ 'he] = 1'b1; arA1[ 'he] = 'X; end
          endcase
       end
@@ -129,11 +129,11 @@ module mp_pla_lined(
          2'b00,
          2'b01: begin
                   arIll[ 'he] = 1'b0;
-                  arA1[ 'he]  = opcode[ 5] ? `SRRW1 : `SRIW1;
+                  arA1[ 'he]  = opcode[ 5] ? `MP_SRRW1 : `MP_SRIW1;
                end
          2'b10: begin
                   arIll[ 'he] = 1'b0;
-                  arA1[ 'he]  = opcode[ 5] ? `SRRL1 : `SRIL1;
+                  arA1[ 'he]  = opcode[ 5] ? `MP_SRRL1 : `MP_SRIL1;
               end
          2'b11: begin arIll[ 'he] = 1'b1; arA1[ 'he]  = 'X; end
          endcase
@@ -145,21 +145,21 @@ module mp_pla_lined(
       illMisc = 1'b0;
       case( opcode[ 5:3])
       3'b000,
-      3'b001:      a1Misc = `TRAP1;
-      3'b010:      a1Misc = `LINK1;
-      3'b011:      a1Misc = `UNLK1;
-      3'b100:      a1Misc = `LUSP1;
-      3'b101:      a1Misc = `SUSP1;
+      3'b001:      a1Misc = `MP_TRAP1;
+      3'b010:      a1Misc = `MP_LINK1;
+      3'b011:      a1Misc = `MP_UNLK1;
+      3'b100:      a1Misc = `MP_LUSP1;
+      3'b101:      a1Misc = `MP_SUSP1;
       
       3'b110:   
          case( opcode[ 2:0])
-         3'b110:   a1Misc = `TRPV1;
-         3'b000:   a1Misc = `RSET1;
-         3'b001:   a1Misc = `B;
-         3'b010:   a1Misc = `STOP1;
-         3'b011:   a1Misc = `RTR1;
-         3'b111:   a1Misc = `RTR1;
-         3'b101:   a1Misc = `RTS1;
+         3'b110:   a1Misc = `MP_TRPV1;
+         3'b000:   a1Misc = `MP_RSET1;
+         3'b001:   a1Misc = `MP_B;
+         3'b010:   a1Misc = `MP_STOP1;
+         3'b011:   a1Misc = `MP_RTR1;
+         3'b111:   a1Misc = `MP_RTR1;
+         3'b101:   a1Misc = `MP_RTS1;
          default:  begin  illMisc = 1'b1; a1Misc = 'X; end
          endcase
          

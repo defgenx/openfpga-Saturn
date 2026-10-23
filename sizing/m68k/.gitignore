@@ -2,3 +2,4 @@ out_*/
 out_*.log
 db/
 incremental_db/
+snap_*/
