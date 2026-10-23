@@ -273,3 +273,51 @@ module SH2P_CACHE_LRU (
 
 endmodule
 
+
+
+// Per-set cache state: {stamp[5:0], valid[3:0], lru[5:0]}, MLAB with asynchronous read.
+module SH2P_CACHE_LV (
+	input         clock,
+	input  [15:0] data,
+	input   [5:0] rdaddress,
+	input   [5:0] wraddress,
+	input         wren,
+	output [15:0] q
+);
+	altdpram	altdpram_component (
+				.data (data),
+				.inclock (clock),
+				.outclock (clock),
+				.rdaddress (rdaddress),
+				.wraddress (wraddress),
+				.wren (wren),
+				.q (q),
+				.aclr (1'b0),
+				.byteena (1'b1),
+				.inclocken (1'b1),
+				.outclocken (1'b1),
+				.rdaddressstall (1'b0),
+				.rden (1'b1),
+				.wraddressstall (1'b0));
+	defparam
+		altdpram_component.indata_aclr = "OFF",
+		altdpram_component.indata_reg = "INCLOCK",
+		altdpram_component.intended_device_family = "Cyclone V",
+		altdpram_component.lpm_type = "altdpram",
+		altdpram_component.outdata_aclr = "OFF",
+		altdpram_component.outdata_reg = "UNREGISTERED",
+		altdpram_component.power_up_uninitialized = "FALSE",
+		altdpram_component.ram_block_type = "MLAB",
+		altdpram_component.rdaddress_aclr = "OFF",
+		altdpram_component.rdaddress_reg = "UNREGISTERED",
+		altdpram_component.rdcontrol_aclr = "OFF",
+		altdpram_component.rdcontrol_reg = "UNREGISTERED",
+		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
+		altdpram_component.width = 16,
+		altdpram_component.widthad = 6,
+		altdpram_component.width_byteena = 1,
+		altdpram_component.wraddress_aclr = "OFF",
+		altdpram_component.wraddress_reg = "INCLOCK",
+		altdpram_component.wrcontrol_aclr = "OFF",
+		altdpram_component.wrcontrol_reg = "INCLOCK";
+endmodule

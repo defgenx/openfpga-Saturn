@@ -23,6 +23,7 @@ module altdpram #(
 ) (
 	input  [width-1:0]   data,
 	input                inclock,
+	input                outclock,
 	input  [widthad-1:0] rdaddress,
 	input  [widthad-1:0] wraddress,
 	input                wren,
@@ -30,6 +31,7 @@ module altdpram #(
 	input                aclr,
 	input  [width_byteena-1:0] byteena,
 	input                inclocken,
+	input                outclocken,
 	input                rdaddressstall,
 	input                rden,
 	input                wraddressstall

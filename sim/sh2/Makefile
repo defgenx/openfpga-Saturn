@@ -31,7 +31,7 @@ endif
 GOLD_SRCS := $(addprefix $(GOLD)/,$(SH_FILES))
 
 TESTS := $(basename $(notdir $(wildcard progs/t_*.py)))
-VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE \
+VFLAGS := --binary $(if $(filter sh2p,$(DUT)),-DSH2_INIT_WAIT)  --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE \
           -Wno-UNOPTFLAT -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -j 4 $(addprefix -D,$(CUTS))
 
 .SECONDARY:
