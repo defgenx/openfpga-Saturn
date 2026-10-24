@@ -2079,54 +2079,38 @@ module SCSPP #(
 	end
 	
 	
-	wire       SCR_SEL = REG_A[11:10] == 2'b00;	
-	wire       SCR_SCR0_SEL  = SCR_SEL & (REG_A[4:1] == 5'h00>>1);
-	bit [15:0] SCR_SCR0_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, OP2.RST ? OP2.SLOT : REG_A[9:5], OP2.RST ? '0 : REG_D & SCR0_MASK, OP2.RST ? 2'b11 : (REG_WE & {2{SCR_SCR0_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : SCR0_RA ), SCR_SCR0_Q);
-	
-	wire       SCR_SA_SEL   = SCR_SEL & (REG_A[4:1] == 5'h02>>1);
-	bit [15:0] SCR_SA_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SA  (CLK, OP2.RST ? OP2.SLOT : REG_A[9:5], OP2.RST ? '0 : REG_D & SA_MASK,   OP2.RST ? 2'b11 : (REG_WE & {2{SCR_SA_SEL}} & {2{CYCLE1_CE}})  , (REG_RD ? REG_A[9:5] : SA_RA   ), SCR_SA_Q);
-	
-	wire       SCR_LSA_SEL  = SCR_SEL & (REG_A[4:1] == 5'h04>>1);
-	bit [15:0] SCR_LSA_Q;
-	SCSPP_RAM_8X2 #(5) SCR_LSA (CLK, OP2.RST ? OP2.SLOT : REG_A[9:5], OP2.RST ? '0 : REG_D & LSA_MASK,  OP2.RST ? 2'b11 : (REG_WE & {2{SCR_LSA_SEL}} & {2{CYCLE1_CE}}) , (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LSA_Q);
-	
-	wire       SCR_LEA_SEL  = SCR_SEL & (REG_A[4:1] == 5'h06>>1);
-	bit [15:0] SCR_LEA_Q;
-	SCSPP_RAM_8X2 #(5) SCR_LEA (CLK, OP2.RST ? OP2.SLOT : REG_A[9:5], OP2.RST ? '0 : REG_D & LEA_MASK,  OP2.RST ? 2'b11 : (REG_WE & {2{SCR_LEA_SEL}} & {2{CYCLE1_CE}}) , (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LEA_Q);
-	
-	wire       SCR_SCR1_SEL = SCR_SEL & (REG_A[4:1] == 5'h08>>1);
-	bit [15:0] SCR_SCR1_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR1(CLK, OP4.RST ? OP4.SLOT : REG_A[9:5], OP4.RST ? '0 : REG_D & SCR1_MASK, OP4.RST ? 2'b11 : (REG_WE & {2{SCR_SCR1_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : OP4.SLOT), SCR_SCR1_Q);
-	
-	wire       SCR_SCR2_SEL = SCR_SEL & (REG_A[4:1] == 5'h0A>>1);
-	bit [15:0] SCR_SCR2_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, OP4.RST ? OP4.SLOT : REG_A[9:5], OP4.RST ? '0 : REG_D & SCR2_MASK, OP4.RST ? 2'b11 : (REG_WE & {2{SCR_SCR2_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : SCR2_RA ), SCR_SCR2_Q);
-	
-	wire       SCR_SCR3_SEL = SCR_SEL & (REG_A[4:1] == 5'h0C>>1);
-	bit [15:0] SCR_SCR3_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR3(CLK, OP6.RST ? OP6.SLOT : REG_A[9:5], OP6.RST ? '0 : REG_D & SCR3_MASK, OP6.RST ? 2'b11 : (REG_WE & {2{SCR_SCR3_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : OP6.SLOT), SCR_SCR3_Q);
-	
-	wire       SCR_SCR4_SEL = SCR_SEL & (REG_A[4:1] == 5'h0E>>1);
-	bit [15:0] SCR_SCR4_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR4(CLK, OP2.RST ? OP2.SLOT : REG_A[9:5], OP2.RST ? '0 : REG_D & SCR4_MASK, OP2.RST ? 2'b11 : (REG_WE & {2{SCR_SCR4_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_SCR4_Q);
-	
-	wire       SCR_SCR5_SEL = SCR_SEL & (REG_A[4:1] == 5'h10>>1);
-	bit [15:0] SCR_SCR5_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK,     RST ?     SLOT : REG_A[9:5],     RST ? '0 : REG_D & SCR5_MASK,     RST ? 2'b11 : (REG_WE & {2{SCR_SCR5_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : SCR5_RA ), SCR_SCR5_Q);
-	
-	wire       SCR_SCR6_SEL = SCR_SEL & (REG_A[4:1] == 5'h12>>1);
-	bit [15:0] SCR_SCR6_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK,     RST ?     SLOT : REG_A[9:5],     RST ? '0 : REG_D & SCR6_MASK,     RST ? 2'b11 : (REG_WE & {2{SCR_SCR6_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : SCR6_RA ), SCR_SCR6_Q);
-
-	wire       SCR_SCR7_SEL = SCR_SEL & (REG_A[4:1] == 5'h14>>1);
-	bit [15:0] SCR_SCR7_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR7(CLK, OP7.RST ? OP7.SLOT : REG_A[9:5], OP7.RST ? '0 : REG_D & SCR7_MASK, OP7.RST ? 2'b11 : (REG_WE & {2{SCR_SCR7_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR7_Q);
-	
-	wire       SCR_SCR8_SEL = SCR_SEL & (REG_A[4:1] == 5'h16>>1);
-	bit [15:0] SCR_SCR8_Q;
-	SCSPP_RAM_8X2 #(5) SCR_SCR8(CLK, OP7.RST ? OP7.SLOT : REG_A[9:5], OP7.RST ? '0 : REG_D & SCR8_MASK, OP7.RST ? 2'b11 : (REG_WE & {2{SCR_SCR8_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR8_Q);
+	//One sweep after RES_N clears every register RAM (the OP7 window is the last to end);
+	//the slot RAMs share one write address, data and sweep enable.
+	wire       SWEEP = OP7.RST;
+	wire [4:0] SW_A = SWEEP ? OP7.SLOT : REG_A[9:5];
+	wire [15:0] SW_D = SWEEP ? 16'h0000 : REG_D;
+	wire       SCR_SEL = REG_A[11:10] == 2'b00;
+	wire [11:0] SCR_WSEL = {12{SCR_SEL & CYCLE1_CE}} & (12'h001 << REG_A[4:1]);
+	bit [15:0] SCR_SCR0_Q,SCR_SA_Q,SCR_LSA_Q,SCR_LEA_Q,SCR_SCR1_Q,SCR_SCR2_Q,SCR_SCR3_Q,SCR_SCR4_Q,SCR_SCR5_Q,SCR_SCR6_Q,SCR_SCR7_Q,SCR_SCR8_Q;
+	wire [ 1:0] SCR_WE0 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 0]}};
+	wire [ 1:0] SCR_WE1 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 1]}};
+	wire [ 1:0] SCR_WE2 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 2]}};
+	wire [ 1:0] SCR_WE3 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 3]}};
+	wire [ 1:0] SCR_WE4 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 4]}};
+	wire [ 1:0] SCR_WE5 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 5]}};
+	wire [ 1:0] SCR_WE6 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 6]}};
+	wire [ 1:0] SCR_WE7 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 7]}};
+	wire [ 1:0] SCR_WE8 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 8]}};
+	wire [ 1:0] SCR_WE9 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 9]}};
+	wire [ 1:0] SCR_WE10= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[10]}};
+	wire [ 1:0] SCR_WE11= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[11]}};
+	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, SW_A, SW_D & SCR0_MASK, SCR_WE0, (REG_RD ? REG_A[9:5] : SCR0_RA ), SCR_SCR0_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SA  (CLK, SW_A, SW_D & SA_MASK,   SCR_WE1, (REG_RD ? REG_A[9:5] : SA_RA   ), SCR_SA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_LSA (CLK, SW_A, SW_D & LSA_MASK,  SCR_WE2, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LSA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_LEA (CLK, SW_A, SW_D & LEA_MASK,  SCR_WE3, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LEA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR1(CLK, SW_A, SW_D & SCR1_MASK, SCR_WE4, (REG_RD ? REG_A[9:5] : OP4.SLOT), SCR_SCR1_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, SW_A, SW_D & SCR2_MASK, SCR_WE5, (REG_RD ? REG_A[9:5] : SCR2_RA ), SCR_SCR2_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR3(CLK, SW_A, SW_D & SCR3_MASK, SCR_WE6, (REG_RD ? REG_A[9:5] : OP6.SLOT), SCR_SCR3_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR4(CLK, SW_A, SW_D & SCR4_MASK, SCR_WE7, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_SCR4_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK, SW_A, SW_D & SCR5_MASK, SCR_WE8, (REG_RD ? REG_A[9:5] : SCR5_RA ), SCR_SCR5_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK, SW_A, SW_D & SCR6_MASK, SCR_WE9, (REG_RD ? REG_A[9:5] : SCR6_RA ), SCR_SCR6_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,(REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR7_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,(REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR8_Q);
 	
 	//STACK,100600-10067F
 	wire       STACKA_SEL = REG_A[11:6] == 6'b011000;
