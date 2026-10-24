@@ -1,0 +1,2 @@
+sysmp: mapALM=3014 ALUT=4581 REG=2494 MEMbits=115,950 MLAB=3360
+Logic utilization (in ALMs) : 3,106 / 18,480 ( 17 % )

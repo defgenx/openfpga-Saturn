@@ -1,0 +1,2 @@
+rom: mapALM=1187 ALUT=1719 REG=861 MEMbits=61,902 MLAB=2048
+Logic utilization (in ALMs) : 1,237 / 18,480 ( 7 % )

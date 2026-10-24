@@ -1,0 +1,2 @@
+rf: mapALM=1291 ALUT=1987 REG=847 MEMbits=39,584 MLAB=2048
+Logic utilization (in ALMs) : 1,343 / 18,480 ( 7 % )
