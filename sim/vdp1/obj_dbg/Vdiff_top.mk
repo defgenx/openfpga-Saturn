@@ -37,7 +37,7 @@ VM_PREFIX = Vdiff_top
 VM_MODPREFIX = Vdiff_top
 # User CFLAGS (from -CFLAGS on Verilator command line)
 VM_USER_CFLAGS = \
-  -O1 -std=c++17 -DDBGST=3000 \
+  -O1 -std=c++17 -DDBGST=100000 \
 
 # User LDLIBS (from -LDFLAGS on Verilator command line)
 VM_USER_LDLIBS = \

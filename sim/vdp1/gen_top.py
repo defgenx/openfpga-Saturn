@@ -2,7 +2,7 @@
 """Generates gen/diff_top.sv: golden VDP1 (REF_, suffix _r) and the shrunk VDP1 (suffix _n) side by side."""
 import os
 ports, insts = [], []
-for s, mod in (("r", "REF_VDP1"), ("n", "VDP1")):
+for s, mod in (("r", "REF_VDP1"), ("n", "VDP1P")):
     ports.append(f"""	input [15:0] VRAM_Q_{s}, input VRAM_RDY_{s}, input [15:0] FB0_Q_{s}, input [15:0] FB1_Q_{s}, input FB_RDY_{s},
 	output [15:0] DO_{s}, output RDY_N_{s}, output IRQ_N_{s}, output [15:0] VOUTO_{s},
 	output [18:1] VRAM_A_{s}, output [15:0] VRAM_D_{s}, output [1:0] VRAM_WE_{s}, output VRAM_RD_{s}, output [8:0] VRAM_BLEN_{s},

@@ -16,7 +16,7 @@
 // INCLUDE MODULE CLASSES
 #include "Vdiff_top___024root.h"
 #include "Vdiff_top_REF_VDP1_PKG.h"
-#include "Vdiff_top_VDP1_PKG.h"
+#include "Vdiff_top_VDP1P_PKG.h"
 
 // DPI TYPES for DPI Export callbacks (Internal use)
 
@@ -31,22 +31,24 @@ class alignas(VL_CACHE_LINE_BYTES) Vdiff_top__Syms final : public VerilatedSyms 
     // MODULE INSTANCE STATE
     Vdiff_top___024root            TOP;
     Vdiff_top_REF_VDP1_PKG         TOP__REF_VDP1_PKG;
-    Vdiff_top_VDP1_PKG             TOP__VDP1_PKG;
+    Vdiff_top_VDP1P_PKG            TOP__VDP1P_PKG;
 
     // SCOPE NAMES
     VerilatedScope* __Vscopep_REF_VDP1_PKG;
     VerilatedScope* __Vscopep_TOP;
-    VerilatedScope* __Vscopep_VDP1_PKG;
+    VerilatedScope* __Vscopep_VDP1P_PKG;
     VerilatedScope* __Vscopep_diff_top;
     VerilatedScope* __Vscopep_diff_top__u_n;
     VerilatedScope* __Vscopep_diff_top__u_n__CLT;
     VerilatedScope* __Vscopep_diff_top__u_n__CLT__altdpram0;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE__ACCS;
+    VerilatedScope* __Vscopep_diff_top__u_n__EDGE__ACCS__altdpram_component;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_B;
-    VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_B__unnamedblk1;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_G;
-    VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_G__unnamedblk1;
     VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_R;
-    VerilatedScope* __Vscopep_diff_top__u_n__GRD_DIV_R__unnamedblk1;
+    VerilatedScope* __Vscopep_diff_top__u_n__GSTEP;
+    VerilatedScope* __Vscopep_diff_top__u_n__GSTEP__altdpram_component;
     VerilatedScope* __Vscopep_diff_top__u_n__PAT_FIFO;
     VerilatedScope* __Vscopep_diff_top__u_n__PAT_FIFO__altdpram_component;
     VerilatedScope* __Vscopep_diff_top__u_n__unnamedblk1;
