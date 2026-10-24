@@ -1,0 +1,8839 @@
+// Verilated -*- C++ -*-
+// DESCRIPTION: Verilator output: Design implementation internals
+// See Vdump_dec.h for the primary calling header
+
+#include "Vdump_dec__pch.h"
+
+VL_ATTR_COLD void Vdump_dec___024root___eval_initial__TOP__1(Vdump_dec___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vdump_dec___024root___eval_initial__TOP__1\n"); );
+    Vdump_dec__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
+    auto& vlSelfRef = std::ref(*vlSelf).get();
+    // Locals
+    VlWide<3>/*79:0*/ __Vfunc_Decode__1__Vfuncout;
+    VL_ZERO_W(80, __Vfunc_Decode__1__Vfuncout);
+    SData/*15:0*/ __Vfunc_Decode__1__IR;
+    __Vfunc_Decode__1__IR = 0;
+    CData/*2:0*/ __Vfunc_Decode__1__STATE;
+    __Vfunc_Decode__1__STATE = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__T;
+    __Vfunc_Decode__1__T = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__DS;
+    __Vfunc_Decode__1__DS = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__RES_EXP;
+    __Vfunc_Decode__1__RES_EXP = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__INT_EXP;
+    __Vfunc_Decode__1__INT_EXP = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__ILI_EXP;
+    __Vfunc_Decode__1__ILI_EXP = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__ILSI;
+    __Vfunc_Decode__1__ILSI = 0;
+    CData/*0:0*/ __Vfunc_Decode__1__VER;
+    __Vfunc_Decode__1__VER = 0;
+    // Body
+    while (VL_GTS_III(32, 4U, vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode)) {
+        vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st = 0U;
+        while (VL_GTS_III(32, 8U, vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st)) {
+            vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir = 0U;
+            while (VL_GTS_III(32, 0x00010000U, vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir)) {
+                __Vfunc_Decode__1__VER = 1U;
+                __Vfunc_Decode__1__ILSI = 0U;
+                __Vfunc_Decode__1__ILI_EXP = (3U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__INT_EXP = (2U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__RES_EXP = (1U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__DS = 0U;
+                __Vfunc_Decode__1__T = 0U;
+                __Vfunc_Decode__1__STATE = (7U & vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st);
+                __Vfunc_Decode__1__IR = (0x0000ffffU 
+                                         & vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir);
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN 
+                    = (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 8U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN 
+                    = (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 4U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC 
+                    = ((IData)(__Vfunc_Decode__1__T) 
+                       == (1U & (~ ((IData)(__Vfunc_Decode__1__IR) 
+                                    >> 9U))));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] = 0U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] = 0xa0240000U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] = 4U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                    = ((0xffffe0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                          << 8U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                    = ((0xffffffc1U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                          << 1U));
+                if (__Vfunc_Decode__1__RES_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                      >> 1U)))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000f40U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000020U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000016U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000020U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa0000000U | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x18000000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x00000014U | (0xffffffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                } else if (__Vfunc_Decode__1__INT_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((1U & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000400U | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x08000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x12000000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (2U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000fc0U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000e00U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000fc0U | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x02264000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000015U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x0000001cU | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                } else if (__Vfunc_Decode__1__ILI_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            if ((1U & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000011U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x20000000U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00006000U | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000400U | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x08000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000fc0U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = ((0x0000e1ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                   | (0x0000ffffU & 
+                                      (0x00000200U 
+                                       | (((IData)(__Vfunc_Decode__1__ILSI)
+                                            ? 4U : 3U) 
+                                          << 0x0000000aU))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000fc0U | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x02264000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000015U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x00000018U | (0xffffffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                } else if ((0x00008000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00004000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0xa0000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            }
+                        } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000040U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = ((0x0000e0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                   | (0x0000ffffU & 
+                                      (0x00000a00U 
+                                       | (0x00000100U 
+                                          & ((IData)(__Vfunc_Decode__1__IR) 
+                                             >> 6U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000000aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00208000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (((0x00000010U 
+                                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 0x0000000aU)) 
+                                                      | (8U 
+                                                         & ((~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 0x0eU)) 
+                                                            << 3U))) 
+                                                     << 0x0000000dU)));
+                        } else if ((0x00000800U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x40000000U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (2U | (0x0000fffcU 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x04000000U 
+                                           | (0xf3ffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0024a000U 
+                                           | (0xffc01fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((2U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000068U 
+                                           | (0x0000ff83U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0x003fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((2U 
+                                                == 
+                                                (3U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 8U)))
+                                                ? 0x0490U
+                                                : (
+                                                   (3U 
+                                                    == 
+                                                    (3U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 8U)))
+                                                    ? 0x04a0U
+                                                    : 0x0480U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = ((0x0000fffcU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                           | (0x0000ffffU 
+                                              & (((2U 
+                                                   == 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 8U)))
+                                                   ? 0x0490U
+                                                   : 
+                                                  ((3U 
+                                                    == 
+                                                    (3U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 8U)))
+                                                    ? 0x04a0U
+                                                    : 0x0480U)) 
+                                                 >> 0x0000000aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00180000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 8U))) 
+                                                 << 0x0000000eU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x10000000U 
+                                                 & ((~ 
+                                                     (0U 
+                                                      != 
+                                                      (3U 
+                                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 8U)))) 
+                                                    << 0x0000001cU))));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (8U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((0x00000200U 
+                                        & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x28000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x24000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (9U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else if ((0x00000100U 
+                                        & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (9U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (8U | (0x0000ffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000b00U 
+                                           | (0x0000e0ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000000aU 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00020000U 
+                                           | (0xfffcffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000040U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000600U 
+                                           | (0x0000e1ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000000aU 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x04000000U 
+                                           | (0xf3ffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0020a000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 8U))));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000040U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000600U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000aU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x04000000U 
+                                       | (0xf3ffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0020a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 8U))));
+                            }
+                        } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00002000U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            }
+                                        } else if (
+                                                   (1U 
+                                                    & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000040U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000011U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x20000000U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00006000U 
+                                                   | (0xffff81ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                    } else if ((2U 
+                                                & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000400U 
+                                                   | (0x0000e3ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x08000000U 
+                                                   | (0xf3ffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00268000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x0000000aU 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        } else {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000fc0U 
+                                                   | (0xffffe03fU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00001200U 
+                                                   | (0x0000e1ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x02264000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        }
+                                    } else if ((1U 
+                                                & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000fc0U 
+                                               | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000400U 
+                                               | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0xf3ffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x02264000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000018U 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000600U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000aU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x04000000U 
+                                       | (0xf3ffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00204000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 8U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000600U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000000aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x04000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00204000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 8U))));
+                        }
+                    } else if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if (__Vfunc_Decode__1__DS) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0x7fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (((2U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 0x0000000bU)) 
+                                           | (1U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 0x0cU))) 
+                                          << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000020U 
+                                       | ((0xffffffc0U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((2U & 
+                                               ((IData)(__Vfunc_Decode__1__IR) 
+                                                >> 0x0000000bU)) 
+                                              | (1U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 0x0cU))) 
+                                             >> 1U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000a00U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000eU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006800U 
+                                       | ((0xffff81ffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00000200U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                >> 3U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000020U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002800U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (4U | (0xffffffe3U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000040U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = ((0x0000e0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                               | (0x0000ffffU & (0x00000a00U 
+                                                 | (0x00000100U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 6U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x0000000aU | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00208000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (((0x00000010U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 0x0000000aU)) 
+                                                  | (8U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 0x0eU)) 
+                                                        << 3U))) 
+                                                 << 0x0000000dU)));
+                    } else if ((0x00000800U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (((IData)(__Vfunc_Decode__1__VER) 
+                                     & (~ (IData)(__Vfunc_Decode__1__DS)))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000a00U 
+                                               | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (6U | 
+                                               (0x0000ffe0U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xdfffffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                                  << 0x0000001dU));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00005800U 
+                                               | ((0xffff81ffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00000400U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 9U)) 
+                                                        << 0x0000000aU))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                                    ? 1U
+                                                    : 0U) 
+                                                  << 2U));
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00001800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000a00U 
+                                           | (0x0000e1ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (6U | (0x0000ffe0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xdfffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                              << 0x0000001dU));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00005000U 
+                                           | ((0xffff81ffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x00000400U 
+                                                 & ((~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 9U)) 
+                                                    << 0x0000000aU))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xffffffe3U 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                                ? 1U
+                                                : 0U) 
+                                              << 2U));
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00001000U 
+                                           | (0xffff81ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if (__Vfunc_Decode__1__DS) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000a00U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (6U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xdfffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                          << 0x0000001dU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00005000U 
+                                       | ((0xffff81ffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00000400U 
+                                             & ((~ 
+                                                 ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 9U)) 
+                                                << 0x0000000aU))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xffffffe3U 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                            ? 1U : 0U) 
+                                          << 2U));
+                            } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00001000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (5U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x7ffffffeU 
+                                                     & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                        << 1U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (2U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0020a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 8U))));
+                        }
+                    } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7ffffffeU 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                    << 1U))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (2U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00204000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 8U))));
+                    }
+                } else if ((0x00004000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (5U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x08000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x06000000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000019U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x40000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000010U 
+                                       | (0x0000ffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xf03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x04000000U 
+                                             & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                                << 0x0000001aU))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0x0fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (0x10000000U 
+                                          & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                             << 0x0000001cU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (2U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x10000000U 
+                                             & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                                << 0x0000001cU))));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xe03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (0x02000000U 
+                                          & ((IData)(__Vfunc_Decode__1__IR) 
+                                             << 0x00000019U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x40000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x2a000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000012U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000041U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0014a000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x80000000U 
+                                       | (0x7fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000016U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0014a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000012U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000012U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0024a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000012U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0024a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000041U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x0026a000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (2U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    } else if ((0x00000080U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((0x00000040U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((0x00000020U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000010U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                            if ((0U 
+                                                 == (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x000000c0U 
+                                                     | ((0xffffe03fU 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                           << 8U)));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0001a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000015U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x004d8000U 
+                                                     | (0xff807fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            } else if (
+                                                       (1U 
+                                                        == (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x80000000U 
+                                                     | (0x7fffffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (1U 
+                                                     | ((0xffffffc0U 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | (0x7ffffffeU 
+                                                           & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                              << 1U))));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0015a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000016U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x002d8000U 
+                                                     | (0xff807fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (4U 
+                                                   | (0xffffffe3U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        } else {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (1U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if (__Vfunc_Decode__1__DS) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000080U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (
+                                                   (0x7fffffffU 
+                                                    & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                   | (((2U 
+                                                        & ((~ 
+                                                            ((IData)(__Vfunc_Decode__1__IR) 
+                                                             >> 5U)) 
+                                                           << 1U)) 
+                                                       | (1U 
+                                                          & (~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)))) 
+                                                      << 0x0000001fU));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (
+                                                   (0xfffffffeU 
+                                                    & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                   | (((2U 
+                                                        & ((~ 
+                                                            ((IData)(__Vfunc_Decode__1__IR) 
+                                                             >> 5U)) 
+                                                           << 1U)) 
+                                                       | (1U 
+                                                          & (~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)))) 
+                                                      >> 1U));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000020U 
+                                                   | (0xffffffc1U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000a00U 
+                                                   | (0x0000e1ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000011U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x20000000U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00006800U 
+                                                   | ((0xffff81ffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00000200U 
+                                                         & ((~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)) 
+                                                            << 9U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00002800U 
+                                                   | (0xffff81ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000a1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7fffff00U 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                    << 8U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000011U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000030U 
+                                            & (IData)(__Vfunc_Decode__1__IR)) 
+                                           | (8U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x70000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((2U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (8U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00001041U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7ffffffeU 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                    << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000020U 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U)) 
+                                           | ((0x00000010U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 1U)) 
+                                              | (8U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 3U)))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x60000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xf3ffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x0c000000U 
+                                              & ((0xa4U 
+                                                  >> 
+                                                  (6U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 3U))) 
+                                                 << 0x0000001aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x02264000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000015U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000e1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x7fffff00U 
+                                             & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                << 8U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000020U 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           << 3U)) 
+                                       | ((0x00000010U 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 1U)) 
+                                          | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x60000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00000010U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                                  >> 2U)))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000080U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0a000000U 
+                                                     | (0x003fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x10800000U 
+                                                     | (0xe07fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000060U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x28184000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x0000fffcU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            }
+                                        } else {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x00000080U 
+                                                     | ((0xffffe03fU 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                           << 8U)));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0024a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000100U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x0000000cU 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00220080U 
+                                           | ((0xffc0003fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x000a0000U 
+                                           | ((0xff807fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (((0x00000080U 
+                                                   & ((~ 
+                                                       ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 4U)) 
+                                                      << 7U)) 
+                                                  | (0x00000040U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 2U))) 
+                                                 << 0x0000000fU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000030U 
+                                            & (IData)(__Vfunc_Decode__1__IR)) 
+                                           | (8U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x70000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((2U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (8U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x000c0000U 
+                                           | ((0xff807fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (((0x00000080U 
+                                                   & ((~ 
+                                                       ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 4U)) 
+                                                      << 7U)) 
+                                                  | (0x00000040U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 2U))) 
+                                                 << 0x0000000fU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000010U 
+                                       | (0x0000ffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0ac00000U 
+                                       | ((0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x01000000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000016U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xf3ffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x0c000000U 
+                                              & ((0xa4U 
+                                                  >> 
+                                                  (6U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 3U))) 
+                                                 << 0x0000001aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x02264000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000015U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00170000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000010U | (0x0000ffe3U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0ac00000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01000000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (1U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if (__Vfunc_Decode__1__VER) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x000000c0U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0001a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x004d8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0015a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x002d8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xe07fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x1f800000U 
+                                              & ((0x00c30a20U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000080U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0x7fffffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (((2U 
+                                                    & ((~ 
+                                                        ((IData)(__Vfunc_Decode__1__IR) 
+                                                         >> 5U)) 
+                                                       << 1U)) 
+                                                   | (1U 
+                                                      & (~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)))) 
+                                                  << 0x0000001fU));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = ((0xfffffffeU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                               | (((2U 
+                                                    & ((~ 
+                                                        ((IData)(__Vfunc_Decode__1__IR) 
+                                                         >> 5U)) 
+                                                       << 1U)) 
+                                                   | (1U 
+                                                      & (~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)))) 
+                                                  >> 1U));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000020U 
+                                               | (0xffffffc1U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000a00U 
+                                               | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x20000000U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00006800U 
+                                               | ((0xffff81ffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00000200U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)) 
+                                                        << 9U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00002800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00220080U 
+                                       | ((0xffc0003fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x000a0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000030U 
+                                        & (IData)(__Vfunc_Decode__1__IR)) 
+                                       | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 3U))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x70000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        }
+                    } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((2U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000011U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xe07fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x1f800000U 
+                                              & ((0x00c30a20U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (8U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x80000000U 
+                                       | (0x7fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (1U | ((0xffffffc0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                   << 1U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0016a000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000016U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x000c0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000020U 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           << 3U)) 
+                                       | ((0x00000010U 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 1U)) 
+                                          | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x60000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000400U 
+                                       | (0x0000e3ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xf3ffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (0x0c000000U 
+                                          & ((0xa4U 
+                                              >> (6U 
+                                                  & ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 3U))) 
+                                             << 0x0000001aU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000020U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (4U | (0xffffffe3U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00170000U | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (((0x00000080U 
+                                                       & ((~ 
+                                                           ((IData)(__Vfunc_Decode__1__IR) 
+                                                            >> 4U)) 
+                                                          << 7U)) 
+                                                      | (0x00000040U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 2U))) 
+                                                     << 0x0000000fU)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x000000c0U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                               | (((0x00000020U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)) 
+                                   | ((0x00000010U 
+                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                          >> 1U)) | 
+                                      (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                             << 3U)))) 
+                                  << 0x00000016U));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x60000000U | (0x0fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x10800000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                } else if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xe03fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((0x00000060U 
+                                                & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 5U)) 
+                                               | ((IData)(
+                                                          (2U 
+                                                           == 
+                                                           (3U 
+                                                            & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                  << 4U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x1fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & (IData)(__Vfunc_Decode__1__IR))) 
+                                                 << 0x0000001cU)));
+                                } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if (__Vfunc_Decode__1__VER) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00220080U 
+                                                   | ((0xffc0003fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00490000U 
+                                                   | ((0xff807fffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00008000U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 0x0000000cU))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x7fffffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00260000U 
+                                                   | (0xffc01fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00290000U 
+                                                   | ((0xff807fffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00008000U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 0x0000000cU))));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xe03fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((0x00000060U 
+                                                & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 5U)) 
+                                               | ((IData)(
+                                                          (2U 
+                                                           == 
+                                                           (3U 
+                                                            & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                  << 4U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x1fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & (IData)(__Vfunc_Decode__1__IR))) 
+                                                 << 0x0000001cU)));
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((0x00000060U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  << 5U)) 
+                                              | ((IData)(
+                                                         (2U 
+                                                          == 
+                                                          (3U 
+                                                           & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                 << 4U)) 
+                                             << 0x00000016U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x1fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | ((0U != 
+                                              (3U & (IData)(__Vfunc_Decode__1__IR))) 
+                                             << 0x0000001cU)));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((0x00000060U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  << 5U)) 
+                                              | ((IData)(
+                                                         (2U 
+                                                          == 
+                                                          (3U 
+                                                           & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                 << 4U)) 
+                                             << 0x00000016U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x1fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | ((0U != 
+                                              (3U & (IData)(__Vfunc_Decode__1__IR))) 
+                                             << 0x0000001cU)));
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0a000000U 
+                                       | ((0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x01c00000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000016U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__VER) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00220080U 
+                                               | ((0xffc0003fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00490000U 
+                                               | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00008000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x0000000cU))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00260000U 
+                                               | (0xffc01fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00290000U 
+                                               | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00008000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x0000000cU))));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x80000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01c00000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01c00000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0x7fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | ((IData)((0x000000008c540000ULL 
+                                                   | (QData)((IData)(
+                                                                     (0x00000102U 
+                                                                      | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                          << 9U) 
+                                                                         | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                            << 2U))))))) 
+                                          << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (((IData)((0x000000008c540000ULL 
+                                                 | (QData)((IData)(
+                                                                   (0x00000102U 
+                                                                    | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                        << 9U) 
+                                                                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                          << 2U))))))) 
+                                        >> 1U) | ((IData)(
+                                                          ((0x000000008c540000ULL 
+                                                            | (QData)((IData)(
+                                                                              (0x00000102U 
+                                                                               | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                                << 9U) 
+                                                                                | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                                << 2U)))))) 
+                                                           >> 0x00000020U)) 
+                                                  << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = ((0x0000fffcU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                       | (0x0000ffffU 
+                                          & ((IData)(
+                                                     ((0x000000008c540000ULL 
+                                                       | (QData)((IData)(
+                                                                         (0x00000102U 
+                                                                          | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                              << 9U) 
+                                                                             | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                                << 2U)))))) 
+                                                      >> 0x00000020U)) 
+                                             >> 1U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x006a0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00018000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x0000000fU))));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x44000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x34000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x28000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x24000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x11000000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00244000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000011U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00244000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                    }
+                } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                        = (0x00000081U | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                        = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                        = (0x00264000U | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                        = (1U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__VER) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x000000c0U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0002a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x004c8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x002c8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x40000000U 
+                                       | (0x3fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x3fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x3ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (2U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0024a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x40000000U | (0x3fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x3fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x3ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (2U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0024a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0U == (0x000000ffU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 4U)))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000021U 
+                                               | (0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x20000000U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00006800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00002800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else if ((1U == (0x000000ffU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U)))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000080U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((2U == (0x000000ffU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U)))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                                  >> 2U)))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000040U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x003fffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00002800U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x10000000U 
+                                                     | (0xe07fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000040U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x003fffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x20000000U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00006800U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            }
+                                        } else {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x80000000U 
+                                                     | (0x7fffffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0000001eU 
+                                                     | (0xffffffc0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x7fffffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0000001fU 
+                                                     | (0xffffffc0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00168000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x0000000cU 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if (((0U == (0x0000000fU 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 4U))) 
+                                    || (1U == (0x0000000fU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U))))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000040U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00020000U | (0xfffcffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00160000U | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (((0x00000080U 
+                                                       & ((~ 
+                                                           ((IData)(__Vfunc_Decode__1__IR) 
+                                                            >> 4U)) 
+                                                          << 7U)) 
+                                                      | (0x00000040U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 2U))) 
+                                                     << 0x0000000fU)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else if ((2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000e1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x7fffff00U 
+                                                     & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                        << 8U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0U == (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   >> 4U)))) {
+                            if ((0U != (0x0000000fU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 8U)))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((1U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = ((0U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 8U)))
+                                    ? (0x11800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]))
+                                    : (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if ((2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000600U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000016U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if (((0U == (0x000000ffU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 4U))) 
+                                || (1U == (0x000000ffU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U))))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa0000000U | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = ((0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                               | (0x0000ffffU & (1U 
+                                                 | (0x003ffffcU 
+                                                    & (((0x00000010U 
+                                                         & (IData)(__Vfunc_Decode__1__IR))
+                                                         ? 5U
+                                                         : 4U) 
+                                                       << 2U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x10800000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    } else if ((2U == (0x000000ffU 
+                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                          >> 4U)))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa02a0000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x006f8000U | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    }
+                } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if (__Vfunc_Decode__1__VER) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00220080U 
+                                           | ((0xffc0003fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00488000U 
+                                           | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00260000U 
+                                           | (0xffc01fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00288000U 
+                                           | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x40000000U | (0x3fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x3fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x3ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (1U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x40000000U | (0x3fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x3fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x3ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (1U | (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00244000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                    }
+                } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if (((0U == (0x0000000fU & 
+                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 4U))) || (2U 
+                                                   == 
+                                                   (0x0000000fU 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U))))) {
+                            if (((IData)(__Vfunc_Decode__1__VER) 
+                                 & (~ (IData)(__Vfunc_Decode__1__DS)))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000080U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0x7fffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (((2U 
+                                                & ((~ 
+                                                    ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 5U)) 
+                                                   << 1U)) 
+                                               | (1U 
+                                                  & (~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)))) 
+                                              << 0x0000001fU));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xfffffffeU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((2U 
+                                                & ((~ 
+                                                    ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 5U)) 
+                                                   << 1U)) 
+                                               | (1U 
+                                                  & (~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)))) 
+                                              >> 1U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000020U 
+                                           | (0xffffffc1U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000800U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x20000000U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00006800U 
+                                           | ((0xffff81ffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x00000200U 
+                                                 & ((~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)) 
+                                                    << 9U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00002800U 
+                                           | (0xffff81ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((((0U == (0x0000000fU 
+                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                            >> 4U))) 
+                                 || (1U == (0x0000000fU 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 4U)))) 
+                                || (2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U))))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x000000c0U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = ((0xe07fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                               | (0x1f800000U & ((0x00410200U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    }
+                } else {
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                }
+                if ((1U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U])) {
+                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x00000014U | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                }
+                __Vfunc_Decode__1__Vfuncout[0U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U];
+                __Vfunc_Decode__1__Vfuncout[1U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U];
+                __Vfunc_Decode__1__Vfuncout[2U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U];
+                vlSelfRef.dump_dec__DOT__D[0U] = __Vfunc_Decode__1__Vfuncout[0U];
+                vlSelfRef.dump_dec__DOT__D[1U] = __Vfunc_Decode__1__Vfuncout[1U];
+                vlSelfRef.dump_dec__DOT__D[2U] = __Vfunc_Decode__1__Vfuncout[2U];
+                VL_FWRITEF_NX(vlSelfRef.dump_dec__DOT__f,"E%0d %04x %0d 0 %0h\n",4
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st
+                              , '#',80,vlSelfRef.dump_dec__DOT__D.data());
+                vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir 
+                    = ((IData)(0x00001001U) + vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir);
+            }
+            vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir = 0U;
+            while (VL_GTS_III(32, 0x00010000U, vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir)) {
+                __Vfunc_Decode__1__VER = 1U;
+                __Vfunc_Decode__1__ILSI = 1U;
+                __Vfunc_Decode__1__ILI_EXP = (3U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__INT_EXP = (2U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__RES_EXP = (1U == vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+                __Vfunc_Decode__1__DS = 0U;
+                __Vfunc_Decode__1__T = 0U;
+                __Vfunc_Decode__1__STATE = (7U & vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st);
+                __Vfunc_Decode__1__IR = (0x0000ffffU 
+                                         & vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir);
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN 
+                    = (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 8U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN 
+                    = (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 4U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC 
+                    = ((IData)(__Vfunc_Decode__1__T) 
+                       == (1U & (~ ((IData)(__Vfunc_Decode__1__IR) 
+                                    >> 9U))));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] = 0U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] = 0xa0240000U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] = 4U;
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                    = ((0xffffe0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                          << 8U));
+                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                    = ((0xffffffc1U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                          << 1U));
+                if (__Vfunc_Decode__1__RES_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                      >> 1U)))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000f40U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000020U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000016U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000020U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa0000000U | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x18000000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x00000014U | (0xffffffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                } else if (__Vfunc_Decode__1__INT_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000011U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((1U & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000400U | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x08000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x12000000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (2U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000fc0U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000e00U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000fc0U | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x02264000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000015U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x0000001cU | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                } else if (__Vfunc_Decode__1__ILI_EXP) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            if ((1U & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000011U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x20000000U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00006000U | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000400U | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x08000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00268000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000001aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000fc0U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = ((0x0000e1ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                   | (0x0000ffffU & 
+                                      (0x00000200U 
+                                       | (((IData)(__Vfunc_Decode__1__ILSI)
+                                            ? 4U : 3U) 
+                                          << 0x0000000aU))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000fc0U | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x02264000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000015U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    }
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x00000018U | (0xffffffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                } else if ((0x00008000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00004000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0xa0000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            }
+                        } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000040U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = ((0x0000e0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                   | (0x0000ffffU & 
+                                      (0x00000a00U 
+                                       | (0x00000100U 
+                                          & ((IData)(__Vfunc_Decode__1__IR) 
+                                             >> 6U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000000aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00208000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (((0x00000010U 
+                                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 0x0000000aU)) 
+                                                      | (8U 
+                                                         & ((~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 0x0eU)) 
+                                                            << 3U))) 
+                                                     << 0x0000000dU)));
+                        } else if ((0x00000800U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x40000000U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (2U | (0x0000fffcU 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x04000000U 
+                                           | (0xf3ffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0024a000U 
+                                           | (0xffc01fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((2U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000068U 
+                                           | (0x0000ff83U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0x003fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((2U 
+                                                == 
+                                                (3U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 8U)))
+                                                ? 0x0490U
+                                                : (
+                                                   (3U 
+                                                    == 
+                                                    (3U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 8U)))
+                                                    ? 0x04a0U
+                                                    : 0x0480U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = ((0x0000fffcU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                           | (0x0000ffffU 
+                                              & (((2U 
+                                                   == 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 8U)))
+                                                   ? 0x0490U
+                                                   : 
+                                                  ((3U 
+                                                    == 
+                                                    (3U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 8U)))
+                                                    ? 0x04a0U
+                                                    : 0x0480U)) 
+                                                 >> 0x0000000aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00180000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 8U))) 
+                                                 << 0x0000000eU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x10000000U 
+                                                 & ((~ 
+                                                     (0U 
+                                                      != 
+                                                      (3U 
+                                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 8U)))) 
+                                                    << 0x0000001cU))));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (8U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((0x00000200U 
+                                        & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x28000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x24000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (9U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else if ((0x00000100U 
+                                        & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (9U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (8U | (0x0000ffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x20000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000b00U 
+                                           | (0x0000e0ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000000aU 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00020000U 
+                                           | (0xfffcffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000040U 
+                                           | (0xffffe03fU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000600U 
+                                           | (0x0000e1ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000000aU 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x04000000U 
+                                           | (0xf3ffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0020a000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 8U))));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000040U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000600U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000aU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x04000000U 
+                                       | (0xf3ffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0020a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 8U))));
+                            }
+                        } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((4U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (~ (IData)(__Vfunc_Decode__1__STATE)))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00002000U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            }
+                                        } else if (
+                                                   (1U 
+                                                    & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000040U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000011U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x20000000U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00006000U 
+                                                   | (0xffff81ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                    } else if ((2U 
+                                                & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        if ((1U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000400U 
+                                                   | (0x0000e3ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x08000000U 
+                                                   | (0xf3ffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00268000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x0000000aU 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        } else {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000fc0U 
+                                                   | (0xffffe03fU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00001200U 
+                                                   | (0x0000e1ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x02264000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        }
+                                    } else if ((1U 
+                                                & (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000fc0U 
+                                               | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000400U 
+                                               | (0x0000e3ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0xf3ffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x02264000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000018U 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | (0xffffe03fU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000600U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000aU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x04000000U 
+                                       | (0xf3ffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00204000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 8U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000600U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000000aU | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x04000000U | (0xf3ffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00204000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 8U))));
+                        }
+                    } else if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if (__Vfunc_Decode__1__DS) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0x7fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (((2U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 0x0000000bU)) 
+                                           | (1U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 0x0cU))) 
+                                          << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000020U 
+                                       | ((0xffffffc0U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((2U & 
+                                               ((IData)(__Vfunc_Decode__1__IR) 
+                                                >> 0x0000000bU)) 
+                                              | (1U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 0x0cU))) 
+                                             >> 1U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000a00U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000000eU 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x20000000U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00006800U 
+                                       | ((0xffff81ffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00000200U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                >> 3U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000020U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00002800U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (4U | (0xffffffe3U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000040U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = ((0x0000e0ffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                               | (0x0000ffffU & (0x00000a00U 
+                                                 | (0x00000100U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 6U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x0000000aU | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00208000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (((0x00000010U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 0x0000000aU)) 
+                                                  | (8U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 0x0eU)) 
+                                                        << 3U))) 
+                                                 << 0x0000000dU)));
+                    } else if ((0x00000800U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (((IData)(__Vfunc_Decode__1__VER) 
+                                     & (~ (IData)(__Vfunc_Decode__1__DS)))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000a00U 
+                                               | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (6U | 
+                                               (0x0000ffe0U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xdfffffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                                  << 0x0000001dU));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00005800U 
+                                               | ((0xffff81ffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00000400U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 9U)) 
+                                                        << 0x0000000aU))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                                    ? 1U
+                                                    : 0U) 
+                                                  << 2U));
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00001800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000a00U 
+                                           | (0x0000e1ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (6U | (0x0000ffe0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xdfffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                              << 0x0000001dU));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00005000U 
+                                           | ((0xffff81ffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x00000400U 
+                                                 & ((~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 9U)) 
+                                                    << 0x0000000aU))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xffffffe3U 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                                ? 1U
+                                                : 0U) 
+                                              << 2U));
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00001000U 
+                                           | (0xffff81ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((0x00000100U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if (__Vfunc_Decode__1__DS) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000a00U 
+                                       | (0x0000e1ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (6U | (0x0000ffe0U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xdfffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC) 
+                                          << 0x0000001dU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00005000U 
+                                       | ((0xffff81ffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00000400U 
+                                             & ((~ 
+                                                 ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 9U)) 
+                                                << 0x0000000aU))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xffffffe3U 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__BC)
+                                            ? 1U : 0U) 
+                                          << 2U));
+                            } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00001000U 
+                                       | (0xffff81ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | (0xffffe03fU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (5U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00000400U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x7ffffffeU 
+                                                     & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                        << 1U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (2U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0020a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 8U))));
+                        }
+                    } else if ((0x00000200U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7ffffffeU 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                    << 1U))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (2U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00204000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 8U))));
+                    }
+                } else if ((0x00004000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (5U | (0x0000ffe0U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x08000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x06000000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000019U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x40000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000010U 
+                                       | (0x0000ffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xf03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x04000000U 
+                                             & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                                << 0x0000001aU))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0x0fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (0x10000000U 
+                                          & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                             << 0x0000001cU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (2U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x10000000U 
+                                             & ((~ (IData)(__Vfunc_Decode__1__IR)) 
+                                                << 0x0000001cU))));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xe03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (0x02000000U 
+                                          & ((IData)(__Vfunc_Decode__1__IR) 
+                                             << 0x00000019U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x40000000U 
+                                       | (0x1fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x2a000000U 
+                                           | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000012U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000041U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0014a000U 
+                                           | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x80000000U 
+                                       | (0x7fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000016U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0014a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000012U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000012U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0024a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000012U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0024a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000041U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x0026a000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (2U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                    } else if ((0x00000080U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((0x00000040U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((0x00000020U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0x00000010U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                            if ((0U 
+                                                 == (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x000000c0U 
+                                                     | ((0xffffe03fU 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                           << 8U)));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0001a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000015U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x004d8000U 
+                                                     | (0xff807fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            } else if (
+                                                       (1U 
+                                                        == (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x80000000U 
+                                                     | (0x7fffffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (1U 
+                                                     | ((0xffffffc0U 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | (0x7ffffffeU 
+                                                           & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                              << 1U))));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0015a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000016U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x002d8000U 
+                                                     | (0xff807fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (4U 
+                                                   | (0xffffffe3U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        } else {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (1U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if (__Vfunc_Decode__1__DS) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000080U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (
+                                                   (0x7fffffffU 
+                                                    & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                   | (((2U 
+                                                        & ((~ 
+                                                            ((IData)(__Vfunc_Decode__1__IR) 
+                                                             >> 5U)) 
+                                                           << 1U)) 
+                                                       | (1U 
+                                                          & (~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)))) 
+                                                      << 0x0000001fU));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (
+                                                   (0xfffffffeU 
+                                                    & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                   | (((2U 
+                                                        & ((~ 
+                                                            ((IData)(__Vfunc_Decode__1__IR) 
+                                                             >> 5U)) 
+                                                           << 1U)) 
+                                                       | (1U 
+                                                          & (~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)))) 
+                                                      >> 1U));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00000020U 
+                                                   | (0xffffffc1U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000a00U 
+                                                   | (0x0000e1ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000011U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x20000000U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00006800U 
+                                                   | ((0xffff81ffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00000200U 
+                                                         & ((~ 
+                                                             ((IData)(__Vfunc_Decode__1__IR) 
+                                                              >> 5U)) 
+                                                            << 9U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00002800U 
+                                                   | (0xffff81ffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000a1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7fffff00U 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                    << 8U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000011U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000030U 
+                                            & (IData)(__Vfunc_Decode__1__IR)) 
+                                           | (8U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x70000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((2U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (8U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00001041U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x7ffffffeU 
+                                                 & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                    << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000020U 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U)) 
+                                           | ((0x00000010U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 1U)) 
+                                              | (8U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 3U)))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x60000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xf3ffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x0c000000U 
+                                              & ((0xa4U 
+                                                  >> 
+                                                  (6U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 3U))) 
+                                                 << 0x0000001aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x02264000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000015U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000e1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x7fffff00U 
+                                             & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                << 8U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000020U 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           << 3U)) 
+                                       | ((0x00000010U 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 1U)) 
+                                          | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x60000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((0x00000010U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x000000c0U 
+                                                   | ((0xffffe03fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0001a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000015U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x004d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x80000000U 
+                                                   | (0x7fffffffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x0015a000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x002d8000U 
+                                                   | (0xff807fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                                  >> 2U)))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000080U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0a000000U 
+                                                     | (0x003fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x10800000U 
+                                                     | (0xe07fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000060U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x28184000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x0000fffcU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            }
+                                        } else {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x00000080U 
+                                                     | ((0xffffe03fU 
+                                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                        | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                           << 8U)));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0024a000U 
+                                                     | (0x00001fffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000100U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x0000000cU 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00220080U 
+                                           | ((0xffc0003fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x000a0000U 
+                                           | ((0xff807fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (((0x00000080U 
+                                                   & ((~ 
+                                                       ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 4U)) 
+                                                      << 7U)) 
+                                                  | (0x00000040U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 2U))) 
+                                                 << 0x0000000fU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = ((0xf03fffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                       | (((0x00000030U 
+                                            & (IData)(__Vfunc_Decode__1__IR)) 
+                                           | (8U & 
+                                              ((IData)(__Vfunc_Decode__1__IR) 
+                                               << 3U))) 
+                                          << 0x00000016U));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x70000000U 
+                                       | (0x0fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((2U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000040U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0xe07fffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (0x1f800000U 
+                                                  & ((0x00c30a20U 
+                                                      >> 
+                                                      ((IData)(6U) 
+                                                       * 
+                                                       (3U 
+                                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                                           >> 4U)))) 
+                                                     << 0x00000017U)));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (8U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x000c0000U 
+                                           | ((0xff807fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (((0x00000080U 
+                                                   & ((~ 
+                                                       ((IData)(__Vfunc_Decode__1__IR) 
+                                                        >> 4U)) 
+                                                      << 7U)) 
+                                                  | (0x00000040U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 2U))) 
+                                                 << 0x0000000fU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000080U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000010U 
+                                       | (0x0000ffe3U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0ac00000U 
+                                       | ((0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x01000000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000016U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (1U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c0U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000400U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xf3ffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x0c000000U 
+                                              & ((0xa4U 
+                                                  >> 
+                                                  (6U 
+                                                   & ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 3U))) 
+                                                 << 0x0000001aU)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x02264000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000015U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00170000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000080U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000010U | (0x0000ffe3U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0ac00000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01000000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (1U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if (__Vfunc_Decode__1__VER) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x000000c0U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0001a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x004d8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0015a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x002d8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xe07fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x1f800000U 
+                                              & ((0x00c30a20U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000080U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = ((0x7fffffffU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                               | (((2U 
+                                                    & ((~ 
+                                                        ((IData)(__Vfunc_Decode__1__IR) 
+                                                         >> 5U)) 
+                                                       << 1U)) 
+                                                   | (1U 
+                                                      & (~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)))) 
+                                                  << 0x0000001fU));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = ((0xfffffffeU 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                               | (((2U 
+                                                    & ((~ 
+                                                        ((IData)(__Vfunc_Decode__1__IR) 
+                                                         >> 5U)) 
+                                                       << 1U)) 
+                                                   | (1U 
+                                                      & (~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)))) 
+                                                  >> 1U));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000020U 
+                                               | (0xffffffc1U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000a00U 
+                                               | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x003fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000011U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x20000000U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00006800U 
+                                               | ((0xffff81ffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00000200U 
+                                                     & ((~ 
+                                                         ((IData)(__Vfunc_Decode__1__IR) 
+                                                          >> 5U)) 
+                                                        << 9U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00002800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00220080U 
+                                       | ((0xffc0003fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x000a0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000030U 
+                                        & (IData)(__Vfunc_Decode__1__IR)) 
+                                       | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 3U))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x70000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        }
+                    } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x80000000U 
+                                           | (0x7fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x0016a000U 
+                                           | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000016U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((2U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000040U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000200U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000011U 
+                                           | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0xe07fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (0x1f800000U 
+                                              & ((0x00c30a20U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (8U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x80000000U 
+                                       | (0x7fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (1U | ((0xffffffc0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                   << 1U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0016a000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000016U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x000c0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (((0x00000080U 
+                                               & ((~ 
+                                                   ((IData)(__Vfunc_Decode__1__IR) 
+                                                    >> 4U)) 
+                                                  << 7U)) 
+                                              | (0x00000040U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 2U))) 
+                                             << 0x0000000fU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000040U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                   | (((0x00000020U 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           << 3U)) 
+                                       | ((0x00000010U 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 1U)) 
+                                          | (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)))) 
+                                      << 0x00000016U));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x60000000U | (0x0fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c0U 
+                                       | ((0xffffe03fU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                             << 8U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000400U 
+                                       | (0x0000e3ffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0xf3ffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | (0x0c000000U 
+                                          & ((0xa4U 
+                                              >> (6U 
+                                                  & ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 3U))) 
+                                             << 0x0000001aU)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02264000U 
+                                       | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00000020U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (4U | (0xffffffe3U 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02264000U | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00170000U | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (((0x00000080U 
+                                                       & ((~ 
+                                                           ((IData)(__Vfunc_Decode__1__IR) 
+                                                            >> 4U)) 
+                                                          << 7U)) 
+                                                      | (0x00000040U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 2U))) 
+                                                     << 0x0000000fU)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x000000c0U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = ((0xf03fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                               | (((0x00000020U & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 3U)) 
+                                   | ((0x00000010U 
+                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                          >> 1U)) | 
+                                      (8U & ((IData)(__Vfunc_Decode__1__IR) 
+                                             << 3U)))) 
+                                  << 0x00000016U));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x60000000U | (0x0fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x10800000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                } else if ((0x00002000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xe03fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((0x00000060U 
+                                                & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 5U)) 
+                                               | ((IData)(
+                                                          (2U 
+                                                           == 
+                                                           (3U 
+                                                            & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                  << 4U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x1fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & (IData)(__Vfunc_Decode__1__IR))) 
+                                                 << 0x0000001cU)));
+                                } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                    if (__Vfunc_Decode__1__VER) {
+                                        if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00220080U 
+                                                   | ((0xffc0003fU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00490000U 
+                                                   | ((0xff807fffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00008000U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 0x0000000cU))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        } else if (
+                                                   (1U 
+                                                    == (IData)(__Vfunc_Decode__1__STATE))) {
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x7fffffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (1U 
+                                                   | ((0xffffffc0U 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                      | (0x7ffffffeU 
+                                                         & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                            << 1U))));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00260000U 
+                                                   | (0xffc01fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00290000U 
+                                                   | ((0xff807fffU 
+                                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                      | (0x00008000U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 0x0000000cU))));
+                                        }
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (4U | 
+                                               (0xffffffe3U 
+                                                & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    } else {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    }
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x000000c1U 
+                                           | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xe03fffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((0x00000060U 
+                                                & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   << 5U)) 
+                                               | ((IData)(
+                                                          (2U 
+                                                           == 
+                                                           (3U 
+                                                            & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                  << 4U)) 
+                                              << 0x00000016U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x1fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00800000U 
+                                           | ((0xe07fffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | ((0U 
+                                                  != 
+                                                  (3U 
+                                                   & (IData)(__Vfunc_Decode__1__IR))) 
+                                                 << 0x0000001cU)));
+                                }
+                            } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((0x00000060U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  << 5U)) 
+                                              | ((IData)(
+                                                         (2U 
+                                                          == 
+                                                          (3U 
+                                                           & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                 << 4U)) 
+                                             << 0x00000016U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x1fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | ((0U != 
+                                              (3U & (IData)(__Vfunc_Decode__1__IR))) 
+                                             << 0x0000001cU)));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | ((0xe03fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (((0x00000060U 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  << 5U)) 
+                                              | ((IData)(
+                                                         (2U 
+                                                          == 
+                                                          (3U 
+                                                           & (IData)(__Vfunc_Decode__1__IR)))) 
+                                                 << 4U)) 
+                                             << 0x00000016U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x1fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x00800000U 
+                                       | ((0xe07fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | ((0U != 
+                                              (3U & (IData)(__Vfunc_Decode__1__IR))) 
+                                             << 0x0000001cU)));
+                            }
+                        } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0a000000U 
+                                       | ((0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x01c00000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000016U))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__VER) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00220080U 
+                                               | ((0xffc0003fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00490000U 
+                                               | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00008000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x0000000cU))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00260000U 
+                                               | (0xffc01fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00290000U 
+                                               | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (0x00008000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x0000000cU))));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x80000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01c00000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0a000000U | ((0x003fffffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x01c00000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000016U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = ((0x7fffffffU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                       | ((IData)((0x000000008c540000ULL 
+                                                   | (QData)((IData)(
+                                                                     (0x00000102U 
+                                                                      | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                          << 9U) 
+                                                                         | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                            << 2U))))))) 
+                                          << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (((IData)((0x000000008c540000ULL 
+                                                 | (QData)((IData)(
+                                                                   (0x00000102U 
+                                                                    | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                        << 9U) 
+                                                                       | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                          << 2U))))))) 
+                                        >> 1U) | ((IData)(
+                                                          ((0x000000008c540000ULL 
+                                                            | (QData)((IData)(
+                                                                              (0x00000102U 
+                                                                               | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                                << 9U) 
+                                                                                | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                                << 2U)))))) 
+                                                           >> 0x00000020U)) 
+                                                  << 0x0000001fU));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = ((0x0000fffcU 
+                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                                       | (0x0000ffffU 
+                                          & ((IData)(
+                                                     ((0x000000008c540000ULL 
+                                                       | (QData)((IData)(
+                                                                         (0x00000102U 
+                                                                          | (((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                                              << 9U) 
+                                                                             | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                                                << 2U)))))) 
+                                                      >> 0x00000020U)) 
+                                             >> 1U)));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x006a0000U 
+                                       | ((0xff807fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                          | (0x00018000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x0000000fU))));
+                            } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x44000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x34000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x0000fffcU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x10800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            }
+                        } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x28000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x24000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            }
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x10800000U | (0xe07fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        }
+                    } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000081U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x11000000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x7fffffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x000000c1U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000200U 
+                                       | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x02000000U 
+                                       | (0x003fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (0x00000015U 
+                                       | (0x0000ffe0U 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00244000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x02000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000015U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x7fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x7ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000011U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x7fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00244000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                    }
+                } else if ((0x00001000U & (IData)(__Vfunc_Decode__1__IR))) {
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                        = (0x00000081U | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x7fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x7ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                        = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                        = (0x00264000U | (0x00001fffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                        = (1U | (0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                } else if ((8U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                                if (__Vfunc_Decode__1__VER) {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x000000c0U 
+                                               | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0002a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000015U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x004c8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x80000000U 
+                                               | (0x7fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (1U | 
+                                               ((0xffffffc0U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                | (0x7ffffffeU 
+                                                   & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                      << 1U))));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000200U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x0016a000U 
+                                               | (0x00001fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                            = (0x00000016U 
+                                               | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x002c8000U 
+                                               | (0xff807fffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                } else {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (0x40000000U 
+                                       | (0x3fffffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x00000041U 
+                                       | ((0xffffe000U 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | ((0x3fffff00U 
+                                              & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)) 
+                                             | (0x3ffffffeU 
+                                                & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                   << 1U)))));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x003fffffU 
+                                       & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                    = (2U | (0x0000fffcU 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                    = (0x0024a000U 
+                                       | ((0xffc01fffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                          | (0x00030000U 
+                                             & ((IData)(__Vfunc_Decode__1__IR) 
+                                                << 0x00000010U))));
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x40000000U | (0x3fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000041U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x3fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x3ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (2U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x0024a000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if ((0U == (0x000000ffU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 4U)))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x7fffffffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                            = (0x00000021U 
+                                               | (0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x20000000U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00006800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00000020U 
+                                               | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    } else if ((1U 
+                                                == (IData)(__Vfunc_Decode__1__STATE))) {
+                                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                            = (0x00002800U 
+                                               | (0xffff81ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (4U | (0xffffffe3U 
+                                                 & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else if ((1U == (0x000000ffU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U)))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000080U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else if ((2U == (0x000000ffU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U)))) {
+                                if (__Vfunc_Decode__1__DS) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else {
+                                    if ((1U & (~ ((IData)(__Vfunc_Decode__1__STATE) 
+                                                  >> 2U)))) {
+                                        if ((2U & (IData)(__Vfunc_Decode__1__STATE))) {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000040U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x003fffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00002800U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x10000000U 
+                                                     | (0xe07fffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000040U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000200U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x003fffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000011U 
+                                                     | (0x0000ffe0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x20000000U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00006800U 
+                                                     | (0xffff81ffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                            }
+                                        } else {
+                                            if ((1U 
+                                                 & (IData)(__Vfunc_Decode__1__STATE))) {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x80000000U 
+                                                     | (0x7fffffffU 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0000001eU 
+                                                     | (0xffffffc0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                    = 
+                                                    (0x00000020U 
+                                                     | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            } else {
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                    = 
+                                                    (0x7fffffffU 
+                                                     & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                    = 
+                                                    (0x0000001fU 
+                                                     | (0xffffffc0U 
+                                                        & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            }
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000200U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                                = (0x00168000U 
+                                                   | (0x00001fffU 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                                = (0x00000016U 
+                                                   | (0x0000ffe0U 
+                                                      & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                                = (0x00000020U 
+                                                   | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                        }
+                                    }
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x0000000cU 
+                                           | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if (((0U == (0x0000000fU 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 4U))) 
+                                    || (1U == (0x0000000fU 
+                                               & ((IData)(__Vfunc_Decode__1__IR) 
+                                                  >> 4U))))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000040U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00020000U | (0xfffcffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00160000U | ((0xff807fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                                  | (((0x00000080U 
+                                                       & ((~ 
+                                                           ((IData)(__Vfunc_Decode__1__IR) 
+                                                            >> 4U)) 
+                                                          << 7U)) 
+                                                      | (0x00000040U 
+                                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                                            << 2U))) 
+                                                     << 0x0000000fU)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else if ((2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x7fffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000e1U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x7fffff00U 
+                                                     & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                        << 8U))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((0U == (0x0000000fU & ((IData)(__Vfunc_Decode__1__IR) 
+                                                   >> 4U)))) {
+                            if ((0U != (0x0000000fU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 8U)))) {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else if ((1U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = ((0U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 8U)))
+                                    ? (0x11800000U 
+                                       | (0xe07fffffU 
+                                          & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]))
+                                    : (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        } else if ((2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U)))) {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x000000c0U | ((0xffffe03fU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000600U | (0x0000e1ffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x20000000U | (0x003fffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (0x00000016U | (0x0000ffe0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0xf3ffffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if (((0U == (0x000000ffU 
+                                        & ((IData)(__Vfunc_Decode__1__IR) 
+                                           >> 4U))) 
+                                || (1U == (0x000000ffU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U))))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa0000000U | (0x003fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = ((0x0000ffe0U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]) 
+                               | (0x0000ffffU & (1U 
+                                                 | (0x003ffffcU 
+                                                    & (((0x00000010U 
+                                                         & (IData)(__Vfunc_Decode__1__IR))
+                                                         ? 5U
+                                                         : 4U) 
+                                                       << 2U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x10800000U | (0xe07fffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    } else if ((2U == (0x000000ffU 
+                                       & ((IData)(__Vfunc_Decode__1__IR) 
+                                          >> 4U)))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000200U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0xa02a0000U | (0x00001fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000011U | (0x0000ffe0U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x006f8000U | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    }
+                } else if ((4U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                            if (__Vfunc_Decode__1__VER) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00220080U 
+                                           | ((0xffc0003fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00488000U 
+                                           | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x7fffffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (1U | ((0xffffffc0U 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                 | (0x7ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00260000U 
+                                           | (0xffc01fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00288000U 
+                                           | (0xff807fffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (0x40000000U | (0x3fffffffU 
+                                                  & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00000081U | ((0xffffe000U 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | ((0x3fffff00U 
+                                                      & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                         << 8U)) 
+                                                     | (0x3ffffffeU 
+                                                        & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                           << 1U)))));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                = (1U | (0x0000fffcU 
+                                         & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                = (0x00244000U | ((0xffc01fffU 
+                                                   & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                                  | (0x00030000U 
+                                                     & ((IData)(__Vfunc_Decode__1__IR) 
+                                                        << 0x00000010U))));
+                        }
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x40000000U | (0x3fffffffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00000081U | ((0xffffe000U 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((0x3fffff00U 
+                                                  & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                     << 8U)) 
+                                                 | (0x3ffffffeU 
+                                                    & ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RBN) 
+                                                       << 1U)))));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x003fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (1U | (0x0000fffcU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x00244000U | ((0xffc01fffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | (0x00030000U 
+                                                 & ((IData)(__Vfunc_Decode__1__IR) 
+                                                    << 0x00000010U))));
+                    }
+                } else if ((2U & (IData)(__Vfunc_Decode__1__IR))) {
+                    if ((1U & (IData)(__Vfunc_Decode__1__IR))) {
+                        if (((0U == (0x0000000fU & 
+                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                      >> 4U))) || (2U 
+                                                   == 
+                                                   (0x0000000fU 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U))))) {
+                            if (((IData)(__Vfunc_Decode__1__VER) 
+                                 & (~ (IData)(__Vfunc_Decode__1__DS)))) {
+                                if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000080U 
+                                           | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = ((0x7fffffffU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                           | (((2U 
+                                                & ((~ 
+                                                    ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 5U)) 
+                                                   << 1U)) 
+                                               | (1U 
+                                                  & (~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)))) 
+                                              << 0x0000001fU));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = ((0xfffffffeU 
+                                            & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                           | (((2U 
+                                                & ((~ 
+                                                    ((IData)(__Vfunc_Decode__1__IR) 
+                                                     >> 5U)) 
+                                                   << 1U)) 
+                                               | (1U 
+                                                  & (~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)))) 
+                                              >> 1U));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x00000020U 
+                                           | (0xffffffc1U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x00000800U 
+                                           | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                                        = (0x003fffffU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                                        = (0x0000fffcU 
+                                           & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x20000000U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00006800U 
+                                           | ((0xffff81ffU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                                              | (0x00000200U 
+                                                 & ((~ 
+                                                     ((IData)(__Vfunc_Decode__1__IR) 
+                                                      >> 5U)) 
+                                                    << 9U))));
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00000020U 
+                                           | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                                } else if ((1U == (IData)(__Vfunc_Decode__1__STATE))) {
+                                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                        = (0x00002800U 
+                                           | (0xffff81ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                                }
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (4U | (0xffffffe3U 
+                                             & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                            } else {
+                                vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                    = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                            }
+                        } else {
+                            vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                                = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                        }
+                    } else if ((((0U == (0x0000000fU 
+                                         & ((IData)(__Vfunc_Decode__1__IR) 
+                                            >> 4U))) 
+                                 || (1U == (0x0000000fU 
+                                            & ((IData)(__Vfunc_Decode__1__IR) 
+                                               >> 4U)))) 
+                                || (2U == (0x0000000fU 
+                                           & ((IData)(__Vfunc_Decode__1__IR) 
+                                              >> 4U))))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U] 
+                            = (0x000000c0U | ((0xffffe03fU 
+                                               & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U]) 
+                                              | ((IData)(vlSymsp->TOP__SH2_PKG.Decode__Vstatic__RAN) 
+                                                 << 8U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U] 
+                            = (0x00000400U | (0x0000e3ffU 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U]));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = ((0xe07fffffU & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]) 
+                               | (0x1f800000U & ((0x00410200U 
+                                                  >> 
+                                                  ((IData)(6U) 
+                                                   * 
+                                                   (3U 
+                                                    & ((IData)(__Vfunc_Decode__1__IR) 
+                                                       >> 4U)))) 
+                                                 << 0x00000017U)));
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x00000040U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    } else {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                    }
+                } else {
+                    vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                        = (1U | vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]);
+                }
+                if ((1U & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U])) {
+                    if ((0U == (IData)(__Vfunc_Decode__1__STATE))) {
+                        vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U] 
+                            = (0x00000014U | (0xffffffe3U 
+                                              & vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U]));
+                    }
+                }
+                __Vfunc_Decode__1__Vfuncout[0U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[0U];
+                __Vfunc_Decode__1__Vfuncout[1U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[1U];
+                __Vfunc_Decode__1__Vfuncout[2U] = vlSymsp->TOP__SH2_PKG.Decode__Vstatic__DECI[2U];
+                vlSelfRef.dump_dec__DOT__D[0U] = __Vfunc_Decode__1__Vfuncout[0U];
+                vlSelfRef.dump_dec__DOT__D[1U] = __Vfunc_Decode__1__Vfuncout[1U];
+                vlSelfRef.dump_dec__DOT__D[2U] = __Vfunc_Decode__1__Vfuncout[2U];
+                VL_FWRITEF_NX(vlSelfRef.dump_dec__DOT__f,"E%0d %04x %0d 1 %0h\n",4
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir
+                              , '~',32,vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st
+                              , '#',80,vlSelfRef.dump_dec__DOT__D.data());
+                vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir 
+                    = ((IData)(0x00001001U) + vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__unnamedblk7__DOT__unnamedblk8__DOT__ir);
+            }
+            vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st 
+                = ((IData)(1U) + vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__unnamedblk6__DOT__st);
+        }
+        vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode 
+            = ((IData)(1U) + vlSelfRef.dump_dec__DOT__unnamedblk5__DOT__mode);
+    }
+    VL_FCLOSE_I(vlSelfRef.dump_dec__DOT__f); VL_FINISH_MT("dump_dec.sv", 25, "");
+}

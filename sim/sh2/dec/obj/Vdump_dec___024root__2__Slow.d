@@ -1,0 +1,13 @@
+Vdump_dec___024root__2__Slow.o: \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/SDKSettings.json \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/sh2-rewrite/sim/sh2/dec/obj/Vdump_dec__pch.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_config.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilatedos.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_types.h \
+  /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_funcs.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/sh2-rewrite/sim/sh2/dec/obj/Vdump_dec__Syms.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/sh2-rewrite/sim/sh2/dec/obj/Vdump_dec.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/sh2-rewrite/sim/sh2/dec/obj/Vdump_dec___024root.h \
+  /Users/adelvecchio/Documents/workspace/openfpga-Saturn-worktrees/sh2-rewrite/sim/sh2/dec/obj/Vdump_dec_SH2_PKG.h \
+  Vdump_dec___024root__2__Slow.cpp Vdump_dec__pch.h
