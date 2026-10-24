@@ -428,10 +428,6 @@ module SCSPP #(
 			OP3 <= OP3_RESET;
 			OP2_SCR0 <= '0;
 			OP2_SCR2 <= '0;
-			OP2_SA <= '0;
-			OP2_LSA <= '0;
-			OP2_LEA <= '0;
-			OP2_SCR4 <= '0;
 			STACK_RGEN <= 0;
 			SOUSX <= '0;
 			SOUSY <= '0;
@@ -441,20 +437,12 @@ module SCSPP #(
 			OP3 <= OP3_RESET;
 			OP2_SCR0 <= '0;
 			OP2_SCR2 <= '0;
-			OP2_SA <= '0;
-			OP2_LSA <= '0;
-			OP2_LEA <= '0;
-			OP2_SCR4 <= '0;
 			STACK_RGEN <= 0;
 			SOUSX <= '0;
 			SOUSY <= '0;
 			WD_READ <= 0;
 		end else begin
 			if (CYCLE0_CE) begin
-				OP2_SA <= SCR_SA_Q;
-				OP2_LSA <= SCR_LSA_Q;
-				OP2_LEA <= SCR_LEA_Q;
-				OP2_SCR4 <= SCR_SCR4_Q;
 				case (CYCLE_NUM[2:1])
 					2'b00: begin
 						
@@ -765,7 +753,6 @@ module SCSPP #(
 		if (!RST_N) begin
 			OP5 <= OP5_RESET;
 			// synopsys translate_off
-			OP4_SCR1 <= '0;
 			OP4_SCR2 <= '0;
 			OP4_SCR5 <= '0;
 			OP4_SCR6 <= '0;
@@ -773,14 +760,12 @@ module SCSPP #(
 			// synopsys translate_on
 		end else if (!RES_N) begin
 			OP5 <= OP5_RESET;
-			OP4_SCR1 <= '0;
 			OP4_SCR2 <= '0;
 			OP4_SCR5 <= '0;
 			OP4_SCR6 <= '0;
 			
 		end else begin
 			if (CYCLE0_CE) begin
-				OP4_SCR1 <= SCR_SCR1_Q;
 				case (CYCLE_NUM[2:1])
 					2'b10: begin
 						OP4_SCR2 <= SCR_SCR2_Q;
@@ -929,14 +914,11 @@ module SCSPP #(
 		if (!RST_N) begin
 			OP7 <= OP7_RESET;
 			// synopsys translate_off
-			OP6_SCR3 <= '0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
 			OP7 <= OP7_RESET;
-			OP6_SCR3 <= '0;
 		end else begin
 			if (CYCLE0_CE) begin
-				OP6_SCR3 <= SCR_SCR3_Q;
 			end
 			
 			if (SLOT1_CE) begin
@@ -962,17 +944,14 @@ module SCSPP #(
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			// synopsys translate_off
-			OP7_SCR8 <= '0;
 			STACK_WGEN <= 0;
 			DSEL <= 0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
-			OP7_SCR8 <= '0;
 			STACK_WGEN <= 0;
 			DSEL <= 0;
 		end else begin
 			DSEL <= CYCLE0_CE & CYCLE_NUM == 3'd6;
-			if (CYCLE0_CE) OP7_SCR8 <= SCR_SCR8_Q;
 			if (SLOT1_CE && OP7.SLOT == 5'd31) STACK_WGEN <= ~STACK_WGEN;
 		end
 	 end
@@ -1055,14 +1034,11 @@ module SCSPP #(
 		
 		if (!RST_N) begin
 			// synopsys translate_off
-			OP7_SCR7 <= '0;
 			DSP_EXTS <= '{2{'0}};
 			// synopsys translate_on
 		end else if (!RES_N) begin
-			OP7_SCR7 <= '0;
 		end else begin
 			if (CYCLE0_CE) begin
-				OP7_SCR7 <= SCR_SCR7_Q;
 			end
 			
 			SD = DSPLevelCalc({OP7.SD,4'h00},OP7_SCR7.IMXL);
@@ -2071,17 +2047,19 @@ module SCSPP #(
 	wire [ 1:0] SCR_WE10= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[10]}};
 	wire [ 1:0] SCR_WE11= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[11]}};
 	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, SW_A, SW_D & SCR0_MASK, SCR_WE0, SCR0_RA, SCR_SCR0_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SA  (CLK, SW_A, SW_D & SA_MASK,   SCR_WE1, SA_RA, SCR_SA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_LSA (CLK, SW_A, SW_D & LSA_MASK,  SCR_WE2, OP2.SLOT, SCR_LSA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_LEA (CLK, SW_A, SW_D & LEA_MASK,  SCR_WE3, OP2.SLOT, SCR_LEA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR1(CLK, SW_A, SW_D & SCR1_MASK, SCR_WE4, OP4.SLOT, SCR_SCR1_Q);
+	assign OP2_SA = SCR_SA_Q; assign OP2_LSA = SCR_LSA_Q; assign OP2_LEA = SCR_LEA_Q; assign OP2_SCR4 = SCR_SCR4_Q;
+	assign OP4_SCR1 = SCR_SCR1_Q; assign OP6_SCR3 = SCR_SCR3_Q; assign OP7_SCR7 = SCR_SCR7_Q; assign OP7_SCR8 = SCR_SCR8_Q;
+	SCSPP_RAM_OR #(5) SCR_SA  (CLK, SW_A, SW_D & SA_MASK,   SCR_WE1, SA_RA, CYCLE0_CE, ~RES_N, SCR_SA_Q);
+	SCSPP_RAM_OR #(5) SCR_LSA (CLK, SW_A, SW_D & LSA_MASK,  SCR_WE2, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_LSA_Q);
+	SCSPP_RAM_OR #(5) SCR_LEA (CLK, SW_A, SW_D & LEA_MASK,  SCR_WE3, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_LEA_Q);
+	SCSPP_RAM_OR #(5) SCR_SCR1(CLK, SW_A, SW_D & SCR1_MASK, SCR_WE4, OP4.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR1_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, SW_A, SW_D & SCR2_MASK, SCR_WE5, SCR2_RA, SCR_SCR2_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR3(CLK, SW_A, SW_D & SCR3_MASK, SCR_WE6, OP6.SLOT, SCR_SCR3_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR4(CLK, SW_A, SW_D & SCR4_MASK, SCR_WE7, OP2.SLOT, SCR_SCR4_Q);
+	SCSPP_RAM_OR #(5) SCR_SCR3(CLK, SW_A, SW_D & SCR3_MASK, SCR_WE6, OP6.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR3_Q);
+	SCSPP_RAM_OR #(5) SCR_SCR4(CLK, SW_A, SW_D & SCR4_MASK, SCR_WE7, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR4_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK, SW_A, SW_D & SCR5_MASK, SCR_WE8, SCR5_RA, SCR_SCR5_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK, SW_A, SW_D & SCR6_MASK, SCR_WE9, SCR6_RA, SCR_SCR6_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,OP7.SLOT, SCR_SCR7_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,OP7.SLOT, SCR_SCR8_Q);
+	SCSPP_RAM_OR #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,OP7.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR7_Q);
+	SCSPP_RAM_OR #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,OP7.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR8_Q);
 	
 	//68K-side copy of the slot registers, address {register, slot}; the pipeline RAMs above are read by the pipeline only.
 	//The sweep writes one register index per clock (SWC), every index within one slot period.
@@ -3297,3 +3275,67 @@ module SCSPP_MPRO_RAM
 	
 endmodule
 
+
+//16-bit RAM with byte enables whose read data is held in the block's output register:
+//Q changes only at clocks with EN (replaces a latch of the plain RAM output); CLR clears it.
+module SCSPP_RAM_OR
+#(
+	parameter addr_width = 5
+)
+(
+	input                    CLK,
+	input  [addr_width-1:0]  WRADDR,
+	input             [15:0] DATA,
+	input              [1:0] WREN,
+	input  [addr_width-1:0]  RDADDR,
+	input                    EN,
+	input                    CLR,
+	output            [15:0] Q
+);
+	altsyncram	altsyncram_component (
+				.address_a (WRADDR),
+				.byteena_a (WREN),
+				.clock0 (CLK),
+				.data_a (DATA),
+				.wren_a (|WREN),
+				.address_b (RDADDR),
+				.q_b (Q),
+				.aclr0 (1'b0),
+				.aclr1 (CLR),
+				.addressstall_a (1'b0),
+				.addressstall_b (1'b0),
+				.byteena_b (1'b1),
+				.clock1 (CLK),
+				.clocken0 (1'b1),
+				.clocken1 (1'b1),
+				.clocken2 (1'b1),
+				.clocken3 (EN),
+				.data_b ({16{1'b1}}),
+				.eccstatus (),
+				.q_a (),
+				.rden_a (1'b1),
+				.rden_b (1'b1),
+				.wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.byte_size = 8,
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "NORMAL",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**addr_width,
+		altsyncram_component.numwords_b = 2**addr_width,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "CLEAR1",
+		altsyncram_component.outdata_reg_b = "CLOCK1",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.read_during_write_mode_mixed_ports = "DONT_CARE",
+		altsyncram_component.widthad_a = addr_width,
+		altsyncram_component.widthad_b = addr_width,
+		altsyncram_component.width_a = 16,
+		altsyncram_component.width_b = 16,
+		altsyncram_component.width_byteena_a = 2;
+endmodule
