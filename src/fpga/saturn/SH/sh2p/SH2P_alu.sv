@@ -32,12 +32,10 @@ module SH2P_alu (
 		{ADDER_C,ADDER_RES} = Adder(adder_a,B,T,adder_code);
 		ADDER_V = ~((A[31] ^ B[31]) ^ adder_code[0]) & (A[31] ^ ADDER_RES[31]);
 		ge_hs = (~A[31] & ~B[31] & ~ADDER_RES[31]) | (A[31] & B[31] & ~ADDER_RES[31]) | ((adder_cmp[0] ^ A[31]) & (~adder_cmp[0] ^ B[31]));
-		eq = ~|ADDER_RES[31:0];
+
 		
 		log_b = TAS ? 32'h00000080 : B;
 		LOG_RES = Log(A,log_b,CD);
-		LOG_Z = ~|LOG_RES;
-		str_eq = ~|LOG_RES[31:24] | ~|LOG_RES[23:16] | ~|LOG_RES[15:8] | ~|LOG_RES[7:0];
 		
 		EXT_RES = Ext(A,B,CD);
 		
@@ -52,6 +50,9 @@ module SH2P_alu (
 			default: ALU_RES_ = B;
 		endcase
 								
+		eq = ~|ALU_RES_;
+		LOG_Z = eq;
+		str_eq = ~|ALU_RES_[31:24] | ~|ALU_RES_[23:16] | ~|ALU_RES_[15:8] | ~|ALU_RES_[7:0];
 		ALU_T_ = 0;
 		case (OP)
 			ADD: case (CD[3:2])

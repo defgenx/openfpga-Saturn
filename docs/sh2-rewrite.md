@@ -181,21 +181,72 @@ The new core must close at `clk_sys` 57.27 MHz with the same 2-cycle multicycle 
 (`quartus_sta` on a registered wrapper, as `sizing/sh2/sh_core_wrap.sv`). Registered-input wrapper for the whole CPU
 as well. The new EX path adds the register-file read and MLAB write setup; the removed bypass levels shorten it.
 
-## 8. Measurements
+## 8. Measurements (as built)
 
-(filled during the work)
+Method: standalone `quartus_fit` (21.1, 5CEBA4F23C8, area profile, one processor, virtual pins), `sizing/sh2p/`. The
+pair is `sizing/sh2p/pair_wrap.sv` (MSH + SSH with the Saturn.sv tie-offs; `SH2_MOD=SH7604` golden, `SH7604P` new).
+"ALMs" = fitter "Logic utilization (in ALMs)". These standalone numbers are about 1.25x the per-block
+"ALMs needed" of the full-system fit in [integration.md](integration.md) (3,475 for one golden CPU there, 4,332 here);
+the last row scales by that ratio (3,475 / 4,332 = 0.80) to compare against the 4,000 budget.
 
-## 9. Deviations from the golden
+| | golden | SH7604P | change |
+|---|---|---|---|
+| Pair, ALMs (standalone fit) | 8,538 | **6,070** | -29% |
+| One CPU, ALMs | 4,269 (4,332 single fit) | 3,035 | -29% |
+| Pair, RAM blocks (M10K) | 8 | 16 | +8 |
+| Pair, DSP | 6 | 6 | 0 |
+| Pair, scaled to the integration metric | ~6,900 | **~4,900** | budget 4,000: not met, 22% over |
 
-(filled during the work)
+Per block, one CPU (fitter ALMs in the pair fit; golden = single-CPU fit, [sh2.md](sh2.md) numbers in brackets are map ALUT):
 
-## 10. Hard parts and risks (ranked)
+| Block | golden | SH7604P | notes |
+|---|---|---|---|
+| SH2P_core | 1,545 | 1,219 | of which ALU 241, decode logic 216, decode ROM 31 (+2 M10K), register file 74 |
+| BSC | 345 | 329 | unchanged FSM |
+| CACHE | 776 | 300 | epoch purge, per-set MLAB word, tags in 2 M10K |
+| DIVU | 447 (521 needed) | 251 | serial, in place in DVDNT |
+| DMAC | 427 (561 needed) | 278 | MLAB channel registers |
+| MULT | 220 (248) | 147 | |
+| INTC / FRT / WDT / MSBY | 124 / 101 / 47 / 7 | 110 / 101 / 47 / 8 | |
+| glue (SH7604P top) | ~150 | ~165 | divider, read-data mux, bus mux |
 
-1. **Core area.** Decode is 468 map-ALMs as written; a hand-structured decoder must reach about 230 and the rest of
-   the core about 420 for the 650 target. If the core stops at 800, the other blocks must still reach 1,100; the
-   total then lands near 1,950 per CPU, still inside the 2,000 per CPU only if every other row is met.
-2. **Cache exactness with the epoch purge** and the rare purge burst.
-3. **Core pipeline equivalence** after removing the bypass network (write-slot collisions, WAW with late load data,
-   microcode forwarding flags).
-4. **BSC** is left nearly as is: it is ~15% of the budget with little structural slack.
-5. **Timing**: EX path with MLAB read and write inside two clocks.
+Timing (`quartus_sta`, slow 85C, `sizing/sh2p/fmax/`, core with registered ports, clock constraint 17.46 ns = 57.27 MHz
+single cycle): worst setup slack -6.2 ns, i.e. longest path 23.7 ns (the golden core measured 19.6 ns on the same kind of
+wrapper in [sh2.md](sh2.md)). It closes with the same 2-cycle setup / 1-cycle hold multicycle that the golden core already
+needs (34.9 ns available, 11 ns margin). The critical path starts at the decode ROM output (M10K, address register
+updated only on CE_R) and ends in the ID-stage PC/IR registers. Paths that are really single-cycle (cache lookup, register
+file write on the F slot, scrubber) are short.
+
+## 9. Verification results and deviations
+
+Tests (all with `DUT=sh2p`, every output of both CPUs compared on every `clk_sys` against the golden pair plus final memory):
+
+* `make -C sim/sh2 DUT=sh2p ptest`: 19 programs x 4 environments = 76 PASS (13 original programs, `t_purge_*`, `t_divu_*`,
+  new `t_purge_wrap`).
+* `make DUT=sh2p soak SEED0=1000 SEED1=1199`: 200 random instruction-soup seeds x 4 environments = 800 PASS (earlier
+  ranges 100-139, 200-229, 300-329 also pass).
+* Block level (`make DUT=sh2p unit-<blk>`, 6 seeds x 600k clk each, longer runs by the block authors): divu, dmac, mult,
+  intc, frt, wdt, msby PASS. Decode: `sim/sh2/dec/tb_dec_eq.sv` exhaustive (all opcodes x state x DS x T plus all exception
+  modes), 2.15 M vectors PASS.
+
+Deviations from the golden (none is visible to software running on the Saturn; each is covered by a test or argument):
+
+1. Register contents across a manual reset (`RES_N`): the golden commits the instruction in WB at the reset edge, SH7604P
+   does not commit the instruction in EX. General registers are architecturally undefined after reset.
+2. Cache: after `RST_N` the stamp memory is swept for 64 SH-2 cycles; the cache must not be used earlier. The test bench
+   releases the CPUs 200 clk after `RST_N` (`SH2_INIT_WAIT`); in the Saturn the SMPC holds `RES_N` far longer.
+   The purge is exact otherwise (6-bit epoch, scrubber visits every set every 64 SH-2 cycles, at most one purge per 2 SH-2
+   cycles), tested by `t_purge_wrap` with 63 and 126 purges.
+3. DIVU: reads of DVDNT/mirror registers while a division runs return scratch values; they are never consumed (the access
+   is stalled by `IBUS_BUSY`). `EN=0` in the middle of a division is not equivalent (EN is constant 1 in the Saturn).
+4. INTC reproduces the golden simulation behaviour for an `ICR.NMIE` write in the same clock as an NMI edge.
+5. The M10K count rises by 4 per CPU (2 decode ROM, 2 cache tags).
+
+## 10. What would still be needed for 4,000
+
+The pair is 29% below the golden but still about 22% above the budget in the integration metric. Remaining sub-blocks in
+order: core 1,219 (control and operand/result muxes ~650, ALU 241, decode 250, regfile 74), BSC 329, cache 300, DMAC 278,
+DIVU 251, glue 165, MULT 147, INTC/FRT/WDT 258. Floors found by the block authors: DMAC/DIVU/FRT/WDT are close to the
+interface-imposed read/write mux cost; the remaining levers are (a) hoisting the shared register-window decode and the
+`IBUS_DO` gating out of the blocks (~60), (b) merging the duplicated CBUS/DBUS paths of the BSC (~60), (c) dropping the
+RD_SAVE forwarding level of the core (~45), (d) lookup state of the cache into M10K (~40), (e) a leaner ALU (~60).
