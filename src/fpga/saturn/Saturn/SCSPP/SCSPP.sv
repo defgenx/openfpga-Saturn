@@ -954,55 +954,57 @@ module SCSPP #(
 	SCR7_t       OP7_SCR7;
 	SCR8_t       OP7_SCR8;
 	
-	//Direct out
+	//Slot output: one level/pan unit serves the direct path (evaluated at DSEL, one clock
+	//after OP7_SCR8 is latched) and the effect path (evaluated at SLOT1_CE, where ESL/ESR are sampled).
 	bit        STACK_WGEN;
 	bit [17:0] DIR_ACC_L,DIR_ACC_R;
+	bit        DSEL;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [ 4:0] S;
-		bit signed [15:0] TEMP;
-		bit signed [15:0] PAN_L,PAN_R;
-		
 		if (!RST_N) begin
 			// synopsys translate_off
 			OP7_SCR8 <= '0;
 			STACK_WGEN <= 0;
-			DIR_ACC_L <= 0;
-			DIR_ACC_R <= 0;
+			DSEL <= 0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
 			OP7_SCR8 <= '0;
 			STACK_WGEN <= 0;
+			DSEL <= 0;
+		end else begin
+			DSEL <= CYCLE0_CE & CYCLE_NUM == 3'd6;
+			if (CYCLE0_CE) OP7_SCR8 <= SCR_SCR8_Q;
+			if (SLOT1_CE && OP7.SLOT == 5'd31) STACK_WGEN <= ~STACK_WGEN;
+		end
+	 end
+	
+	bit [15:0] EFF_W;
+	always_comb begin
+		EFF_W = '0;
+		if (OP7.SLOT <= 5'd15) EFF_W = EFREG_Q;
+		else if (OP7.SLOT == 5'd16) EFF_W = !SND_EN[2] ? 16'h0000 : ESL;
+		else if (OP7.SLOT == 5'd17) EFF_W = !SND_EN[2] ? 16'h0000 : ESR;
+	end
+	wire signed [15:0] MX_W   = DSEL ? OP7.SD : EFF_W;
+	wire        [ 2:0] MX_SDL = DSEL ? OP7_SCR8.DISDL : OP7_SCR8.EFSDL;
+	wire        [ 4:0] MX_PAN = DSEL ? OP7_SCR8.DIPAN : OP7_SCR8.EFPAN;
+	wire signed [15:0] MX_LEV = MX_SDL ? MX_W >>> (~MX_SDL) : 16'sh0000;
+	wire signed [15:0] MX_SH  = MX_LEV >>> MX_PAN[3:1];
+	wire signed [15:0] MX_ATT = MX_SH - (MX_PAN[0] ? MX_SH >>> 2 : 16'sh0000);
+	wire signed [15:0] PAN_L  = MX_PAN[4] ? MX_LEV : MX_ATT;
+	wire signed [15:0] PAN_R  = MX_PAN[4] ? MX_ATT : MX_LEV;
+	
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			// synopsys translate_off
 			DIR_ACC_L <= 0;
 			DIR_ACC_R <= 0;
-		end else begin
-			if (CYCLE0_CE) begin
-				OP7_SCR8 <= SCR_SCR8_Q;
-			end
-			
-			S = OP7.SLOT;
-			TEMP = LevelCalc(OP7.SD,OP7_SCR8.DISDL);
-			PAN_L = PanLCalc(TEMP,OP7_SCR8.DIPAN);
-			PAN_R = PanRCalc(TEMP,OP7_SCR8.DIPAN);
-			
-			if (SLOT1_CE) begin
-				if (S == 5'd0) begin
-					DIR_ACC_L <= {{2{PAN_L[15]}},PAN_L[15:0]};
-					DIR_ACC_R <= {{2{PAN_R[15]}},PAN_R[15:0]};
-				end else begin
-					DIR_ACC_L <= DIR_ACC_L + {{2{PAN_L[15]}},PAN_L[15:0]};
-					DIR_ACC_R <= DIR_ACC_R + {{2{PAN_R[15]}},PAN_R[15:0]};
-				end
-				
-				if (S == 5'd31) begin
-					STACK_WGEN <= ~STACK_WGEN;
-				end
-			end
-			
-`ifdef DEBUG
-			LVL_DBG <= TEMP;
-			PAN_L_DBG <= PAN_L;
-			PAN_R_DBG <= PAN_R;
-`endif
+			// synopsys translate_on
+		end else if (!RES_N) begin
+			DIR_ACC_L <= 0;
+			DIR_ACC_R <= 0;
+		end else if (DSEL) begin
+			DIR_ACC_L <= (OP7.SLOT == 5'd0 ? 18'd0 : DIR_ACC_L) + {{2{PAN_L[15]}},PAN_L};
+			DIR_ACC_R <= (OP7.SLOT == 5'd0 ? 18'd0 : DIR_ACC_R) + {{2{PAN_R[15]}},PAN_R};
 		end
 	end
 	wire STACK_WE = (CYCLE_NUM == 3'd0) & ~OP7.STWINH;
@@ -1292,10 +1294,6 @@ module SCSPP #(
 	//Effect out
 	bit signed [17:0] EFF_ACC_L,EFF_ACC_R;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [ 4:0] S;
-		bit [15:0] TEMP;
-		bit [15:0] PAN_L,PAN_R;
-		
 		if (!RST_N) begin
 			// synopsys translate_off
 			EFF_ACC_L <= '0;
@@ -1305,43 +1303,16 @@ module SCSPP #(
 			EFF_ACC_L <= '0;
 			EFF_ACC_R <= '0;
 		end else begin
-			S = OP7.SLOT;
-			
-			TEMP = '0;
-			if (S <= 5'd15) begin
-`ifdef POCKET_CUT_SCSP_DSP
-				TEMP = '0;
-`else
-				TEMP = LevelCalc(EFREG_Q,OP7_SCR8.EFSDL);
-`endif
-			end else if (S == 5'd16) begin
-				TEMP = !SND_EN[2] ? 16'h0000 : LevelCalc(ESL,OP7_SCR8.EFSDL);
-			end else if (S == 5'd17) begin
-				TEMP = !SND_EN[2] ? 16'h0000 : LevelCalc(ESR,OP7_SCR8.EFSDL);
-			end
-			PAN_L = PanLCalc(TEMP,OP7_SCR8.EFPAN);
-			PAN_R = PanRCalc(TEMP,OP7_SCR8.EFPAN);
-			
 			if (SLOT0_EN & CYCLE0_CE) begin
 				EFREG_Q <= EFREG_RAM_Q;
 			end
 			
 			if (SLOT1_CE) begin
-				if (S == 5'd0) begin
-					EFF_ACC_L <= {{2{PAN_L[15]}},PAN_L[15:0]};
-					EFF_ACC_R <= {{2{PAN_R[15]}},PAN_R[15:0]};
-				end else begin
-					EFF_ACC_L <= EFF_ACC_L + {{2{PAN_L[15]}},PAN_L[15:0]};
-					EFF_ACC_R <= EFF_ACC_R + {{2{PAN_R[15]}},PAN_R[15:0]};
-				end
+				EFF_ACC_L <= (OP7.SLOT == 5'd0 ? 18'd0 : EFF_ACC_L) + {{2{PAN_L[15]}},PAN_L};
+				EFF_ACC_R <= (OP7.SLOT == 5'd0 ? 18'd0 : EFF_ACC_R) + {{2{PAN_R[15]}},PAN_R};
 			end
 		end
 	end
-`ifdef DEBUG
-	assign EFF_ACC_L_OF = (EFF_ACC_L[17] && EFF_ACC_L[16:15] != 2'b11) || (!EFF_ACC_L[17] && EFF_ACC_L[16:15] != 2'b00);
-	assign EFF_ACC_R_OF = (EFF_ACC_R[17] && EFF_ACC_R[16:15] != 2'b11) || (!EFF_ACC_R[17] && EFF_ACC_R[16:15] != 2'b00);
-`endif
-	
 	//Out
 	bit [17:0] SUM_L,SUM_R;
 	always @(posedge CLK or negedge RST_N) begin
