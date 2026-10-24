@@ -34,3 +34,17 @@ sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
 sizing/vdp2p/snap/
+sim/vdp1/gen/
+sim/vdp1/obj*/
+sim/vdp1/out/
+sim/vdp1/obj_orig/
+sim/vdp1/gen_orig/
+sizing/vdp1p/x1src/
+sizing/vdp1p/x2src/
+sizing/vdp1p/base/
+sizing/vdp1p/g1/
+sizing/vdp1p/g1v/
+sizing/vdp1p/g2/
+sizing/vdp1p/g3/
+sizing/vdp1p/x1/
+sizing/vdp1p/x2/

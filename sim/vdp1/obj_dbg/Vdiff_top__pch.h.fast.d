@@ -10,4 +10,4 @@ Vdiff_top__pch.h.fast.gch: \
   /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/verilated_sym_props.h \
   /opt/homebrew/Cellar/verilator/5.052/share/verilator/include/vltstd/svdpi.h \
   Vdiff_top__Syms.h Vdiff_top.h Vdiff_top___024root.h \
-  Vdiff_top_REF_VDP1_PKG.h Vdiff_top_VDP1_PKG.h
+  Vdiff_top_REF_VDP1_PKG.h Vdiff_top_VDP1P_PKG.h

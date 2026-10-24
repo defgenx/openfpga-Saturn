@@ -38,8 +38,8 @@ VM_CLASSES_SLOW += \
   Vdiff_top___024root__0__Slow \
   Vdiff_top_REF_VDP1_PKG__Slow \
   Vdiff_top_REF_VDP1_PKG__0__Slow \
-  Vdiff_top_VDP1_PKG__Slow \
-  Vdiff_top_VDP1_PKG__0__Slow \
+  Vdiff_top_VDP1P_PKG__Slow \
+  Vdiff_top_VDP1P_PKG__0__Slow \
 
 # Generated support classes, fast-path, compile with highest optimization
 VM_SUPPORT_FAST += \
