@@ -1,0 +1,13 @@
+block                      regs    ALUT
+cell data assembly          837    1774
+VRAM access/CPU port        776    1676
+priority/colour             404    1088
+rotation                    581     594
+register file               970     167
+scroll counters             512     618
+access pipelines            496     492
+outputs                       0     684
+other                       143     372
+timing                       82     189
+windows                      40      29
+total                      4841    7682

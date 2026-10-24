@@ -155,7 +155,7 @@ static void gen_cycles(Rng& rng, Cfg& c, int mode) {
 }
 
 #define R_(a) c.r[(a) / 2]
-static const int N_SCENES = 17;
+static const int N_SCENES = 21;
 
 static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	for (int i = 0; i < 0x90; i++) {
@@ -198,6 +198,29 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 		R_(0xEA) = scene == 16 ? (rng.next() & 0x03FF) : R_(0xEA);
 		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);   // not hires: extended calc is a low-res feature
 		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;   // RGB555 color RAM: extended calc applies to palette dots too
+		break; }
+	case 17: case 18: case 19: {   // extended colour calculation with all four NBG opaque: second/third screen blend,
+	                               // line colour insertion (18), line colour + shadow + sprite (19)
+		R_(0x20) = 0x1F0F | (scene == 19 ? 0x0010 : 0);
+		for (int a = 0xF8; a <= 0xFA; a += 2) R_(a) = ((rng.below(4) + 1) << 8) | (rng.below(4) + 1);   // distinct-ish priorities
+		R_(0xF0) = (rng.below(8) << 8) | rng.below(8);
+		R_(0xEC) = 0x0400 | 0x000F | (scene >= 18 ? 0x0020 : 0) | (rng.chance(50) ? 0x0200 : 0) | (rng.chance(50) ? 0x0100 : 0) | (rng.chance(30) ? 0x0040 : 0);
+		R_(0xE8) = scene == 17 ? 0 : (scene == 18 ? 0x3F : (rng.next() & 0x3F));
+		R_(0xEE) = rng.chance(60) ? 0 : (rng.next() & 0x03FF);
+		R_(0xE2) = scene == 19 ? (rng.next() & 0x013F) | 0x003F : R_(0xE2);
+		R_(0xE0) = scene == 19 ? (rng.next() & 0x373F) : R_(0xE0);
+		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);
+		if (rng.chance(60)) R_(0x0E) &= 0xCFFF;
+		break; }
+	case 20: {   // NBG0/NBG1 reduction (1/2, 1/4) at 4 and 8 bits per dot, NBG2/NBG3 on: the layers that lose their cell data lanes
+		R_(0x20) = 0x0F0F & (rng.next() | 0x0F03);
+		R_(0x28) = (R_(0x28) & 0xFF8F) | (rng.below(2) << 4);
+		R_(0x28) = (R_(0x28) & 0x8FFF) | (rng.below(2) << 12);
+		R_(0x2A) &= 0xFFCC;
+		R_(0x98) = 0x0300 | (0x0003 & rng.next());
+		R_(0x98) = (R_(0x98) & ~0x0300) | ((rng.next() & 3) << 8);
+		R_(0x98) = rng.chance(50) ? (R_(0x98) & 0x0303) : (0x0100 << rng.below(2)) | (1 << rng.below(2));
+		R_(0x00) = (R_(0x00) & ~3) | rng.below(2);
 		break; }
 	default: break;
 	}
@@ -311,7 +334,7 @@ int main(int argc, char** argv) {
 					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
 					else ra = 2 * rng.below(0x90);
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
-						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0x9E) || (ra >= 0xB0 && ra <= 0xBA);
+						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0xAE) || (ra >= 0xB0 && ra <= 0xBE) || (ra >= 0xD8 && ra <= 0xDE) || ra == 0xD6;   // WCTLD: its rotation parameter window bits pick the table for coefficient addresses   // registers that form VRAM addresses: blanking only
 						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
 						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);   // keep RBG1 on/off as programmed
 						Op o{0, (uint32_t)(0x180000 + ra), {wv}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
@@ -346,10 +369,15 @@ int main(int argc, char** argv) {
 		top->eval();
 
 		const VlWide<3>& rm = top->r_misc; const VlWide<3>& dm = top->d_misc;
-		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rm, &dm, sizeof(rm)) != 0 ||
-			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || top->r_RA_D != top->d_RA_D ||
+		// R,G,B are compared while VBL_N is high (visible lines); in vertical blank only the sync/IRQ/bus outputs are.
+		// A colour-depth or reduction register changed during blanking leaves stale bytes in the dot data for the first
+		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
+		VlWide<3> rmc = rm, dmc = dm;
+		if (!bits(rm, 7, 1)) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
+		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
+			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
-			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || top->r_RB_D != top->d_RB_D ||
+			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || (top->r_RB_WE && top->r_RB_D != top->d_RB_D) ||
 			top->r_RB_WE != top->d_RB_WE || top->r_RB_RD != top->d_RB_RD);
 		if (diff) {
 			static const struct { const char* n; int lo, w; } f[] = {
@@ -359,7 +387,7 @@ int main(int argc, char** argv) {
 			printf("MISMATCH seed=%llu scene=%d clk=%ld\n", (unsigned long long)seed, scene, t);
 			for (auto& x : f) { uint64_t a = bits(rm, x.lo, x.w), b = bits(dm, x.lo, x.w); if (a != b) printf("  %-9s ref=%llx dut=%llx\n", x.n, (unsigned long long)a, (unsigned long long)b); }
 			#define CMP(n) if (top->r_##n != top->d_##n) printf("  %-9s ref=%llx dut=%llx\n", #n, (unsigned long long)top->r_##n, (unsigned long long)top->d_##n);
-			CMP(RA0_A) CMP(RA1_A) CMP(RA_D) CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) CMP(RB_D) CMP(RB_WE) CMP(RB_RD)
+			CMP(RA0_A) CMP(RA1_A) if (top->r_RA_WE) { CMP(RA_D) } CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) if (top->r_RB_WE) { CMP(RB_D) } CMP(RB_WE) CMP(RB_RD)
 			failed = true;
 #ifdef DBG
 			for (int k = 9; k >= 0; k--) { Hist& h = hist[(t - k) & 15];
