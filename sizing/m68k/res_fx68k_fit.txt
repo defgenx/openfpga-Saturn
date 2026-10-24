@@ -1,0 +1,2 @@
+fx68k: mapALM=2093 ALUT=2886 REG=1388 MEMbits=39,584 MLAB=0
+Logic utilization (in ALMs) : 1,986 / 18,480 ( 11 % )

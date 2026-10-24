@@ -1,6 +1,7 @@
 # Saturn system, memory subsystem, CD drive and Pocket glue (everything under saturn_pocket).
 # Saturn/Saturn.qip is not used: it lists the ST-V files that are not imported.
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/FX68K/fx68k.qip]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/M68KP/m68kp.qip]
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/SH/SH7604/SH7604.qip]
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/SH/SH7034/SH7034.qip]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/SH_mem.sv]

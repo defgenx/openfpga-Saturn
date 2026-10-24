@@ -1097,7 +1097,11 @@ module Saturn
 	);
 	
 	bit M68K_RESO_N;
+`ifdef POCKET_M68KP
+	m68kp M68K
+`else
 	fx68k M68K
+`endif
 	(
 		.clk(CLK),
 		.extReset(~SCPU_RES_N | ~M68K_RESO_N),
