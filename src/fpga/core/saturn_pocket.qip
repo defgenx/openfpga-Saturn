@@ -2,6 +2,7 @@
 # Saturn/Saturn.qip is not used: it lists the ST-V files that are not imported.
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/FX68K/fx68k.qip]
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/SH/SH7604/SH7604.qip]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/SH/sh2p/SH7604P.qip]
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../saturn/SH/SH7034/SH7034.qip]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/SH_mem.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/SH7604_mem.sv]
