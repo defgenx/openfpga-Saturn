@@ -221,7 +221,12 @@ static void tick() {
 	bool bad = false;
 	CMP(DO) CMP(RDY_N) CMP(INT_N) CMP(SCCE_R) CMP(SCCE_F) CMP(SCDO) CMP(SCDTACK_N)
 	CMP(SCAVEC_N) CMP(SCIPL_N) CMP(RAM_A) CMP(RAM_D) CMP(RAM_WE) CMP(RAM_RD) CMP(RAM_CS)
-	CMP(RAM_RFS) CMP(SOUND_L) CMP(SOUND_R)
+	CMP(RAM_RFS)
+	// SOUND lags SUM/CR0 by up to two clocks: compared once the reference output has been steady for 4 clocks
+	{ static uint16_t pl = 0, pr = 0; static int steady = 0;
+	  if (top->R_SOUND_L == pl && top->R_SOUND_R == pr) steady++; else steady = 0;
+	  pl = top->R_SOUND_L; pr = top->R_SOUND_R;
+	  if (steady >= 4) { CMP(SOUND_L) CMP(SOUND_R) } }
 	if (bad) {
 		if (++mismatches > 5) { fprintf(stderr, "FAIL\n"); exit(1); }
 	}

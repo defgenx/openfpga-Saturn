@@ -1331,8 +1331,18 @@ module SCSPP #(
 		end
 	end
 	
-	assign SOUND_L = MVolCalc(SUM_L, CR0.MVOL, CR0.DB);
-	assign SOUND_R = MVolCalc(SUM_R, CR0.MVOL, CR0.DB);
+	//One master-volume unit serves both channels on alternate clocks; the outputs lag
+	//SUM_L/SUM_R and CR0 by up to two clocks.
+	bit        MV_T;
+	bit [15:0] SOUND_LR,SOUND_RR;
+	wire [15:0] MV_OUT = MVolCalc(MV_T ? SUM_R : SUM_L, CR0.MVOL, CR0.DB);
+	always @(posedge CLK) begin
+		MV_T <= ~MV_T;
+		if (!MV_T) SOUND_LR <= MV_OUT;
+		else       SOUND_RR <= MV_OUT;
+	end
+	assign SOUND_L = SOUND_LR;
+	assign SOUND_R = SOUND_RR;
 `ifdef DEBUG
 	assign SUM_L_OF = (SUM_L[17] && SUM_L[16:15] != 2'b11) || (!SUM_L[17] && SUM_L[16:15] != 2'b00);
 	assign SUM_R_OF = (SUM_R[16] && SUM_R[16:15] != 2'b11) || (!SUM_R[17] && SUM_R[16:15] != 2'b00);
@@ -1941,20 +1951,10 @@ module SCSPP #(
 					end
 				end else if (REG_RD_DELAY) begin
 					if (REG_A[11:10] == 2'b00) begin
-						case ({REG_A[4:1],1'b0})
-							5'h00: REG_Q <= SCR_SCR0_Q & SCR0_MASK;
-							5'h02: REG_Q <= SCR_SA_Q & SA_MASK;
-							5'h04: REG_Q <= SCR_LSA_Q & LSA_MASK;
-							5'h06: REG_Q <= SCR_LEA_Q & LEA_MASK;
-							5'h08: REG_Q <= SCR_SCR1_Q & SCR1_MASK;
-							5'h0A: REG_Q <= SCR_SCR2_Q & SCR2_MASK;
-							5'h0C: REG_Q <= SCR_SCR3_Q & SCR3_MASK;
-							5'h0E: REG_Q <= SCR_SCR4_Q & SCR4_MASK;
-							5'h10: REG_Q <= SCR_SCR5_Q & SCR5_MASK;
-							5'h12: REG_Q <= SCR_SCR6_Q & SCR6_MASK;
-							5'h14: REG_Q <= SCR_SCR7_Q & SCR7_MASK;
-							5'h16: REG_Q <= SCR_SCR8_Q & SCR8_MASK;
-							default:REG_Q <= '0;
+						case (REG_A[4:1])
+							4'd0, 4'd6: REG_Q <= MIR_Q & SCR0_MASK;
+							4'd10: REG_Q <= MIR_Q & SCR7_MASK;
+							default: REG_Q <= MIR_Q;
 						endcase
 					end else if (REG_A[11:9] == 3'b010) begin
 						case ({REG_A[5:1],1'b0})
@@ -2070,18 +2070,28 @@ module SCSPP #(
 	wire [ 1:0] SCR_WE9 = SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[ 9]}};
 	wire [ 1:0] SCR_WE10= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[10]}};
 	wire [ 1:0] SCR_WE11= SWEEP ? 2'b11 : REG_WE & {2{SCR_WSEL[11]}};
-	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, SW_A, SW_D & SCR0_MASK, SCR_WE0, (REG_RD ? REG_A[9:5] : SCR0_RA ), SCR_SCR0_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SA  (CLK, SW_A, SW_D & SA_MASK,   SCR_WE1, (REG_RD ? REG_A[9:5] : SA_RA   ), SCR_SA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_LSA (CLK, SW_A, SW_D & LSA_MASK,  SCR_WE2, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LSA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_LEA (CLK, SW_A, SW_D & LEA_MASK,  SCR_WE3, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_LEA_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR1(CLK, SW_A, SW_D & SCR1_MASK, SCR_WE4, (REG_RD ? REG_A[9:5] : OP4.SLOT), SCR_SCR1_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, SW_A, SW_D & SCR2_MASK, SCR_WE5, (REG_RD ? REG_A[9:5] : SCR2_RA ), SCR_SCR2_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR3(CLK, SW_A, SW_D & SCR3_MASK, SCR_WE6, (REG_RD ? REG_A[9:5] : OP6.SLOT), SCR_SCR3_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR4(CLK, SW_A, SW_D & SCR4_MASK, SCR_WE7, (REG_RD ? REG_A[9:5] : OP2.SLOT), SCR_SCR4_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK, SW_A, SW_D & SCR5_MASK, SCR_WE8, (REG_RD ? REG_A[9:5] : SCR5_RA ), SCR_SCR5_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK, SW_A, SW_D & SCR6_MASK, SCR_WE9, (REG_RD ? REG_A[9:5] : SCR6_RA ), SCR_SCR6_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,(REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR7_Q);
-	SCSPP_RAM_8X2 #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,(REG_RD ? REG_A[9:5] : OP7.SLOT), SCR_SCR8_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, SW_A, SW_D & SCR0_MASK, SCR_WE0, SCR0_RA, SCR_SCR0_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SA  (CLK, SW_A, SW_D & SA_MASK,   SCR_WE1, SA_RA, SCR_SA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_LSA (CLK, SW_A, SW_D & LSA_MASK,  SCR_WE2, OP2.SLOT, SCR_LSA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_LEA (CLK, SW_A, SW_D & LEA_MASK,  SCR_WE3, OP2.SLOT, SCR_LEA_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR1(CLK, SW_A, SW_D & SCR1_MASK, SCR_WE4, OP4.SLOT, SCR_SCR1_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, SW_A, SW_D & SCR2_MASK, SCR_WE5, SCR2_RA, SCR_SCR2_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR3(CLK, SW_A, SW_D & SCR3_MASK, SCR_WE6, OP6.SLOT, SCR_SCR3_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR4(CLK, SW_A, SW_D & SCR4_MASK, SCR_WE7, OP2.SLOT, SCR_SCR4_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK, SW_A, SW_D & SCR5_MASK, SCR_WE8, SCR5_RA, SCR_SCR5_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK, SW_A, SW_D & SCR6_MASK, SCR_WE9, SCR6_RA, SCR_SCR6_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,OP7.SLOT, SCR_SCR7_Q);
+	SCSPP_RAM_8X2 #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,OP7.SLOT, SCR_SCR8_Q);
+	
+	//68K-side copy of the slot registers, address {register, slot}; the pipeline RAMs above are read by the pipeline only.
+	//The sweep writes one register index per clock (SWC), every index within one slot period.
+	bit [3:0] SWC;
+	always @(posedge CLK) SWC <= SWC + 4'd1;
+	wire        MIR_SEL = REG_A[11:10] == 2'b00 & (REG_A[4:1] < 4'd12);
+	wire [ 1:0] MIR_WE  = SWEEP ? 2'b11 : REG_WE & {2{MIR_SEL & CYCLE1_CE}};
+	wire [ 8:0] MIR_WA  = SWEEP ? {SWC,OP7.SLOT} : {REG_A[4:1],REG_A[9:5]};
+	bit  [15:0] MIR_Q;
+	SCSPP_RAM_8X2 #(9) SCR_MIR(CLK, MIR_WA, SW_D, MIR_WE, {REG_A[4:1],REG_A[9:5]}, MIR_Q);
 	
 	//STACK,100600-10067F
 	wire       STACKA_SEL = REG_A[11:6] == 6'b011000;
