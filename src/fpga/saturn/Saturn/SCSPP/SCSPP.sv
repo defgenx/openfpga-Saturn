@@ -1415,17 +1415,14 @@ module SCSPP #(
 //	bit         BURST;
 	
 	wire SCU_REQ = ~AD_N & ~CS_N & ~REQ_N;	//25A00000-25BFFFFF
-	bit [20: 1] SCU_RA;
-	bit         SCU_RPEND;
+		bit         SCU_RPEND;
 	bit         SCU_RRDY;
-	bit [20: 1] SCU_WA;
-	bit [15: 0] SCU_D;
+		bit [15: 0] SCU_D;
 	bit [ 1: 0] SCU_WE;
 	bit         SCU_WPEND;
 	bit         SCU_WRDY;
 	
-	bit [23: 1] SCPU_RA;
-	bit         SCPU_RPEND;
+		bit         SCPU_RPEND;
 	bit [23: 1] SCPU_WA;
 	bit [ 1: 0] SCPU_WE;
 	bit [15: 0] SCPU_D;
@@ -1478,36 +1475,33 @@ module SCSPP #(
 			
 			//SCU read
 			if (SCU_REQ && WE_N) begin
-				SCU_RA <= A;
 				SCU_RPEND <= 1;
 				SCU_RRDY <= 0;
-				A <= A + 20'd1;
 			end
 			
 			if ((MEM_DEV_LATCH == 3'd4 && CYCLE0_CE) || (REG_ST == MS_SCU_WAIT && REG_RD && CYCLE1_CE)) begin
 				SCU_RRDY <= 1;
 				SCU_RPEND <= 0;
 				SCU_REG_RPEND <= 0;
+				A <= A + 20'd1;
 			end
 			
 			//SCU write
 			if (SCU_REQ && !WE_N && !DTEN_N) begin
-				SCU_WA <= A;
 				SCU_D <= DI;
 				SCU_WE <= ~{2{WE_N}} & ~DQM;
 				SCU_WPEND <= 1;
 				SCU_WRDY <= 0;
-				A <= A + 20'd1;
 			end
 			
 			if ((MEM_ST == MS_SCU_WAIT && MEM_WE && CYCLE1_CE) || (REG_ST == MS_SCU_WAIT && REG_WE && CYCLE1_CE)) begin
 				SCU_WRDY <= 1;
 				SCU_WPEND <= 0;
+				A <= A + 20'd1;
 			end
 			
 			//SCPU read
 			if (!SCAS_N && SCRW_N && SCDTACK_N && SCFC != 3'b111 && !SCPU_RPEND) begin
-				SCPU_RA <= SCA[23:1];
 				SCPU_RPEND <= 1;
 			end
 			if ((REG_ST == MS_SCPU_WAIT || IO_ST == MS_SCPU_WAIT) && CYCLE1_CE) begin
@@ -1555,21 +1549,21 @@ module SCSPP #(
 						MEM_CS <= 1;
 						MEM_DEV <= 3'd3;
 						MEM_ST <= MS_DMA_WAIT;
-					end else if (!SCU_RA[20] && SCU_RPEND && MEM_DEV_LATCH != 3'd4) begin
-						MEM_A <= SCU_RA[18:1];
+					end else if (!A[20] && SCU_RPEND && MEM_DEV_LATCH != 3'd4) begin
+						MEM_A <= A[18:1];
 						MEM_WE <= 2'b00;
 						MEM_RD <= 1;
-						MEM_CS <= ~SCU_RA[19];
+						MEM_CS <= ~A[19];
 						MEM_DEV <= 3'd4;
 						MEM_ST <= MS_SCU_WAIT;
-					end else if (!SCU_WA[20] && SCU_MEM_WPEND) begin
+					end else if (!A[20] && SCU_MEM_WPEND) begin
 						SCU_WPEND <= 0;
 						SCU_MEM_WPEND <= 0;
-						MEM_A <= SCU_WA[18:1];
+						MEM_A <= A[18:1];
 						MEM_D <= SCU_D;
 						MEM_WE <= SCU_WE;
 						MEM_RD <= 0;
-						MEM_CS <= ~SCU_WA[19];
+						MEM_CS <= ~A[19];
 						MEM_DEV <= 3'd0;
 						MEM_ST <= MS_SCU_WAIT;
 					end else if (SCPU_WA[23:20] == 4'h0 && SCPU_WPEND) begin
@@ -1581,11 +1575,11 @@ module SCSPP #(
 						MEM_CS <= ~SCPU_WA[19];
 						MEM_DEV <= 3'd0;
 						MEM_ST <= MS_SCPU_WAIT;
-					end else if (SCPU_RA[23:20] == 4'h0 && SCPU_RPEND) begin
-						MEM_A <= SCPU_RA[18:1];
+					end else if (SCA[23:20] == 4'h0 && SCPU_RPEND) begin
+						MEM_A <= SCA[18:1];
 						MEM_WE <= '0;
 						MEM_RD <= 1;
-						MEM_CS <= ~SCPU_RA[19];
+						MEM_CS <= ~SCA[19];
 						MEM_DEV <= 3'd5;
 						MEM_ST <= MS_SCPU_WAIT;
 					end else begin
@@ -1669,14 +1663,14 @@ module SCSPP #(
 						REG_WE <= ~{2{DMA_DIR}};
 						REG_RD <= DMA_DIR;
 						REG_ST <= MS_DMA_WAIT;
-					end else if (SCU_RA[20] && SCU_REG_RPEND) begin
-						REG_A <= SCU_RA[11:1];
+					end else if (A[20] && SCU_REG_RPEND) begin
+						REG_A <= A[11:1];
 						REG_WE <= 2'b00;
 						REG_RD <= 1;
 						REG_ST <= MS_SCU_WAIT;
-					end else if (SCU_WA[20] && SCU_REG_WPEND) begin
+					end else if (A[20] && SCU_REG_WPEND) begin
 						SCU_REG_WPEND <= 0;
-						REG_A <= SCU_WA[11:1];
+						REG_A <= A[11:1];
 						REG_D <= SCU_D;
 						REG_WE <= SCU_WE;
 						REG_RD <= 0;
@@ -1688,14 +1682,14 @@ module SCSPP #(
 						REG_WE <= SCPU_WE;
 						REG_RD <= 0;
 						REG_ST <= MS_SCPU_WAIT;
-					end else if (SCPU_RA[23:20] == 4'h1 && SCPU_RPEND) begin
+					end else if (SCA[23:20] == 4'h1 && SCPU_RPEND) begin
 						SCDTACK_N <= 0;
-						REG_A <= SCPU_RA[11:1];
+						REG_A <= SCA[11:1];
 						REG_WE <= '0;
 						REG_RD <= 1;
 						REG_ST <= MS_SCPU_WAIT;
 `ifdef DEBUG
-						DBG_68K_ERR <= ({SCPU_RA[20:1],1'b0} >= 21'h080000 && {SCPU_RA[20:1],1'b0} < 21'h100000) || ({SCPU_RA[20:1],1'b0} >= 21'h100EE4);
+						DBG_68K_ERR <= ({SCA[20:1],1'b0} >= 21'h080000 && {SCA[20:1],1'b0} < 21'h100000) || ({SCA[20:1],1'b0} >= 21'h100EE4);
 `endif
 					end
 				end
@@ -1737,7 +1731,7 @@ module SCSPP #(
 					if (SCPU_WA[23:21] && SCPU_WPEND) begin
 						SCPU_WPEND <= 0;
 						IO_ST <= MS_SCPU_WAIT;
-					end else if (SCPU_RA[23:21] && SCPU_RPEND) begin
+					end else if (SCA[23:21] && SCPU_RPEND) begin
 						SCDTACK_N <= 0;
 						IO_ST <= MS_SCPU_WAIT;
 					end
