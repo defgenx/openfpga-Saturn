@@ -38,17 +38,19 @@ module SH7604P_WDT
 	output            MRES
 );
 
-	import SH7604P_PKG::*;
+	// WTCSR bits 4:3 and RSTCSR bits 4:0 always read as 1 and are not stored.
+	reg  [7:0] WTCNT;
+	reg        S_OVF, S_WTIT, S_TME;
+	reg  [2:0] S_CKS;
+	reg        S_WOVF, S_RSTE, S_RSTS;
+	reg        WRES;
 	
-	WTCNT_t     WTCNT;
-	WTCSR_t     WTCSR;
-	RSTCSR_t    RSTCSR;
-	bit         WRES;
+	wire RUN = EN & CE_R & ~DISABLE;
+	wire CNT_FF = &WTCNT;
 	
-	//Clock selector
-	bit         WT_CE;
+	reg WT_CE;
 	always_comb begin
-		case (WTCSR.CKS)
+		case (S_CKS)
 			3'b000: WT_CE = CLK2_CE;
 			3'b001: WT_CE = CLK64_CE;
 			3'b010: WT_CE = CLK128_CE;
@@ -56,188 +58,144 @@ module SH7604P_WDT
 			3'b100: WT_CE = CLK512_CE;
 			3'b101: WT_CE = CLK1024_CE;
 			3'b110: WT_CE = CLK4096_CE;
-			3'b111: WT_CE = CLK8192_CE;
+			default: WT_CE = CLK8192_CE;
 		endcase
 	end
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
-			// synopsys translate_off
 			WDTOVF_N <= 1;
 			WRES <= 0;
-			// synopsys translate_onn
 		end
-		else begin
-			if (!RES_N) begin
-				WDTOVF_N <= 1;
-				WRES <= 0;
-			end else if (EN && CE_R && !DISABLE) begin
-				if (WT_CE) begin
-					if (WTCNT == 8'hFF && WTCSR.WTIT) begin
-						WDTOVF_N <= 0;
-						WRES <= RSTCSR.RSTE;
-					end
-				end
-				
-				if (!WDTOVF_N && CLK128_CE) WDTOVF_N <= 1;
-				if (WRES && CLK512_CE) WRES <= 0;
+		else if (!RES_N) begin
+			WDTOVF_N <= 1;
+			WRES <= 0;
+		end
+		else if (RUN) begin
+			if (WT_CE && CNT_FF && S_WTIT) begin
+				WDTOVF_N <= 0;
+				WRES <= S_RSTE;
 			end
+			if (!WDTOVF_N && CLK128_CE) WDTOVF_N <= 1;
+			if (WRES && CLK512_CE) WRES <= 0;
 		end
-	end	
+	end
 	
-	assign PRES = WRES & ~RSTCSR.RSTS;
-	assign MRES = WRES &  RSTCSR.RSTS;
+	assign PRES = WRES & ~S_RSTS;
+	assign MRES = WRES &  S_RSTS;
 	
-	bit          SBY_TME;
+	reg SBY_TME, NMI_OLD;
 	always @(posedge CLK or negedge RST_N) begin
-		bit          NMI_OLD;
-		
 		if (!RST_N) begin
 			SBY_TME <= 0;
-			// synopsys translate_off
-			NMI_OLD <= 0;
-			// synopsys translate_onn
 		end
-		else begin
-			if (!RES_N) begin
-				SBY_TME <= 0;
-			end else if (EN && CE_R && !DISABLE) begin
-				NMI_OLD <= NMI;
-				if (NMI && !NMI_OLD && SBY) begin
-					SBY_TME <= 1;
-				end
-				if (OVF) begin
-					SBY_TME <= 0;
-				end
-			end
+		else if (!RES_N) begin
+			SBY_TME <= 0;
 		end
-	end	
+		else if (RUN) begin
+			if (NMI && !NMI_OLD && SBY) SBY_TME <= 1;
+			if (OVF) SBY_TME <= 0;
+		end
+	end
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) NMI_OLD <= 0;
+		else if (RUN && RES_N) NMI_OLD <= NMI;
+	end
 	
 	//Registers
-	wire REG_SEL = (IBUS_A >= 32'hFFFFFE80 && IBUS_A <= 32'hFFFFFE8F);
-	bit  [ 7: 0] OPEN_BUS;
-	bit          IBUS_REQ_OLD;
+	wire REG_SEL = (IBUS_A[31:4] == 28'hFFFFFE8);
+	reg  [7:0] OPEN_BUS;
+	reg        IBUS_REQ_OLD;
+	reg  [7:0] REG_DO;
+	reg  [1:0] BUSY;
+	wire WR_DONE = REG_SEL && IBUS_WE && !IBUS_REQ && IBUS_REQ_OLD;
+	wire RD_DONE = REG_SEL && !IBUS_WE && !IBUS_REQ && IBUS_REQ_OLD;
+	wire HALF    = IBUS_BA == 4'b1100 || IBUS_BA == 4'b0011;
+	
 	always @(posedge CLK or negedge RST_N) begin
-		bit          TM_EN;
-		bit          OVF_SET;
+		reg TM_EN, OVF_SET;
 		
 		if (!RST_N) begin
-			// synopsys translate_off
-			WTCNT  <= WTCNT_INIT;
-			WTCSR  <= WTCSR_INIT;
-			RSTCSR <= RSTCSR_INIT;
-			// synopsys translate_on
+			WTCNT <= 8'h00;
+			S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
+			S_WOVF <= 0; S_RSTE <= 0; S_RSTS <= 0;
 			OVF <= 0;
 			TM_EN <= 0;
 			OVF_SET <= 0;
 		end
-		else begin
-			if (!RES_N) begin
-				WTCNT  <= WTCNT_INIT;
-				WTCSR  <= WTCSR_INIT;
-				RSTCSR <= RSTCSR_INIT;
-				OVF <= 0;
-				TM_EN <= 0;
-				OVF_SET <= 0;
-//			end else if (SBY) begin
-//				WTCNT <= WTCNT_INIT;//?
-//				WTCSR[7:3] <= WTCSR_INIT[7:3];
-//				RSTCSR <= RSTCSR_INIT;
-			end else if (EN && CE_R && !DISABLE) begin
-				if (CLK2_CE) begin
-					TM_EN <= WTCSR.TME | SBY_TME;
-				end
-				
-				OVF <= 0;
-				if (!TM_EN) begin
-					WTCNT <= WTCNT_INIT;
-					WTCSR.OVF <= 0;
-				end else if (WT_CE) begin
-					WTCNT <= WTCNT + 8'd1;
-					if (WTCNT == 8'hFF) begin
-						if (SBY_TME) begin
-							OVF <= 1;
-						end
-						else if (!WTCSR.WTIT) begin
-							WTCSR.OVF <= 1;
-						end
-						else begin
-							RSTCSR.WOVF <= 1;
-							WTCSR <= 8'h18;
-						end
+		else if (!RES_N) begin
+			WTCNT <= 8'h00;
+			S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
+			S_WOVF <= 0; S_RSTE <= 0; S_RSTS <= 0;
+			OVF <= 0;
+			TM_EN <= 0;
+			OVF_SET <= 0;
+		end
+		else if (RUN) begin
+			if (CLK2_CE) TM_EN <= S_TME | SBY_TME;
+			
+			OVF <= 0;
+			if (!TM_EN) begin
+				WTCNT <= 8'h00;
+				S_OVF <= 0;
+			end else if (WT_CE) begin
+				WTCNT <= WTCNT + 8'd1;
+				if (CNT_FF) begin
+					if (SBY_TME) OVF <= 1;
+					else if (!S_WTIT) S_OVF <= 1;
+					else begin
+						S_WOVF <= 1;
+						S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
 					end
 				end
-				
-				if (REG_SEL && IBUS_WE && !IBUS_REQ && IBUS_REQ_OLD) begin
-					if (IBUS_BA == 4'b1100 || IBUS_BA == 4'b0011) begin
-						case (IBUS_A[2:0])
-							3'h0: begin
-								if (IBUS_DI[15:8] == 8'h5A) WTCNT <= IBUS_DI[7:0] & WTCNT_WMASK;
-								else if (IBUS_DI[15:8] == 8'hA5) begin
-									WTCSR[6:0] <= IBUS_DI[6:0] & WTCSR_WMASK[6:0];
-									if (!IBUS_DI[7] && OVF_SET) begin WTCSR.OVF <= 0; OVF_SET <= 0; end
-								end
-							end
-							3'h2:  begin
-								if (IBUS_DI[15:8] == 8'h5A) RSTCSR[6:0] <= IBUS_DI[6:0] & RSTCSR_WMASK[6:0];
-								else if (IBUS_DI[15:8] == 8'hA5 && !IBUS_DI[7]) RSTCSR[7] <= 0;
-							end
-							default:;
-						endcase
+			end
+			
+			if (WR_DONE && HALF) begin
+				if (IBUS_A[2:0] == 3'h0) begin
+					if (IBUS_DI[15:8] == 8'h5A) WTCNT <= IBUS_DI[7:0];
+					else if (IBUS_DI[15:8] == 8'hA5) begin
+						S_WTIT <= IBUS_DI[6]; S_TME <= IBUS_DI[5]; S_CKS <= IBUS_DI[2:0];
+						if (!IBUS_DI[7] && OVF_SET) begin S_OVF <= 0; OVF_SET <= 0; end
 					end
-					
-					case (IBUS_A[2:0])
-						3'h4:    OPEN_BUS <= IBUS_DI[15:8];
-						default: OPEN_BUS <= IBUS_DI[7:0];
-					endcase
 				end
-				if (REG_SEL && !IBUS_WE && !IBUS_REQ && IBUS_REQ_OLD) begin
-					case (IBUS_A[2:0])
-						3'h4:;
-						default: OPEN_BUS <= REG_DO;
-					endcase
-					if (IBUS_A[2:0] == 3'h0 && WTCSR.OVF) OVF_SET <= 1;
+				if (IBUS_A[2:0] == 3'h2) begin
+					if (IBUS_DI[15:8] == 8'h5A) begin S_RSTE <= IBUS_DI[6]; S_RSTS <= IBUS_DI[5]; end
+					else if (IBUS_DI[15:8] == 8'hA5 && !IBUS_DI[7]) S_WOVF <= 0;
 				end
+			end
+			if (WR_DONE) OPEN_BUS <= IBUS_A[2:0] == 3'h4 ? IBUS_DI[15:8] : IBUS_DI[7:0];
+			if (RD_DONE) begin
+				if (IBUS_A[2:0] != 3'h4) OPEN_BUS <= REG_DO;
+				if (IBUS_A[2:0] == 3'h0 && S_OVF) OVF_SET <= 1;
 			end
 		end
 	end
 	
-	assign ITI_IRQ = WTCSR.OVF;
+	assign ITI_IRQ = S_OVF;
 	
-	bit  [ 7: 0] REG_DO;
-	bit  [ 1: 0] BUSY;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			REG_DO <= '0;
 			BUSY <= '0;
 		end
-		else begin
-			if (!RES_N) begin
-				REG_DO <= '0;
-				BUSY <= '0;
-			end else if (CE_F && !DISABLE) begin
-				if (REG_SEL && !IBUS_WE && IBUS_REQ && !BUSY[0]) begin
-					case (IBUS_A[2:0])
-						3'h0: REG_DO <= (WTCSR | 8'h18) & WTCSR_RMASK;
-						3'h1: REG_DO <= WTCNT & WTCNT_RMASK;
-						3'h2: REG_DO <= '1;
-						3'h3: REG_DO <= (RSTCSR | 8'h1F) & RSTCSR_RMASK;
-						3'h4: REG_DO <= OPEN_BUS;
-						3'h5: REG_DO <= '1;
-						3'h6: REG_DO <= '1;
-						3'h7: REG_DO <= '1;
-						default:;
-					endcase
-				end
-			end else if (CE_R && !DISABLE) begin
-				IBUS_REQ_OLD <= IBUS_REQ;
-				if (REG_SEL && !IBUS_WE && IBUS_REQ && !IBUS_REQ_OLD) begin
-					BUSY[0] <= 1;
-				end else if (BUSY[0]) begin
-					BUSY[0] <= 0;
-				end
-				BUSY[1] <= BUSY[0];
+		else if (!RES_N) begin
+			REG_DO <= '0;
+			BUSY <= '0;
+		end
+		else if (CE_F && !DISABLE) begin
+			if (REG_SEL && !IBUS_WE && IBUS_REQ && !BUSY[0]) begin
+				case (IBUS_A[2:0])
+					3'h0: REG_DO <= {S_OVF,S_WTIT,S_TME,2'b11,S_CKS};
+					3'h1: REG_DO <= WTCNT;
+					3'h3: REG_DO <= {S_WOVF,S_RSTE,S_RSTS,5'h1F};
+					3'h4: REG_DO <= OPEN_BUS;
+					default: REG_DO <= 8'hFF;
+				endcase
 			end
+		end else if (CE_R && !DISABLE) begin
+			IBUS_REQ_OLD <= IBUS_REQ;
+			BUSY[0] <= REG_SEL && !IBUS_WE && IBUS_REQ && !IBUS_REQ_OLD;
+			BUSY[1] <= BUSY[0];
 		end
 	end
 	
