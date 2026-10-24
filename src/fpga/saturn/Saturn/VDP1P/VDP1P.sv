@@ -444,6 +444,10 @@ module VDP1P (
 	wire [13: 0] DX14_L2 = {LEFT_VERT.X[12],LEFT_VERT.X}   - {SYS_CLIP_X2[12],SYS_CLIP_X2};
 	wire [13: 0] DX14_R1 = {RIGHT_VERT.X[12],RIGHT_VERT.X} - {SYS_CLIP_X1[12],SYS_CLIP_X1};
 	wire [13: 0] DX14_R2 = {RIGHT_VERT.X[12],RIGHT_VERT.X} - {SYS_CLIP_X2[12],SYS_CLIP_X2};
+	// Horizontal pre-clip flag: one edge pair wholly left of X1 or right of X2; computed by a one-comparator unit in the
+	// 8 cycles after EDGE_INIT (first read in the row set-up at least 40 cycles later).
+	wire         CLIP_H;
+	VDP1P_CLIPH CLIPH(CLK, EN, EN && CMD_ST == CMDS_EDGE_INIT, VERTA.X, VERTD.X, VERTB.X, VERTC.X, SYS_CLIP_X1, SYS_CLIP_X2, CMD.CMDPMOD.PCLP, CLIP_H);
 	bit  [ 8: 0] CMD_DELAY;
 	bit  [ 9: 0] PENALTY_CNT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -466,7 +470,6 @@ module VDP1P (
 		bit         LN_Y_MAJOR;
 		bit [11: 0] LN_MAJ,LN_MIN;
 		bit [16: 3] SPR_OFFSY_NEXT;
-		bit         CLIP_H;
 		bit [12: 0] LINE_DIFF_LEFT_CLIPX1,LINE_DIFF_LEFT_CLIPX2,LINE_DIFF_RIGHT_CLIPX1,LINE_DIFF_RIGHT_CLIPX2;
 		bit         LINE_EQ_LEFT_CLIPX1,LINE_EQ_LEFT_CLIPX2,LINE_EQ_RIGHT_CLIPX1,LINE_EQ_RIGHT_CLIPX2;
 		bit         LINE_GT_LEFT_CLIPX1,LINE_GT_LEFT_CLIPX2,LINE_GT_RIGHT_CLIPX1,LINE_GT_RIGHT_CLIPX2;
@@ -795,14 +798,7 @@ module VDP1P (
 					
 					DIR <= '0;
 					
-					CLIP_H <= 0;
-					if (($signed(VERTA.X) < $signed(SYS_CLIP_X1) && $signed(VERTD.X) < $signed(SYS_CLIP_X1)) ||
-					    ($signed(VERTB.X) < $signed(SYS_CLIP_X1) && $signed(VERTC.X) < $signed(SYS_CLIP_X1)) ||
-						 ($signed(VERTA.X) > $signed(SYS_CLIP_X2) && $signed(VERTD.X) > $signed(SYS_CLIP_X2)) ||
-						 ($signed(VERTB.X) > $signed(SYS_CLIP_X2) && $signed(VERTC.X) > $signed(SYS_CLIP_X2))) begin
-						CLIP_H <= ~CMD.CMDPMOD.PCLP;
-					end
-							
+					
 					CMD_ST <= CMDS_POLYGON_CALCE;
 				end
 				
@@ -2699,4 +2695,36 @@ module VDP1P_EDGE_LANE (
 	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
 	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
 	VDP1P_MLAB #(.W(14),.AW(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
+endmodule
+
+
+// Pre-clip flag: (A.X<X1 && D.X<X1) || (B.X<X1 && C.X<X1) || (A.X>X2 && D.X>X2) || (B.X>X2 && C.X>X2), one compare per cycle.
+module VDP1P_CLIPH (
+	input         CLK,
+	input         EN,
+	input         START,
+	input  [12:0] AX,
+	input  [12:0] DX,
+	input  [12:0] BX,
+	input  [12:0] CX,
+	input  [12:0] X1,
+	input  [12:0] X2,
+	input         PCLP,
+	output        RES
+);
+	bit  [ 2: 0] I;
+	bit          RUN,PREV,ANY,PC;
+	wire [12: 0] V = I[1:0] == 2'd0 ? AX : I[1:0] == 2'd1 ? DX : I[1:0] == 2'd2 ? BX : CX;
+	wire         HIT = I[2] ? ($signed(X2) < $signed(V)) : ($signed(V) < $signed(X1));
+	assign RES = ANY && !PC;
+	always @(posedge CLK) if (EN) begin
+		if (START) begin
+			RUN <= 1; I <= 0; ANY <= 0; PC <= PCLP;
+		end else if (RUN) begin
+			PREV <= HIT;
+			if (I[0] && PREV && HIT) ANY <= 1;
+			I <= I + 3'd1;
+			if (I == 3'd7) RUN <= 0;
+		end
+	end
 endmodule
