@@ -31,6 +31,11 @@ foreach cpu {MSH SSH} {
 	set_multicycle_path -hold  -from [get_registers "*|$cpu|core|*"] -to [get_registers "*|$cpu|core|*"] 1
 }
 
+# VDP2P advances on CE_R (every second clk_sys) like the golden VDP2: register-to-register paths inside it have two
+# clk_sys periods (docs/vdp2-rewrite.md: -1.47 ns at one period, all failing paths are clock-enable paths).
+set_multicycle_path -setup -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 2
+set_multicycle_path -hold  -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 1
+
 # ---------------------------------------------------------------------------------- SDRAM
 # dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). Datasheet values as quoted in docs/memory.md:
 # input setup 1.5 ns, hold 1.0 ns, output valid 5.5 ns max, hold 2.5 ns min.
