@@ -33,3 +33,7 @@ sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
+sim/**/build_scup/
+sizing/scup/*/out/
+sizing/scup/*/*.log
+sizing/scup/*.out
