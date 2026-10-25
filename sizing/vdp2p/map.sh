@@ -1,5 +1,6 @@
 #!/bin/sh
 # usage: sizing/vdp2p/map.sh <tag> [src dir]   area-profile quartus_map of VDP2P (copy in sizing/vdp2p/snap/<tag>/)
+# MACROS="POCKET_CUT_VDP2_ZOOM ..." adds VERILOG_MACRO assignments.
 # Result: snap/<tag>/<tag>.log, output_files/p.map.rpt, <tag>.vqm. Summary: sizing/vdp2/summary.sh snap/<tag>/output_files/p.map.rpt
 set -e
 TAG=$1
@@ -24,6 +25,7 @@ set_global_assignment -name AUTO_RAM_RECOGNITION ON
 set_global_assignment -name AUTO_ROM_RECOGNITION ON
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name VERILOG_MACRO "LIGHT_SATURN=1"
+$(for m in $MACROS; do echo "set_global_assignment -name VERILOG_MACRO \"$m=1\""; done)
 set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
 set_global_assignment -name SYSTEMVERILOG_FILE ${PFX}_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ${PFX}.sv

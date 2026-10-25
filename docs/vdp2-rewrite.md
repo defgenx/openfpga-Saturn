@@ -266,3 +266,63 @@ Why the remaining plan in the brief does not reach 3,500 (measured and computed,
 What remains is the feature logic itself (RBG 1,179 ALMs, priority/colour about 760, scroll about 450, cell data about 550 in the
 5,221-ALM profile). Reaching 3,500 in-system needs either feature cuts or a different memory budget (line buffers), not a
 restructuring of this datapath.
+
+## 10. Where the area is, measured (line-ahead renderer brief)
+
+The brief for this step was a line-ahead serial renderer (one fetch/address engine, one decoder, one rotation datapath, a
+priority line buffer in M10K, +15 M10K allowed). Before writing it, VDP2P2 was cut apart with `sizing/vdp2p/featabl.py` and the
+`POCKET_CUT_VDP2_*` macros (area-profile `quartus_map`, `map.sh`; one run per row; same sources, only the named logic tied off).
+
+Layers of the 4,712-ALM design (ALMs, map):
+
+| design | ALMs | what is left |
+|---|---|---|
+| all six layers off (`BGON` tied, sprite dot tied) | 1,375 | timing generator, CPU/VRAM port, registers, colour RAM, colour calculation and output, table fetches |
+| layers decoded to transparent (`N?DOT`, `R0DOT` constant) | 3,761 | all fetch/address/scroll/rotation logic; no cell data capture, dot select or priority |
+| ... and RBG0/RBG1 off | 2,823 | NBG front end only |
+| ... and NBG0-3 off (RBG on) | 2,567 | RBG front end only |
+| full | 4,712 | |
+
+The front end (fetch decode, address unit, scroll counters, pattern-name conversion, rotation coordinates) is 2,390 ALMs (NBG about
+1,450, RBG about 940); what a dot-domain renderer replaces (cell capture, cell buffer, dot select, dot decode, priority/colour
+candidates) is 951. A renderer that cost nothing would leave 3,761.
+
+Feature cut menu (`POCKET_CUT_VDP2_<NAME>`, register bits read back 0; ALMs against 4,712; the sim harness has the same cut builds):
+
+| cut | ALMs | | cut | ALMs |
+|---|---|---|---|---|
+| COEF (rotation coefficient tables) | -263 | | ZOOM (reduction bits) | -192 |
+| RPARAMB (second rotation parameter set, includes RBG1) | -209 | | RGB32 (16M colour) | -185 |
+| LINESCROLL (X/Y/zoom line tables) | -204 | | BITMAP | -123 |
+| RBG1 alone | -161 | | EXTCC | -34 |
+| LNCOL | -32 | | HIRES | -22 |
+| MOSAIC | -19 | | SPRWIN / LINEWIN | -17 / -16 |
+| BACKLINE | -1 | | all sixteen together | **3,438 (-1,274)** |
+
+Single-feature ties of the live logic (`featabl.py`, not register cuts): NBG2+NBG3 -303, window logic -168, sprite data formats -100,
+vertical cell scroll -95, special priority / colour calculation codes -69.
+
+Experiments with the dot-domain back end (`sizing/vdp2p/proto/`):
+
+* E1, serial compositor (one candidate layer per clock after the dot event, three sorted accumulators, one `MakeDotData`, per-layer
+  register bundles selected by the step counter) in place of the parallel ranking: 4,712 -> 4,600 ALMs (ALUT -231). It needs six
+  clocks per dot where hi-res has four and sampling the registers over the window; not integrated.
+* E2, line renderer: cell words queue in a FIFO as they leave the bank buffers, a walker decodes them one dot per clock (source
+  position accumulator per layer, so zoom and reduction use the same path) into a three-slot priority line buffer
+  (3 x 33 bit x 1,024, +10 M10K), RBG0/RBG1 dots insert through the same pipeline, scan-out ranks the three slots with the
+  sprite dot, windows and shadow at the dot rate. It replaces the cell capture, the cell buffer ring, the character parameter ring,
+  the scroll position counter of the dot select, the dot select, the five dot decoders and the parallel ranking.
+  Built into VDP2P2 from the real front end signals and synthesised: **4,409 ALMs** (-303), 17 DSP, +97 kbit. It is an area
+  prototype: the word arrival timing, scene generator and the mosaic hold are not done, so the figure is a lower bound of a working
+  version by those pieces only.
+
+What this says about reaching 3,500 in-system (4,724 today, so -1,224): E2 alone gives -303; the front end stays. The cuts alone reach
+it only with nearly all of them. The sensible combinations are cuts of COEF, RGB32, ZOOM, LINESCROLL, RPARAMB and BITMAP
+(-1,176 added, 3,536) plus any one of the small ones, or E2 plus about four of the large ones. Anything else needs VDP2's share of
+the budget to move.
+
+Why E2 was not carried to a working version in this step: the golden's capture writes each word into lanes in an order that
+depends on the cycle pattern, and the differential scenes use unconstrained patterns (stale-lane behaviour is part of what the
+harness checks). A decode-at-arrival design matches the golden for legal patterns only, so it needs a scene generator that builds
+consistent PN/CH slots and banks first (the PN word range and character base would have to be forced into the banks the pattern
+names), and its register writes become visible per dot window and per line.
