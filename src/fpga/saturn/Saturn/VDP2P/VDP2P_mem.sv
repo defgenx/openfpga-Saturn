@@ -307,8 +307,7 @@ module VDP2P_REGRAM #(
 	assign Q = vld[RA] ? w : '0;
 endmodule
 
-// Two 8x6 products and their sum (colour calculation of one channel).
-(* multstyle = "dsp" *)
+// Two 8x6 products and their sum (colour calculation of one channel), in one DSP block.
 module VDP2P_RATIO (
 	input  [ 7:0] A,
 	input  [ 7:0] B,
@@ -316,5 +315,19 @@ module VDP2P_RATIO (
 	input  [ 5:0] RB,
 	output [13:0] S
 );
+`ifdef ALTERA_RESERVED_QIS
+	altera_mult_add #(
+		.number_of_multipliers(2), .width_a(8), .width_b(6), .width_result(14),
+		.representation_a("UNSIGNED"), .representation_b("UNSIGNED"),
+		.multiplier1_direction("ADD"),
+		.input_register_a0("UNREGISTERED"), .input_register_b0("UNREGISTERED"),
+		.input_register_a1("UNREGISTERED"), .input_register_b1("UNREGISTERED"),
+		.multiplier_register0("UNREGISTERED"), .multiplier_register1("UNREGISTERED"),
+		.output_register("UNREGISTERED"),
+		.dedicated_multiplier_circuitry("YES"), .extra_latency(0),
+		.intended_device_family("Cyclone V"), .lpm_type("altera_mult_add")
+	) mac (.dataa({B,A}), .datab({RB,RA}), .result(S));
+`else
 	assign S = (A * RA) + (B * RB);
+`endif
 endmodule
