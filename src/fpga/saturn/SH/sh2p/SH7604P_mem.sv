@@ -321,3 +321,59 @@ module SH2P_CACHE_LV (
 		altdpram_component.wrcontrol_aclr = "OFF",
 		altdpram_component.wrcontrol_reg = "INCLOCK";
 endmodule
+
+
+// Cache tags of two ways in one M10K: {way1[18:0], way0[18:0]}, per-way write enable, read address registered on the falling edge.
+module SH2P_CACHE_TAG2 (
+	input         clock,
+	input  [37:0] data,
+	input   [1:0] wren,
+	input   [5:0] rdaddress,
+	input   [5:0] wraddress,
+	output [37:0] q
+);
+	altsyncram	altsyncram_component (
+				.address_a (wraddress),
+				.address_b (rdaddress),
+				.clock0 (clock),
+				.clock1 (~clock),
+				.data_a (data),
+				.wren_a (|wren),
+				.byteena_a (wren),
+				.q_b (q),
+				.aclr0 (1'b0),
+				.aclr1 (1'b0),
+				.addressstall_a (1'b0),
+				.addressstall_b (1'b0),
+				.byteena_b (1'b1),
+				.clocken0 (1'b1),
+				.clocken1 (1'b1),
+				.clocken2 (1'b1),
+				.clocken3 (1'b1),
+				.data_b ({38{1'b1}}),
+				.eccstatus (),
+				.q_a (),
+				.rden_a (1'b1),
+				.rden_b (1'b1),
+				.wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "BYPASS",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 64,
+		altsyncram_component.numwords_b = 64,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "NONE",
+		altsyncram_component.outdata_reg_b = "UNREGISTERED",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.widthad_a = 6,
+		altsyncram_component.widthad_b = 6,
+		altsyncram_component.width_a = 38,
+		altsyncram_component.width_b = 38,
+		altsyncram_component.width_byteena_a = 2;
+endmodule

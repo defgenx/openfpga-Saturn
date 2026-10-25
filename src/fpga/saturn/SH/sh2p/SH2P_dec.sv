@@ -17,17 +17,17 @@ module SH2P_dec #(parameter bit VER=1) (
 	wire BC = (T == ~IR[9]);
 	reg [7:0] CLSN;
 	always_comb begin
-		if (IR[15]) begin
-			if (IR[14]) begin
+		if (IR[14]) begin
+			if (IR[15]) begin
 				if (IR[13]) begin
 					if (IR[12]) begin
-						if (STATE[0]) begin
+						if (STATE[2]) begin
 							CLSN = 8'd46;
 						end else begin
 							if (STATE[1]) begin
 								CLSN = 8'd46;
 							end else begin
-								if (STATE[2]) begin
+								if (STATE[0]) begin
 									CLSN = 8'd46;
 								end else begin
 									CLSN = 8'd51;
@@ -43,112 +43,32 @@ module SH2P_dec #(parameter bit VER=1) (
 					end else begin
 						if (IR[11]) begin
 							if (IR[10]) begin
-								if (IR[9]) begin
-									if (IR[8]) begin
+								if (STATE[2]) begin
+									CLSN = 8'd48;
+								end else begin
+									if (STATE[1]) begin
 										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd48;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd83;
-												end
-											end
+											CLSN = 8'd48;
 										end else begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
+											if (IR[9]) begin
+												if (IR[8]) begin
 													CLSN = 8'd151;
-												end
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd156;
-												end
-											end
-										end
-									end else begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd48;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd83;
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
 												end else begin
 													CLSN = 8'd150;
 												end
 											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd156;
-												end
-											end
-										end
-									end
-								end else begin
-									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd48;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd83;
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
+												if (IR[8]) begin
 													CLSN = 8'd149;
-												end
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
 												end else begin
-													CLSN = 8'd156;
+													CLSN = 8'd148;
 												end
 											end
 										end
 									end else begin
 										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd48;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd83;
-												end
-											end
+											CLSN = 8'd83;
 										end else begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd148;
-												end
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd48;
-												end else begin
-													CLSN = 8'd156;
-												end
-											end
+											CLSN = 8'd156;
 										end
 									end
 								end
@@ -185,61 +105,45 @@ module SH2P_dec #(parameter bit VER=1) (
 							end else begin
 								if (IR[9]) begin
 									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd52;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd163;
-													end
-												end
+										if (DS) begin
+											if (STATE[2]) begin
+												CLSN = 8'd46;
 											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd144;
-													end
+												if (STATE[1]) begin
+													CLSN = 8'd46;
 												end else begin
-													if (DS) begin
+													if (STATE[0]) begin
 														CLSN = 8'd46;
 													end else begin
-														CLSN = 8'd164;
+														CLSN = 8'd51;
 													end
 												end
 											end
 										end else begin
-											if (STATE[1]) begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
+											if (STATE[2]) begin
+												if (STATE[1]) begin
+													if (STATE[0]) begin
+														CLSN = 8'd52;
 													end else begin
 														CLSN = 8'd61;
 													end
 												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd191;
-													end
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
+													if (STATE[0]) begin
+														CLSN = 8'd144;
 													end else begin
 														CLSN = 8'd52;
 													end
+												end
+											end else begin
+												if (STATE[1]) begin
+													if (STATE[0]) begin
+														CLSN = 8'd163;
+													end else begin
+														CLSN = 8'd191;
+													end
 												end else begin
-													if (DS) begin
-														CLSN = 8'd51;
+													if (STATE[0]) begin
+														CLSN = 8'd164;
 													end else begin
 														CLSN = 8'd52;
 													end
@@ -261,414 +165,6 @@ module SH2P_dec #(parameter bit VER=1) (
 					end
 				end
 			end else begin
-				if (IR[13]) begin
-					if (IR[12]) begin
-						if (STATE[0]) begin
-							if (STATE[1]) begin
-								if (DS) begin
-									CLSN = 8'd46;
-								end else begin
-									CLSN = 8'd47;
-								end
-							end else begin
-								if (STATE[2]) begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd47;
-									end
-								end else begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd63;
-									end
-								end
-							end
-						end else begin
-							if (STATE[1]) begin
-								if (DS) begin
-									CLSN = 8'd46;
-								end else begin
-									CLSN = 8'd47;
-								end
-							end else begin
-								if (STATE[2]) begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd47;
-									end
-								end else begin
-									if (DS) begin
-										CLSN = 8'd51;
-									end else begin
-										CLSN = 8'd184;
-									end
-								end
-							end
-						end
-					end else begin
-						if (STATE[0]) begin
-							if (STATE[1]) begin
-								if (DS) begin
-									CLSN = 8'd46;
-								end else begin
-									CLSN = 8'd47;
-								end
-							end else begin
-								if (STATE[2]) begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd47;
-									end
-								end else begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd63;
-									end
-								end
-							end
-						end else begin
-							if (STATE[1]) begin
-								if (DS) begin
-									CLSN = 8'd46;
-								end else begin
-									CLSN = 8'd47;
-								end
-							end else begin
-								if (STATE[2]) begin
-									if (DS) begin
-										CLSN = 8'd46;
-									end else begin
-										CLSN = 8'd47;
-									end
-								end else begin
-									if (DS) begin
-										CLSN = 8'd51;
-									end else begin
-										CLSN = 8'd183;
-									end
-								end
-							end
-						end
-					end
-				end else begin
-					if (IR[12]) begin
-						CLSN = 8'd182;
-					end else begin
-						if (IR[11]) begin
-							if (IR[10]) begin
-								if (IR[9]) begin
-									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd60;
-													end
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd51;
-													end else begin
-														if (BC) begin
-															CLSN = 8'd180;
-														end else begin
-															CLSN = 8'd176;
-														end
-													end
-												end
-											end
-										end
-									end else begin
-										if (STATE[0]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd51;
-												end
-											end
-										end
-									end
-								end else begin
-									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd60;
-													end
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd51;
-													end else begin
-														if (BC) begin
-															CLSN = 8'd181;
-														end else begin
-															CLSN = 8'd177;
-														end
-													end
-												end
-											end
-										end
-									end else begin
-										if (STATE[0]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd51;
-												end
-											end
-										end
-									end
-								end
-							end else begin
-								if (IR[9]) begin
-									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd59;
-													end
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd51;
-													end else begin
-														if (BC) begin
-															CLSN = 8'd178;
-														end else begin
-															CLSN = 8'd174;
-														end
-													end
-												end
-											end
-										end
-									end else begin
-										if (STATE[0]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd51;
-												end
-											end
-										end
-									end
-								end else begin
-									if (IR[8]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd59;
-													end
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												if (DS) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd45;
-												end
-											end else begin
-												if (STATE[2]) begin
-													if (DS) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd45;
-													end
-												end else begin
-													if (DS) begin
-														CLSN = 8'd51;
-													end else begin
-														if (BC) begin
-															CLSN = 8'd179;
-														end else begin
-															CLSN = 8'd175;
-														end
-													end
-												end
-											end
-										end
-									end else begin
-										CLSN = 8'd93;
-									end
-								end
-							end
-						end else begin
-							if (IR[10]) begin
-								if (IR[9]) begin
-									if (STATE[0]) begin
-										CLSN = 8'd46;
-									end else begin
-										if (STATE[1]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[2]) begin
-												CLSN = 8'd46;
-											end else begin
-												CLSN = 8'd51;
-											end
-										end
-									end
-								end else begin
-									if (IR[8]) begin
-										CLSN = 8'd90;
-									end else begin
-										CLSN = 8'd88;
-									end
-								end
-							end else begin
-								if (IR[9]) begin
-									if (STATE[0]) begin
-										CLSN = 8'd46;
-									end else begin
-										if (STATE[1]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[2]) begin
-												CLSN = 8'd46;
-											end else begin
-												CLSN = 8'd51;
-											end
-										end
-									end
-								end else begin
-									if (IR[8]) begin
-										CLSN = 8'd89;
-									end else begin
-										CLSN = 8'd87;
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end else begin
-			if (IR[14]) begin
 				if (IR[13]) begin
 					if (IR[12]) begin
 						CLSN = 8'd92;
@@ -740,267 +236,115 @@ module SH2P_dec #(parameter bit VER=1) (
 						CLSN = 8'd91;
 					end else begin
 						if (IR[3]) begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
-												end else begin
-													CLSN = 8'd127;
-												end
-											end
+							if (IR[1]) begin
+								if (IR[0]) begin
+									if (IR[2]) begin
+										if (STATE[2]) begin
+											CLSN = 8'd47;
 										end else begin
 											if (STATE[1]) begin
 												CLSN = 8'd47;
 											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+												if (STATE[0]) begin
+													CLSN = 8'd127;
 												end else begin
 													CLSN = 8'd116;
 												end
 											end
 										end
 									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
+										if (STATE[2]) begin
+											if (IR[7]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
+												if (IR[6]) begin
 													CLSN = 8'd46;
 												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
+													if (IR[4]) begin
+														if (IR[5]) begin
+															CLSN = 8'd46;
+														end else begin
+															CLSN = 8'd58;
+														end
 													end else begin
-														CLSN = 8'd51;
+														if (DS) begin
+															CLSN = 8'd46;
+														end else begin
+															CLSN = 8'd47;
+														end
 													end
 												end
 											end
 										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
+											if (STATE[1]) begin
+												if (IR[7]) begin
 													CLSN = 8'd46;
 												end else begin
-													if (STATE[1]) begin
+													if (IR[6]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
+														if (IR[4]) begin
+															if (IR[5]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
+																if (STATE[0]) begin
+																	CLSN = 8'd152;
 																end else begin
-																	CLSN = 8'd51;
+																	CLSN = 8'd85;
 																end
 															end
-														end
-													end else begin
-														CLSN = 8'd68;
-													end
-												end else begin
-													if (IR[4]) begin
-														CLSN = 8'd67;
-													end else begin
-														CLSN = 8'd66;
-													end
-												end
-											end
-										end
-									end
-								end else begin
-									if (STATE[0]) begin
-										CLSN = 8'd46;
-									end else begin
-										if (STATE[1]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[2]) begin
-												CLSN = 8'd46;
-											end else begin
-												CLSN = 8'd51;
-											end
-										end
-									end
-								end
-							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
 														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
+															if (DS) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
+																CLSN = 8'd47;
 															end
 														end
+													end
+												end
+											end else begin
+												if (STATE[0]) begin
+													if (IR[7]) begin
+														CLSN = 8'd46;
 													end else begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
+														if (IR[6]) begin
+															CLSN = 8'd46;
+														end else begin
+															if (IR[4]) begin
+																if (IR[5]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	CLSN = 8'd84;
+																end
+															end else begin
 																if (DS) begin
 																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
-																end else begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd63;
-																	end
+																	CLSN = 8'd63;
 																end
 															end
+														end
+													end
+												end else begin
+													if (IR[7]) begin
+														CLSN = 8'd51;
+													end else begin
+														if (IR[6]) begin
+															CLSN = 8'd51;
 														end else begin
-															if (STATE[1]) begin
+															if (IR[5]) begin
 																if (DS) begin
-																	CLSN = 8'd46;
+																	CLSN = 8'd51;
 																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
-																end else begin
-																	if (DS) begin
+																	if (IR[4]) begin
 																		CLSN = 8'd51;
 																	end else begin
 																		CLSN = 8'd185;
 																	end
 																end
-															end
-														end
-													end
-												end else begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																if (STATE[2]) begin
-																	CLSN = 8'd58;
-																end else begin
-																	CLSN = 8'd152;
-																end
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd58;
-																end else begin
-																	CLSN = 8'd84;
-																end
-															end
-														end else begin
-															if (STATE[1]) begin
-																if (STATE[2]) begin
-																	CLSN = 8'd58;
-																end else begin
-																	CLSN = 8'd85;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd58;
-																end else begin
+																if (IR[4]) begin
 																	CLSN = 8'd101;
-																end
-															end
-														end
-													end else begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																if (DS) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
-																end else begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd63;
-																	end
-																end
-															end
-														end else begin
-															if (STATE[1]) begin
-																if (DS) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
 																end else begin
 																	if (DS) begin
 																		CLSN = 8'd51;
@@ -1014,15 +358,31 @@ module SH2P_dec #(parameter bit VER=1) (
 												end
 											end
 										end
+									end
+								end else begin
+									if (IR[7]) begin
+										if (STATE[2]) begin
+											CLSN = 8'd46;
+										end else begin
+											if (STATE[1]) begin
+												CLSN = 8'd46;
+											end else begin
+												if (STATE[0]) begin
+													CLSN = 8'd46;
+												end else begin
+													CLSN = 8'd51;
+												end
+											end
+										end
 									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
+										if (IR[6]) begin
+											if (STATE[2]) begin
 												CLSN = 8'd46;
 											end else begin
 												if (STATE[1]) begin
 													CLSN = 8'd46;
 												end else begin
-													if (STATE[2]) begin
+													if (STATE[0]) begin
 														CLSN = 8'd46;
 													end else begin
 														CLSN = 8'd51;
@@ -1030,42 +390,38 @@ module SH2P_dec #(parameter bit VER=1) (
 												end
 											end
 										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
+											if (IR[5]) begin
+												if (IR[4]) begin
+													if (STATE[2]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
+														if (STATE[1]) begin
 															CLSN = 8'd46;
 														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
+															if (STATE[0]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
+																CLSN = 8'd51;
 															end
 														end
+													end
+												end else begin
+													if (IR[2]) begin
+														CLSN = 8'd68;
 													end else begin
 														CLSN = 8'd99;
 													end
-												end else begin
-													if (IR[4]) begin
+												end
+											end else begin
+												if (IR[4]) begin
+													if (IR[2]) begin
+														CLSN = 8'd67;
+													end else begin
 														CLSN = 8'd40;
+													end
+												end else begin
+													if (IR[2]) begin
+														CLSN = 8'd66;
 													end else begin
 														CLSN = 8'd44;
 													end
@@ -1073,89 +429,47 @@ module SH2P_dec #(parameter bit VER=1) (
 											end
 										end
 									end
-								end else begin
-									if (IR[0]) begin
-										if (IR[7]) begin
+								end
+							end else begin
+								if (IR[7]) begin
+									if (STATE[2]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd46;
+										end else begin
 											if (STATE[0]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
+												CLSN = 8'd51;
 											end
+										end
+									end
+								end else begin
+									if (IR[6]) begin
+										if (STATE[2]) begin
+											CLSN = 8'd46;
 										end else begin
-											if (IR[6]) begin
+											if (STATE[1]) begin
+												CLSN = 8'd46;
+											end else begin
 												if (STATE[0]) begin
 													CLSN = 8'd46;
 												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd38;
-													end
-												end else begin
-													if (IR[4]) begin
-														CLSN = 8'd36;
-													end else begin
-														CLSN = 8'd34;
-													end
+													CLSN = 8'd51;
 												end
 											end
 										end
 									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
+										if (IR[5]) begin
+											if (IR[4]) begin
+												if (STATE[2]) begin
 													CLSN = 8'd46;
 												end else begin
 													if (STATE[1]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
+														if (STATE[0]) begin
 															CLSN = 8'd46;
 														end else begin
 															CLSN = 8'd51;
@@ -1163,27 +477,53 @@ module SH2P_dec #(parameter bit VER=1) (
 													end
 												end
 											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
+												if (IR[2]) begin
+													if (STATE[2]) begin
+														CLSN = 8'd46;
+													end else begin
+														if (STATE[1]) begin
 															CLSN = 8'd46;
 														end else begin
-															if (STATE[1]) begin
+															if (STATE[0]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
+																CLSN = 8'd51;
 															end
 														end
+													end
+												end else begin
+													if (IR[0]) begin
+														CLSN = 8'd38;
 													end else begin
 														CLSN = 8'd37;
 													end
+												end
+											end
+										end else begin
+											if (IR[2]) begin
+												if (STATE[2]) begin
+													CLSN = 8'd46;
 												end else begin
-													if (IR[4]) begin
+													if (STATE[1]) begin
+														CLSN = 8'd46;
+													end else begin
+														if (STATE[0]) begin
+															CLSN = 8'd46;
+														end else begin
+															CLSN = 8'd51;
+														end
+													end
+												end
+											end else begin
+												if (IR[4]) begin
+													if (IR[0]) begin
+														CLSN = 8'd36;
+													end else begin
 														CLSN = 8'd35;
+													end
+												end else begin
+													if (IR[0]) begin
+														CLSN = 8'd34;
 													end else begin
 														CLSN = 8'd33;
 													end
@@ -1194,178 +534,110 @@ module SH2P_dec #(parameter bit VER=1) (
 								end
 							end
 						end else begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (IR[7]) begin
+							if (IR[7]) begin
+								if (STATE[2]) begin
+									CLSN = 8'd46;
+								end else begin
+									if (STATE[1]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[0]) begin
+											CLSN = 8'd46;
+										end else begin
+											CLSN = 8'd51;
+										end
+									end
+								end
+							end else begin
+								if (IR[6]) begin
+									if (STATE[2]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd46;
+										end else begin
 											if (STATE[0]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
+												CLSN = 8'd51;
 											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
+										end
+									end
+								end else begin
+									if (IR[2]) begin
+										if (IR[1]) begin
+											if (IR[0]) begin
+												if (STATE[2]) begin
+													if (IR[5]) begin
+														if (IR[4]) begin
+															CLSN = 8'd46;
+														end else begin
+															CLSN = 8'd55;
+														end
+													end else begin
+														CLSN = 8'd55;
+													end
 												end else begin
 													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
 														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
+															if (IR[5]) begin
+																if (IR[4]) begin
 																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																CLSN = 8'd55;
-															end else begin
-																if (STATE[2]) begin
 																	CLSN = 8'd55;
-																end else begin
-																	CLSN = 8'd56;
 																end
+															end else begin
+																CLSN = 8'd55;
 															end
 														end else begin
-															if (STATE[1]) begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
+															if (IR[5]) begin
+																if (IR[4]) begin
+																	CLSN = 8'd46;
 																end else begin
 																	CLSN = 8'd142;
 																end
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
-																end else begin
-																	CLSN = 8'd130;
-																end
-															end
-														end
-													end
-												end else begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																CLSN = 8'd55;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
-																end else begin
-																	CLSN = 8'd56;
-																end
-															end
-														end else begin
-															if (STATE[1]) begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
-																end else begin
+																if (IR[4]) begin
 																	CLSN = 8'd141;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
-																end else begin
-																	CLSN = 8'd130;
-																end
-															end
-														end
-													end else begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																CLSN = 8'd55;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
-																end else begin
-																	CLSN = 8'd56;
-																end
-															end
-														end else begin
-															if (STATE[1]) begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
 																end else begin
 																	CLSN = 8'd139;
 																end
+															end
+														end
+													end else begin
+														if (STATE[0]) begin
+															if (IR[5]) begin
+																if (IR[4]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	CLSN = 8'd56;
+																end
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd55;
+																CLSN = 8'd56;
+															end
+														end else begin
+															if (IR[5]) begin
+																if (IR[4]) begin
+																	CLSN = 8'd51;
 																end else begin
 																	CLSN = 8'd130;
 																end
+															end else begin
+																CLSN = 8'd130;
 															end
-														end
-													end
-												end
-											end
-										end
-									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
 														end
 													end
 												end
 											end else begin
 												if (IR[5]) begin
 													if (IR[4]) begin
-														if (STATE[0]) begin
+														if (STATE[2]) begin
 															CLSN = 8'd46;
 														end else begin
 															if (STATE[1]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
+																if (STATE[0]) begin
 																	CLSN = 8'd46;
 																end else begin
 																	CLSN = 8'd51;
@@ -1383,165 +655,79 @@ module SH2P_dec #(parameter bit VER=1) (
 													end
 												end
 											end
-										end
-									end
-								end else begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
 										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
+											if (IR[4]) begin
+												if (STATE[2]) begin
+													if (IR[5]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
+														if (IR[0]) begin
+															CLSN = 8'd105;
 														end else begin
-															CLSN = 8'd51;
+															CLSN = 8'd46;
 														end
 													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
+												end else begin
+													if (STATE[1]) begin
+														if (IR[5]) begin
 															CLSN = 8'd46;
 														end else begin
-															if (STATE[1]) begin
+															if (IR[0]) begin
+																CLSN = 8'd105;
+															end else begin
+																CLSN = 8'd46;
+															end
+														end
+													end else begin
+														if (STATE[0]) begin
+															if (IR[5]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
+																if (IR[0]) begin
+																	CLSN = 8'd105;
+																end else begin
 																	CLSN = 8'd46;
+																end
+															end
+														end else begin
+															if (IR[5]) begin
+																CLSN = 8'd51;
+															end else begin
+																if (IR[0]) begin
+																	CLSN = 8'd105;
 																end else begin
 																	CLSN = 8'd51;
 																end
 															end
 														end
-													end else begin
+													end
+												end
+											end else begin
+												if (IR[5]) begin
+													if (IR[0]) begin
 														CLSN = 8'd32;
-													end
-												end else begin
-													if (IR[4]) begin
-														CLSN = 8'd105;
-													end else begin
-														CLSN = 8'd30;
-													end
-												end
-											end
-										end
-									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
 													end else begin
 														CLSN = 8'd31;
 													end
 												end else begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
+													if (IR[0]) begin
+														CLSN = 8'd30;
 													end else begin
 														CLSN = 8'd29;
 													end
 												end
 											end
 										end
-									end
-								end
-							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
+									end else begin
+										if (IR[5]) begin
+											if (IR[4]) begin
+												if (STATE[2]) begin
 													CLSN = 8'd46;
 												end else begin
 													if (STATE[1]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
+														if (STATE[0]) begin
 															CLSN = 8'd46;
 														end else begin
 															CLSN = 8'd51;
@@ -1549,117 +735,51 @@ module SH2P_dec #(parameter bit VER=1) (
 													end
 												end
 											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														if (STATE[0]) begin
+												if (IR[1]) begin
+													if (IR[0]) begin
+														if (STATE[2]) begin
 															CLSN = 8'd54;
 														end else begin
 															if (STATE[1]) begin
 																CLSN = 8'd54;
 															end else begin
-																if (STATE[2]) begin
+																if (STATE[0]) begin
 																	CLSN = 8'd54;
 																end else begin
 																	CLSN = 8'd168;
 																end
 															end
 														end
+													end else begin
+														CLSN = 8'd123;
 													end
 												end else begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd54;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd54;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd54;
-																end else begin
-																	CLSN = 8'd167;
-																end
-															end
-														end
+													if (IR[0]) begin
+														CLSN = 8'd28;
 													end else begin
-														if (STATE[0]) begin
+														CLSN = 8'd27;
+													end
+												end
+											end
+										end else begin
+											if (IR[1]) begin
+												if (IR[0]) begin
+													if (STATE[2]) begin
+														CLSN = 8'd54;
+													end else begin
+														if (STATE[1]) begin
 															CLSN = 8'd54;
 														end else begin
-															if (STATE[1]) begin
+															if (STATE[0]) begin
 																CLSN = 8'd54;
 															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd54;
+																if (IR[4]) begin
+																	CLSN = 8'd167;
 																end else begin
 																	CLSN = 8'd166;
 																end
 															end
 														end
-													end
-												end
-											end
-										end
-									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd123;
 													end
 												end else begin
 													if (IR[4]) begin
@@ -1668,120 +788,16 @@ module SH2P_dec #(parameter bit VER=1) (
 														CLSN = 8'd121;
 													end
 												end
-											end
-										end
-									end
-								end else begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd28;
-													end
-												end else begin
-													if (IR[4]) begin
+												if (IR[4]) begin
+													if (IR[0]) begin
 														CLSN = 8'd104;
 													end else begin
-														CLSN = 8'd26;
-													end
-												end
-											end
-										end
-									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd27;
-													end
-												end else begin
-													if (IR[4]) begin
 														CLSN = 8'd124;
+													end
+												end else begin
+													if (IR[0]) begin
+														CLSN = 8'd26;
 													end else begin
 														CLSN = 8'd25;
 													end
@@ -1794,12 +810,48 @@ module SH2P_dec #(parameter bit VER=1) (
 						end
 					end
 				end
-			end else begin
-				if (IR[13]) begin
-					if (IR[12]) begin
-						if (IR[3]) begin
-							if (IR[2]) begin
-								if (IR[1]) begin
+			end
+		end else begin
+			if (IR[13]) begin
+				if (IR[15]) begin
+					if (DS) begin
+						if (STATE[2]) begin
+							CLSN = 8'd46;
+						end else begin
+							if (STATE[1]) begin
+								CLSN = 8'd46;
+							end else begin
+								if (STATE[0]) begin
+									CLSN = 8'd46;
+								end else begin
+									CLSN = 8'd51;
+								end
+							end
+						end
+					end else begin
+						if (STATE[2]) begin
+							CLSN = 8'd47;
+						end else begin
+							if (STATE[1]) begin
+								CLSN = 8'd47;
+							end else begin
+								if (STATE[0]) begin
+									CLSN = 8'd63;
+								end else begin
+									if (IR[12]) begin
+										CLSN = 8'd184;
+									end else begin
+										CLSN = 8'd183;
+									end
+								end
+							end
+						end
+					end
+				end else begin
+					if (IR[2]) begin
+						if (IR[12]) begin
+							if (IR[1]) begin
+								if (IR[3]) begin
 									if (IR[0]) begin
 										CLSN = 8'd9;
 									end else begin
@@ -1807,124 +859,44 @@ module SH2P_dec #(parameter bit VER=1) (
 									end
 								end else begin
 									if (IR[0]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
-												end else begin
-													CLSN = 8'd74;
-												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
-												end else begin
-													CLSN = 8'd43;
-												end
-											end
-										end
-									end else begin
-										CLSN = 8'd0;
-									end
-								end
-							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										CLSN = 8'd10;
-									end else begin
-										CLSN = 8'd8;
-									end
-								end else begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd51;
-												end
-											end
-										end
-									end else begin
-										CLSN = 8'd1;
-									end
-								end
-							end
-						end else begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
 										CLSN = 8'd6;
 									end else begin
 										CLSN = 8'd5;
 									end
-								end else begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+								end
+							end else begin
+								if (IR[0]) begin
+									if (STATE[2]) begin
+										CLSN = 8'd47;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd47;
+										end else begin
+											if (STATE[0]) begin
+												if (IR[3]) begin
+													CLSN = 8'd74;
 												end else begin
 													CLSN = 8'd73;
 												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
 											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+												if (IR[3]) begin
+													CLSN = 8'd43;
 												end else begin
 													CLSN = 8'd42;
 												end
 											end
 										end
+									end
+								end else begin
+									if (IR[3]) begin
+										CLSN = 8'd0;
 									end else begin
 										CLSN = 8'd39;
 									end
 								end
-							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										CLSN = 8'd4;
-									end else begin
-										CLSN = 8'd3;
-									end
-								end else begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd46;
-												end else begin
-													CLSN = 8'd51;
-												end
-											end
-										end
-									end else begin
-										CLSN = 8'd2;
-									end
-								end
 							end
-						end
-					end else begin
-						if (IR[3]) begin
-							if (IR[2]) begin
+						end else begin
+							if (IR[3]) begin
 								if (IR[1]) begin
 									if (IR[0]) begin
 										CLSN = 8'd20;
@@ -1941,22 +913,6 @@ module SH2P_dec #(parameter bit VER=1) (
 							end else begin
 								if (IR[1]) begin
 									if (IR[0]) begin
-										CLSN = 8'd14;
-									end else begin
-										CLSN = 8'd13;
-									end
-								end else begin
-									if (IR[0]) begin
-										CLSN = 8'd12;
-									end else begin
-										CLSN = 8'd11;
-									end
-								end
-							end
-						end else begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
 										CLSN = 8'd70;
 									end else begin
 										CLSN = 8'd122;
@@ -1968,16 +924,48 @@ module SH2P_dec #(parameter bit VER=1) (
 										CLSN = 8'd118;
 									end
 								end
-							end else begin
+							end
+						end
+					end else begin
+						if (IR[0]) begin
+							if (IR[12]) begin
 								if (IR[1]) begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
+									if (IR[3]) begin
+										CLSN = 8'd10;
+									end else begin
+										CLSN = 8'd4;
+									end
+								end else begin
+									if (STATE[2]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd46;
+										end else begin
+											if (STATE[0]) begin
+												CLSN = 8'd46;
+											end else begin
+												CLSN = 8'd51;
+											end
+										end
+									end
+								end
+							end else begin
+								if (IR[3]) begin
+									if (IR[1]) begin
+										CLSN = 8'd14;
+									end else begin
+										CLSN = 8'd12;
+									end
+								end else begin
+									if (IR[1]) begin
+										if (STATE[2]) begin
 											CLSN = 8'd46;
 										end else begin
 											if (STATE[1]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[2]) begin
+												if (STATE[0]) begin
 													CLSN = 8'd46;
 												end else begin
 													CLSN = 8'd51;
@@ -1985,11 +973,35 @@ module SH2P_dec #(parameter bit VER=1) (
 											end
 										end
 									end else begin
-										CLSN = 8'd103;
+										CLSN = 8'd102;
+									end
+								end
+							end
+						end else begin
+							if (IR[12]) begin
+								if (IR[3]) begin
+									if (IR[1]) begin
+										CLSN = 8'd8;
+									end else begin
+										CLSN = 8'd1;
 									end
 								end else begin
-									if (IR[0]) begin
-										CLSN = 8'd102;
+									if (IR[1]) begin
+										CLSN = 8'd3;
+									end else begin
+										CLSN = 8'd2;
+									end
+								end
+							end else begin
+								if (IR[3]) begin
+									if (IR[1]) begin
+										CLSN = 8'd13;
+									end else begin
+										CLSN = 8'd11;
+									end
+								end else begin
+									if (IR[1]) begin
+										CLSN = 8'd103;
 									end else begin
 										CLSN = 8'd100;
 									end
@@ -1997,906 +1009,120 @@ module SH2P_dec #(parameter bit VER=1) (
 							end
 						end
 					end
-				end else begin
-					if (IR[12]) begin
-						CLSN = 8'd86;
+				end
+			end else begin
+				if (IR[12]) begin
+					if (IR[15]) begin
+						CLSN = 8'd182;
 					end else begin
-						if (IR[3]) begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
-												end else begin
-													CLSN = 8'd132;
-												end
-											end
+						CLSN = 8'd86;
+					end
+				end else begin
+					if (IR[15]) begin
+						if (IR[11]) begin
+							if (IR[8]) begin
+								if (DS) begin
+									if (STATE[2]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd46;
 										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
+											if (STATE[0]) begin
+												CLSN = 8'd46;
 											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+												CLSN = 8'd51;
+											end
+										end
+									end
+								end else begin
+									if (STATE[2]) begin
+										CLSN = 8'd45;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd45;
+										end else begin
+											if (STATE[0]) begin
+												if (IR[10]) begin
+													CLSN = 8'd60;
 												end else begin
-													CLSN = 8'd117;
+													CLSN = 8'd59;
+												end
+											end else begin
+												if (BC) begin
+													if (IR[10]) begin
+														if (IR[9]) begin
+															CLSN = 8'd180;
+														end else begin
+															CLSN = 8'd181;
+														end
+													end else begin
+														if (IR[9]) begin
+															CLSN = 8'd178;
+														end else begin
+															CLSN = 8'd179;
+														end
+													end
+												end else begin
+													if (IR[10]) begin
+														if (IR[9]) begin
+															CLSN = 8'd176;
+														end else begin
+															CLSN = 8'd177;
+														end
+													end else begin
+														if (IR[9]) begin
+															CLSN = 8'd174;
+														end else begin
+															CLSN = 8'd175;
+														end
+													end
 												end
 											end
 										end
-									end else begin
-										CLSN = 8'd82;
-									end
-								end else begin
-									if (IR[0]) begin
-										CLSN = 8'd81;
-									end else begin
-										CLSN = 8'd80;
 									end
 								end
 							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		if (STATE[0]) begin
-																			if (STATE[1]) begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd49;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd140;
-																					end
-																				end
-																			end else begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd49;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd136;
-																					end
-																				end
-																			end
-																		end else begin
-																			if (STATE[1]) begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd49;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd146;
-																					end
-																				end
-																			end else begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd49;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd51;
-																					end else begin
-																						CLSN = 8'd129;
-																					end
-																				end
-																			end
-																		end
-																	end
-																end
-															end
-														end
-													end
-												end else begin
-													if (IR[4]) begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd47;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd47;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd47;
-																				end else begin
-																					CLSN = 8'd57;
-																				end
-																			end
-																		end
-																	end
-																end
-															end
-														end
-													end else begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		if (STATE[0]) begin
-																			if (STATE[1]) begin
-																				if (DS) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd47;
-																				end
-																			end else begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd47;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd63;
-																					end
-																				end
-																			end
-																		end else begin
-																			if (STATE[1]) begin
-																				if (DS) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd47;
-																				end
-																			end else begin
-																				if (STATE[2]) begin
-																					if (DS) begin
-																						CLSN = 8'd46;
-																					end else begin
-																						CLSN = 8'd47;
-																					end
-																				end else begin
-																					if (DS) begin
-																						CLSN = 8'd51;
-																					end else begin
-																						CLSN = 8'd69;
-																					end
-																				end
-																			end
-																		end
-																	end
-																end
-															end
-														end
-													end
-												end
-											end
-										end
+								if (STATE[2]) begin
+									if (IR[10]) begin
+										CLSN = 8'd46;
 									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
+										if (IR[9]) begin
+											CLSN = 8'd46;
 										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd71;
-													end
-												end else begin
-													if (IR[4]) begin
-														CLSN = 8'd75;
-													end else begin
-														CLSN = 8'd76;
-													end
-												end
-											end
+											CLSN = 8'd93;
 										end
 									end
 								end else begin
-									if (IR[0]) begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
+									if (STATE[1]) begin
+										if (IR[10]) begin
+											CLSN = 8'd46;
+										end else begin
+											if (IR[9]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
-											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
-											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														CLSN = 8'd169;
-													end
-												end else begin
-													if (IR[4]) begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		CLSN = 8'd64;
-																	end
-																end
-															end
-														end
-													end else begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		CLSN = 8'd45;
-																	end
-																end
-															end
-														end
-													end
-												end
+												CLSN = 8'd93;
 											end
 										end
 									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
+										if (STATE[0]) begin
+											if (IR[10]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
+												if (IR[9]) begin
 													CLSN = 8'd46;
 												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
+													CLSN = 8'd93;
 												end
 											end
 										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
-														CLSN = 8'd46;
-													end else begin
-														if (STATE[2]) begin
-															CLSN = 8'd46;
-														end else begin
-															CLSN = 8'd51;
-														end
-													end
-												end
+											if (IR[10]) begin
+												CLSN = 8'd51;
 											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
-														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		CLSN = 8'd108;
-																	end
-																end
-															end
-														end
-													end
+												if (IR[9]) begin
+													CLSN = 8'd51;
 												end else begin
-													if (IR[4]) begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		CLSN = 8'd125;
-																	end
-																end
-															end
-														end
-													end else begin
-														if (IR[11]) begin
-															if (STATE[0]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[1]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[2]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd51;
-																	end
-																end
-															end
-														end else begin
-															if (IR[10]) begin
-																if (STATE[0]) begin
-																	CLSN = 8'd46;
-																end else begin
-																	if (STATE[1]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[2]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			CLSN = 8'd51;
-																		end
-																	end
-																end
-															end else begin
-																if (IR[9]) begin
-																	if (STATE[0]) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		if (STATE[1]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[2]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				CLSN = 8'd51;
-																			end
-																		end
-																	end
-																end else begin
-																	if (IR[8]) begin
-																		if (STATE[0]) begin
-																			CLSN = 8'd46;
-																		end else begin
-																			if (STATE[1]) begin
-																				CLSN = 8'd46;
-																			end else begin
-																				if (STATE[2]) begin
-																					CLSN = 8'd46;
-																				end else begin
-																					CLSN = 8'd51;
-																				end
-																			end
-																		end
-																	end else begin
-																		CLSN = 8'd106;
-																	end
-																end
-															end
-														end
-													end
+													CLSN = 8'd93;
 												end
 											end
 										end
@@ -2904,32 +1130,74 @@ module SH2P_dec #(parameter bit VER=1) (
 								end
 							end
 						end else begin
-							if (IR[2]) begin
-								if (IR[1]) begin
-									if (IR[0]) begin
+							if (IR[9]) begin
+								if (STATE[2]) begin
+									CLSN = 8'd46;
+								end else begin
+									if (STATE[1]) begin
+										CLSN = 8'd46;
+									end else begin
 										if (STATE[0]) begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
-											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+											CLSN = 8'd46;
+										end else begin
+											CLSN = 8'd51;
+										end
+									end
+								end
+							end else begin
+								if (IR[10]) begin
+									if (IR[8]) begin
+										CLSN = 8'd90;
+									end else begin
+										CLSN = 8'd88;
+									end
+								end else begin
+									if (IR[8]) begin
+										CLSN = 8'd89;
+									end else begin
+										CLSN = 8'd87;
+									end
+								end
+							end
+						end
+					end else begin
+						if (IR[2]) begin
+							if (IR[1]) begin
+								if (IR[0]) begin
+									if (STATE[2]) begin
+										CLSN = 8'd47;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd47;
+										end else begin
+											if (STATE[0]) begin
+												if (IR[3]) begin
+													CLSN = 8'd132;
 												end else begin
 													CLSN = 8'd72;
 												end
-											end
-										end else begin
-											if (STATE[1]) begin
-												CLSN = 8'd47;
 											end else begin
-												if (STATE[2]) begin
-													CLSN = 8'd47;
+												if (IR[3]) begin
+													CLSN = 8'd117;
 												end else begin
 													CLSN = 8'd41;
 												end
 											end
 										end
+									end
+								end else begin
+									if (IR[3]) begin
+										CLSN = 8'd82;
 									end else begin
 										CLSN = 8'd79;
+									end
+								end
+							end else begin
+								if (IR[3]) begin
+									if (IR[0]) begin
+										CLSN = 8'd81;
+									end else begin
+										CLSN = 8'd80;
 									end
 								end else begin
 									if (IR[0]) begin
@@ -2938,156 +1206,452 @@ module SH2P_dec #(parameter bit VER=1) (
 										CLSN = 8'd77;
 									end
 								end
+							end
+						end else begin
+							if (IR[7]) begin
+								if (STATE[2]) begin
+									CLSN = 8'd46;
+								end else begin
+									if (STATE[1]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[0]) begin
+											CLSN = 8'd46;
+										end else begin
+											CLSN = 8'd51;
+										end
+									end
+								end
 							end else begin
-								if (IR[1]) begin
-									if (IR[0]) begin
-										if (IR[7]) begin
+								if (IR[6]) begin
+									if (STATE[2]) begin
+										CLSN = 8'd46;
+									end else begin
+										if (STATE[1]) begin
+											CLSN = 8'd46;
+										end else begin
 											if (STATE[0]) begin
 												CLSN = 8'd46;
 											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[2]) begin
-														CLSN = 8'd46;
-													end else begin
-														CLSN = 8'd51;
-													end
-												end
+												CLSN = 8'd51;
 											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
-													CLSN = 8'd46;
-												end else begin
-													if (STATE[1]) begin
+										end
+									end
+								end else begin
+									if (IR[1]) begin
+										if (IR[0]) begin
+											if (STATE[2]) begin
+												if (DS) begin
+													if (IR[11]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
+														if (IR[10]) begin
 															CLSN = 8'd46;
 														end else begin
-															CLSN = 8'd51;
+															if (IR[9]) begin
+																CLSN = 8'd46;
+															end else begin
+																if (IR[8]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (IR[5]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[4]) begin
+																			if (IR[3]) begin
+																				CLSN = 8'd47;
+																			end else begin
+																				CLSN = 8'd46;
+																			end
+																		end else begin
+																			CLSN = 8'd46;
+																		end
+																	end
+																end
+															end
+														end
+													end
+												end else begin
+													if (IR[11]) begin
+														if (IR[4]) begin
+															CLSN = 8'd46;
+														end else begin
+															if (IR[3]) begin
+																CLSN = 8'd46;
+															end else begin
+																CLSN = 8'd47;
+															end
+														end
+													end else begin
+														if (IR[10]) begin
+															if (IR[4]) begin
+																CLSN = 8'd46;
+															end else begin
+																if (IR[3]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	CLSN = 8'd47;
+																end
+															end
+														end else begin
+															if (IR[9]) begin
+																if (IR[4]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (IR[3]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		CLSN = 8'd47;
+																	end
+																end
+															end else begin
+																if (IR[8]) begin
+																	if (IR[4]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[3]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			CLSN = 8'd47;
+																		end
+																	end
+																end else begin
+																	if (IR[4]) begin
+																		if (IR[5]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[3]) begin
+																				CLSN = 8'd47;
+																			end else begin
+																				CLSN = 8'd46;
+																			end
+																		end
+																	end else begin
+																		if (IR[5]) begin
+																			if (IR[3]) begin
+																				CLSN = 8'd49;
+																			end else begin
+																				CLSN = 8'd47;
+																			end
+																		end else begin
+																			CLSN = 8'd47;
+																		end
+																	end
+																end
+															end
 														end
 													end
 												end
 											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
+												if (STATE[1]) begin
+													if (DS) begin
+														if (IR[11]) begin
 															CLSN = 8'd46;
 														end else begin
-															if (STATE[1]) begin
+															if (IR[10]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
+																if (IR[9]) begin
 																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd51;
+																	if (IR[8]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[5]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[4]) begin
+																				if (IR[3]) begin
+																					CLSN = 8'd47;
+																				end else begin
+																					CLSN = 8'd46;
+																				end
+																			end else begin
+																				CLSN = 8'd46;
+																			end
+																		end
+																	end
 																end
 															end
 														end
 													end else begin
 														if (STATE[0]) begin
-															if (STATE[1]) begin
-																if (DS) begin
+															if (IR[11]) begin
+																if (IR[4]) begin
 																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
+																	if (IR[3]) begin
 																		CLSN = 8'd46;
 																	end else begin
 																		CLSN = 8'd47;
 																	end
-																end else begin
-																	if (DS) begin
+																end
+															end else begin
+																if (IR[10]) begin
+																	if (IR[4]) begin
 																		CLSN = 8'd46;
 																	end else begin
-																		CLSN = 8'd63;
+																		if (IR[3]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			CLSN = 8'd47;
+																		end
+																	end
+																end else begin
+																	if (IR[9]) begin
+																		if (IR[4]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[3]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				CLSN = 8'd47;
+																			end
+																		end
+																	end else begin
+																		if (IR[8]) begin
+																			if (IR[4]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				if (IR[3]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					CLSN = 8'd47;
+																				end
+																			end
+																		end else begin
+																			if (IR[4]) begin
+																				if (IR[5]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					if (IR[3]) begin
+																						CLSN = 8'd47;
+																					end else begin
+																						CLSN = 8'd46;
+																					end
+																				end
+																			end else begin
+																				if (IR[5]) begin
+																					if (IR[3]) begin
+																						CLSN = 8'd140;
+																					end else begin
+																						CLSN = 8'd47;
+																					end
+																				end else begin
+																					CLSN = 8'd47;
+																				end
+																			end
+																		end
 																	end
 																end
 															end
 														end else begin
-															if (STATE[1]) begin
-																if (DS) begin
+															if (IR[11]) begin
+																if (IR[4]) begin
 																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
+																	if (IR[3]) begin
 																		CLSN = 8'd46;
 																	end else begin
 																		CLSN = 8'd47;
 																	end
+																end
+															end else begin
+																if (IR[10]) begin
+																	if (IR[4]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[3]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			CLSN = 8'd47;
+																		end
+																	end
 																end else begin
-																	if (DS) begin
-																		CLSN = 8'd51;
+																	if (IR[9]) begin
+																		if (IR[4]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[3]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				CLSN = 8'd47;
+																			end
+																		end
+																	end else begin
+																		if (IR[8]) begin
+																			if (IR[4]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				if (IR[3]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					CLSN = 8'd47;
+																				end
+																			end
+																		end else begin
+																			if (IR[4]) begin
+																				if (IR[5]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					if (IR[3]) begin
+																						CLSN = 8'd47;
+																					end else begin
+																						CLSN = 8'd46;
+																					end
+																				end
+																			end else begin
+																				if (IR[5]) begin
+																					if (IR[3]) begin
+																						CLSN = 8'd146;
+																					end else begin
+																						CLSN = 8'd47;
+																					end
+																				end else begin
+																					CLSN = 8'd47;
+																				end
+																			end
+																		end
+																	end
+																end
+															end
+														end
+													end
+												end else begin
+													if (STATE[0]) begin
+														if (IR[4]) begin
+															if (IR[11]) begin
+																CLSN = 8'd46;
+															end else begin
+																if (IR[10]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (IR[9]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[8]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[5]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				if (IR[3]) begin
+																					CLSN = 8'd47;
+																				end else begin
+																					CLSN = 8'd46;
+																				end
+																			end
+																		end
+																	end
+																end
+															end
+														end else begin
+															if (DS) begin
+																CLSN = 8'd46;
+															end else begin
+																if (IR[3]) begin
+																	if (IR[11]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[10]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[9]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				if (IR[8]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					if (IR[5]) begin
+																						CLSN = 8'd136;
+																					end else begin
+																						CLSN = 8'd63;
+																					end
+																				end
+																			end
+																		end
+																	end
+																end else begin
+																	CLSN = 8'd63;
+																end
+															end
+														end
+													end else begin
+														if (IR[5]) begin
+															if (DS) begin
+																CLSN = 8'd51;
+															end else begin
+																if (IR[4]) begin
+																	CLSN = 8'd51;
+																end else begin
+																	if (IR[3]) begin
+																		if (IR[11]) begin
+																			CLSN = 8'd51;
+																		end else begin
+																			if (IR[10]) begin
+																				CLSN = 8'd51;
+																			end else begin
+																				if (IR[9]) begin
+																					CLSN = 8'd51;
+																				end else begin
+																					if (IR[8]) begin
+																						CLSN = 8'd51;
+																					end else begin
+																						CLSN = 8'd129;
+																					end
+																				end
+																			end
+																		end
 																	end else begin
 																		CLSN = 8'd172;
 																	end
 																end
 															end
-														end
-													end
-												end else begin
-													if (IR[4]) begin
-														if (STATE[0]) begin
-															CLSN = 8'd46;
 														end else begin
-															if (STATE[1]) begin
-																CLSN = 8'd46;
-															end else begin
-																if (STATE[2]) begin
-																	CLSN = 8'd46;
-																end else begin
+															if (IR[4]) begin
+																if (IR[11]) begin
 																	CLSN = 8'd51;
-																end
-															end
-														end
-													end else begin
-														if (STATE[0]) begin
-															if (STATE[1]) begin
-																if (DS) begin
-																	CLSN = 8'd46;
 																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
-																end else begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd63;
-																	end
-																end
-															end
-														end else begin
-															if (STATE[1]) begin
-																if (DS) begin
-																	CLSN = 8'd46;
-																end else begin
-																	CLSN = 8'd47;
-																end
-															end else begin
-																if (STATE[2]) begin
-																	if (DS) begin
-																		CLSN = 8'd46;
-																	end else begin
-																		CLSN = 8'd47;
-																	end
-																end else begin
-																	if (DS) begin
+																	if (IR[10]) begin
 																		CLSN = 8'd51;
+																	end else begin
+																		if (IR[9]) begin
+																			CLSN = 8'd51;
+																		end else begin
+																			if (IR[8]) begin
+																				CLSN = 8'd51;
+																			end else begin
+																				if (IR[3]) begin
+																					CLSN = 8'd57;
+																				end else begin
+																					CLSN = 8'd51;
+																				end
+																			end
+																		end
+																	end
+																end
+															end else begin
+																if (DS) begin
+																	CLSN = 8'd51;
+																end else begin
+																	if (IR[3]) begin
+																		if (IR[11]) begin
+																			CLSN = 8'd51;
+																		end else begin
+																			if (IR[10]) begin
+																				CLSN = 8'd51;
+																			end else begin
+																				if (IR[9]) begin
+																					CLSN = 8'd51;
+																				end else begin
+																					if (IR[8]) begin
+																						CLSN = 8'd51;
+																					end else begin
+																						CLSN = 8'd69;
+																					end
+																				end
+																			end
+																		end
 																	end else begin
 																		CLSN = 8'd173;
 																	end
@@ -3097,31 +1661,55 @@ module SH2P_dec #(parameter bit VER=1) (
 													end
 												end
 											end
-										end
-									end else begin
-										if (IR[7]) begin
-											if (STATE[0]) begin
-												CLSN = 8'd46;
-											end else begin
-												if (STATE[1]) begin
-													CLSN = 8'd46;
-												end else begin
+										end else begin
+											if (IR[5]) begin
+												if (IR[4]) begin
 													if (STATE[2]) begin
 														CLSN = 8'd46;
 													end else begin
-														CLSN = 8'd51;
+														if (STATE[1]) begin
+															CLSN = 8'd46;
+														end else begin
+															if (STATE[0]) begin
+																CLSN = 8'd46;
+															end else begin
+																CLSN = 8'd51;
+															end
+														end
+													end
+												end else begin
+													if (IR[3]) begin
+														CLSN = 8'd71;
+													end else begin
+														CLSN = 8'd155;
+													end
+												end
+											end else begin
+												if (IR[4]) begin
+													if (IR[3]) begin
+														CLSN = 8'd75;
+													end else begin
+														CLSN = 8'd154;
+													end
+												end else begin
+													if (IR[3]) begin
+														CLSN = 8'd76;
+													end else begin
+														CLSN = 8'd153;
 													end
 												end
 											end
-										end else begin
-											if (IR[6]) begin
-												if (STATE[0]) begin
+										end
+									end else begin
+										if (IR[5]) begin
+											if (IR[4]) begin
+												if (STATE[2]) begin
 													CLSN = 8'd46;
 												end else begin
 													if (STATE[1]) begin
 														CLSN = 8'd46;
 													end else begin
-														if (STATE[2]) begin
+														if (STATE[0]) begin
 															CLSN = 8'd46;
 														end else begin
 															CLSN = 8'd51;
@@ -3129,15 +1717,143 @@ module SH2P_dec #(parameter bit VER=1) (
 													end
 												end
 											end else begin
-												if (IR[5]) begin
-													if (IR[4]) begin
+												if (IR[3]) begin
+													if (IR[0]) begin
+														CLSN = 8'd169;
+													end else begin
+														if (STATE[2]) begin
+															if (IR[11]) begin
+																CLSN = 8'd46;
+															end else begin
+																if (IR[10]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (IR[9]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[8]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			CLSN = 8'd108;
+																		end
+																	end
+																end
+															end
+														end else begin
+															if (STATE[1]) begin
+																if (IR[11]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (IR[10]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[9]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[8]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				CLSN = 8'd108;
+																			end
+																		end
+																	end
+																end
+															end else begin
+																if (STATE[0]) begin
+																	if (IR[11]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (IR[10]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			if (IR[9]) begin
+																				CLSN = 8'd46;
+																			end else begin
+																				if (IR[8]) begin
+																					CLSN = 8'd46;
+																				end else begin
+																					CLSN = 8'd108;
+																				end
+																			end
+																		end
+																	end
+																end else begin
+																	if (IR[11]) begin
+																		CLSN = 8'd51;
+																	end else begin
+																		if (IR[10]) begin
+																			CLSN = 8'd51;
+																		end else begin
+																			if (IR[9]) begin
+																				CLSN = 8'd51;
+																			end else begin
+																				if (IR[8]) begin
+																					CLSN = 8'd51;
+																				end else begin
+																					CLSN = 8'd108;
+																				end
+																			end
+																		end
+																	end
+																end
+															end
+														end
+													end
+												end else begin
+													if (STATE[2]) begin
+														CLSN = 8'd46;
+													end else begin
+														if (STATE[1]) begin
+															CLSN = 8'd46;
+														end else begin
+															if (STATE[0]) begin
+																CLSN = 8'd46;
+															end else begin
+																CLSN = 8'd51;
+															end
+														end
+													end
+												end
+											end
+										end else begin
+											if (IR[11]) begin
+												if (STATE[2]) begin
+													CLSN = 8'd46;
+												end else begin
+													if (STATE[1]) begin
+														CLSN = 8'd46;
+													end else begin
 														if (STATE[0]) begin
+															CLSN = 8'd46;
+														end else begin
+															CLSN = 8'd51;
+														end
+													end
+												end
+											end else begin
+												if (IR[10]) begin
+													if (STATE[2]) begin
+														CLSN = 8'd46;
+													end else begin
+														if (STATE[1]) begin
+															CLSN = 8'd46;
+														end else begin
+															if (STATE[0]) begin
+																CLSN = 8'd46;
+															end else begin
+																CLSN = 8'd51;
+															end
+														end
+													end
+												end else begin
+													if (IR[9]) begin
+														if (STATE[2]) begin
 															CLSN = 8'd46;
 														end else begin
 															if (STATE[1]) begin
 																CLSN = 8'd46;
 															end else begin
-																if (STATE[2]) begin
+																if (STATE[0]) begin
 																	CLSN = 8'd46;
 																end else begin
 																	CLSN = 8'd51;
@@ -3145,29 +1861,53 @@ module SH2P_dec #(parameter bit VER=1) (
 															end
 														end
 													end else begin
-														CLSN = 8'd155;
-													end
-												end else begin
-													if (IR[4]) begin
-														CLSN = 8'd154;
-													end else begin
-														CLSN = 8'd153;
+														if (IR[8]) begin
+															if (STATE[2]) begin
+																CLSN = 8'd46;
+															end else begin
+																if (STATE[1]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (STATE[0]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		CLSN = 8'd51;
+																	end
+																end
+															end
+														end else begin
+															if (IR[3]) begin
+																if (IR[4]) begin
+																	if (IR[0]) begin
+																		CLSN = 8'd64;
+																	end else begin
+																		CLSN = 8'd125;
+																	end
+																end else begin
+																	if (IR[0]) begin
+																		CLSN = 8'd45;
+																	end else begin
+																		CLSN = 8'd106;
+																	end
+																end
+															end else begin
+																if (STATE[2]) begin
+																	CLSN = 8'd46;
+																end else begin
+																	if (STATE[1]) begin
+																		CLSN = 8'd46;
+																	end else begin
+																		if (STATE[0]) begin
+																			CLSN = 8'd46;
+																		end else begin
+																			CLSN = 8'd51;
+																		end
+																	end
+																end
+															end
+														end
 													end
 												end
-											end
-										end
-									end
-								end else begin
-									if (STATE[0]) begin
-										CLSN = 8'd46;
-									end else begin
-										if (STATE[1]) begin
-											CLSN = 8'd46;
-										end else begin
-											if (STATE[2]) begin
-												CLSN = 8'd46;
-											end else begin
-												CLSN = 8'd51;
 											end
 										end
 									end
@@ -3467,7 +2207,7 @@ module SH2P_decrom (
 );
 	import SH2P_PKG::*;
 	wire [7:0] AD = RESET ? 8'd45 : CLS_D;
-	(* romstyle = "logic" *) reg [85:0] Q;
+	(* romstyle = "M10K" *) reg [85:0] Q;
 	always @(posedge CLK) if (EN_A | RESET) begin
 		case (AD)
 			8'd0: Q <= 86'h1000900304020000000;
