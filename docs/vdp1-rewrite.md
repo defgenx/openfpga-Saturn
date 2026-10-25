@@ -59,7 +59,19 @@ What this allows and forbids:
 - The accumulators are initialised in the 3 cycles after CALCTY. An engine-busy hold on CALCX exists but never triggers in
   the tests (the steps finish within 3 cycles; the shortest CALCX to CALCX distance is 4).
 
-### 2.3 Smaller changes
+### 2.3 Pre-clip flag and row floor (`POCKET_VDP1P_ROWFLOOR`, default on)
+- The horizontal pre-clip flag (8 compares of the vertex X values against the clip window) comes from a one-comparator unit that runs in the
+  8 cycles after EDGE_INIT; its first reader is the row set-up at least 40 cycles later. No timing change.
+- With `POCKET_VDP1P_ROWFLOOR`, EDGE_INIT computes one edge difference per cycle (shared subtractor and abs) and lasts 4 clocks instead of 1.
+  Timing change: every polygon, distorted sprite, scaled and normal sprite starts its first row 3 clocks later. It happens once per command inside
+  the set-up that already takes 50 clocks to the first row (two 21-clock divider windows) and, for sprites, after the 46-clock command delay;
+  VRAM, framebuffer and bus accesses are in the same order, only the start of the first row moves. Games see a draw that is 3 clocks (about 0.05 us)
+  longer per textured or filled command, far below the jitter of the VDP1 draw model itself. The golden copy used by the testbench gets the same
+  change (`sim/vdp1/rowfloor_patch.pl`), so the comparison stays exact; `make ROWFLOOR=0` compares against the unmodified golden core.
+- A per-row floor (row set-up on a serial unit) was costed and not built: the ablation of the logic it would replace is only 75 ALUT
+  (row arithmetic 32, texture constants 43), less than the serial unit and its registers.
+
+### 2.4 Smaller changes
 - Row start colour for every command type through the multiplier path (no table copy and no extra source on the line colour
   registers).
 - Clip-edge compares share the 14-bit differences (exact `<`, `>` and the 13-bit truncated forms the golden code uses).
