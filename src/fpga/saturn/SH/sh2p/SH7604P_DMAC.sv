@@ -200,13 +200,7 @@ module SH7604P_DMAC (
 	wire  [3:0] RUSED = (4'b0001 << RP1) | (4'b0001 << RP2) | (4'b0001 << RP3);
 	wire  [1:0] RFREE = !RUSED[0] ? 2'd0 : !RUSED[1] ? 2'd1 : !RUSED[2] ? 2'd2 : 2'd3;
 	wire [31:0] RD_BUF3;
-	altdpram #(.width(32), .widthad(2), .width_byteena(1), .indata_aclr("OFF"), .indata_reg("INCLOCK"),
-		.intended_device_family("Cyclone V"), .lpm_type("altdpram"), .outdata_aclr("OFF"), .outdata_reg("UNREGISTERED"),
-		.power_up_uninitialized("FALSE"), .ram_block_type("MLAB"), .rdaddress_aclr("OFF"), .rdaddress_reg("UNREGISTERED"),
-		.rdcontrol_aclr("OFF"), .rdcontrol_reg("UNREGISTERED"), .read_during_write_mode_mixed_ports("CONSTRAINED_DONT_CARE"),
-		.wraddress_aclr("OFF"), .wraddress_reg("INCLOCK"), .wrcontrol_aclr("OFF"), .wrcontrol_reg("INCLOCK"))
-	RDBUF (.data(DBUS_DI), .inclock(CLK), .rdaddress(RP3), .wraddress(RFREE), .wren(RD_BUF_LATCH & CE_R), .q(RD_BUF3),
-		.aclr(1'b0), .byteena(1'b1), .inclocken(1'b1), .rdaddressstall(1'b0), .rden(1'b1), .wraddressstall(1'b0));
+	SH2P_FERAM #(2,32) RDBUF(CLK, RD_BUF_LATCH & CE_R, RFREE, DBUS_DI, RP3, RD_BUF3);
 	always @(posedge CLK) begin
 		if (EV) begin
 			RP3 <= RP2;
@@ -445,20 +439,8 @@ module SH7604P_DMAC_ADR (
 	wire [32:0] ASUM    = {ASUM_A,1'b1} + {ASUM_B,ASUM_S};
 	wire [31:0] MW_DATA = ASUM[32:1];
 	
-	altdpram #(.width(32), .widthad(3), .width_byteena(1), .indata_aclr("OFF"), .indata_reg("INCLOCK"),
-		.intended_device_family("Cyclone V"), .lpm_type("altdpram"), .outdata_aclr("OFF"), .outdata_reg("UNREGISTERED"),
-		.power_up_uninitialized("FALSE"), .ram_block_type("MLAB"), .rdaddress_aclr("OFF"), .rdaddress_reg("UNREGISTERED"),
-		.rdcontrol_aclr("OFF"), .rdcontrol_reg("UNREGISTERED"), .read_during_write_mode_mixed_ports("CONSTRAINED_DONT_CARE"),
-		.wraddress_aclr("OFF"), .wraddress_reg("INCLOCK"), .wrcontrol_aclr("OFF"), .wrcontrol_reg("INCLOCK"))
-	SARDAR_A (.data(MW_DATA), .inclock(CLK), .rdaddress(RADDR_A), .wraddress({1'b0,MW_ADDR}), .wren(MW_EN), .q(QA),
-		.aclr(1'b0), .byteena(1'b1), .inclocken(1'b1), .rdaddressstall(1'b0), .rden(1'b1), .wraddressstall(1'b0));
-	altdpram #(.width(32), .widthad(3), .width_byteena(1), .indata_aclr("OFF"), .indata_reg("INCLOCK"),
-		.intended_device_family("Cyclone V"), .lpm_type("altdpram"), .outdata_aclr("OFF"), .outdata_reg("UNREGISTERED"),
-		.power_up_uninitialized("FALSE"), .ram_block_type("MLAB"), .rdaddress_aclr("OFF"), .rdaddress_reg("UNREGISTERED"),
-		.rdcontrol_aclr("OFF"), .rdcontrol_reg("UNREGISTERED"), .read_during_write_mode_mixed_ports("CONSTRAINED_DONT_CARE"),
-		.wraddress_aclr("OFF"), .wraddress_reg("INCLOCK"), .wrcontrol_aclr("OFF"), .wrcontrol_reg("INCLOCK"))
-	SARDAR_B (.data(MW_DATA), .inclock(CLK), .rdaddress(RADDR_B), .wraddress({1'b0,MW_ADDR}), .wren(MW_EN), .q(QB),
-		.aclr(1'b0), .byteena(1'b1), .inclocken(1'b1), .rdaddressstall(1'b0), .rden(1'b1), .wraddressstall(1'b0));
+	SH2P_FERAM #(3,32) SARDAR_A(CLK, MW_EN, {1'b0,MW_ADDR}, MW_DATA, RADDR_A, QA);
+	SH2P_FERAM #(3,32) SARDAR_B(CLK, MW_EN, {1'b0,MW_ADDR}, MW_DATA, RADDR_B, QB);
 	
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) SV <= '0;

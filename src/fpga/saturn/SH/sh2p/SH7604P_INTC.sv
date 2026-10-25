@@ -155,7 +155,9 @@ module SH7604P_INTC (
 	reg  [2:0] IRL_LVL_SAVE;
 	wire [7:0] IRL_VEC = !VECMD ? {5'b01000,IRL_LVL_SAVE} : VBUS_DI;
 	wire [2:0] CI = INT_ACCEPTED[3:1];
-	wire [13:0] VEC_W = RA[CI];
+	wire [13:0] RA_Q;
+	wire [15:0] RB_Q;
+	wire [13:0] VEC_W = RA_Q;
 	wire [6:0] VEC_RAM = !VV[CI] ? 7'h00 : INT_ACCEPTED[0] ? VEC_W[13:7] : VEC_W[6:0];
 	always_comb begin
 		case (INT_ACCEPTED)
@@ -217,7 +219,7 @@ module SH7604P_INTC (
 		end
 	end
 	
-	// Vector bytes (copy A, read by the accepted source) and every readable register (copy B, read by the bus address) live in MLABs.
+	// Vector bytes (copy A, read by the accepted source) and every readable register (copy B, read by the bus address) live in M10K (falling-edge read).
 	// A register reads as 0 until its first write after reset; a write merges the bytes it does not carry with the old word.
 	wire       RWR  = CE_R && RES_N && WR;
 	wire       VWR  = R62 || R64 || R66 || R68 || RE4;
@@ -225,14 +227,10 @@ module SH7604P_INTC (
 	wire [2:0] BIDX = IBUS_A[7] ? 3'd5 + {1'b0, IBUS_A[2:1]} : IBUS_A[3:1];                                                     // copy B word
 	wire [7:0] BMH  = (R60 || RE2) ? 8'hFF : RE0 ? 8'h01 : 8'h7F;
 	wire [7:0] BML  = (R60 || R68) ? 8'h00 : RE0 ? 8'h01 : RE2 ? 8'hF0 : 8'h7F;
-	(* ramstyle = "MLAB, no_rw_check" *) reg [13:0] RA [0:7];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [15:0] RB [0:7];
-	wire [15:0] OLDB = VB[BIDX] ? RB[BIDX] : 16'h0000;
+	wire [15:0] OLDB = VB[BIDX] ? RB_Q : 16'h0000;
 	wire [15:0] NEWB = {WB[1] ? WD[15:8] & BMH : OLDB[15:8], WB[0] ? WD[7:0] & BML : OLDB[7:0]};
-	always @(posedge CLK) begin
-		if (RWR) RB[BIDX] <= NEWB;
-		if (RWR && VWR) RA[WIDX] <= {NEWB[14:8], NEWB[6:0]};
-	end
+	SH2P_FERAM #(3,14) RA(CLK, RWR && VWR, WIDX, {NEWB[14:8], NEWB[6:0]}, CI, RA_Q);
+	SH2P_FERAM #(3,16) RB(CLK, RWR, BIDX, NEWB, BIDX, RB_Q);
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) VB <= 8'h00;
 		else if (CE_R) begin
