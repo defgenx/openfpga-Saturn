@@ -285,15 +285,18 @@ there); the scaled column applies the ratio measured here to those numbers.
 
 | Sub-block | ALM before | ALM after | M10K before | M10K after | in-system before | in-system scaled |
 |---|---|---|---|---|---|---|
-| `ddram_pocket` | 816 | 416 | 21 | 14 | 784 | 400 |
-| `psram_sync` x2 | 132 + 129 | 95 + 98 | 0 | 0 | 159 + 159 | 114 + 121 |
-| `sdram_pocket` | 296 | 258 | 0 | 0 | 324 | 282 |
-| `vdp1_fb_pocket` | 178 | 236 | 177 | 130 | 196 | 260 |
-| `load_pocket` + `sram_pocket` | 54 + 34 | 55 + 39 | 2 | 2 | 86 | 92 |
-| Total | 1,639 | 1,197 | 200 | 146 | 1,708 | about 1,270 |
+| `ddram_pocket` | 816 | 436 | 21 | 15 | 784 | 419 |
+| `psram_sync` x2 | 132 + 129 | 92 + 108 | 0 | 0 | 159 + 159 | 111 + 133 |
+| `sdram_pocket` | 296 | 260 | 0 | 0 | 324 | 285 |
+| `vdp1_fb_pocket` | 178 | 205 | 177 | 98 | 196 | 226 |
+| `load_pocket` + `sram_pocket` | 54 + 34 | 54 + 20 | 2 | 2 | 86 | 72 |
+| Total | 1,639 | 1,175 | 200 | 115 | 1,708 | about 1,250 |
+
+`cd_stream` adds the 64 entry ring write FIFO (2 M10K, about 25 ALMs) outside this table; the CD ring left the SRAM
+(section 5) and FB1 is 49,152 words = 96 blocks plus 2 for the write FIFOs.
 
 The framebuffer is 176 blocks before, not 141: Quartus builds a 16 bit array with byte enables from 512 x 16 blocks
-(8192 bits), so 90,112 words take 176 blocks; the 141 is 1,417 kbit / 10.24. Now FB1 is 65,536 words = 128 blocks, plus 2
+(8192 bits), so 90,112 words take 176 blocks; the 141 is 1,417 kbit / 10.24. Now FB1 is 49,152 words = 96 blocks, plus 2
 for the write FIFOs. Columns of 5 + 2 + 1 bits per byte lane take the same 128 blocks (tried); 10 bit columns (1K x 10,
 10240 bits) would need a read-modify-write for partial byte writes and give 112.
 
@@ -308,7 +311,7 @@ What changed, ALM by ALM (standalone, same flow):
 | `sdram_pocket`: SCSP slots read the request registers, word 0 of a VDP2 fetch lands directly, scrub counters wrap without a compare, SCSP rows 128-255 | sdram 296 -> 258 |
 | `vdp1_fb_pocket`: FB1 tail in the SRAM, second FIFO and tracker | fb 178 -> 236, 47 M10K blocks fewer |
 
-Where the remaining LUTs are (`sizing/mem/s6.cones.txt`): `ddram_pocket` address and write data muxes (a_addr 98, a_wd 53,
+Where the remaining LUTs are (`sizing/mem/s12.cones.txt`): `ddram_pocket` address and write data muxes (a_addr 98, a_wd 53,
 b_addr 51 LUTs: nine channel sources), `sdram_pocket` pin address mux (96), the FB1 read mux across 128 blocks (48), the
 framebuffer engine SRAM address (47), the SDRAM scrub counters (45), VDP2 write data lane (36), `ramh_dout` (32). The
 other candidates were costed and not done: writes invalidating the channel's cache line (drops the write address
