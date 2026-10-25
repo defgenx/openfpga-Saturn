@@ -60,7 +60,7 @@ initial begin
 	for (i = 0; i < 4096; i = i + 1) if (img[i] !== f_bios[i]) begin bad = bad + 1; if (bad < 8) $display("BIOS byte %0d: %h exp %h", i, img[i], f_bios[i]); end
 	for (i = 0; i < 1024; i = i + 1) begin
 		if (img[24'h100000 + 2*i] !== 8'hFF || img[24'h100000 + 2*i + 1] !== f_bk[i]) begin bad = bad + 1; if (bad < 8) $display("backup byte %0d: %h%h exp FF%h", i, img[24'h100000 + 2*i], img[24'h100000 + 2*i + 1], f_bk[i]); end
-		if (img[24'h400000 + 2*i] !== 8'hFF || img[24'h400000 + 2*i + 1] !== f_bc[i]) begin bad = bad + 1; if (bad < 8) $display("backup cart byte %0d bad", i); end
+		if (img[24'h800000 + 2*i] !== 8'hFF || img[24'h800000 + 2*i + 1] !== f_bc[i]) begin bad = bad + 1; if (bad < 8) $display("backup cart byte %0d bad", i); end
 	end
 	$display("tb_load: %0d loader writes, FIFO overflows %0d, mismatches %0d", nwr, ovf, bad);
 	if (bad == 0 && ovf == 0 && nwr == 1024 + 512 + 512) $display("tb_load: PASS"); else $display("tb_load: FAIL");

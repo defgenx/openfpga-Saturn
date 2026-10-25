@@ -33,7 +33,8 @@ module psram_sync #(
 	parameter int WRITE_ADJ = 0,       // extra chip cycles before the first write word (bring-up)
 	parameter int CLK_KHZ   = 114546,  // clk, for the power-up wait
 	parameter int INIT_US   = 150,
-	parameter int ROW_LOG2  = 7        // halfwords per segment, log2 (row = 128)
+	parameter int ROW_LOG2  = 7,       // halfwords per segment, log2 (row = 128)
+	parameter bit HOLD_DIN  = 1'b0     // 1: the client keeps din/be stable until the request has finished (no copy kept here)
 ) (
 	input  wire        clk,
 	input  wire        reset,
@@ -45,7 +46,7 @@ module psram_sync #(
 	input  wire        we,
 	input  wire [63:0] din,
 	input  wire  [7:0] be,
-	output reg  [63:0] dout,
+	output wire [63:0] dout,           // valid in the cycle dout_ready is high
 	output reg         dout_ready,
 	output wire        idle,           // no segment running (for tests)
 
@@ -102,12 +103,15 @@ reg         last = 1'b0, smp = 1'b0, cur_we = 1'b0, cur_we_req = 1'b0;
 reg         act_busy = 1'b0;
 reg  [22:0] act_adr = 23'd0;      // halfword address of the next word
 reg  [10:0] act_cnt = 11'd0;      // read words still to fetch
-reg  [63:0] act_din = 64'd0;
-reg  [7:0]  act_be = 8'd0;
+reg  [63:0] act_din_r = 64'd0;
+reg  [7:0]  act_be_r = 8'd0;
+wire [63:0] act_din = HOLD_DIN ? din : act_din_r;
+wire  [7:0] act_be  = HOLD_DIN ? be  : act_be_r;
 reg  [2:0]  w_cur = 3'd0;         // write: next word lane
 reg  [2:0]  w_rem = 3'd0;         // write: words left
 
 reg  [63:0] shift = 64'd0;
+assign dout = shift;
 reg  [1:0]  wcap = 2'd0;
 
 wire        row_end = &act_adr[ROW_LOG2-1:0];
@@ -150,7 +154,7 @@ task automatic launch;
 			w = we;
 			adr = {addr, 2'b00} + (we ? {20'd0, first_lane(be)} : 23'd0);
 			act_adr <= adr; act_busy <= 1'b1; cur_we_req <= we;
-			act_din <= din; act_be <= be;
+			if (!HOLD_DIN) begin act_din_r <= din; act_be_r <= be; end
 			act_cnt <= {1'b0, burstcnt, 2'b00};
 			w_cur <= first_lane(be); w_rem <= last_lane(be) - first_lane(be) + 3'd1;
 		end
@@ -189,10 +193,7 @@ always @(posedge clk) begin
 		if (smp) begin
 			shift <= {shift[47:0], cram_dq_in};
 			wcap <= wcap + 2'd1;
-			if (wcap == 2'd3) begin
-				dout <= {shift[47:0], cram_dq_in};
-				if (!rst_pend && !reset) dout_ready <= 1'b1;
-			end
+			if (wcap == 2'd3 && !rst_pend && !reset) dout_ready <= 1'b1;
 		end
 	end else begin
 		// ---- F edge: the chip clock falls; every other pin changes here

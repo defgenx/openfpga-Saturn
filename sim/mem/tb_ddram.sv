@@ -158,13 +158,15 @@ task automatic raml_write(input [21:1] a, input [15:0] d, input [1:0] be);
 		@(posedge clk);
 	end
 endtask
-task automatic bios_load(input [18:1] a, input [15:0] d);
+task automatic bios_load(input [18:1] a, input [15:0] d, input [15:0] d2);
 	begin
+		// the BIOS arrives through the loader port, two words per 32 bit write (a is even)
 		@(posedge clk);
-		while (bios_busy) @(posedge clk);
-		bios_addr <= {8'b0, a}; bios_din <= d; bios_wr <= 2'b11;
-		@(posedge clk); bios_wr <= 2'b00;
+		while (ld_busy) @(posedge clk);
+		ld_addr <= a[18:2]; ld_data <= {d, d2}; ld_wr <= 1'b1;
+		@(posedge clk); ld_wr <= 1'b0;
 		sh_raml[{3'b000, a}] = d; sv_raml[{3'b000, a}] = 1;
+		sh_raml[{3'b000, a} + 1] = d2; sv_raml[{3'b000, a} + 1] = 1;
 		@(posedge clk);
 	end
 endtask
@@ -279,7 +281,7 @@ task automatic cdb_read(input [13:1] a);
 	end
 endtask
 
-// loader: 32 bit writes into the cartridge window (PSRAM0 byte 0x500000 +), the bridge's bursty word stream
+// loader: 32 bit writes into the cartridge window (PSRAM0 byte 0x900000 +), the bridge's bursty word stream
 
 // ---------------------------------------------------------------- stimulus
 integer n_ops = 400, nq = 200, k, r;
@@ -297,7 +299,7 @@ initial begin
 	repeat (INIT_US * 115 + 3000) @(posedge clk);
 
 	// BIOS load, then quiet-phase WRAM-H measurement
-	for (k = 0; k < 2048; k = k + 1) bios_load(k, $urandom);
+	for (k = 0; k < 2048; k = k + 2) bios_load(k, $urandom, $urandom);
 	for (k = 0; k < 4096; k = k + 1) ramh_write(k, $urandom, 4'hF);
 	repeat (4000) @(posedge clk);                       // let the posted writes drain
 	phase = 0;
@@ -347,10 +349,10 @@ initial begin
 		end
 		// loader: 32 bit writes into the cartridge window upper half at the bridge pace
 		begin
-			ldbase = 22'h100000;                                // PSRAM0 byte 0x500000 = cart window + 0x100000
+			ldbase = 22'h100000;                                // PSRAM0 byte 0x900000 = cart window + 0x100000
 			for (kl = 0; kl < n_ops * 4; kl = kl + 1) begin
 				@(posedge clk); while (ld_busy) @(posedge clk);
-				ld_addr <= (24'h500000 >> 2) + kl; ld_data <= {16'hA000 + kl[15:0], 16'h5000 + kl[15:0]}; ld_wr <= 1'b1;
+				ld_addr <= (24'h900000 >> 2) + kl; ld_data <= {16'hA000 + kl[15:0], 16'h5000 + kl[15:0]}; ld_wr <= 1'b1;
 				@(posedge clk); ld_wr <= 1'b0;
 				repeat (30) @(posedge clk);                    // a bridge word every ~430 ns
 			end
