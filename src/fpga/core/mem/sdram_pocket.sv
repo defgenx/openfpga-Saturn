@@ -8,7 +8,7 @@
 //
 //   bank 0  VDP2 A0 (rows 0-63)          bank 1  VDP2 B0 (rows 0-63)
 //   bank 2  VDP2 A1 (rows 0-63)          bank 3  VDP2 B1 (rows 0-63)
-//           + SCSP RAM 0-256 KB (rows 64-191)    + SCSP RAM 256-512 KB (rows 64-191)
+//           + SCSP RAM 0-256 KB (rows 128-255)   + SCSP RAM 256-512 KB (rows 128-255)
 //
 // Cycle numbers are pin-register edges after the frame start F (VDP2 DOT_CE_F):
 //   1 latch the VDP2 addresses
@@ -162,7 +162,7 @@ function automatic [1:0] lane_be(input [7:0] be);
 	lane_be = |be[7:6] ? be[7:6] : |be[5:4] ? be[5:4] : |be[3:2] ? be[3:2] : be[1:0];
 endfunction
 function automatic [7:0] scr_next(input [7:0] s, input big);
-	scr_next = big ? s + 8'd1 : {2'd0, s[5:0] + 6'd1};   // banks 0/1: 64 rows, banks 2/3: all 256 (rows 192-255 are unused, scrubbing them is harmless)
+	scr_next = big ? s + 8'd1 : {2'd0, s[5:0] + 6'd1};   // banks 0/1: 64 rows, banks 2/3: all 256 (rows 64-127 are unused, scrubbing them is harmless)
 endfunction
 
 wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the half, write
@@ -303,7 +303,7 @@ always @(posedge clk) begin
 		4'd14: begin
 			c_cmd = CMD_ACT; c_ba = 2'd2;
 			if ((sc_rd_p | sc_wr_p) && !sc_addr[17]) begin
-				c_a = row_a(8'd64 + {1'b0, sc_addr[16:10]});
+				c_a = row_a({1'b1, sc_addr[16:10]});
 				s_act[2] <= 1'b1; s_wr[2] <= sc_wr_p; s_dum[2] <= 1'b0;
 				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 			end else begin
@@ -331,7 +331,7 @@ always @(posedge clk) begin
 		4'd0: begin
 			c_cmd = CMD_ACT; c_ba = 2'd3;
 			if ((sc_rd_p | sc_wr_p) && sc_addr[17]) begin
-				c_a = row_a(8'd64 + {1'b0, sc_addr[16:10]});
+				c_a = row_a({1'b1, sc_addr[16:10]});
 				s_act[3] <= 1'b1; s_wr[3] <= sc_wr_p; s_dum[3] <= 1'b0;
 				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 			end else begin
