@@ -1028,7 +1028,7 @@ module SCSPP #(
 	assign MPRO1_Q = MPRO0_Q;
 	bit          MPRO_OK;
 	wire         MPRO_SET_Q;
-	EFREG_t      EFREG_Q;
+	wire [15:0] EFREG_Q;
 `ifdef POCKET_CUT_SCSP_DSP
 	//DSP removed: an all-zero program issues no RAM write, no sound-RAM access and no EFREG/TEMP/MEMS update.
 	assign MPRO0_Q = '0;
@@ -1144,12 +1144,12 @@ module SCSPP #(
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
 	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
 	
-	bit [12:0] COEF_Q;
+	wire [12:0] COEF_Q = COEF_DQ[15:3];
 	wire [16:1] MADRS_Q = MADRS_DRAM_Q;
 	//INPUTS keeps its previous value when no source is selected, so the input
 	//select and the MEMS/EXTS data stay latched as before.
 	bit [5:0]  MPRO1_IRA;
-	bit [23:0] MEMS_Q;
+	wire [23:0] MEMS_Q = {MEMS_DQ[15:0],MEMS_DQ[23:16]};
 	bit [15:0] EXTS_Q;
 	
 	always @(posedge CLK or negedge RST_N) begin
@@ -1224,8 +1224,6 @@ module SCSPP #(
 				
 				MIXS_Q <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16]};
 				MPRO1_IRA <= MPRO0_Q.IRA;
-				MEMS_Q <= {MEMS_RAM_Q[15:0],MEMS_RAM_Q[23:16]};
-				COEF_Q <= COEF_RAM_Q[15:3];
 				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
 				
 				
@@ -1297,7 +1295,6 @@ module SCSPP #(
 	
 	
 	//Effect out
-	always @(posedge CLK) if (RES_N & SLOT0_EN & CYCLE0_CE) EFREG_Q <= EFREG_RAM_Q;
 	//Out
 	bit [17:0] SUM_L,SUM_R;
 	always @(posedge CLK or negedge RST_N) begin
@@ -2087,7 +2084,12 @@ module SCSPP #(
 	//COEF,100700-10077F
 	wire       COEF_SEL = REG_A[11:7] == 5'b01110;
 	bit [15:0] COEF_RAM_Q;
-	SCSPP_RAM_8X2 #(6) COEF_RAM (CLK, OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}}), (REG_RD ? REG_A[6:1] : DSP_COEF_RA), COEF_RAM_Q);
+	//Second copy for the DSP, read through its output register (replaces the COEF_Q latch).
+	wire [ 5:0] COEF_WA = OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1];
+	wire [ 1:0] COEF_WE = OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}});
+	wire [15:0] COEF_DQ;
+	SCSPP_RAM_8X2 #(6) COEF_RAM (CLK, COEF_WA, SW_D, COEF_WE, REG_A[6:1], COEF_RAM_Q);
+	SCSPP_RAM_OR  #(6) COEF_DRAM(CLK, COEF_WA, SW_D, COEF_WE, DSP_COEF_RA, CYCLE0_CE & RES_N, 1'b0, COEF_DQ);
 	
 	//MADRS,100780-1007BF
 	wire       MADRS_SEL = REG_A[11:6] == 6'b011110;
@@ -2123,7 +2125,12 @@ module SCSPP #(
 	wire       MEMS0_SEL = MEMS_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       MEMS1_SEL = MEMS_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] MEMS_RAM_Q;
-	SCSPP_RAM_8X4 #(5) MEMS_RAM (CLK, OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]), OP7.RST ? '0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}}, (REG_RD ? REG_A[6:2] : DSP_MEMS_RA), MEMS_RAM_Q);
+	wire [ 4:0] MEMS_WA = OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]);
+	wire [31:0] MEMS_WD = OP7.RST ? 32'd0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}});
+	wire [ 3:0] MEMS_WE = OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}};
+	wire [31:0] MEMS_DQ;
+	SCSPP_RAM_8X4 #(5) MEMS_RAM (CLK, MEMS_WA, MEMS_WD, MEMS_WE, REG_A[6:2], MEMS_RAM_Q);
+	SCSPP_RAM_ORN #(4) MEMS_DRAM(CLK, MEMS_WA, MEMS_WD, MEMS_WE, DSP_MEMS_RA, CYCLE0_CE & RES_N, 1'b0, MEMS_DQ);
 	
 	//MIXS,100E80-100EBF
 	wire       MIXS_SEL = REG_A[11:6] == 12'hE80>>6;
@@ -2136,7 +2143,11 @@ module SCSPP #(
 	//EFREG,100EC0-100EDF
 	wire       EFREG_SEL = REG_A[11:5] == 7'b1110110;
 	bit [15:0] EFREG_RAM_Q;
-	SCSPP_RAM_8X2 #(4) EFREG_RAM (CLK, OP7.RST ? OP7.SLOT[4:1] : (DSP_EFREG_WE ? DSP_EFREG_WA : REG_A[4:1]), OP7.RST ? '0 : (DSP_EFREG_WE ? DSP_EFREG_D : REG_D), OP7.RST ? 2'b11 : ((REG_WE & {2{EFREG_SEL}}) | {2{DSP_EFREG_WE}}) & {2{CYCLE1_CE}}, (REG_RD ? REG_A[4:1] : DSP_EFREG_RA), EFREG_RAM_Q);
+	wire [ 3:0] EFREG_WA = OP7.RST ? OP7.SLOT[4:1] : (DSP_EFREG_WE ? DSP_EFREG_WA : REG_A[4:1]);
+	wire [15:0] EFREG_WD = OP7.RST ? 16'd0 : (DSP_EFREG_WE ? DSP_EFREG_D : REG_D);
+	wire [ 1:0] EFREG_WE = OP7.RST ? 2'b11 : ((REG_WE & {2{EFREG_SEL}}) | {2{DSP_EFREG_WE}}) & {2{CYCLE1_CE}};
+	SCSPP_RAM_8X2 #(4) EFREG_RAM (CLK, EFREG_WA, EFREG_WD, EFREG_WE, REG_A[4:1], EFREG_RAM_Q);
+	SCSPP_RAM_OR  #(4) EFREG_DRAM(CLK, EFREG_WA, EFREG_WD, EFREG_WE, DSP_EFREG_RA, RES_N & SLOT0_EN & CYCLE0_CE, 1'b0, EFREG_Q);
 	
 	//EXTS,100EE0-100EE3
 	wire       EXTS_SEL = REG_A[11:2] == 12'hEE0>>2;
