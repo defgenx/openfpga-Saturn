@@ -4,11 +4,12 @@
 set -e
 TAG=$1
 D=$(cd "$(dirname "$0")/../.." && pwd)
-V=${2:-$D/src/fpga/saturn/Saturn/VDP2P}
+PFX=${PFX:-VDP2P}
+V=${2:-$D/src/fpga/saturn/Saturn/$PFX}
 S=$D/sizing/vdp2p/snap/$TAG
 rm -rf $S; mkdir -p $S
-cp $V/VDP2P.sv $V/VDP2P_pkg.sv $V/VDP2P_mem.sv $D/sizing/vdp2/area.qsf $S/
-sed 's/^\tVDP2 u (/\tVDP2P u (/; s/module vdp2_wrap/module vdp2_wrap/' $D/sizing/vdp2/vdp2_wrap.sv > $S/vdp2_wrap.sv
+cp $V/$PFX.sv $V/${PFX}_pkg.sv $V/${PFX}_mem.sv $D/sizing/vdp2/area.qsf $S/
+sed 's/^\tVDP2 u (/\t$PFX u (/; s/module vdp2_wrap/module vdp2_wrap/' $D/sizing/vdp2/vdp2_wrap.sv > $S/vdp2_wrap.sv
 cat > $S/p.qpf <<Q
 PROJECT_REVISION = "p"
 Q
@@ -24,9 +25,9 @@ set_global_assignment -name AUTO_ROM_RECOGNITION ON
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name VERILOG_MACRO "LIGHT_SATURN=1"
 set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
-set_global_assignment -name SYSTEMVERILOG_FILE VDP2P_pkg.sv
-set_global_assignment -name SYSTEMVERILOG_FILE VDP2P.sv
-set_global_assignment -name SYSTEMVERILOG_FILE VDP2P_mem.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ${PFX}_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ${PFX}.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ${PFX}_mem.sv
 set_global_assignment -name SYSTEMVERILOG_FILE vdp2_wrap.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 source area.qsf

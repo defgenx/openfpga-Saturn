@@ -689,6 +689,8 @@ module VDP2P2 import VDP2P2_PKG::*; (
 		bit [3:0] VCPA1; 
 		bit [3:0] VCPB0; 
 		bit [3:0] VCPB1;
+	bit [3:0] NBG_NIB[4];
+	bit       NBG_GT[4], NBG_PNV[4], NBG_CHV[4], NBG_VSV[4];
 	bit [1:0] RDBSA0; 
 	bit [1:0] RDBSA1; 
 	bit [1:0] RDBSB0; 
@@ -705,48 +707,33 @@ module VDP2P2 import VDP2P2_PKG::*; (
 		RDBSB0 = REGS.RAMCTL.RDBSB0;
 		RDBSB1 = REGS.RAMCTL.VRBMD ? REGS.RAMCTL.RDBSB1 : REGS.RAMCTL.RDBSB0;
 		
-		VA_PIPE[0].NxA0PN[0] = VCPA0 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[0] = VCPA1 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[0] = VCPB0 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[0] = VCPB1 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[1] = VCPA0 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[1] = VCPA1 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[1] = VCPB0 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[1] = VCPB1 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[2] = VCPA0 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[2] = VCPA1 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[2] = VCPB0 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[2] = VCPB1 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[3] = VCPA0 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[3] = VCPA1 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[3] = VCPB0 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[3] = VCPB1 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		
-		VA_PIPE[0].NxA0CH[0] = VCPA0 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[0] = VCPA1 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[0] = VCPB0 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[0] = VCPB1 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[1] = VCPA0 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[1] = VCPA1 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[1] = VCPB0 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[1] = VCPB1 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[2] = VCPA0 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[2] = VCPA1 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[2] = VCPB0 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[2] = VCPB1 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[3] = VCPA0 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[3] = VCPA1 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[3] = VCPB0 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[3] = VCPB1 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		
-		VA_PIPE[0].NxA0VS[0] = VCPA0 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxA1VS[0] = VCPA1 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxB0VS[0] = VCPB0 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxB1VS[0] = VCPB1 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxA0VS[1] = VCPA0 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxA1VS[1] = VCPA1 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxB0VS[1] = VCPB0 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxB1VS[1] = VCPB1 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
+		//NBG accesses of each bank: the cycle pattern nibble gives type (PN 0-3, CH 4-7, VS C-D) and layer in its low bits
+		NBG_NIB = '{VCPA0, VCPA1, VCPB0, VCPB1};
+		NBG_GT  = '{(RDBSA0 == 2'b00 | !RSxREG[0].ON),
+		            (RDBSA1 == 2'b00 | !RSxREG[0].ON),
+		            (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON,
+		            (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON};
+		for (int bk = 0; bk < 4; bk++) begin
+			NBG_PNV[bk] = NBG_NIB[bk][3:2] == 2'b00 & NPN_FETCH & NSxREG[NBG_NIB[bk][1:0]].ON & NBG_GT[bk];
+			NBG_CHV[bk] = NBG_NIB[bk][3:2] == 2'b01 & NCH_FETCH & NSxREG[NBG_NIB[bk][1:0]].ON & NBG_GT[bk];
+			NBG_VSV[bk] = NBG_NIB[bk][3:1] == 3'b110 & NSxREG[NBG_NIB[bk][0]].VCSC & NVCS_FETCH & NSxREG[NBG_NIB[bk][0]].ON & NBG_GT[bk] & !REFRESH;
+		end
+		for (int l = 0; l < 4; l++) begin
+			VA_PIPE[0].NxA0PN[l] = NBG_PNV[0] & NBG_NIB[0][1:0] == l;
+			VA_PIPE[0].NxA1PN[l] = NBG_PNV[1] & NBG_NIB[1][1:0] == l;
+			VA_PIPE[0].NxB0PN[l] = NBG_PNV[2] & NBG_NIB[2][1:0] == l;
+			VA_PIPE[0].NxB1PN[l] = NBG_PNV[3] & NBG_NIB[3][1:0] == l;
+			VA_PIPE[0].NxA0CH[l] = NBG_CHV[0] & NBG_NIB[0][1:0] == l;
+			VA_PIPE[0].NxA1CH[l] = NBG_CHV[1] & NBG_NIB[1][1:0] == l;
+			VA_PIPE[0].NxB0CH[l] = NBG_CHV[2] & NBG_NIB[2][1:0] == l;
+			VA_PIPE[0].NxB1CH[l] = NBG_CHV[3] & NBG_NIB[3][1:0] == l;
+		end
+		for (int l = 0; l < 2; l++) begin
+			VA_PIPE[0].NxA0VS[l] = NBG_VSV[0] & NBG_NIB[0][0] == l;
+			VA_PIPE[0].NxA1VS[l] = NBG_VSV[1] & NBG_NIB[1][0] == l;
+			VA_PIPE[0].NxB0VS[l] = NBG_VSV[2] & NBG_NIB[2][0] == l;
+			VA_PIPE[0].NxB1VS[l] = NBG_VSV[3] & NBG_NIB[3][0] == l;
+		end
 				
 		VA_PIPE[0].NxPN_FETCH[0] = NBG_PN_FETCH[0];
 		VA_PIPE[0].NxPN_FETCH[1] = NBG_PN_FETCH[1];
@@ -868,42 +855,26 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	RVRAMAccess_t RBG_B0VA;
 	RVRAMAccess_t RBG_B1VA;
 	always_comb begin
-		NBG_A0VA.PN = |VA_PIPE[0].NxA0PN;
-		NBG_A0VA.CH = |VA_PIPE[0].NxA0CH;
-		NBG_A0VA.VS = |VA_PIPE[0].NxA0VS;
-		NBG_A0VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxA0PN[0] || VA_PIPE[0].NxA0CH[0] || VA_PIPE[0].NxA0VS[0]) NBG_A0VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxA0PN[1] || VA_PIPE[0].NxA0CH[1] || VA_PIPE[0].NxA0VS[1]) NBG_A0VA.Nx = 2'd1;
-		if (VA_PIPE[0].NxA0PN[2] || VA_PIPE[0].NxA0CH[2])                         NBG_A0VA.Nx = 2'd2;
-		if (VA_PIPE[0].NxA0PN[3] || VA_PIPE[0].NxA0CH[3])                         NBG_A0VA.Nx = 2'd3;
+		NBG_A0VA.PN = NBG_PNV[0];
+		NBG_A0VA.CH = NBG_CHV[0];
+		NBG_A0VA.VS = NBG_VSV[0];
+		NBG_A0VA.Nx = (NBG_PNV[0] | NBG_CHV[0] | NBG_VSV[0]) ? NBG_NIB[0][1:0] : 2'd0;
 		
-		NBG_A1VA.PN = |VA_PIPE[0].NxA1PN;
-		NBG_A1VA.CH = |VA_PIPE[0].NxA1CH;
-		NBG_A1VA.VS = |VA_PIPE[0].NxA1VS;
-		NBG_A1VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxA1PN[0] || VA_PIPE[0].NxA1CH[0] || VA_PIPE[0].NxA1VS[0]) NBG_A1VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxA1PN[1] || VA_PIPE[0].NxA1CH[1] || VA_PIPE[0].NxA1VS[1]) NBG_A1VA.Nx = 2'd1;
-		if (VA_PIPE[0].NxA1PN[2] || VA_PIPE[0].NxA1CH[2])                         NBG_A1VA.Nx = 2'd2;
-		if (VA_PIPE[0].NxA1PN[3] || VA_PIPE[0].NxA1CH[3])                         NBG_A1VA.Nx = 2'd3;
+		NBG_A1VA.PN = NBG_PNV[1];
+		NBG_A1VA.CH = NBG_CHV[1];
+		NBG_A1VA.VS = NBG_VSV[1];
+		NBG_A1VA.Nx = (NBG_PNV[1] | NBG_CHV[1] | NBG_VSV[1]) ? NBG_NIB[1][1:0] : 2'd0;
 		
-		NBG_B0VA.PN = |VA_PIPE[0].NxB0PN;
-		NBG_B0VA.CH = |VA_PIPE[0].NxB0CH;
-		NBG_B0VA.VS = |VA_PIPE[0].NxB0VS;
-		NBG_B0VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxB0PN[0] || VA_PIPE[0].NxB0CH[0] || VA_PIPE[0].NxB0VS[0]) NBG_B0VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxB0PN[1] || VA_PIPE[0].NxB0CH[1] || VA_PIPE[0].NxB0VS[1]) NBG_B0VA.Nx = 2'd1;
-		if (VA_PIPE[0].NxB0PN[2] || VA_PIPE[0].NxB0CH[2])                         NBG_B0VA.Nx = 2'd2;
-		if (VA_PIPE[0].NxB0PN[3] || VA_PIPE[0].NxB0CH[3])                         NBG_B0VA.Nx = 2'd3;
+		NBG_B0VA.PN = NBG_PNV[2];
+		NBG_B0VA.CH = NBG_CHV[2];
+		NBG_B0VA.VS = NBG_VSV[2];
+		NBG_B0VA.Nx = (NBG_PNV[2] | NBG_CHV[2] | NBG_VSV[2]) ? NBG_NIB[2][1:0] : 2'd0;
 		
 		
-		NBG_B1VA.PN = |VA_PIPE[0].NxB1PN;
-		NBG_B1VA.CH = |VA_PIPE[0].NxB1CH;
-		NBG_B1VA.VS = |VA_PIPE[0].NxB1VS;
-		NBG_B1VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxB1PN[0] || VA_PIPE[0].NxB1CH[0] || VA_PIPE[0].NxB1VS[0]) NBG_B1VA.Nx = 2'd0;
-		if (VA_PIPE[0].NxB1PN[1] || VA_PIPE[0].NxB1CH[1] || VA_PIPE[0].NxB1VS[1]) NBG_B1VA.Nx = 2'd1;
-		if (VA_PIPE[0].NxB1PN[2] || VA_PIPE[0].NxB1CH[2])                         NBG_B1VA.Nx = 2'd2;
-		if (VA_PIPE[0].NxB1PN[3] || VA_PIPE[0].NxB1CH[3])                         NBG_B1VA.Nx = 2'd3;
+		NBG_B1VA.PN = NBG_PNV[3];
+		NBG_B1VA.CH = NBG_CHV[3];
+		NBG_B1VA.VS = NBG_VSV[3];
+		NBG_B1VA.Nx = (NBG_PNV[3] | NBG_CHV[3] | NBG_VSV[3]) ? NBG_NIB[3][1:0] : 2'd0;
 				
 		RBG_A0VA.PN = |VA_PIPE[0].RxA0PN;
 		RBG_A0VA.CH = |VA_PIPE[0].RxA0CH;
