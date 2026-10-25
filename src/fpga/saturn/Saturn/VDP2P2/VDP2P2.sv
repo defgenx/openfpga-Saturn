@@ -2768,7 +2768,7 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	//scan-out
 	bit  [31: 0] SE[3];
 	bit  [ 2: 0] SEV;
-	always @(posedge CLK) if (SO_RD_D) begin SE[0] <= LBQ[0]; SE[1] <= LBQ[1]; SE[2] <= LBQ[2]; SEV <= LBVQB; end
+		always @(posedge CLK) if (SO_RD_D) begin SE[0] <= LBQ[0]; SE[1] <= LBQ[1]; SE[2] <= LBQ[2]; SEV <= LBVQB; end
 	wire TW0_HIT = HRES[1] ? WHIT33_Q[0] : WHIT34[0];
 	wire TW1_HIT = HRES[1] ? WHIT33_Q[1] : WHIT34[1];
 	wire CCW_EN    =   WinTest(TW0_HIT ^ REGS.WCTLD.CCW0A,TW1_HIT ^ REGS.WCTLD.CCW1A,SDOT.WN ^ REGS.WCTLD.CCSWA,REGS.WCTLD.CCW0E,REGS.WCTLD.CCW1E,REGS.WCTLD.CCSWE & REGS.SPCTL.SPWINEN,REGS.WCTLD.CCLOG);

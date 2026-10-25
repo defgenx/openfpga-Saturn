@@ -405,6 +405,16 @@ int main(int argc, char** argv) {
 					else if (pick < 85) ra = 0x100 + 2 * rng.below(16);     // color calc / offsets
 					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
 					else ra = 2 * rng.below(0x90);
+					if (g_legal) {   // only registers that keep the cycle pattern, formats and zoom legal
+						int k2 = rng.below(100);
+						if (k2 < 30) ra = 0x70 + 2 * rng.below(4);              // NBG0 scroll
+						else if (k2 < 45) ra = 0x80 + 2 * rng.below(4);         // NBG1 scroll
+						else if (k2 < 55) ra = 0x90 + 2 * rng.below(4);         // NBG2/3 scroll
+						else if (k2 < 70) ra = 0xC0 + 2 * rng.below(16);        // windows
+						else if (k2 < 80) ra = 0xE0 + 2 * rng.below(8);         // colour calculation
+						else if (k2 < 90) ra = 0xF0 + 2 * rng.below(8);         // priorities
+						else ra = 0x100 + 2 * rng.below(16);                    // colour offset and ratios
+					}
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
 						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0xAE) || (ra >= 0xB0 && ra <= 0xBE) || (ra >= 0xD8 && ra <= 0xDE) || ra == 0xD6;   // WCTLD: its rotation parameter window bits pick the table for coefficient addresses   // registers that form VRAM addresses: blanking only
 						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
@@ -414,16 +424,17 @@ int main(int argc, char** argv) {
 					}
 				}
 			} else if (k < 75) {     // VRAM write
-				{ uint32_t wa = 2 * rng.below(0x40000); uint16_t wd = rng.next(); int gp = rng.below(4), dq = rng.chance(20) ? rng.below(4) : 0; if (g_legal) pend_cfg.push_back({0, wa, {wd}, dq, gp}); else W(wa, wd, gp, dq); }
+				{ uint32_t wa = 2 * rng.below(0x40000); uint16_t wd = rng.next(); if (g_noflip) wd &= ~0x4400; int gp = rng.below(4), dq = rng.chance(20) ? rng.below(4) : 0; if (g_legal) pend_cfg.push_back({0, wa, {wd}, dq, gp}); else W(wa, wd, gp, dq); }
 			} else if (k < 85) {     // VRAM burst
 				std::vector<uint16_t> d; int n = 2 + rng.below(8);
-				for (int i = 0; i < n; i++) d.push_back(rng.next());
+				for (int i = 0; i < n; i++) d.push_back(g_noflip ? rng.next() & ~0x4400 : rng.next());
 				{ Op bo{2, (uint32_t)2 * rng.below(0x3F000), d, 0, (int)rng.below(4)}; if (g_legal) pend_cfg.push_back(bo); else bus.q.push_back(bo); }
 			} else {                 // CRAM write
 				W(0x100000 + 2 * rng.below(2048), rng.next(), rng.below(4), rng.chance(20) ? rng.below(4) : 0);
 			}
 		}
 		bus.step(odd, rdy_n_prev);
+		{ static int pst = 0; if (bus.st == 1 && pst != 1 && getenv("VDP2_LOGB")) printf("B t=%ld kind=%d addr=%06x\n", t, bus.cur.kind, bus.cur.addr); pst = bus.st; }
 
 		// memory read data from the previous clock's addresses
 		top->r_RA0_Q = mr.a0.q; top->r_RA1_Q = mr.a1.q; top->r_RB0_Q = mr.b0.q; top->r_RB1_Q = mr.b1.q;
@@ -445,7 +456,7 @@ int main(int argc, char** argv) {
 		// A colour-depth or reduction register changed during blanking leaves stale bytes in the dot data for the first
 		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
 		VlWide<3> rmc = rm, dmc = dm;
-		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1)))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
+		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1) || curline[1].size() < 6))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
 		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
 			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||

@@ -84,6 +84,21 @@ module tb_top (
 	end
 `endif
 
+
+`ifdef CMPDOT
+	integer cd_n = 0;
+	reg cd_ev = 0;
+	integer cd_t = 0;
+	always @(posedge CLK) begin
+		cd_t <= cd_t + 1;
+		cd_ev <= u_dut.CEVT;
+		if (cd_ev && cd_t > 987500 && cd_n < 12 && (u_dut.XD >= 10'd1000 || u_dut.XD < 4) && u_dut.REGS.TVMD.DISP && d_VBL_N && (u_ref.DOT_FST !== u_dut.DOT_FST || u_ref.DOT_SEC !== u_dut.DOT_SEC || u_ref.DOT_THD !== u_dut.DOT_THD)) begin
+			cd_n <= cd_n + 1;
+			$display("DOTDIFF scrnx=%0d xd=%0d H=%0d\n  FST ref %h dut %h\n  SEC ref %h dut %h\n  THD ref %h dut %h", u_ref.SCRNX, u_dut.XD, u_dut.H_CNT, u_ref.DOT_FST, u_dut.DOT_FST, u_ref.DOT_SEC, u_dut.DOT_SEC, u_ref.DOT_THD, u_dut.DOT_THD);
+		end
+	end
+`endif
+
 	// coverage probes on the golden copy
 	wire hires = u_ref.HRES[1];
 	assign cov[0] = u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & u_ref.DOT_FST.LCEN & u_ref.DOT_THD.CCEN & ~hires;
