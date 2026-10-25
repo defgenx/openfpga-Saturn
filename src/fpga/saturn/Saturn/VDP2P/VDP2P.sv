@@ -1734,8 +1734,13 @@ module VDP2P import VDP2P_PKG::*; (
 	RotCoord_t   MULYA;
 	RotCoord_t   ACCX,ACCY;
 	RotCoord_t   SUMX, SUMY;
-	assign SUMX = $signed(ACCX) + $signed(MultRC(MULXA, ($signed(SUBXA) - $signed(SUBXB))));
-	assign SUMY = $signed(ACCY) + $signed(MultRC(MULYA, ($signed(SUBYA) - $signed(SUBYB))));
+	//One multiplier and adder for both lanes: the operands only change at DOT_CE_R, so X is evaluated in the slot
+	//DOTCLK_DIV==1 and Y in the slot 2; the sums are read at the next DOT_CE_R (slot 3).
+	wire         SUMSY = DOTCLK_DIV[1];
+	RotCoord_t   SUMC;
+	assign SUMC = $signed(SUMSY ? ACCY : ACCX) + $signed(MultRC(SUMSY ? MULYA : MULXA, ($signed(SUMSY ? SUBYA : SUBXA) - $signed(SUMSY ? SUBYB : SUBXB))));
+	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd1) SUMX <= SUMC;
+	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd2) SUMY <= SUMC;
 	//Per-table rotation state in block RAM (word = table A/B). Xsp/Ysp accumulate one entry per DOTCLK_DIV slot.
 	wire [31:0]  XYST_Q, XP_Q, YP_Q, DX_Q, DY_Q, SPX_Q, SPY_Q;
 	reg          XST_WE, YST_WE, DX_WE, XP_WE, SPX_WE, SPY_WE;
