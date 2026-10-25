@@ -741,7 +741,7 @@ module SCSPP #(
 	SCR6_t       OP4_SCR6;
 	wire [ 7: 0] OP4_LFO_DATA = OP4_LFO_Q;
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [10: 0] ATTACK_VOL_CALC,DECAY_VOL_CALC,ATT_SH;
+		bit  [10: 0] ATTACK_VOL_CALC,DECAY_VOL_CALC;
 		bit  [ 9: 0] NEW_EVOL;
 		bit  [ 1: 0] NEW_EST;
 		bit  [10: 0] VOL_INC_BASE;
@@ -790,15 +790,8 @@ module SCSPP #(
 				NEW_EVOL = OP4_EVOL;
 				NEW_EST = OP4_EST;
 				
-				//SRAC is 1..4 (ERMAX 24..30), so the shifts are 4-way selects.
-				case (SRAC[2:0])
-					3'd1:    ATT_SH = {2'b11,~OP4_EVOL[9:1]};
-					3'd2:    ATT_SH = {3'b111,~OP4_EVOL[9:2]};
-					3'd3:    ATT_SH = {4'b1111,~OP4_EVOL[9:3]};
-					default: ATT_SH = {5'b11111,~OP4_EVOL[9:4]};
-				endcase
-				ATTACK_VOL_CALC = {1'b0,OP4_EVOL} + (ENV_STEP ? ATT_SH : 11'd0);
-				DECAY_VOL_CALC = {1'b0,OP4_EVOL} + (ENV_STEP ? {7'd0,(SRAC[2:0]==3'd1),(SRAC[2:0]==3'd2),(SRAC[2:0]==3'd3),(SRAC[2:0]!=3'd1 && SRAC[2:0]!=3'd2 && SRAC[2:0]!=3'd3)} : 11'd0);
+				ATTACK_VOL_CALC = {1'b0,OP4_EVOL} + (ENV_STEP ? $signed($signed(~{1'b0,OP4_EVOL}) >>> SRAC[4:0]) : 11'd0);
+				DECAY_VOL_CALC = {1'b0,OP4_EVOL} + (ENV_STEP ? $signed(10'd16 >>> SRAC[4:0]) : 11'd0);
 				if (OP4.RST) begin
 					NEW_EVOL = 10'h3FF;
 					NEW_EST = EST_RELEASE;
