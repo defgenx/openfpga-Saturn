@@ -307,7 +307,7 @@ module VDP2P_REGRAM #(
 	assign Q = vld[RA] ? w : '0;
 endmodule
 
-// Two 8x6 products and their sum (colour calculation of one channel), in one DSP block.
+// Two 8x6 products and their sum (colour calculation of one channel); the synthesis maps this to a DSP block.
 module VDP2P_RATIO (
 	input  [ 7:0] A,
 	input  [ 7:0] B,
@@ -315,19 +315,33 @@ module VDP2P_RATIO (
 	input  [ 5:0] RB,
 	output [13:0] S
 );
+	assign S = (A * RA) + (B * RB);
+endmodule
+
+// 19-bit adder in a DSP block: A*1 + B*1 with the 1 coming from a register that synthesis cannot fold (ONE).
+module VDP2P_DADD #(
+	parameter W = 19
+) (
+	input          ONE,
+	input  [W-1:0] A,
+	input  [W-1:0] B,
+	output [W-1:0] S
+);
 `ifdef ALTERA_RESERVED_QIS
-	altera_mult_add #(
-		.number_of_multipliers(2), .width_a(8), .width_b(6), .width_result(14),
-		.representation_a("UNSIGNED"), .representation_b("UNSIGNED"),
+	wire [W+2:0] r;
+	altmult_add #(
+		.number_of_multipliers(2), .width_a(W), .width_b(2), .width_result(W+3),
+		.representation_a("SIGNED"), .representation_b("SIGNED"),
 		.multiplier1_direction("ADD"),
 		.input_register_a0("UNREGISTERED"), .input_register_b0("UNREGISTERED"),
 		.input_register_a1("UNREGISTERED"), .input_register_b1("UNREGISTERED"),
 		.multiplier_register0("UNREGISTERED"), .multiplier_register1("UNREGISTERED"),
 		.output_register("UNREGISTERED"),
 		.dedicated_multiplier_circuitry("YES"), .extra_latency(0),
-		.intended_device_family("Cyclone V"), .lpm_type("altera_mult_add")
-	) mac (.dataa({B,A}), .datab({RB,RA}), .result(S));
+		.intended_device_family("Cyclone V"), .lpm_type("altmult_add")
+	) mac (.dataa({B,A}), .datab({1'b0,ONE,1'b0,ONE}), .result(r));
+	assign S = r[W-1:0];
 `else
-	assign S = (A * RA) + (B * RB);
+	assign S = A + B;
 `endif
 endmodule

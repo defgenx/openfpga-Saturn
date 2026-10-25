@@ -931,8 +931,8 @@ module VDP2P import VDP2P_PKG::*; (
 		NxOFFX[1] = XS[1];
 		NxOFFX[2] = XS[2];
 		NxOFFX[3] = XS[3];
-		NxOFFY[0] = NMOSY[0] + NVCSY[0];
-		NxOFFY[1] = NMOSY[1] + NVCSY[1];
+		NxOFFY[0] = NYOFS[0];
+		NxOFFY[1] = NYOFS[1];
 		NxOFFY[2] = NMOSY[2];
 		NxOFFY[3] = NMOSY[3];
 	end
@@ -1537,8 +1537,25 @@ module VDP2P import VDP2P_PKG::*; (
 	ScrollData_t NVCSY[2];
 	ScrollData_t NMOSY[4];
 	CoordInc_t   LZMX[2];
+	ScrollData_t CX[4];
+	ScrollData_t NCX[4];
+	//19-bit adders of the scroll counters in DSP blocks (ONE is a registered 1 so the constant operand is kept)
+	bit          ONE;
+	always @(posedge CLK or negedge RST_N) if (!RST_N) ONE <= 1'b0; else ONE <= 1'b1;
+	ScrollData_t CXN[2], XSN[2], NCXN[2], NMOSYN[2];
+	wire         NLS2 = VA2.LS_POS[2];
+	VDP2P_DADD d_cx0(ONE, CX[0],  {8'h00,LZMX[0]}, CXN[0]);
+	VDP2P_DADD d_cx1(ONE, CX[1],  {8'h00,LZMX[1]}, CXN[1]);
+	VDP2P_DADD d_xs0(ONE, XS[0],  CXN[0], XSN[0]);
+	VDP2P_DADD d_xs1(ONE, XS[1],  CXN[1], XSN[1]);
+	VDP2P_DADD d_nx0(ONE, NCX[0], {8'h00,LZMX[0]}, NCXN[0]);
+	VDP2P_DADD d_nx1(ONE, NCX[1], {8'h00,LZMX[1]}, NCXN[1]);
+	VDP2P_DADD d_ms0(ONE, NY[{1'b0,NLS2}], NSY[{1'b0,NLS2}], NMOSYN[0]);
+	VDP2P_DADD d_ms1(ONE, NY[{1'b1,NLS2}], NSY[{1'b1,NLS2}], NMOSYN[1]);
+	ScrollData_t NYOFS[2];
+	VDP2P_DADD d_ny0(ONE, NMOSY[0], NVCSY[0], NYOFS[0]);
+	VDP2P_DADD d_ny1(ONE, NMOSY[1], NVCSY[1], NYOFS[1]);
 	always @(posedge CLK or negedge RST_N) begin
-		ScrollData_t CX[4];
 		bit  [31: 0] LS_WD;
 		bit          LS_RD;
 		bit          N2;
@@ -1557,8 +1574,8 @@ module VDP2P import VDP2P_PKG::*; (
 		else begin
 			if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
 				if (NPN_FETCH) begin
-					CX[0] <= CX[0] + LZMX[0];
-					CX[1] <= CX[1] + LZMX[1];
+					CX[0] <= CXN[0];
+					CX[1] <= CXN[1];
 					CX[2] <= CX[2] + 19'h00100;
 					CX[3] <= CX[3] + 19'h00100;
 				end
@@ -1566,9 +1583,9 @@ module VDP2P import VDP2P_PKG::*; (
 			
 			if (DOT_CE_R) begin
 				if (NPN_FETCH && (CELLX | {HRES[1],2'b00}) == 3'd7) begin
-					XS[0] <= XS[0] + CX[0] + LZMX[0];
+					XS[0] <= XSN[0];
 					CX[0] <= '0;
-					XS[1] <= XS[1] + CX[1] + LZMX[1];
+					XS[1] <= XSN[1];
 					CX[1] <= '0;
 					XS[2] <= XS[2] + CX[2] + 19'h00100;
 					CX[2] <= '0;
@@ -1625,10 +1642,10 @@ module VDP2P import VDP2P_PKG::*; (
 							else if (LS_RD)                           begin LZMX[{1'b0,N2}] <= LS_WD[18:8]; end
 							
 							if (!MOSAIC_VCNT || !NSxREG[{1'b0,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b0,N2}] <= NY[{1'b0,N2}] + NSY[{1'b0,N2}];
+								NMOSY[{1'b0,N2}] <= NMOSYN[0];
 							end
 							if (!MOSAIC_VCNT || !NSxREG[{1'b1,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b1,N2}] <= NY[{1'b1,N2}] + NSY[{1'b1,N2}];
+								NMOSY[{1'b1,N2}] <= NMOSYN[1];
 							end
 						end
 					endcase
@@ -2652,7 +2669,6 @@ module VDP2P import VDP2P_PKG::*; (
 	assign RxCDP[1] = RBG_CDP[1];
 	
 	
-	ScrollData_t NCX[4];
 	always @(posedge CLK or negedge RST_N) begin
 		ScrollData_t X[4];
 		
@@ -2662,8 +2678,8 @@ module VDP2P import VDP2P_PKG::*; (
 			// synopsys translate_on
 		end
 		else begin
-			X[0] = NCX[0] + LZMX[0];
-			X[1] = NCX[1] + LZMX[1];
+			X[0] = NCXN[0];
+			X[1] = NCXN[1];
 			X[2] = NCX[2] + 19'h00100;
 			X[3] = NCX[3] + 19'h00100;
 			if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
