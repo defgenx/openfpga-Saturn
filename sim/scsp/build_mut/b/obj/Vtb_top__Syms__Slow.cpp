@@ -12,25 +12,25 @@ Vtb_top__Syms::Vtb_top__Syms(VerilatedContext* contextp, const char* namep, Vtb_
     , TOP{this, namep}
 {
     // Check resources
-    Verilated::stackCheck(1089);
+    Verilated::stackCheck(1071);
     // Setup sub module instances
     TOP__REF_SCSP_PKG.ctor(this, "REF_SCSP_PKG");
-    TOP__SCSP_PKG.ctor(this, "SCSP_PKG");
+    TOP__SCSPP_PKG.ctor(this, "SCSPP_PKG");
     // Configure time unit / time precision
     _vm_contextp__->timeunit(-12);
     _vm_contextp__->timeprecision(-12);
     // Setup each module's pointers to their submodules
     TOP.__PVT__REF_SCSP_PKG = &TOP__REF_SCSP_PKG;
-    TOP.__PVT__SCSP_PKG = &TOP__SCSP_PKG;
+    TOP.__PVT__SCSPP_PKG = &TOP__SCSPP_PKG;
     // Setup each module's pointer back to symbol table (for public functions)
     TOP.__Vconfigure(true);
     TOP__REF_SCSP_PKG.__Vconfigure(true);
-    TOP__SCSP_PKG.__Vconfigure(true);
+    TOP__SCSPP_PKG.__Vconfigure(true);
 }
 
 Vtb_top__Syms::~Vtb_top__Syms() {
     // Tear down scopes
     // Tear down sub module instances
-    TOP__SCSP_PKG.dtor();
+    TOP__SCSPP_PKG.dtor();
     TOP__REF_SCSP_PKG.dtor();
 }

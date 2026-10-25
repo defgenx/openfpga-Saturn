@@ -48,6 +48,8 @@ Vtb_top::Vtb_top(VerilatedContext* _vcontextp__, const char* _vcname__)
     , N_RAM_CS{vlSymsp->TOP.N_RAM_CS}
     , R_RAM_RFS{vlSymsp->TOP.R_RAM_RFS}
     , N_RAM_RFS{vlSymsp->TOP.N_RAM_RFS}
+    , N_OP7SLOT{vlSymsp->TOP.N_OP7SLOT}
+    , N_CYC{vlSymsp->TOP.N_CYC}
     , DI{vlSymsp->TOP.DI}
     , SCDI{vlSymsp->TOP.SCDI}
     , ESL{vlSymsp->TOP.ESL}
@@ -67,7 +69,7 @@ Vtb_top::Vtb_top(VerilatedContext* _vcontextp__, const char* _vcname__)
     , SCA{vlSymsp->TOP.SCA}
     , R_RAM_A{vlSymsp->TOP.R_RAM_A}
     , N_RAM_A{vlSymsp->TOP.N_RAM_A}
-    , __PVT__SCSP_PKG{vlSymsp->TOP.__PVT__SCSP_PKG}
+    , __PVT__SCSPP_PKG{vlSymsp->TOP.__PVT__SCSPP_PKG}
     , __PVT__REF_SCSP_PKG{vlSymsp->TOP.__PVT__REF_SCSP_PKG}
     , rootp{&(vlSymsp->TOP)}
 {

@@ -13,7 +13,7 @@
 class Vtb_top__Syms;
 class Vtb_top___024root;
 class Vtb_top_REF_SCSP_PKG;
-class Vtb_top_SCSP_PKG;
+class Vtb_top_SCSPP_PKG;
 
 
 // This class is the main interface to the Verilated model
@@ -72,6 +72,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top VL_NOT_FINAL : public VerilatedModel 
     VL_OUT8(&N_RAM_CS,0,0);
     VL_OUT8(&R_RAM_RFS,0,0);
     VL_OUT8(&N_RAM_RFS,0,0);
+    VL_OUT8(&N_OP7SLOT,4,0);
+    VL_OUT8(&N_CYC,2,0);
     VL_IN16(&DI,15,0);
     VL_IN16(&SCDI,15,0);
     VL_IN16(&ESL,15,0);
@@ -95,7 +97,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vtb_top VL_NOT_FINAL : public VerilatedModel 
     // CELLS
     // Public to allow access to /* verilator public */ items.
     // Otherwise the application code can consider these internals.
-    Vtb_top_SCSP_PKG* const __PVT__SCSP_PKG;
+    Vtb_top_SCSPP_PKG* const __PVT__SCSPP_PKG;
     Vtb_top_REF_SCSP_PKG* const __PVT__REF_SCSP_PKG;
 
     // Root instance pointer to allow access to model internals,

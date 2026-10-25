@@ -396,6 +396,19 @@ module SCSPP #(
 		endcase
 	end
 	
+	//Loop arithmetic: one add/sub forms LSA-LEA or LSA+LEA, one add/sub applies it (or 2*LEA, 2*LSA) to the offset.
+	wire [18:0] CUR_W   = OP2.KON ? 19'd0 : SO_RAM_Q;
+	wire        CUR_DIR = CUR_W[16];
+	wire        CUR_LP  = CUR_W[17];
+	wire [ 1:0] LPC     = OP2_SCR0.LPCTL;
+	wire        REV_OUT = LPC == 2'b10 && !CUR_LP;
+	wire        R_SUB   = !REV_OUT;
+	wire [15:0] R_W     = OP2_LSA + (OP2_LEA ^ {16{R_SUB}}) + {15'd0,R_SUB};
+	wire [15:0] M_W     = LPC == 2'b11 ? (CUR_DIR ? {OP2_LSA[14:0],1'b0} : {OP2_LEA[14:0],1'b0}) : R_W;
+	wire        F_SUB   = REV_OUT || (LPC == 2'b11 && !CUR_DIR);
+	wire [15:0] K_W     = CUR_W[15:0] + (M_W ^ {16{F_SUB}}) + {15'd0,F_SUB};
+	wire [15:0] COMP_X  = CUR_W[15:0] ^ {16{CUR_DIR & LPC[1]}};
+	wire [15:0] COMP_Y  = (CUR_DIR && LPC[1]) || !CUR_LP ? OP2_LSA : OP2_LEA;
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [15: 0] SOUSX;
 		bit  [15: 0] SOUSY;
@@ -455,7 +468,7 @@ module SCSPP #(
 			end
 		
 			{CUR_LOOPEND,CUR_SALOOP,CUR_SADIR,CUR_SO} = OP2.KON ? '0 : SO_RAM_Q;
-			COMP = ((CUR_SO^{16{CUR_SADIR&OP2_SCR0.LPCTL[1]}}) + 16'd1) > ((CUR_SADIR && OP2_SCR0.LPCTL[1]) || !CUR_SALOOP ? OP2_LSA : OP2_LEA);
+			COMP = (COMP_X >= COMP_Y) && (COMP_X != 16'hFFFF);
 			
 			CUR_PHASE_FRAC = OP2.KON ? '0 : PHASE_FRAC_RAM_Q;
 						
@@ -493,7 +506,7 @@ module SCSPP #(
 							end
 						end else begin
 							if (COMP) begin
-								NEW_SAO = CUR_SO + (OP2_LSA - OP2_LEA);
+								NEW_SAO = K_W;
 								EVENT = 1;
 							end
 						end
@@ -501,14 +514,14 @@ module SCSPP #(
 					2'b10: begin	//Reverse loop
 						if (!CUR_SALOOP) begin
 							if (COMP) begin
-								NEW_SAO = CUR_SO - (OP2_LSA + OP2_LEA);
+								NEW_SAO = K_W;
 								NEW_SALOOP = 1;
 								NEW_SADIR = 1;
 								EVENT = 1;
 							end
 						end else begin
 							if (!COMP) begin
-								NEW_SAO = CUR_SO + (OP2_LSA - OP2_LEA);
+								NEW_SAO = K_W;
 							end else begin
 								EVENT = 1;
 							end
@@ -523,13 +536,13 @@ module SCSPP #(
 							end
 						end else if (!CUR_SADIR) begin
 							if (COMP) begin
-								NEW_SAO = CUR_SO - (OP2_LEA<<1);
+								NEW_SAO = K_W;
 								NEW_SADIR = 1;
 								EVENT = 1;
 							end
 						end else begin
 							if (!COMP) begin
-								NEW_SAO = CUR_SO + (OP2_LSA<<1);
+								NEW_SAO = K_W;
 								NEW_SADIR = 0;
 							end else begin
 								EVENT = 1;
