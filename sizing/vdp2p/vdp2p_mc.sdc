@@ -17,3 +17,10 @@ foreach pat {"*VDP2P_REGRAM:*|*"} {
 		set_multicycle_path -hold  -end 1 -from $r
 	}
 }
+# CPU-written configuration registers (written at most once per bus cycle; a write landing in a fetch evaluation window is
+# the register write skew deviation of docs/vdp2.md, so the capture sees the old or the new value).
+set r [get_registers -nowarn "*VDP2P:*|REGS.*"]
+if {[get_collection_size $r] > 0} {
+	set_multicycle_path -setup -end 2 -from $r
+	set_multicycle_path -hold  -end 1 -from $r
+}
