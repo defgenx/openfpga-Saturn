@@ -66,6 +66,7 @@ int main(int argc, char** argv) {
 	d = new Vtb_dsp;
 	d->RST_N = 0; d->RES_N = 1; d->CE = 0; d->CE_R = 0; d->CE_F = 0; d->A = 0; d->DI = 0; d->WE = 0; d->RE = 0;
 	d->DMA_DI = 0; d->DMA_ACK = 0; d->DMA_END = 0;
+	uint32_t pend_di = 0; bool have_di = false;
 	d->CLK = 0; d->eval(); check("init");
 	d->CLK = 1; d->eval(); d->CLK = 0; d->eval(); check("reset");
 	d->RST_N = 1;
@@ -87,12 +88,13 @@ int main(int argc, char** argv) {
 		d->CE = dsp_ce && ce_r;
 		if (ce_r) dsp_ce = !dsp_ce;
 		d->WE = 0; d->RE = 0;
+		if (have_di) { d->DMA_DI = pend_di; have_di = false; }
 		// DMA stand-in: ACK is set at CE_F and cleared at the next CE_R
 		if (clear_ack) { d->DMA_ACK = 0; clear_ack = false; }
 		if (ce_f && d->DMA_REQ && !d->DMA_ACK && d->DMA_RUN) {
 			if (dma_delay-- <= 0) {
-				d->DMA_ACK = 1; d->DMA_DI = rng.next(); dma_delay = dma_lat; nreq++;
-				if (rng.pct(15)) d->DMA_DI &= 0x0000FFFF;
+				d->DMA_ACK = 1; pend_di = rng.next(); have_di = true; dma_delay = dma_lat; nreq++;   // data follows the ACK by one clk, as the SCU's buffer push does
+				if (rng.pct(15)) pend_di &= 0x0000FFFF;
 				if (d->DMA_LAST) { end_arm = true; nlast++; }
 			}
 		}
