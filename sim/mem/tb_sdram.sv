@@ -290,7 +290,7 @@ always @(posedge clk_sys) begin
 		hot = rnd(100);
 		if (hot < 70) sca = {rnd(2) == 1, 17'd0} + rnd(24);
 		else          sca = {rnd(2) == 1, 17'd0} | rnd(131072);
-		sc_i = idx(sca[17] ? 2'd3 : 2'd2, 8'd64 + {1'b0, sca[16:10]}, sca[9:0]);
+		sc_i = idx(sca[17] ? 2'd3 : 2'd2, {1'b1, sca[16:10]}, sca[9:0]);
 		ch2addr <= {1'b0, sca};
 		if (rnd(100) < 65) begin
 			ch2rd <= 1'b1;

@@ -1,0 +1,8 @@
+mem_pocket                         ALM  1834  M10K  146  block-kbit  1098
+ddram_pocket:ddram|                ALM   416  M10K   14  block-kbit    42
+load_pocket:loader|                ALM    55  M10K    2  block-kbit    14
+psram_sync:psram0|                 ALM    95  M10K    0  block-kbit     0
+psram_sync:psram1|                 ALM    98  M10K    0  block-kbit     0
+sdram_pocket:sdram|                ALM   258  M10K    0  block-kbit     0
+sram_pocket:sram|                  ALM    39  M10K    0  block-kbit     0
+vdp1_fb_pocket:fb|                 ALM   236  M10K  130  block-kbit  1041

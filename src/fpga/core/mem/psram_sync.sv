@@ -12,13 +12,15 @@
 // the Saturn ddram.sv backend semantics. Not implemented: parking the chips back in asynchronous
 // mode when the core stops (the PSX core does; see docs/memory.md, risks).
 //
-// Client port (same as the 64 bit DDRAM backend that rtl/ddram.sv drives):
+// Client port, 16 bit words:
 //   busy low: a request given on rd/we is taken at the next clk edge. busy is also low in the clk
-//   cycle in which dout_ready is high so that ddram.sv can store the beat.
-//   addr   64 bit word index in the chip (halfword address = {addr, 2'b00} + word)
-//   rd     burst of `burstcnt` beats, beat n word k = halfword 4n+k; word 0 is bits 63:48
-//   we     one beat, be[7:6] = word 0 bytes (be[7] = high byte), ... be[1:0] = word 3; only the
-//          words from the first to the last enabled lane are written, masked per byte
+//   cycle in which rlast is high (the last word of a read).
+//   addr   halfword address of the first word (bit 22 = die)
+//   cnt    rd: number of words (1 to 1023); we: 1 or 2 words
+//   rd     the words come on rdata with rvalid, one every second clk; rlast marks the final word
+//   we     (a 2 word write starts at an even address: it never crosses a row) din = {word 0, word 1}, be = {byte enables of word 0, of word 1} ({high byte, low byte});
+//          a word whose enables are 0 is not written. The client keeps din and be unchanged until
+//          the controller is idle again.
 //
 // Timing (clk cycles): single word read 2*(LATENCY+2)+1 = 13, 16 words (one 32 byte line) 13+30,
 // write of 1-2 words 2*(LATENCY+1)+2*words+2. A row (128 halfwords) is never crossed inside a
@@ -32,21 +34,23 @@ module psram_sync #(
 	parameter int READ_ADJ  = 0,       // extra chip cycles before the first read sample (bring-up)
 	parameter int WRITE_ADJ = 0,       // extra chip cycles before the first write word (bring-up)
 	parameter int CLK_KHZ   = 114546,  // clk, for the power-up wait
-	parameter int INIT_US   = 150,
+	parameter int INIT_US   = 150,     // power-up wait; 0: none here, the client drives init_go (saves the timer)
 	parameter int ROW_LOG2  = 7        // halfwords per segment, log2 (row = 128)
 ) (
 	input  wire        clk,
 	input  wire        reset,
+	input  wire        init_go,        // INIT_US = 0: high once the power-up wait is over
 
 	output wire        busy,
-	input  wire [20:0] addr,
-	input  wire  [7:0] burstcnt,
+	input  wire [22:0] addr,
+	input  wire  [9:0] cnt,
 	input  wire        rd,
 	input  wire        we,
-	input  wire [63:0] din,
-	input  wire  [7:0] be,
-	output reg  [63:0] dout,
-	output reg         dout_ready,
+	input  wire [31:0] din,
+	input  wire  [3:0] be,
+	output reg  [15:0] rdata,          // read word, valid in the cycle rvalid is high
+	output reg         rvalid,
+	output reg         rlast,          // with the last word of a read; busy is low in that cycle
 	output wire        idle,           // no segment running (for tests)
 
 	output wire [21:16] cram_a,
@@ -91,7 +95,8 @@ assign {cram_ub_n, cram_lb_n} = p_bm_n;
 // ---- control
 reg         ph = 1'b0;            // 1: the coming edge is an F edge
 reg  [2:0]  st = ST_INIT;
-reg  [12:0] tmr = 13'd0;          // power-up wait / slot within a segment or config write
+reg   [3:0] tmr = 4'd0;           // slot within a segment or config write
+reg  [12:0] itmr = 13'd0;         // power-up wait (INIT_US > 0)
 reg  [1:0]  cop = 2'd0;           // config write: {die, BCR(1)/RCR(0)}
 reg         cpass = 1'b0;         // 0 asynchronous form (ST_CFG), 1 clocked form (ST_SCFG)
 reg         clk_run = 1'b0;
@@ -101,36 +106,18 @@ reg         last = 1'b0, smp = 1'b0, cur_we = 1'b0, cur_we_req = 1'b0;
 // the request on the pins (and the rest of a split read)
 reg         act_busy = 1'b0;
 reg  [22:0] act_adr = 23'd0;      // halfword address of the next word
-reg  [10:0] act_cnt = 11'd0;      // read words still to fetch
-reg  [63:0] act_din = 64'd0;
-reg  [7:0]  act_be = 8'd0;
-reg  [2:0]  w_cur = 3'd0;         // write: next word lane
-reg  [2:0]  w_rem = 3'd0;         // write: words left
-
-reg  [63:0] shift = 64'd0;
-reg  [1:0]  wcap = 2'd0;
+reg   [9:0] act_cnt = 10'd0;      // read words still to fetch
+reg         w_cur = 1'b0;         // write: next word
+reg   [1:0] w_rem = 2'd0;         // write: words left
+reg         smp_last = 1'b0;      // the word being sampled ends the request
 
 wire        row_end = &act_adr[ROW_LOG2-1:0];
 wire        busy_i  = rst_pend || !(st == ST_IDLE && ph && !act_busy);
-assign busy = busy_i && !dout_ready;
+assign busy = busy_i && !rlast;
 assign idle = (st == ST_IDLE) && !act_busy;
 wire        take_bus = !busy_i && (rd || we);
 
 wire [15:0] cfg_val = cop[0] ? BCR_SYNC : RCR_ALL;
-
-// byte-lane helpers for a write beat
-function automatic [2:0] first_lane(input [7:0] b);
-	first_lane = |b[7:6] ? 3'd0 : |b[5:4] ? 3'd1 : |b[3:2] ? 3'd2 : 3'd3;
-endfunction
-function automatic [2:0] last_lane(input [7:0] b);
-	last_lane = |b[1:0] ? 3'd3 : |b[3:2] ? 3'd2 : |b[5:4] ? 3'd1 : 3'd0;
-endfunction
-function automatic [15:0] lane_word(input [63:0] d, input [2:0] l);
-	lane_word = d >> (16 * (3 - l));
-endfunction
-function automatic [1:0] lane_mask(input [7:0] b, input [2:0] l);
-	lane_mask = b >> (2 * (3 - l));
-endfunction
 
 task automatic pins_idle;
 	begin
@@ -148,14 +135,13 @@ task automatic launch;
 		else begin
 			// new request from the port
 			w = we;
-			adr = {addr, 2'b00} + (we ? {20'd0, first_lane(be)} : 23'd0);
+			adr = addr;
 			act_adr <= adr; act_busy <= 1'b1; cur_we_req <= we;
-			act_din <= din; act_be <= be;
-			act_cnt <= {1'b0, burstcnt, 2'b00};
-			w_cur <= first_lane(be); w_rem <= last_lane(be) - first_lane(be) + 3'd1;
+			act_cnt <= cnt;
+			w_cur <= 1'b0; w_rem <= cnt[1:0];
 		end
 		cur_we <= w;
-		st <= ST_LAT; tmr <= 13'd1; last <= 1'b0;
+		st <= ST_LAT; tmr <= 4'd1; last <= 1'b0;
 		p_ce_n <= adr[22] ? 2'b01 : 2'b10;
 		p_adv_n <= 1'b0; p_we_n <= !w; p_oe_n <= 1'b1; p_oe <= 1'b1;
 		p_a <= adr[21:16]; p_dq <= adr[15:0];
@@ -165,7 +151,7 @@ endtask
 // after a configuration-register write (F edge)
 task automatic cfg_next;
 	begin
-		tmr <= 13'd0;
+		tmr <= 4'd0;
 		cop <= cop + 2'd1;
 		if (rst_pend) begin st <= ST_INIT; clk_run <= 1'b0; end
 		else if (cop == 2'd3) begin
@@ -180,19 +166,16 @@ endtask
 always @(posedge clk) begin
 	ph <= !ph;
 	rst_pend <= rst_pend || reset;
-	dout_ready <= 1'b0;
+	rlast <= 1'b0;
+	rvalid <= 1'b0;
 
 	if (!ph) begin
 		// ---- R edge: the chip clock rises; read capture
 		p_clk <= clk_run;
 		smp <= 1'b0;
 		if (smp) begin
-			shift <= {shift[47:0], cram_dq_in};
-			wcap <= wcap + 2'd1;
-			if (wcap == 2'd3) begin
-				dout <= {shift[47:0], cram_dq_in};
-				if (!rst_pend && !reset) dout_ready <= 1'b1;
-			end
+			rdata <= cram_dq_in;
+			if (!rst_pend && !reset) begin rvalid <= 1'b1; rlast <= smp_last; end
 		end
 	end else begin
 		// ---- F edge: the chip clock falls; every other pin changes here
@@ -200,18 +183,18 @@ always @(posedge clk) begin
 
 		case (st)
 		ST_INIT: begin
-			clk_run <= 1'b0; act_busy <= 1'b0; p_cre <= 1'b0; wcap <= 2'd0;
+			clk_run <= 1'b0; act_busy <= 1'b0; p_cre <= 1'b0;
 			pins_idle();
-			tmr <= reset ? 13'd0 : tmr + 13'd1;
-			if (!reset && tmr == 13'(INIT_SLOTS)) begin
-				st <= ST_CFG; tmr <= 13'd0; cop <= 2'd0; cpass <= 1'b0; rst_pend <= 1'b0;
+			if (INIT_US != 0) itmr <= reset ? 13'd0 : itmr + 13'd1;
+			if (!reset && (INIT_US == 0 ? init_go : itmr == 13'(INIT_SLOTS))) begin
+				st <= ST_CFG; tmr <= 4'd0; cop <= 2'd0; cpass <= 1'b0; rst_pend <= 1'b0;
 			end
 		end
 
 		// asynchronous configuration-register write, clock stopped: slot 0 CRE high, 1 CE#/ADV# low
 		// with the value on A and DQ, 2-5 WE# low (4 slots = 70 ns at 114.5 MHz), 7 CE# high, 8 CRE low
 		ST_CFG: begin
-			tmr <= tmr + 13'd1;
+			tmr <= tmr + 4'd1;
 			case (tmr[3:0])
 			4'd0: p_cre <= 1'b1;
 			4'd1: begin
@@ -230,7 +213,7 @@ always @(posedge clk) begin
 		// clocked configuration-register write: slot 0 CRE high, 1 CE#/ADV#/WE# low with the value
 		// on A and DQ (sampled at the next chip edge), 2 ADV#/WE# high, 10 CE# high, 11 CRE low
 		ST_SCFG: begin
-			tmr <= tmr + 13'd1;
+			tmr <= tmr + 4'd1;
 			case (tmr[3:0])
 			4'd0: p_cre <= 1'b1;
 			4'd1: begin
@@ -248,32 +231,32 @@ always @(posedge clk) begin
 		ST_IDLE: begin
 			if (act_busy && rst_pend && !cur_we_req) act_busy <= 1'b0;   // drop reads under reset
 			else if (act_busy || take_bus) launch();
-			else if (rst_pend) begin st <= ST_INIT; tmr <= 13'd0; clk_run <= 1'b0; end
+			else if (rst_pend) begin st <= ST_INIT; tmr <= 4'd0; clk_run <= 1'b0; end
 		end
 
 		ST_LAT: begin
 			p_adv_n <= 1'b1; p_we_n <= 1'b1;
-			if (!cur_we) begin p_oe <= 1'b0; if (tmr >= 13'(OE_SLOT)) p_oe_n <= 1'b0; end
-			tmr <= tmr + 13'd1;
-			if (tmr == 13'((cur_we ? WR_FIRST : RD_FIRST) - 1)) st <= ST_DATA;
+			if (!cur_we) begin p_oe <= 1'b0; if (tmr >= 4'(OE_SLOT)) p_oe_n <= 1'b0; end
+			tmr <= tmr + 4'd1;
+			if (tmr == 4'((cur_we ? WR_FIRST : RD_FIRST) - 1)) st <= ST_DATA;
 		end
 
 		ST_DATA: begin
 			if (!cur_we) begin
 				if (last) begin pins_idle(); st <= ST_IDLE; end
 				else begin
-					smp <= 1'b1;
-					act_adr <= act_adr + 23'd1; act_cnt <= act_cnt - 11'd1;
-					if (act_cnt == 11'd1) act_busy <= 1'b0;
-					if (act_cnt == 11'd1 || row_end || rst_pend) last <= 1'b1;
+					smp <= 1'b1; smp_last <= (act_cnt == 10'd1);
+					act_adr <= act_adr + 23'd1; act_cnt <= act_cnt - 10'd1;
+					if (act_cnt == 10'd1) act_busy <= 1'b0;
+					if (act_cnt == 10'd1 || row_end || rst_pend) last <= 1'b1;
 				end
 			end else begin
-				if (w_rem == 3'd0) begin
+				if (w_rem == 2'd0) begin
 					pins_idle(); act_busy <= 1'b0; st <= ST_IDLE;
 				end else begin
-					p_dq <= lane_word(act_din, w_cur);
-					p_bm_n <= ~lane_mask(act_be, w_cur);
-					w_cur <= w_cur + 3'd1; w_rem <= w_rem - 3'd1;
+					p_dq <= w_cur ? din[15:0] : din[31:16];
+					p_bm_n <= ~(w_cur ? be[1:0] : be[3:2]);
+					w_cur <= 1'b1; w_rem <= w_rem - 2'd1;
 				end
 			end
 		end

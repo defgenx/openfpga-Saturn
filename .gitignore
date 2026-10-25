@@ -76,3 +76,10 @@ sizing/scup/*/*.log
 sizing/scup/*.out
 sizing/scup/*/
 !sizing/scup/*.sh
+sizing/mem/snap/
+sizing/mem/db/
+sizing/mem/incremental_db/
+sizing/mem/out_*/
+sizing/mem/m_*.q*
+sizing/mem/*.log
+sizing/mem/*.out

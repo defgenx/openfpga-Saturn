@@ -11,14 +11,15 @@ module psram_bench #(
 	input  wire        clk,
 	input  wire        reset,
 	output wire        busy,
-	input  wire [20:0] addr,
-	input  wire  [7:0] burstcnt,
+	input  wire [22:0] addr,
+	input  wire  [9:0] cnt,
 	input  wire        rd,
 	input  wire        we,
-	input  wire [63:0] din,
-	input  wire  [7:0] be,
-	output wire [63:0] dout,
-	output wire        dout_ready,
+	input  wire [31:0] din,
+	input  wire  [3:0] be,
+	output wire [15:0] rdata,
+	output wire        rvalid,
+	output wire        rlast,
 	output wire        idle,
 	output wire [31:0] m_err, m_rd, m_wr, m_bursts, m_cel, m_xrow
 );
@@ -26,8 +27,8 @@ module psram_bench #(
 wire [21:16] a; wire [15:0] dq_out, dq_in; wire dq_oe, cclk, adv_n, cre, ce0_n, ce1_n, oe_n, we_n, ub_n, lb_n;
 
 psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US)) ctl (
-	.clk(clk), .reset(reset), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
-	.dout(dout), .dout_ready(dout_ready), .idle(idle),
+	.clk(clk), .reset(reset), .init_go(1'b0), .busy(busy), .addr(addr), .cnt(cnt), .rd(rd), .we(we), .din(din), .be(be),
+	.rdata(rdata), .rvalid(rvalid), .rlast(rlast), .idle(idle),
 	.cram_a(a), .cram_dq_out(dq_out), .cram_dq_oe(dq_oe), .cram_dq_in(dq_in), .cram_clk(cclk),
 	.cram_adv_n(adv_n), .cram_cre(cre), .cram_ce0_n(ce0_n), .cram_ce1_n(ce1_n),
 	.cram_oe_n(oe_n), .cram_we_n(we_n), .cram_ub_n(ub_n), .cram_lb_n(lb_n)

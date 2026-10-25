@@ -86,7 +86,11 @@ sram_model #(.T_AA(`SRAMAA_PS)) smem (.a(a_d), .dq(dq), .oe_n(oen_d), .we_n(wen_
 reg [15:0] sh0 [0:90111];
 reg [15:0] sh1 [0:90111];
 integer errs = 0, i;
-initial for (i = 0; i < 90112; i = i + 1) begin sh0[i] = 16'h0; sh1[i] = 16'h0; fb.m1[i] = 16'h0; smem.mem[16384 + i] = 16'h0; end
+// FB0 at SRAM word 16384, the FB1 tail (index 65536 ..) at 16384 + 90112
+initial for (i = 0; i < 90112; i = i + 1) begin
+	sh0[i] = 16'h0; sh1[i] = 16'h0; smem.mem[16384 + i] = 16'h0;
+	if (i < 65536) fb.m1[i] = 16'h0; else smem.mem[106496 + i - 65536] = 16'h0;
+end
 
 function automatic [17:1] vaddr(input [8:0] x, input [7:0] y);   // VDP1 FBn_A for pixel (x,y), normal mode
 	vaddr = {y[7:0], x[8:0]};
@@ -116,6 +120,10 @@ task automatic draw_w(input integer fb_sel, input [8:0] x, input [7:0] y, input 
 			if (fb_sel == 0) sh0[idx_of(x, y)] = old; else sh1[idx_of(x, y)] = old;
 		end
 	end
+endtask
+
+task automatic draw_w0(input [8:0] x, input [7:0] y, input [15:0] d);
+	begin draw_w(0, x, y, d, 2'b11); end
 endtask
 
 task automatic draw_r(input integer fb_sel, input [8:0] x, input [7:0] y);
@@ -208,7 +216,7 @@ initial begin
 	t_start = $time;
 	for (t = 0; t < 2000; t = t + 1) draw_w(1, t % 352, (t / 352) % 256, $urandom, 2'b11);
 	t_end = $time;
-	$display("tb_fb: A draw FB1 (M10K): 2000 writes in %0d ns = %0d ns per pixel", (t_end - t_start) / 1000, (t_end - t_start) / 2000000);
+	$display("tb_fb: A draw FB1 (M10K + tail): 2000 writes in %0d ns = %0d ns per pixel", (t_end - t_start) / 1000, (t_end - t_start) / 2000000);
 	repeat (200) @(posedge clk_sys);
 	for (t = 0; t < 300; t = t + 1) begin draw_r(0, $urandom % 352, $urandom % 256); draw_r(1, $urandom % 352, $urandom % 256); end
 	$display("tb_fb: A draw checks done, errors %0d", errs);
@@ -269,6 +277,96 @@ initial begin
 	end
 	$display("tb_fb: C vberase: 30000 writes at 1 per 2 clk_sys with %0d CD accesses, FIFO drops %0d, errors %0d, CD read errors %0d",
 	         cd_n, fb_drop, errs - pass, cd_err);
+
+	// ---- B2: FB1 is the display buffer, tail columns 256..351 come from the SRAM
+	pass = errs; lat_max = 0; lat_n = 0;
+	for (by = 0; by < 4; by = by + 1) for (bx = 250; bx < 352; bx = bx + 1) begin
+		rd16 = $urandom; sh1[idx_of(bx, by)] = rd16;
+		if (bx < 256) fb.m1[idx_of(bx, by)] = rd16; else smem.mem[106496 + idx_of(bx, by) - 65536] = rd16;
+	end
+	for (by = 0; by < 4; by = by + 1) begin
+		for (bx = 250; bx < 352; bx = bx + 1) begin
+			@(posedge clk_sys);
+			fb1_a <= vaddr(bx, by);
+			expq = sh1[idx_of(bx, by)];
+			begin : waitq1
+				integer c;
+				for (c = 1; c <= 8; c = c + 1) begin
+					@(posedge clk_sys);
+					if (fb1_q === expq) begin
+						if (c > lat_max) lat_max = c;
+						lat_n = lat_n + 1;
+						disable waitq1;
+					end
+				end
+				errs = errs + 1; if (errs - pass < 10) $display("%0t FB1 display (%0d,%0d) q %h exp %h not valid in 8 clk_sys", $time, bx, by, fb1_q, expq);
+			end
+			fb1_we <= 2'b11; fb1_d <= {1'b1, bx[7:0], by[6:0]};
+			@(posedge clk_sys);
+			fb1_we <= 2'b00;
+			sh1[idx_of(bx, by)] = {1'b1, bx[7:0], by[6:0]};
+			if (fb1_q !== expq) begin errs = errs + 1; if (errs - pass < 10) $display("%0t erase disturbed FB1_Q (%0d,%0d)", $time, bx, by); end
+			repeat (3) @(posedge clk_sys);
+		end
+	end
+	$display("tb_fb: B2 FB1 display (M10K to tail boundary at column 256): valid within %0d clk_sys (worst of %0d), errors %0d", lat_max, lat_n, errs - pass);
+
+	// ---- D: VBlank erase of the FB1 tail (one write per 2 clk_sys) while FB0 is drawn into with the FB_RDY protocol,
+	// and the other way round: FB0 erase while FB1 tail draws
+	pass = errs;
+	fork
+		begin : erase1
+			integer e;
+			for (e = 0; e < 20000; e = e + 1) begin
+				@(posedge clk_sys);
+				fb1_a <= vaddr(256 + (e % 96), (e / 96) % 208);
+				fb1_d <= 16'h2000 + e; fb1_we <= 2'b11;
+				sh1[idx_of(256 + (e % 96), (e / 96) % 208)] = 16'h2000 + e;
+				@(posedge clk_sys);
+				fb1_we <= 2'b00;
+			end
+		end
+		begin : draw0
+			integer d;
+			for (d = 0; d < 3000; d = d + 1) begin
+				px = $urandom % 352; py = $urandom % 256;
+				if ($urandom % 3) draw_w0(px, py, $urandom); else draw_r(0, px, py);
+			end
+		end
+	join
+	repeat (2000) @(posedge clk_sys);
+	for (t = 0; t < 20000; t = t + 53) begin
+		bx = 256 + (t % 96); by = (t / 96) % 208;
+		@(posedge clk_sys); fb1_a <= vaddr(bx, by);
+		repeat (10) @(posedge clk_sys);
+		if (fb1_q !== sh1[idx_of(bx, by)]) begin errs = errs + 1; if (errs - pass < 10) $display("D tail erase (%0d,%0d) got %h exp %h", bx, by, fb1_q, sh1[idx_of(bx, by)]); end
+	end
+	fork
+		begin : erase0
+			integer e;
+			for (e = 0; e < 20000; e = e + 1) begin
+				@(posedge clk_sys);
+				fb0_a <= vaddr(e % 352, (e / 352) % 56);
+				fb0_d <= 16'h6000 + e; fb0_we <= 2'b11;
+				sh0[idx_of(e % 352, (e / 352) % 56)] = 16'h6000 + e;
+				@(posedge clk_sys);
+				fb0_we <= 2'b00;
+			end
+		end
+		begin : draw1
+			integer d;
+			for (d = 0; d < 3000; d = d + 1) begin
+				px = 256 + $urandom % 96; py = 100 + $urandom % 156;
+				if ($urandom % 3) draw_w(1, px, py, $urandom, 2'b11); else draw_r(1, px, py);
+			end
+		end
+	join
+	repeat (2000) @(posedge clk_sys);
+	for (t = 0; t < 20000; t = t + 53) begin
+		bx = t % 352; by = (t / 352) % 56;
+		draw_r(0, bx, by);
+	end
+	$display("tb_fb: D concurrent erase and draw on both SRAM streams: FIFO drops %0d, errors %0d", fb_drop, errs - pass);
 
 	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes)", s_err, s_rd, s_wr);
 	if (errs == 0 && cd_err == 0 && fb_drop == 0 && s_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");

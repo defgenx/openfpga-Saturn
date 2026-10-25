@@ -38,13 +38,14 @@ reg  [20:1] bsram_addr = 0; wire [15:0] bsram_dout; reg [15:0] bsram_din = 0; re
 reg  [23:2] ld_addr = 0;    reg [31:0] ld_data = 0; reg ld_wr = 0; wire ld_busy;
 reg  [13:1] cdbuf_waddr = 0; reg [15:0] cdbuf_wdata = 0; reg cdbuf_wwr = 0; wire cdbuf_wbusy;
 
-wire p0_busy, p0_rd, p0_we, p0_dout_ready, p1_busy, p1_rd, p1_we, p1_dout_ready;
-wire [20:0] p0_addr, p1_addr;  wire [7:0] p0_burst, p1_burst, p0_be, p1_be;  wire [63:0] p0_din, p1_din, p0_dout, p1_dout;
+wire p0_busy, p0_rd, p0_we, p0_rlast, p0_rvalid, p1_busy, p1_rd, p1_we, p1_rlast, p1_rvalid;
+wire [22:0] p0_addr, p1_addr;  wire [9:0] p0_cnt, p1_cnt;  wire [3:0] p0_be, p1_be;  wire [31:0] p0_din, p1_din;
+wire [15:0] p0_rdata, p1_rdata;
 
 ddram_pocket dut (
 	.clk(clk), .rst(rst),
-	.p0_busy(p0_busy), .p0_addr(p0_addr), .p0_burst(p0_burst), .p0_rd(p0_rd), .p0_we(p0_we), .p0_din(p0_din), .p0_be(p0_be), .p0_dout(p0_dout), .p0_dout_ready(p0_dout_ready),
-	.p1_busy(p1_busy), .p1_addr(p1_addr), .p1_burst(p1_burst), .p1_rd(p1_rd), .p1_we(p1_we), .p1_din(p1_din), .p1_be(p1_be), .p1_dout(p1_dout), .p1_dout_ready(p1_dout_ready),
+	.p0_busy(p0_busy), .p0_addr(p0_addr), .p0_cnt(p0_cnt), .p0_rd(p0_rd), .p0_we(p0_we), .p0_din(p0_din), .p0_be(p0_be), .p0_rdata(p0_rdata), .p0_rvalid(p0_rvalid), .p0_rlast(p0_rlast),
+	.p1_busy(p1_busy), .p1_addr(p1_addr), .p1_cnt(p1_cnt), .p1_rd(p1_rd), .p1_we(p1_we), .p1_din(p1_din), .p1_be(p1_be), .p1_rdata(p1_rdata), .p1_rvalid(p1_rvalid), .p1_rlast(p1_rlast),
 	.ramh_addr(ramh_addr), .ramh_dout(ramh_dout), .ramh_din(ramh_din), .ramh_rd(ramh_rd), .ramh_wr(ramh_wr), .ramh_busy(ramh_busy),
 	.cdram_addr(cdram_addr), .cdram_dout(cdram_dout), .cdram_din(cdram_din), .cdram_rd(cdram_rd), .cdram_wr(cdram_wr), .cdram_busy(cdram_busy),
 	.raml_addr(raml_addr), .raml_dout(raml_dout), .raml_din(raml_din), .raml_rd(raml_rd), .raml_wr(raml_wr), .raml_busy(raml_busy),
@@ -62,12 +63,12 @@ ddram_pocket dut (
 wire [31:0] m0_err, m0_rd, m0_wr, m0_bursts, m0_cel, m0_xrow, m1_err, m1_rd, m1_wr, m1_bursts, m1_cel, m1_xrow;
 wire i0, i1;
 psram_bench #(.INIT_US(INIT_US)) ps0 (
-	.clk(clk), .reset(rst), .busy(p0_busy), .addr(p0_addr), .burstcnt(p0_burst), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
-	.dout(p0_dout), .dout_ready(p0_dout_ready), .idle(i0),
+	.clk(clk), .reset(rst), .busy(p0_busy), .addr(p0_addr), .cnt(p0_cnt), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
+	.rdata(p0_rdata), .rvalid(p0_rvalid), .rlast(p0_rlast), .idle(i0),
 	.m_err(m0_err), .m_rd(m0_rd), .m_wr(m0_wr), .m_bursts(m0_bursts), .m_cel(m0_cel), .m_xrow(m0_xrow));
 psram_bench #(.INIT_US(INIT_US)) ps1 (
-	.clk(clk), .reset(rst), .busy(p1_busy), .addr(p1_addr), .burstcnt(p1_burst), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
-	.dout(p1_dout), .dout_ready(p1_dout_ready), .idle(i1),
+	.clk(clk), .reset(rst), .busy(p1_busy), .addr(p1_addr), .cnt(p1_cnt), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
+	.rdata(p1_rdata), .rvalid(p1_rvalid), .rlast(p1_rlast), .idle(i1),
 	.m_err(m1_err), .m_rd(m1_rd), .m_wr(m1_wr), .m_bursts(m1_bursts), .m_cel(m1_cel), .m_xrow(m1_xrow));
 
 
@@ -158,13 +159,15 @@ task automatic raml_write(input [21:1] a, input [15:0] d, input [1:0] be);
 		@(posedge clk);
 	end
 endtask
-task automatic bios_load(input [18:1] a, input [15:0] d);
+task automatic bios_load(input [18:1] a, input [15:0] d, input [15:0] d2);
 	begin
+		// the BIOS arrives through the loader port, two words per 32 bit write (a is even)
 		@(posedge clk);
-		while (bios_busy) @(posedge clk);
-		bios_addr <= {8'b0, a}; bios_din <= d; bios_wr <= 2'b11;
-		@(posedge clk); bios_wr <= 2'b00;
+		while (ld_busy) @(posedge clk);
+		ld_addr <= a[18:2]; ld_data <= {d, d2}; ld_wr <= 1'b1;
+		@(posedge clk); ld_wr <= 1'b0;
 		sh_raml[{3'b000, a}] = d; sv_raml[{3'b000, a}] = 1;
+		sh_raml[{3'b000, a} + 1] = d2; sv_raml[{3'b000, a} + 1] = 1;
 		@(posedge clk);
 	end
 endtask
@@ -279,7 +282,7 @@ task automatic cdb_read(input [13:1] a);
 	end
 endtask
 
-// loader: 32 bit writes into the cartridge window (PSRAM0 byte 0x500000 +), the bridge's bursty word stream
+// loader: 32 bit writes into the cartridge window (PSRAM0 byte 0x900000 +), the bridge's bursty word stream
 
 // ---------------------------------------------------------------- stimulus
 integer n_ops = 400, nq = 200, k, r;
@@ -297,7 +300,7 @@ initial begin
 	repeat (INIT_US * 115 + 3000) @(posedge clk);
 
 	// BIOS load, then quiet-phase WRAM-H measurement
-	for (k = 0; k < 2048; k = k + 1) bios_load(k, $urandom);
+	for (k = 0; k < 2048; k = k + 2) bios_load(k, $urandom, $urandom);
 	for (k = 0; k < 4096; k = k + 1) ramh_write(k, $urandom, 4'hF);
 	repeat (4000) @(posedge clk);                       // let the posted writes drain
 	phase = 0;
@@ -347,10 +350,10 @@ initial begin
 		end
 		// loader: 32 bit writes into the cartridge window upper half at the bridge pace
 		begin
-			ldbase = 22'h100000;                                // PSRAM0 byte 0x500000 = cart window + 0x100000
+			ldbase = 22'h100000;                                // PSRAM0 byte 0x900000 = cart window + 0x100000
 			for (kl = 0; kl < n_ops * 4; kl = kl + 1) begin
 				@(posedge clk); while (ld_busy) @(posedge clk);
-				ld_addr <= (24'h500000 >> 2) + kl; ld_data <= {16'hA000 + kl[15:0], 16'h5000 + kl[15:0]}; ld_wr <= 1'b1;
+				ld_addr <= (24'h900000 >> 2) + kl; ld_data <= {16'hA000 + kl[15:0], 16'h5000 + kl[15:0]}; ld_wr <= 1'b1;
 				@(posedge clk); ld_wr <= 1'b0;
 				repeat (30) @(posedge clk);                    // a bridge word every ~430 ns
 			end

@@ -5,7 +5,7 @@
 // writes to PSRAM0 byte addresses (docs/memory.md):
 //   BIOS         0x000000 + offset            two image words per write, as the file reads (big endian words)
 //   backup RAM   0x100000 + 2 * offset        one byte -> one image word {8'hFF, byte}: 4 bytes = 2 writes
-//   backup cart  0x400000 + 2 * offset        same expansion (the cartridge window base)
+//   backup cart  0x800000 + 2 * offset        same expansion (the cartridge window base)
 // LD_LITTLE=1: ld_data[7:0] is the first file byte (bridge_endian_little set); 0: ld_data[31:24] is.
 //
 // `loading` is high while words are in flight, in the clk_ram domain; hold the Saturn in reset with it.
@@ -91,7 +91,7 @@ always @(posedge clk) begin
 			st <= 2'd0;
 		end else begin
 			// byte -> {FF, byte}; two bytes per 32 bit write
-			o_addr <= (c_sel[1] ? 24'h100000 : 24'h400000) + {c_off[22:0], 1'b0} + (second ? 24'd4 : 24'd0) >> 2;
+			o_addr <= (c_sel[1] ? 22'h040000 : 22'h200000) | {c_off[22:2], second};   // base + 2 * offset + 4 * second, as word index (no overlap: offsets < 512 KB)
 			o_data <= second ? {8'hFF, b2, 8'hFF, b3} : {8'hFF, b0, 8'hFF, b1};
 			if (second) st <= 2'd0; else begin second <= 1'b1; st <= 2'd3; end
 		end
