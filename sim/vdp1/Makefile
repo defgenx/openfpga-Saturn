@@ -8,15 +8,23 @@ N    ?= 40
 SEED ?= 1
 PPM  ?= 6
 VFLAGS = --cc --exe --build -j 4 --top-module diff_top -Mdir obj -Wno-fatal -Wno-lint -Wno-style \
-         -Wno-PROCASSWIRE -Wno-COMBDLY -Wno-WIDTH -Wno-UNOPTFLAT --x-initial 0 --x-assign 0 -O3 \
+         $(VFLAGS_RF) -Wno-PROCASSWIRE -Wno-COMBDLY -Wno-WIDTH -Wno-UNOPTFLAT --x-initial 0 --x-assign 0 -O3 \
          -CFLAGS "-O2 -std=c++17" $(VEXTRA)
 SRC = gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1P_pkg.sv $(DUT)/VDP1P.sv altdpram.v gen/diff_top.sv
 
 all: run divtest
 
-gen/REF_VDP1.sv: $(REF)/VDP1.sv
+# ROWFLOOR=1 (default): the golden copy gets the same timing changes as VDP1P under POCKET_VDP1P_ROWFLOOR (see docs/vdp1-rewrite.md)
+ROWFLOOR ?= 1
+ROWFLOOR_PATCH = rowfloor_patch.pl
+ifeq ($(ROWFLOOR),1)
+VFLAGS_RF = -DPOCKET_VDP1P_ROWFLOOR
+else
+VFLAGS_RF = -DPOCKET_VDP1P_NO_ROWFLOOR
+endif
+gen/REF_VDP1.sv: $(REF)/VDP1.sv $(ROWFLOOR_PATCH)
 	@mkdir -p gen
-	perl -pe 's/\bVDP1/REF_VDP1/g' $< > $@
+	perl -pe 's/\bVDP1/REF_VDP1/g' $< | ROWFLOOR=$(ROWFLOOR) perl $(ROWFLOOR_PATCH) > $@
 gen/REF_VDP1_pkg.sv: $(REF)/VDP1_pkg.sv
 	@mkdir -p gen
 	perl -pe 's/\bVDP1/REF_VDP1/g' $< > $@

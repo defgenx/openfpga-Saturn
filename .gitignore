@@ -65,3 +65,7 @@ sizing/sh2p/probe/db/
 sizing/sh2p/alu/db/
 sizing/sh2p/probe/incremental_db/
 sizing/sh2p/alu/incremental_db/
+sizing/vdp1p/ab/
+sizing/vdp1p/ab_*/
+sizing/vdp1p/x2f/
+sizing/vdp1p/g4/
