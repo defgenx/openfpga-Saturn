@@ -345,3 +345,31 @@ module VDP2P2_DADD #(
 	assign S = A + B;
 `endif
 endmodule
+
+// Line buffer valid bits: three bits per dot. Port A reads/writes for the insertion pipeline; port B reads for scan-out
+// and clears the word one clock after the read.
+module VDP2P2_LBV (
+	input         CLK,
+	input         AWE,
+	input  [ 9:0] AWA,
+	input  [ 2:0] AWD,
+	input  [ 9:0] ARA,
+	output [ 2:0] AQ,
+	input  [ 9:0] BRA,
+	output [ 2:0] BQ,
+	input         BWE,
+	input  [ 9:0] BWA
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [2:0] mem [0:1023];
+	reg [2:0] qa = '0, qb = '0;
+	always @(posedge CLK) begin
+		if (AWE) mem[AWA] <= AWD;
+		qa <= mem[ARA];
+	end
+	always @(posedge CLK) begin
+		if (BWE) mem[BWA] <= 3'b000;
+		qb <= mem[BRA];
+	end
+	assign AQ = qa;
+	assign BQ = qb;
+endmodule

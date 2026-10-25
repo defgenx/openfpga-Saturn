@@ -981,6 +981,37 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	wire [11: 0] R_CY = VA4.RxY[R_CSET][11:0];
 	wire [19: 1] R_CHA = (!UR1 && RSxREG[0].BMEN) ? RxBMAddr(RPxREG[R_CSET].MP, R_CX, R_CY, RSxREG[0].CHCN, RSxREG[0].BMSZ) :
 	                                                RxCHAddr(RBG_PN_PIPE[1][UR1], R_CX, R_CY, RSxREG[UR1].CHCN, RSxREG[UR1].CHSZ);
+	//Character access record: the pattern name attributes, display-order word count and cell the address was built from.
+	//It follows the access to the word arrival (two dot events) in a small tap.
+	wire [ 1: 0] RC_ZM    = {NSxREG[{1'b0,UL[0]}].ZMQT, NSxREG[{1'b0,UL[0]}].ZMQT | NSxREG[{1'b0,UL[0]}].ZMHF};
+	wire [ 2: 0] RC_CNT01 = NBG_CH_CNT[{1'b0,UL[0]}];
+	wire         RC_BM    = !UL[1] && NSxREG[{1'b0,UL[0]}].BMEN;
+	bit  [ 1: 0] RC_OFS;
+	always_comb begin
+		case (NSxREG[{1'b0,UL[0]}].CHCN)
+			3'b000:  RC_OFS = RC_CNT01[1:0] & RC_ZM;
+			3'b001:  RC_OFS = {1'b0, RC_CNT01[1] & RC_ZM[0]};
+			default: RC_OFS = 2'd0;
+		endcase
+	end
+	PN_t         RC_PN;
+	always_comb begin
+		if (UL[1]) RC_PN = NSxREG[{1'b1,UL[0]}].CHCN == 3'b001 ? NC_PN23[NBG_CH_CNT[{1'b1,UL[0]}][0]] : NC_PN23[0];
+		else       RC_PN = NC_PN[RC_OFS];
+	end
+	wire [ 9: 0] RC_ATT   = RC_BM ? {NSxREG[{1'b0,UL[0]}].BMP,4'b0000,1'b0,NSxREG[{1'b0,UL[0]}].BMPR,NSxREG[{1'b0,UL[0]}].BMCC} : {RC_PN.PALN,RC_PN.HF,RC_PN.PR,RC_PN.CC};
+	wire [ 2: 0] RC_CNT   = UL[1] ? NBG_CH_CNT[{1'b1,UL[0]}] : (RC_BM ? NBG_BM_CNT[{1'b0,UL[0]}] : RC_CNT01);
+	wire [10: 0] RC_X     = NC_X + {(UL[1] || RC_BM) ? 2'd0 : RC_OFS, 3'b000};
+	wire [22: 0] REC      = {UL, RC_CNT, RC_ATT, RC_X[10:3]};
+	bit  [22: 0] RH[4];
+	always @(posedge CLK) begin
+		if (USEL == 2'd0) RH[0] <= REC;
+		if (USEL == 2'd1) RH[1] <= REC;
+		if (USEL == 2'd2) RH[2] <= REC;
+		if (DOT_CE_F)     RH[3] <= REC;
+	end
+	wire [91: 0] RECQ;
+	VDP2P2_DTAP #(.W(92),.K(2),.AW(3),.ML(1)) rec_tap(CLK, DOT_CE_R, {RH[3],RH[2],RH[1],RH[0]}, RECQ);
 	bit  [19: 1] UO;
 	always_comb begin
 		UO = '0;
@@ -2366,157 +2397,6 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	end
 
 	
-	//NBG cell data capture. The golden writes NBG_CDC/NBG_CDP for the four arrays in parallel at DOT_CE_R. Here the
-	//writes of the batch that the golden performs at the next DOT_CE_R are done one array per clock in the window
-	//after the previous event (inputs are stable then), through one lane network. The only reader of NBG_CDC/NBG_CDP
-	//is the cell boundary copy, which is moved one event earlier (see NDC_WE_E) so that it sees the same state.
-	bit  [ 2: 0] CSEQ;
-	bit          NHF1_HOLD;
-	always @(posedge CLK) begin
-		if (DOT_CE_R) CSEQ <= 3'd1;
-		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd5) ? 3'd0 : CSEQ + 3'd1;
-	end
-	wire         CVIS = CSEQ != 3'd0 && CSEQ != 3'd5;
-	wire [ 1: 0] CAI  = 2'd0 - CSEQ[1:0];   //1,2,3,4 -> 3,2,1,0
-	//Fetched character words: the golden loads NBG_CH[l] at DOT_CE_R from the bank buffers. The chains read them in the
-	//window before that event, so each word is loaded after its last reader (layer 3 after the visit of array 3, ...
-	//layer 0 after the visit of array 0) through one bank multiplexer; the bank buffers and BG2 are stable in the window.
-	wire [ 1: 0] CHL = 2'd1 - CSEQ[1:0];   //CSEQ 2,3,4,5 -> layer 3,2,1,0
-	wire [ 1: 0] CHS = BG2.NxCHS[CHL];
-	wire [31: 0] CHD = CHS == 2'd0 ? RA0_BUF : CHS == 2'd1 ? RA1_BUF : CHS == 2'd2 ? RB0_BUF : RB1_BUF;
-	always @(posedge CLK) if (CSEQ >= 3'd2 && BG2.NxCH[CHL]) NBG_CH[CHL] <= CHD;
-
-	//Array selection for the visited array CAI (the golden evaluates the four arrays in parallel; the visits are
-	//sequential, so only the selectors are computed): V_SL layer whose character word, count and enable are used,
-	//V_KL layer whose bitmap registers apply, V_EL/V_EH the pattern name entries of the low/high plane.
-	reg  [ 1: 0] V_SL, V_KL;
-	reg  [ 2: 0] V_EL, V_EH, V_CHCN;
-	reg          V_NEN;
-	always_comb begin
-		V_SL = 2'd0; V_KL = 2'd0; V_EL = 3'd0; V_EH = 3'd0; V_CHCN = 3'd0; V_NEN = 1'b0;
-		case (CAI)
-		2'd3: begin
-			if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
-				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 7; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
-			end else if (BG3.NxCH[1] && NSxREG[1].CHCN[1]) begin
-				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 7; V_CHCN = {1'b0,NSxREG[1].CHCN[1:0]}; V_NEN = BG3.NxCH[1];
-			end else if (BG3.NxCH[1] && ((NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) || (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF))) begin
-				V_SL = 1; V_KL = 1; V_EL = 5; V_EH = 7; V_CHCN = {2'b00,NSxREG[1].CHCN[0]}; V_NEN = BG3.NxCH[1];
-			end else begin
-				V_SL = 3; V_KL = 3; V_EL = 3; V_EH = 7; V_CHCN = {2'b00,NSxREG[3].CHCN[0]}; V_NEN = BG3.NxCH[3];
-			end
-		end
-		2'd2: begin
-			if (BG3.NxCH[0] && NSxREG[0].CHCN[2:1]) begin
-				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 6; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
-			end else if (BG3.NxCH[0] && ((NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) || (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF))) begin
-				V_SL = 0; V_KL = 0; V_EL = 4; V_EH = 6; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
-			end else begin
-				V_SL = 2; V_KL = 2; V_EL = 2; V_EH = 2; V_CHCN = {2'b00,NSxREG[2].CHCN[0]}; V_NEN = BG3.NxCH[2];
-			end
-		end
-		2'd1: begin
-			if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
-				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 5; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
-			end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b000 && (NSxREG[1].ZMHF || NSxREG[1].ZMQT)) begin
-				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = NSxREG[1].CHCN; V_NEN = BG3.NxCH[1] & (!BG3.NxCH_CNT[1][1] | (NSxREG[1].ZMHF & ~NSxREG[1].ZMQT));
-			end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
-				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = NSxREG[1].CHCN; V_NEN = BG3.NxCH[1];
-			end else begin
-				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = {1'b0,NSxREG[1].CHCN[1:0]}; V_NEN = BG3.NxCH[1];
-			end
-		end
-		default: begin
-			V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 4; V_CHCN = NSxREG[0].CHCN;
-			if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b000 && (NSxREG[0].ZMHF || NSxREG[0].ZMQT))
-				V_NEN = BG3.NxCH[0] & (!BG3.NxCH_CNT[0][1] | (NSxREG[0].ZMHF & ~NSxREG[0].ZMQT));
-			else if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF)
-				V_NEN = BG3.NxCH[0] & !BG3.NxCH_CNT[0][1];
-			else
-				V_NEN = BG3.NxCH[0];
-		end
-		endcase
-	end
-	wire         V_BM = NSxREG[V_KL].BMEN;
-	wire [ 6: 0] S_PL  = V_BM ? {NSxREG[V_KL].BMP,4'b0000} : PN4E[V_EL].PALN;
-	wire [ 6: 0] S_PH  = V_BM ? {NSxREG[V_KL].BMP,4'b0000} : PN4E[V_EH].PALN;
-	wire         S_PRL = V_BM ? NSxREG[V_KL].BMPR : PN4E[V_EL].PR;
-	wire         S_PRH = V_BM ? NSxREG[V_KL].BMPR : PN4E[V_EH].PR;
-	wire         S_CCL = V_BM ? NSxREG[V_KL].BMCC : PN4E[V_EL].CC;
-	wire         S_CCH = V_BM ? NSxREG[V_KL].BMCC : PN4E[V_EH].CC;
-	wire         S_HFL = V_BM ? 1'b0 : PN4E[V_EL].HF;
-	wire         S_HFH = V_BM ? 1'b0 : PN4E[V_EH].HF;
-	always @(posedge CLK) if (CSEQ == 3'd3) NHF1_HOLD <= S_HFL;
-	wire         S_HF16 = (CAI == 2'd3) ? NHF1_HOLD : S_HFL;
-	wire [ 2: 0] S_CNT = BG3.NxCH_CNT[V_SL][2:0];
-	wire [31: 0] S_CH  = NBG_CH[V_SL];
-	//write enables of the visited array (same conditions as the golden's per-array case statements)
-	wire         S_V   = CVIS & V_NEN & BG2.NxCH_EN[V_SL];
-	VDP2NSRegs_t S_R;
-	assign       S_R = NSxREG[CAI[0]];
-	wire         S_Z   = S_R.ZMQT && S_R.ON;
-	wire         S_K4H = CAI[1] ? (!S_CNT[2] && S_CNT[1:0] == 2'b11 && S_Z) : (S_CNT[0] && (S_R.ZMHF || S_R.ZMQT) && S_R.ON);
-	wire         S_K4L = CAI[1] ? (!S_CNT[2] && ((S_CNT[1:0] == 2'b00 && !S_Z) || (S_CNT[1:0] == 2'b10 && S_Z))) : !S_CNT;
-	wire         S_K8  = CAI[1] ? (!S_CNT[2] && ((S_CNT[1] == 1'b0 && !(S_R.CHCN == 3'b001 && S_R.ZMHF && S_R.ON)) || (S_CNT[1] == 1'b1 && S_R.ZMHF && S_R.ON))) : (!S_CNT[2] && !S_CNT[1]);
-	wire         S_E4H = S_V && V_CHCN == 3'b000 && S_K4H;
-	wire         S_E4L = S_V && V_CHCN == 3'b000 && !S_K4H && S_K4L;
-	wire         S_E8  = S_V && V_CHCN == 3'b001 && S_K8;
-	wire         S_E16 = S_V && (V_CHCN == 3'b010 || V_CHCN == 3'b011) && !S_CNT[2];
-	wire         S_E32 = S_V && V_CHCN == 3'b100;
-	//character parameter writes: the same conditions; 16 bits per dot write them for arrays 0 and 1, 32 bits per dot for array 0
-	wire         S_DPH = S_E4H;
-	wire         S_DPL = S_E4L | S_E8 | (S_E16 & ~CAI[1]) | (S_E32 & (CAI == 2'd0));
-	bit  [ 3: 0] IL[8], IH[8];
-	bit  [ 7: 0] EL, EH;
-	always_comb begin
-		bit [ 7: 0] B16, B32;
-		bit [ 1: 0] bi;
-		bit [ 2: 0] ni;
-		EL = '0; EH = '0;
-		for (int l = 0; l < 8; l++) begin
-			IL[l] = 4'h0; IH[l] = 4'h0;
-			if (S_E4H) begin
-				EH[l] = 1'b1;
-				ni = 3'(l) ^ {3{S_HFH}};
-				IH[l] = S_CH[31 - 4*ni -: 4];
-			end
-			if (S_E4L) begin
-				EL[l] = 1'b1;
-				ni = 3'(l) ^ {3{S_HFL}};
-				IL[l] = S_CH[31 - 4*ni -: 4];
-			end
-			if (S_E8 && l[2] == S_CNT[0]) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				bi = 2'(l) ^ {2{S_HFL}};
-				{IH[l],IL[l]} = S_CH[31 - 8*bi -: 8];
-			end
-			if (S_E16 && l[2:1] == S_CNT[1:0]) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				B16 = !CAI[1] ? ((l[0] ^ S_HF16) ? S_CH[7:0] : S_CH[23:16]) : ((l[0] ^ S_HF16) ? S_CH[15:8] : S_CH[31:24]);
-				{IH[l],IL[l]} = B16;
-			end
-			if (S_E32 && l[2:0] == S_CNT) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				B32 = CAI == 2'd0 ? S_CH[7:0] : CAI == 2'd1 ? S_CH[23:16] : CAI == 2'd2 ? S_CH[15:8] : S_CH[31:24];
-				{IH[l],IL[l]} = B32;
-			end
-		end
-	end
-	always @(posedge CLK) if (CVIS) begin
-		for (int l = 0; l < 8; l++) begin
-			if (EL[l]) NBG_CDC[CAI][l][3:0] <= IL[l];
-			if (EH[l]) NBG_CDC[CAI][l][7:4] <= IH[l];
-		end
-	end
-	//Character parameters (priority, colour calculation flag, palette number) of the cell being assembled: entry n=CAI is the
-	//low part (written when C_DPL), n+4 the high part (C_DPH). Words of 9 bits in two small RAMs.
-	wire [ 8: 0] CDP_LO_D = {S_PRL, S_CCL, S_PL};
-	wire [ 8: 0] CDP_HI_D = {S_PRH, S_CCH, S_PH};
-	wire [ 1: 0] CPP;
-	wire [ 8: 0] CDPA_LO_Q, CDPA_HI_Q;
-	VDP2P2_SDP #(2,9) cdpa_lo(CLK, S_DPL, CAI, CDP_LO_D, CPP, CDPA_LO_Q);
-	VDP2P2_SDP #(2,9) cdpa_hi(CLK, S_DPH, CAI, CDP_HI_D, CPP, CDPA_HI_Q);
-
 	//Pipeline taps: stage 2, 3 and 4 of the access pipelines are read back from block RAM (see VDP2P2_DTAP)
 	always_comb begin
 		for (int i=0; i<4; i++) begin
@@ -2581,7 +2461,7 @@ module VDP2P2 import VDP2P2_PKG::*; (
 		TAP2_D.va.RPA = VA_PIPE[0].RPA;  TAP2_D.va.RPB = VA_PIPE[0].RPB;  TAP2_D.va.RP_POS = VA_PIPE[0].RP_POS;
 		TAP2_D.bg.NxPN = BG0.NxPN;  TAP2_D.bg.NxCH = BG0.NxCH;  TAP2_D.bg.NxVS = BG0.NxVS;  TAP2_D.bg.NxCH_EN = '0;
 		for (int i=0; i<4; i++) begin
-			TAP2_D.bg.NxPNS[i] = BG0.NxPNS[i];  TAP2_D.bg.NxCHS[i] = BG0.NxCHS[i];  TAP2_D.bg.NxCH_EN[i] = BG0.NxCH_EN[i];
+			TAP2_D.bg.NxPNS[i] = BG0.NxPNS[i];  TAP2_D.bg.NxCHS[i] = BG0.NxCHS[i];  TAP2_D.bg.NxCH_EN[i] = E_CHEN[i];  TAP2_D.bg.NxCHC[i] = BG0.NxCH_CNT[i];
 		end
 		for (int i=0; i<2; i++) begin
 			TAP2_D.bg.NxPN_CNT[i] = BG0.NxPN_CNT[i];  TAP2_D.bg.NxVSS[i] = BG0.NxVSS[i];
@@ -2618,236 +2498,14 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	end
 	assign VA4 = TAP4_Q.va;  assign PN4E = TAP4_Q.pn;  assign RPN4E = TAP4_Q.rpn;  assign RTP4 = TAP4_Q.rtp;
 	
-	//Dots data
-	bit  [ 1: 0] NDC_P;
-	bit [31: 0] RxDC[2];
+	//Dots data: RBG dot registers (the NBG cells are decoded when they arrive)
+	bit [31:0] RxDC[2];
 	CellParam_t RxCDP[2];
-	always @(posedge CLK or negedge RST_N) begin
-		if (!RST_N) begin
-			// synopsys translate_off
-			
-			// synopsys translate_on
-		end
-		else if (DOT_CE_R) begin
-			if ((CELLX[2:0] | {HRES[1],2'b00}) == 3'd7) begin
-				NDC_P <= NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
-			end
-		end
-	end
 	assign RxDC[0] = {RBG_DC[0][3],RBG_DC[0][1],RBG_DC[0][2],RBG_DC[0][0]};
 	assign RxCDP[0] = RBG_CDP[0];
 	assign RxDC[1] = {RBG_DC[1][3],RBG_DC[1][1],RBG_DC[1][2],RBG_DC[1][0]};
 	assign RxCDP[1] = RBG_CDP[1];
-	
-	
-	always @(posedge CLK or negedge RST_N) begin
-		ScrollData_t X[4];
-		
-		if (!RST_N) begin
-			// synopsys translate_off
-			NCX <= '{4{SCRLD_NULL}};
-			// synopsys translate_on
-		end
-		else begin
-			X[0] = NCXN[0];
-			X[1] = NCXN[1];
-			X[2] = NCX[2] + 19'h00100;
-			X[3] = NCX[3] + 19'h00100;
-			if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
-				if (DOT_FETCH) begin
-					NCX[0] <= X[0];
-					NCX[1] <= X[1];
-					NCX[2] <= X[2];
-					NCX[3] <= X[3];
-					
-					MOSAIC_HCNT <= MOSAIC_HCNT + 4'd1;
-					if (MOSAIC_HCNT == REGS.MZCTL.MZSZH) begin
-						MOSAIC_HCNT <= '0;
-					end
-				end
-			end
-			if (DOT_CE_R) begin
-				if (DOT_FETCH) begin
-					if ((SCRNX[2:0] | {HRES[1],2'b00}) == 3'd7) begin
-						NCX[0] <= X[0] & {11'h007,8'hFF};
-						NCX[1] <= X[1] & {11'h007,8'hFF};
-						NCX[2] <= X[2] & {11'h007,8'hFF};
-						NCX[3] <= X[3] & {11'h007,8'hFF};
-					end
-				end
-				if (VA3.LS) begin
-					NCX[0] <= NSX[0] & {11'h007,8'hFF};
-					NCX[1] <= NSX[1] & {11'h007,8'hFF};
-					NCX[2] <= NSX[2] & {11'h007,8'hFF};
-					NCX[3] <= NSX[3] & {11'h007,8'hFF};
-					MOSAIC_HCNT <= '0;
-				end
-			end
-		end
-	end
-	
-	//Cell data double buffer: two 8-byte banks per layer in block RAM, read back by the dot index
-	//early copy: the next event is a cell boundary (same reset rule as the CELLX counter)
-	wire [ 2: 0] CELLX_N = (H_CNT == NBG_CELLX_START - 1 && IS_RENDER_LINES) ? 3'd0 : CELLX + 3'd1;
-	wire         NDC_WE_E = DOT_CE_R && (CELLX_N | {HRES[1],2'b00}) == 3'd7;
-	wire         N0_HF4 = (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMHF);
-	wire         N0_QT4 = !N0_HF4 && (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT);
-	wire         N0_HF8 = !N0_HF4 && !N0_QT4 && (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF);
-	wire         N1_HF4 = (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMHF);
-	wire         N1_QT4 = !N1_HF4 && (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT);
-	wire         N1_HF8 = !N1_HF4 && !N1_QT4 && (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF);
-	wire [ 63:0] NDC_WD0 = {NBG_CDC[0][7],NBG_CDC[0][6],NBG_CDC[0][5],NBG_CDC[0][4],NBG_CDC[0][3],NBG_CDC[0][2],NBG_CDC[0][1],NBG_CDC[0][0]};
-	wire [ 63:0] NDC_WD1 = {NBG_CDC[1][7],NBG_CDC[1][6],NBG_CDC[1][5],NBG_CDC[1][4],NBG_CDC[1][3],NBG_CDC[1][2],NBG_CDC[1][1],NBG_CDC[1][0]};
-	wire [ 63:0] NDC_WD2 = {NBG_CDC[2][7],NBG_CDC[2][6],NBG_CDC[2][5],NBG_CDC[2][4],NBG_CDC[2][3],NBG_CDC[2][2],NBG_CDC[2][1],NBG_CDC[2][0]};
-	wire [ 63:0] NDC_WD3 = {NBG_CDC[3][7],NBG_CDC[3][6],NBG_CDC[3][5],NBG_CDC[3][4],NBG_CDC[3][3],NBG_CDC[3][2],NBG_CDC[3][1],NBG_CDC[3][0]};
-	wire [  7:0] N0_D0, N0_D1, N0_D2, N0_D3, N1_D1, N1_D3, N2_D2, N3_D3;
-	wire [ 10:0] N0I = NCX[0].INT, N1I = NCX[1].INT;
-	//Character parameter ring: three banks of four 18-bit words {hi,lo}; the visible window is bank NDC_P (older cell)
-	//and NDC_P+1 (newer cell) like the cell data. The hidden bank NDC_P+2 receives the assembled parameters one
-	//event before the boundary, one pair per clock, each pair read before the capture visit that rewrites it.
-	bit  [ 2: 0] CPN;
-	wire         CPW = NDC_WE_E | (CPN != 3'd0);
-	assign       CPP = NDC_WE_E ? 2'd3 : (CPN == 3'd1 ? 2'd2 : CPN == 3'd2 ? 2'd1 : 2'd0);
-	always @(posedge CLK) CPN <= NDC_WE_E ? 3'd1 : (CPN == 3'd3 ? 3'd0 : CPN == 3'd0 ? 3'd0 : CPN + 3'd1);
-	wire [ 1: 0] NDC_P1 = NDC_P == 2'd2 ? 2'd0 : NDC_P + 2'd1;
-	wire [ 1: 0] NDC_P2 = NDC_P == 2'd0 ? 2'd2 : NDC_P - 2'd1;
-	wire [10: 0] N2I = NCX[2].INT, N3I = NCX[3].INT;
-	wire [ 1: 0] RP0 = N0_QT4 ? {N0I[4],1'b0} : N0_HF8 ? {N0I[3],1'b0} : 2'b00;
-	wire         RH0 = (N0_HF4 | N0_QT4) ? N0I[3] : 1'b0;
-	wire         RB0 = N0_QT4 ? N0I[5] : (N0_HF4 | N0_HF8) ? N0I[4] : N0I[3];
-	wire [ 1: 0] RP1 = N1_QT4 ? {N1I[4],1'b1} : N1_HF8 ? {N1I[3],1'b1} : 2'b01;
-	wire         RH1 = (N1_HF4 | N1_QT4) ? N1I[3] : 1'b0;
-	wire         RB1 = N1_QT4 ? N1I[5] : (N1_HF4 | N1_HF8) ? N1I[4] : N1I[3];
-	wire [17: 0] CR0, CR1, CR2, CR3;
-	VDP2P2_CDPRING cdr0(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB0 ? NDC_P1 : NDC_P, RP0, CR0);
-	VDP2P2_CDPRING cdr1(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, RB1 ? NDC_P1 : NDC_P, RP1, CR1);
-	VDP2P2_CDPRING cdr2(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N2I[3] ? NDC_P1 : NDC_P, 2'd2, CR2);
-	VDP2P2_CDPRING cdr3(CLK, CPW, NDC_P2, CPP, {CDPA_HI_Q,CDPA_LO_Q}, N3I[3] ? NDC_P1 : NDC_P, 2'd3, CR3);
-	CellParam_t N0CDP_W;
-	assign N0CDP_W = {RH0 ? CR0[17:9] : CR0[8:0], 1'b0};
-	CellParam_t N1CDP_W;
-	assign N1CDP_W = {RH1 ? CR1[17:9] : CR1[8:0], 1'b0};
-	CellParam_t N2CDP_W;
-	assign N2CDP_W = {CR2[8:0], 1'b0};
-	CellParam_t N3CDP_W;
-	assign N3CDP_W = {CR3[8:0], 1'b0};
-
-	//One read port per array. The readers of an array are mutually exclusive in effect: the layer that does not own the
-	//array in the current colour depth / reduction mode is switched off by N1ON/N2ON/N3ON below, so its data is unused.
-	wire         N0_REDUCE_I = (NSxREG[0].CHCN[0] && NSxREG[0].ZMHF) || NSxREG[0].ZMQT;
-	wire         N1_REDUCE_I = (NSxREG[1].CHCN[0] && NSxREG[1].ZMHF) || NSxREG[1].ZMQT;
-	wire [  3:0] NDI0 = {(N0_HF4|N0_HF8) ? N0I[4] : N0_QT4 ? N0I[5] : N0I[3], N0I[2:0]};
-	wire [  3:0] NDI1 = NSxREG[0].CHCN[2] ? N0I[3:0] : {(N1_HF4|N1_HF8) ? N1I[4] : N1_QT4 ? N1I[5] : N1I[3], N1I[2:0]};
-	wire [  3:0] NDI2 = (NSxREG[0].CHCN[2] | NSxREG[0].CHCN[1] | N0_REDUCE_I) ? {N0_QT4 ? N0I[5] : N0_HF8 ? N0I[4] : N0I[3], N0I[2:0]} : NCX[2].INT[3:0];
-	wire [  3:0] NDI3 = NSxREG[0].CHCN[2] ? N0I[3:0] : (NSxREG[1].CHCN[1] | N1_REDUCE_I) ? {N1_QT4 ? N1I[5] : N1_HF8 ? N1I[4] : N1I[3], N1I[2:0]} : NCX[3].INT[3:0];
-	wire [  7:0] ND0, ND1, ND2, ND3;
-	VDP2P2_NDCRD #(0) nd0(CLK, NDC_WE_E, NDC_P, NDC_WD0, NDI0, ND0);
-	VDP2P2_NDCRD #(0) nd1(CLK, NDC_WE_E, NDC_P, NDC_WD1, NDI1, ND1);
-	VDP2P2_NDCRD #(0) nd2(CLK, NDC_WE_E, NDC_P, NDC_WD2, NDI2, ND2);
-	VDP2P2_NDCRD #(0) nd3(CLK, NDC_WE_E, NDC_P, NDC_WD3, NDI3, ND3);
-	assign N0_D0 = ND0; assign N0_D1 = ND1; assign N0_D2 = ND2; assign N0_D3 = ND3;
-	assign N1_D1 = ND1; assign N1_D3 = ND3; assign N2_D2 = ND2; assign N3_D3 = ND3;
-	DotData_t R0DOT, N0DOT, N1DOT, N2DOT, N3DOT;
-	bit [31:0] N0DOTDC, N1DOTDC, N2DOTDC, N3DOTDC;
-	bit [31:0] R0DOTDC;
-	CellParam_t N0DOTCDP, N1DOTCDP, N2DOTCDP, N3DOTCDP;
-	CellParam_t R0DOTCDP;
-	always @(posedge CLK or negedge RST_N) begin
-		bit          NxDOT_FETCH[4];
-		bit          R0DOT_FETCH;
-	
-		if (!RST_N) begin
-			// synopsys translate_off
-			R0DOT <= DD_NULL;
-			N0DOT <= DD_NULL;
-			N1DOT <= DD_NULL;
-			N2DOT <= DD_NULL;
-			N3DOT <= DD_NULL;
-			// synopsys translate_on
-		end
-		else if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
-			NxDOT_FETCH[0] = (!MOSAIC_HCNT || !NSxREG[0].MZE);
-			NxDOT_FETCH[1] = (!MOSAIC_HCNT || !NSxREG[1].MZE);
-			NxDOT_FETCH[2] = (!MOSAIC_HCNT || !NSxREG[2].MZE);
-			NxDOT_FETCH[3] = (!MOSAIC_HCNT || !NSxREG[3].MZE);
-			R0DOT_FETCH    = (!MOSAIC_HCNT || !RSxREG[0].MZE);
-			
-			if (NxDOT_FETCH[0]) begin
-				if (RSxREG[1].ON) begin
-					N0DOTDC <= RxDC[1];
-					N0DOTCDP <= RxCDP[1];
-				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMHF) begin
-					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						1'b1: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-					endcase
-				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) begin
-					case (NCX[0].INT[4:3])
-						2'b00: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						2'b01: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-						2'b10: begin N0DOTDC <= {28'h0000000,N0_D2[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						2'b11: begin N0DOTDC <= {28'h0000000,N0_D2[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-					endcase
-				end else if (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF) begin
-					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {24'h000000,N0_D0[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
-						1'b1: begin N0DOTDC <= {24'h000000,N0_D2[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
-					endcase
-				end else begin
-					N0DOTDC <= {N0_D3[ 7: 0],N0_D1[ 7: 0],N0_D2[ 7: 0],N0_D0[ 7: 0]};
-					N0DOTCDP <= N0CDP_W;
-				end
-			end
-			
-			if (NxDOT_FETCH[1]) begin
-				if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMHF) begin
-					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						1'b1: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) begin
-					case (NCX[1].INT[4:3])
-						2'b00: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						2'b01: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-						2'b10: begin N1DOTDC <= {28'h0000000,N1_D3[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						2'b11: begin N1DOTDC <= {28'h0000000,N1_D3[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else if (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
-					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {24'h000000,N1_D1[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
-						1'b1: begin N1DOTDC <= {24'h000000,N1_D3[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else begin
-					N1DOTDC <= {16'h0000,N1_D3[ 7: 0],N1_D1[ 7: 0]};
-					N1DOTCDP <= N1CDP_W;
-				end
-			end
-				
-			if (NxDOT_FETCH[2]) begin
-				N2DOTDC <= {24'h000000,N2_D2[ 7: 0]};
-				N2DOTCDP <= N2CDP_W;
-			end
-			
-			if (NxDOT_FETCH[3]) begin
-				N3DOTDC <= {24'h000000,N3_D3[ 7: 0]};
-				N3DOTCDP <= N3CDP_W;
-			end
-			
-			if (R0DOT_FETCH) begin
-				R0DOTDC <= RxDC[0];
-				R0DOTCDP <= RxCDP[0];
-			end
-		end
-	end
-	
-	wire N0_REDUCE = (NSxREG[0].CHCN[0] && NSxREG[0].ZMHF) || NSxREG[0].ZMQT;
-	wire N1_REDUCE = (NSxREG[1].CHCN[0] && NSxREG[1].ZMHF) || NSxREG[1].ZMQT;
-	assign R0DOT = MakeDotData(R0DOTDC, R0DOTCDP, RSxREG[0].CHCN, RSxREG[0].TPON);
-	assign N0DOT = MakeDotData(N0DOTDC, N0DOTCDP, NSxREG[0].CHCN, NSxREG[0].TPON);
-	assign N1DOT = MakeDotData(N1DOTDC, N1DOTCDP, NSxREG[1].CHCN, NSxREG[1].TPON);
-	assign N2DOT = MakeDotData(N2DOTDC, N2DOTCDP, NSxREG[2].CHCN, NSxREG[2].TPON);
-	assign N3DOT = MakeDotData(N3DOTDC, N3DOTCDP, NSxREG[3].CHCN, NSxREG[3].TPON);
-								 
+							 
 	//Sprite data
 	SpriteDotData_t SDOT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -2861,37 +2519,346 @@ module VDP2P2 import VDP2P2_PKG::*; (
 		end
 	end
 	
-	//Priority
+	//Line renderer. Character words are decoded when they leave the VRAM bank buffers: they queue in a FIFO, a walker
+	//turns each word into screen dots (source position accumulator per layer, so zoom and reduction use the same path)
+	//and inserts them into a three-slot priority line buffer. RBG dots insert through the same pipeline. Scan-out reads
+	//the buffer at the dot rate and ranks the slots against the sprite dot.
+	wire CEVT = DOT_CE_R || (DOT_CE_F & HRES[1]);
+	parameter [9:0] XOFF = 10'd16;
+	
+	//per-layer register bundles: 0 sprite, 1 RBG0, 2 NBG0 (and RBG1), 3 NBG1, 4 NBG2, 5 NBG3
+	typedef struct packed {
+		bit [ 2: 0] CAOS;
+		bit [ 2: 0] PRIN;
+		bit [ 1: 0] SPRM;
+		bit         SFCS;
+		bit         CCEN;
+		bit [ 1: 0] SCCM;
+		bit [ 4: 0] CCRT;
+		bit         COEN;
+		bit         COSL;
+		bit         SDENR;
+		bit [ 2: 0] BOKN;
+		bit         LCEN;
+		bit         MZE;
+		bit         W0A, W1A, SWA, W0E, W1E, SWE, WLOG;
+	} LCfg_t;
+	LCfg_t LC[6];
+	always_comb begin
+		LC[0] = {REGS.CRAOFB.SPCAOS, 3'd0, 2'd0, 1'b0, 1'b0, 2'd0, 5'd0, REGS.CLOFEN.SPCOEN, REGS.CLOFSL.SPCOSL, 1'b0, 3'd0, REGS.LNCLEN.SPLCEN, 1'b0,
+		         REGS.WCTLC.SPW0A, REGS.WCTLC.SPW1A, REGS.WCTLC.SPSWA, REGS.WCTLC.SPW0E, REGS.WCTLC.SPW1E, REGS.WCTLC.SPSWE, REGS.WCTLC.SPLOG};
+		LC[1] = {REGS.CRAOFB.R0CAOS, RSxREG[0].PRIN, RSxREG[0].SPRM, REGS.SFSEL.R0SFCS, RSxREG[0].CCEN, RSxREG[0].SCCM, RSxREG[0].CCRT, RSxREG[0].COEN, RSxREG[0].COSL, REGS.SDCTL.R0SDEN, 3'd1, REGS.LNCLEN.R0LCEN, RSxREG[0].MZE,
+		         REGS.WCTLC.R0W0A, REGS.WCTLC.R0W1A, REGS.WCTLC.R0SWA, REGS.WCTLC.R0W0E, REGS.WCTLC.R0W1E, REGS.WCTLC.R0SWE, REGS.WCTLC.R0LOG};
+		LC[2] = {NSxREG[0].CAOS, NSxREG[0].PRIN, NSxREG[0].SPRM, REGS.SFSEL.N0SFCS, NSxREG[0].CCEN, NSxREG[0].SCCM, NSxREG[0].CCRT, NSxREG[0].COEN, NSxREG[0].COSL, REGS.SDCTL.N0SDEN, 3'd2, REGS.LNCLEN.N0LCEN, NSxREG[0].MZE,
+		         REGS.WCTLA.N0W0A, REGS.WCTLA.N0W1A, REGS.WCTLA.N0SWA, REGS.WCTLA.N0W0E, REGS.WCTLA.N0W1E, REGS.WCTLA.N0SWE, REGS.WCTLA.N0LOG};
+		LC[3] = {NSxREG[1].CAOS, NSxREG[1].PRIN, NSxREG[1].SPRM, REGS.SFSEL.N1SFCS, NSxREG[1].CCEN, NSxREG[1].SCCM, NSxREG[1].CCRT, NSxREG[1].COEN, NSxREG[1].COSL, REGS.SDCTL.N1SDEN, 3'd4, REGS.LNCLEN.N1LCEN, NSxREG[1].MZE,
+		         REGS.WCTLA.N1W0A, REGS.WCTLA.N1W1A, REGS.WCTLA.N1SWA, REGS.WCTLA.N1W0E, REGS.WCTLA.N1W1E, REGS.WCTLA.N1SWE, REGS.WCTLA.N1LOG};
+		LC[4] = {NSxREG[2].CAOS, NSxREG[2].PRIN, NSxREG[2].SPRM, REGS.SFSEL.N2SFCS, NSxREG[2].CCEN, NSxREG[2].SCCM, NSxREG[2].CCRT, NSxREG[2].COEN, NSxREG[2].COSL, REGS.SDCTL.N2SDEN, 3'd5, REGS.LNCLEN.N2LCEN, NSxREG[2].MZE,
+		         REGS.WCTLB.N2W0A, REGS.WCTLB.N2W1A, REGS.WCTLB.N2SWA, REGS.WCTLB.N2W0E, REGS.WCTLB.N2W1E, REGS.WCTLB.N2SWE, REGS.WCTLB.N2LOG};
+		LC[5] = {NSxREG[3].CAOS, NSxREG[3].PRIN, NSxREG[3].SPRM, REGS.SFSEL.N3SFCS, NSxREG[3].CCEN, NSxREG[3].SCCM, NSxREG[3].CCRT, NSxREG[3].COEN, NSxREG[3].COSL, REGS.SDCTL.N3SDEN, 3'd6, REGS.LNCLEN.N3LCEN, NSxREG[3].MZE,
+		         REGS.WCTLB.N3W0A, REGS.WCTLB.N3W1A, REGS.WCTLB.N3SWA, REGS.WCTLB.N3W0E, REGS.WCTLB.N3W1E, REGS.WCTLB.N3SWE, REGS.WCTLB.N3LOG};
+	end
+	wire N0_REDUCE = (NSxREG[0].CHCN[0] && NSxREG[0].ZMHF) || NSxREG[0].ZMQT;
+	wire N1_REDUCE = (NSxREG[1].CHCN[0] && NSxREG[1].ZMHF) || NSxREG[1].ZMQT;
+	//layer enabled (colour depth lane sharing of NBG0/NBG1, screen enable bits)
+	bit  [ 5: 1] LAYER_OK;
+	always_comb begin
+		LAYER_OK[1] = RSxREG[0].ON & SCRN_EN[4];
+		LAYER_OK[2] = (NSxREG[0].ON | RSxREG[1].ON) & SCRN_EN[0];
+		LAYER_OK[3] = NSxREG[1].ON & ~NSxREG[0].CHCN[2] & SCRN_EN[1];
+		LAYER_OK[4] = NSxREG[2].ON & ~NSxREG[0].CHCN[2] & ~NSxREG[0].CHCN[1] & ~N0_REDUCE & SCRN_EN[2];
+		LAYER_OK[5] = NSxREG[3].ON & ~NSxREG[0].CHCN[2] & ~NSxREG[1].CHCN[1] & ~N1_REDUCE & SCRN_EN[3];
+	end
+	
+	//display dot index of the window opened by the last event
+	wire [ 7: 0] LOK = {2'b00, LAYER_OK, 1'b0};
+	wire [ 9: 0] XP = HRES[1] ? {SCRNX,SCRNX0} : {1'b0,SCRNX};
+	bit  [ 9: 0] XD;
+	always @(posedge CLK) if (CEVT) XD <= XP - XOFF;
+	wire         LSTART = NBG_FETCH_START_EN && DOT_CE_R;
+
+	//arrival of character words
+	bit  [ 2: 0] ASEQ;
+	always @(posedge CLK) ASEQ <= DOT_CE_R ? 3'd1 : (ASEQ == 3'd0 ? 3'd0 : (ASEQ == 3'd4 ? 3'd0 : ASEQ + 3'd1));
+	wire [ 1: 0] AL   = ASEQ[1:0] - 2'd1;
+	wire [ 1: 0] ABK  = BG2.NxCHS[AL];
+	wire [22: 0] AREC = RECQ[23*ABK +: 23];
+	wire         AV   = ASEQ != 3'd0 && BG2.NxCH[AL] && BG2.NxCH_EN[AL] && LAYER_OK[AL + 3'd2] && !(AL == 2'd0 && RSxREG[1].ON);
+	wire [31: 0] AWD  = ABK == 2'd0 ? RA0_BUF : ABK == 2'd1 ? RA1_BUF : ABK == 2'd2 ? RB0_BUF : RB1_BUF;
+	wire [54: 0] RFIFO_D = {AL, AREC[22:21] == AL ? AREC[20:18] : 3'd0, AWD, AREC[17:8], AREC[7:0]};
+	bit  [ 2: 0] FWP, FRP;
+	bit  [ 3: 0] FCNT;
+	wire         FPOP;
+	wire [54: 0] RFIFO_Q;
+	VDP2P2_SDP #(3,55) rfifo(CLK, AV, FWP, RFIFO_D, FRP, RFIFO_Q);
+	always @(posedge CLK) begin
+		if (LSTART) begin FWP <= 3'd0; FRP <= 3'd0; FCNT <= 4'd0; end
+		else begin
+			if (AV) FWP <= FWP + 3'd1;
+			if (FPOP) FRP <= FRP + 3'd1;
+			FCNT <= FCNT + {3'b000,AV} - {3'b000,FPOP};
+		end
+	end
+	wire         FEMPTY = FCNT == 4'd0;
+`ifdef DBGARR
+	always @(posedge CLK) begin
+		if (AV && V_CNT == 9'd40) $display("ARR h=%0d l=%0d cnt=%0d cell=%0d att=%03x w=%08x", H_CNT, AL, AREC[20:18], AREC[7:0], AREC[17:8], AWD);
+		if (ASEQ == 3'd1 && V_CNT == 9'd40 && H_CNT < 60) $display("  vis h=%0d nxch=%b en=%b cnt3=%0d bank=%0d reccnt=%0d cellx=%0d usel", H_CNT, BG2.NxCH, BG2.NxCH_EN, BG2.NxCHC[0], BG2.NxCHS[0], RECQ[20:18], RECQ[7:0]);
+		if (DOT_CE_R && V_CNT == 9'd40 && H_CNT < 60 && H_CNT >= 20) $display("  ev h=%0d pnen=%b pnfetch=%b chen=%b mt=%b hit=%b pn_en=%b nbgpnfetch=%b", H_CNT, E_PNEN, VA2.NxPN_FETCH, E_CHEN, MT, HIT, NBG_PN_EN[0], NBG_PN_FETCH[0]);
+		if (SO_RD_D && V_CNT == 9'd40 && XD >= 6 && XD <= 10) $display("  scan h=%0d xd=%0d v=%b e0=%08x e1=%08x", H_CNT, XD, LBVQB, LBQ[0], LBQ[1]);
+		if (P2V && V_CNT == 9'd40 && P2X >= 6 && P2X <= 10) $display("  wr h=%0d x=%0d we=%b%b%b v0=%b b0=%b", H_CNT, P2X, LBWE[0],LBWE[1],LBWE[2], LBVQ, B0);
+		if (DOT_CE_R && V_CNT == 9'd40 && BG0.NxCH[0] && !E_CHEN[0]) $display("  MISS h=%0d mt=%b bkch=%b%b%b%b pnf=%b pncyc=%b ul=%0d uo=%05x usel=%0d nib=%x%x%x%x cyt=%0d gt=%b%b%b%b chv=%b%b%b%b", H_CNT, MT, BKCH[0][0], BKCH[1][0], BKCH[2][0], BKCH[3][0], VA2.NxPN_FETCH[0], NxPN_CYC[0], UL, UO, USEL, NBG_NIB[0],NBG_NIB[1],NBG_NIB[2],NBG_NIB[3], CYT, NBG_GT[0],NBG_GT[1],NBG_GT[2],NBG_GT[3], NBG_CHV[0],NBG_CHV[1],NBG_CHV[2],NBG_CHV[3]);
+		if (LSTART && V_CNT == 9'd40) $display("LSTART h=%0d nsx0=%05x", H_CNT, NSX[0]);
+		if (WBUSY && WDONE && V_CNT == 9'd40) $display("  walker done l=%0d k=%0d xk=%05x cnt=%0d cell=%0d", WL, WK, WXK, WCNT, WCELL);
+		if (P0V && V_CNT == 9'd40 && P0MOVE) $display("  ins x=%0d lid=%0d dc=%08x tp=%b pri=%0d cdp=%03x md=%08x chcn=%0d", P0X, P0LID, P0DC, P0D.TP, P0PRI, P0CDP, M0DC, P0CHCN);
+	end
+`endif
+	
+	//walker: per layer next screen pixel and its source position (kept in a small RAM between words)
+	bit  [ 9: 0] WK;
+	bit  [18: 0] WXK;
+	bit  [ 1: 0] WL;
+	bit  [ 2: 0] WCNT;
+	bit  [31: 0] WWD;
+	bit  [ 9: 0] WATT;
+	bit  [ 7: 0] WCELL;
+	bit          WBUSY;
+	bit  [ 2: 0] WINIT;
+	wire [28: 0] WST_Q;
+	wire         WDONE;
+	wire         WST_WE = WDONE || WINIT != 3'd0;
+	wire [ 1: 0] WST_WA = WINIT != 3'd0 ? WINIT[1:0] - 2'd1 : WL;
+	wire [28: 0] WST_WD = WINIT != 3'd0 ? {10'd0,NSX[WINIT[1:0] - 2'd1]} : {WK,WXK};
+	VDP2P2_SDP #(2,29) wst(CLK, WST_WE, WST_WA, WST_WD, RFIFO_Q[54:53], WST_Q);
+	wire [ 2: 0] WCHCN = NSxREG[WL].CHCN;
+	wire [ 3: 0] DPW   = WCHCN == 3'b000 ? 4'd8 : WCHCN == 3'b001 ? 4'd4 : WCHCN[2] ? 4'd1 : 4'd2;
+	wire [ 2: 0] WJ0   = WCHCN == 3'b000 ? 3'd0 : WCHCN == 3'b001 ? {WCNT[0],2'b00} : WCHCN[2] ? WCNT : {WCNT[1:0],1'b0};
+	wire [ 3: 0] WJE   = {1'b0,WJ0} + DPW;
+	wire [10: 0] WSD   = WXK[18:8];
+	wire         WINR  = WSD[10:3] == WCELL && WSD[2:0] >= WJ0 && {1'b0,WSD[2:0]} < WJE;
+	wire [ 7: 0] WDC8  = WSD[10:3] - WCELL;
+	wire         WPAST = (WDC8 != 8'd0 && !WDC8[7]) || (WDC8 == 8'd0 && {1'b0,WSD[2:0]} >= WJE);
+	assign       WDONE = WBUSY && (WPAST || WK >= 10'd704);
+	bit          P0V;
+	bit  [ 9: 0] P0X;
+	bit  [31: 0] P0DC;
+	CellParam_t  P0CDP;
+	bit  [ 2: 0] P0LID;
+	bit  [ 3: 0] P0PH;
+	bit          P1V;
+	wire         P0MOVE, P0FREE;
+	bit          R0PEND, R1PEND;
+	wire         WEM = WBUSY && !WDONE && WINR;
+	assign       FPOP = !WBUSY && !FEMPTY && WINIT == 3'd0;
+	wire [18: 0] WZ    = WL[1] ? 19'h00100 : {8'h00,LZMX[WL[0]]};
+	//mosaic phase per layer: the dots of a block repeat the first one
+	bit  [ 3: 0] PHN[4], PHR0;
+	always @(posedge CLK) begin
+		if (FPOP) begin
+			{WL,WCNT,WWD,WATT,WCELL} <= RFIFO_Q;
+			{WK,WXK} <= WST_Q;
+			WBUSY <= 1'b1;
+		end else if (WBUSY) begin
+			if (WDONE) WBUSY <= 1'b0;
+			else if (!WINR || (P0FREE && !R0PEND && !R1PEND)) begin
+				WK <= WK + 10'd1;
+				WXK <= WXK + WZ;
+				if (WINR) PHN[WL] <= PHN[WL] == REGS.MZCTL.MZSZH ? 4'd0 : PHN[WL] + 4'd1;
+			end
+		end
+		if (LSTART) begin WINIT <= 3'd4; WBUSY <= 1'b0; end
+		else if (WINIT != 3'd0) WINIT <= WINIT - 3'd1;
+		if (LSTART) begin PHN[0] <= 4'd0; PHN[1] <= 4'd0; PHN[2] <= 4'd0; PHN[3] <= 4'd0; PHR0 <= 4'd0; end
+	end
+	wire [ 2: 0] WJ  = WSD[2:0] ^ {3{WATT[2]}};
+	bit  [31: 0] WDC;
+	always_comb begin
+		case (WCHCN)
+			3'b000:  WDC = {28'h0,WWD[31 - 4*WJ -: 4]};
+			3'b001:  WDC = {24'h0,WWD[31 - 8*WJ[1:0] -: 8]};
+			3'b010,
+			3'b011:  WDC = {16'h0,WJ[0] ? WWD[15:0] : WWD[31:16]};
+			default: WDC = WWD;
+		endcase
+	end
+	
+	//insertion pipeline. P0: raw dot of RBG0, RBG1 (as NBG0) or the walker; P1: decoded candidate; P2: slot update
+	bit          P1_TP;
+	bit  [ 9: 0] P1X, P2X;
+	bit  [31: 0] P1E, P2E;
+	bit          P2V;
+	bit          SO_RD, SO_RD_D;
+	bit  [ 9: 0] SXD_D;
+	wire [ 9: 0] LBRA = SO_RD ? XD : P1X;
+	wire         P1GO = P1V && !SO_RD && !(P2V && P2X == P1X);
+	assign       P0MOVE = P0V && (!P1V || P1GO);
+	assign       P0FREE = !P0V || P0MOVE;
+	wire [ 9: 0] RBX = XD + 10'd1;
+	//mosaic hold per layer: raw dot and parameters
+	wire [41: 0] MHQ;
+	wire         P0NEW = !LC[P0LID].MZE || P0PH == 4'd0;
+	VDP2P2_SDP #(3,42) mhold(CLK, P0MOVE && P0NEW, P0LID, {P0DC,P0CDP}, P0LID, MHQ);
+	wire [31: 0] M0DC  = P0NEW ? P0DC : MHQ[41:10];
+	CellParam_t  M0CDP;
+	assign       M0CDP = P0NEW ? P0CDP : MHQ[9:0];
+	wire [ 2: 0] P0CHCN = P0LID == 3'd1 ? RSxREG[0].CHCN : NSxREG[P0LID - 3'd2].CHCN;
+	wire         P0TPON = P0LID == 3'd1 ? RSxREG[0].TPON : NSxREG[P0LID - 3'd2].TPON;
+	DotData_t    P0D;
+	assign       P0D = MakeDotData(M0DC, M0CDP, P0CHCN, P0TPON);
+	LCfg_t       P0L;
+	assign       P0L = LC[P0LID];
+	wire         P0SFC = SFCMatch(P0L.SFCS, REGS.SFCODE, P0D.DC[3:0]);
+	wire [ 2: 0] P0PRI = P0L.SPRM == 2'b01 ? {P0L.PRIN[2:1],P0D.PR} : P0L.SPRM == 2'b10 ? {P0L.PRIN[2:1],P0D.PR & P0SFC} : P0L.PRIN;
+	wire         P0CCP = (P0L.SCCM == 2'b01 ? P0D.CC : P0L.SCCM == 2'b10 ? P0SFC & P0D.CC : 1'b1) & P0L.CCEN;
+	always @(posedge CLK) begin
+		if (CEVT) begin R0PEND <= LAYER_OK[1]; R1PEND <= RSxREG[1].ON & SCRN_EN[0]; end
+		if (P0FREE) begin
+			P0V <= 1'b0;
+			if (R0PEND) begin
+				P0V <= RBX < 10'd704; P0X <= RBX; P0DC <= RxDC[0]; P0CDP <= RxCDP[0]; P0LID <= 3'd1; P0PH <= PHR0; R0PEND <= 1'b0;
+				if (RBX < 10'd704) PHR0 <= PHR0 == REGS.MZCTL.MZSZH ? 4'd0 : PHR0 + 4'd1;
+			end else if (R1PEND) begin
+				P0V <= RBX < 10'd704; P0X <= RBX; P0DC <= RxDC[1]; P0CDP <= RxCDP[1]; P0LID <= 3'd2; P0PH <= PHN[0]; R1PEND <= 1'b0;
+				if (RBX < 10'd704) PHN[0] <= PHN[0] == REGS.MZCTL.MZSZH ? 4'd0 : PHN[0] + 4'd1;
+			end else if (WEM) begin
+				P0V <= WK < 10'd704; P0X <= WK; P0DC <= WDC; P0CDP <= {WATT[1],WATT[0],WATT[9:3],1'b0}; P0LID <= {1'b0,WL} + 3'd2; P0PH <= PHN[WL];
+			end
+		end
+		if (P0MOVE) begin
+			P1V <= !P0D.TP && |P0PRI;
+			P1X <= P0X;
+			P1E <= {P0LID,P0D.P,P0CCP,P0PRI,P0D.DC};
+		end else if (P1GO) P1V <= 1'b0;
+		P2V <= P1GO;
+		if (P1GO) begin P2X <= P1X; P2E <= P1E; end
+		SO_RD <= CEVT;
+		SXD_D <= XD;
+		SO_RD_D <= SO_RD;
+	end
+	
+	//line buffer: three slots of {lid,P,CC,PRI,DC} and their valid bits (cleared when scan-out has read them)
+	wire [31: 0] LBQ[3];
+	bit  [31: 0] LBW[3];
+	bit          LBWE[3];
+	wire [ 2: 0] LBVQ, LBVQB;
+	bit  [ 2: 0] LBVW;
+	bit          LBVWE;
+	VDP2P2_SDP #(10,32,0) lb0(CLK, LBWE[0], P2X, LBW[0], LBRA, LBQ[0]);
+	VDP2P2_SDP #(10,32,0) lb1(CLK, LBWE[1], P2X, LBW[1], LBRA, LBQ[1]);
+	VDP2P2_SDP #(10,32,0) lb2(CLK, LBWE[2], P2X, LBW[2], LBRA, LBQ[2]);
+	VDP2P2_LBV lbv(CLK, LBVWE, P2X, LBVW, P1X, LBVQ, XD, LBVQB, SO_RD_D, SXD_D);
+	wire [ 2: 0] NPRI = P2E[26:24], NLID = P2E[31:29];
+	wire         V0 = LBVQ[0], V1 = LBVQ[1], V2 = LBVQ[2];
+	wire         B0 = !V0 || NPRI > LBQ[0][26:24] || (NPRI == LBQ[0][26:24] && NLID < LBQ[0][31:29]);
+	wire         B1 = !V1 || NPRI > LBQ[1][26:24] || (NPRI == LBQ[1][26:24] && NLID < LBQ[1][31:29]);
+	wire         B2 = !V2 || NPRI > LBQ[2][26:24] || (NPRI == LBQ[2][26:24] && NLID < LBQ[2][31:29]);
+	always_comb begin
+		LBW[0] = P2E; LBW[1] = LBQ[0]; LBW[2] = LBQ[1];
+		LBWE[0] = 0; LBWE[1] = 0; LBWE[2] = 0;
+		LBVW = 3'b000; LBVWE = 0;
+		if (P2V) begin
+			LBVWE = 1;
+			if (B0)      begin LBWE[0] = 1; LBWE[1] = 1; LBWE[2] = 1; LBVW = {V1,V0,1'b1}; end
+			else if (B1) begin LBWE[1] = 1; LBWE[2] = 1; LBW[1] = P2E; LBW[2] = LBQ[1]; LBVW = {V1,1'b1,V0}; end
+			else if (B2) begin LBWE[2] = 1; LBW[2] = P2E; LBVW = {1'b1,V1,V0}; end
+			else         LBVW = {V2,V1,V0};
+		end
+	end
+	
+	//scan-out
+	bit  [31: 0] SE[3];
+	bit  [ 2: 0] SEV;
+	always @(posedge CLK) if (SO_RD_D) begin SE[0] <= LBQ[0]; SE[1] <= LBQ[1]; SE[2] <= LBQ[2]; SEV <= LBVQB; end
 	wire TW0_HIT = HRES[1] ? WHIT33_Q[0] : WHIT34[0];
 	wire TW1_HIT = HRES[1] ? WHIT33_Q[1] : WHIT34[1];
-	wire NxW_EN[4] = '{WinTest(TW0_HIT ^ REGS.WCTLA.N0W0A,TW1_HIT ^ REGS.WCTLA.N0W1A,SDOT.WN ^ REGS.WCTLA.N0SWA,REGS.WCTLA.N0W0E,REGS.WCTLA.N0W1E,REGS.WCTLA.N0SWE & REGS.SPCTL.SPWINEN,REGS.WCTLA.N0LOG),
-	                   WinTest(TW0_HIT ^ REGS.WCTLA.N1W0A,TW1_HIT ^ REGS.WCTLA.N1W1A,SDOT.WN ^ REGS.WCTLA.N1SWA,REGS.WCTLA.N1W0E,REGS.WCTLA.N1W1E,REGS.WCTLA.N1SWE & REGS.SPCTL.SPWINEN,REGS.WCTLA.N1LOG),
-	                   WinTest(TW0_HIT ^ REGS.WCTLB.N2W0A,TW1_HIT ^ REGS.WCTLB.N2W1A,SDOT.WN ^ REGS.WCTLB.N2SWA,REGS.WCTLB.N2W0E,REGS.WCTLB.N2W1E,REGS.WCTLB.N2SWE & REGS.SPCTL.SPWINEN,REGS.WCTLB.N2LOG),
-	                   WinTest(TW0_HIT ^ REGS.WCTLB.N3W0A,TW1_HIT ^ REGS.WCTLB.N3W1A,SDOT.WN ^ REGS.WCTLB.N3SWA,REGS.WCTLB.N3W0E,REGS.WCTLB.N3W1E,REGS.WCTLB.N3SWE & REGS.SPCTL.SPWINEN,REGS.WCTLB.N3LOG)};
-	wire RxW_EN[2] = '{WinTest(TW0_HIT ^ REGS.WCTLC.R0W0A,TW1_HIT ^ REGS.WCTLC.R0W1A,SDOT.WN ^ REGS.WCTLC.R0SWA,REGS.WCTLC.R0W0E,REGS.WCTLC.R0W1E,REGS.WCTLC.R0SWE & REGS.SPCTL.SPWINEN,REGS.WCTLC.R0LOG),
-	                   0};
-	wire SW_EN     =   WinTest(TW0_HIT ^ REGS.WCTLC.SPW0A,TW1_HIT ^ REGS.WCTLC.SPW1A,SDOT.WN ^ REGS.WCTLC.SPSWA,REGS.WCTLC.SPW0E,REGS.WCTLC.SPW1E,REGS.WCTLC.SPSWE & REGS.SPCTL.SPWINEN,REGS.WCTLC.SPLOG);
 	wire CCW_EN    =   WinTest(TW0_HIT ^ REGS.WCTLD.CCW0A,TW1_HIT ^ REGS.WCTLD.CCW1A,SDOT.WN ^ REGS.WCTLD.CCSWA,REGS.WCTLD.CCW0E,REGS.WCTLD.CCW1E,REGS.WCTLD.CCSWE & REGS.SPCTL.SPWINEN,REGS.WCTLD.CCLOG);
-							 
+	wire SW_EN     =   WinTest(TW0_HIT ^ REGS.WCTLC.SPW0A,TW1_HIT ^ REGS.WCTLC.SPW1A,SDOT.WN ^ REGS.WCTLC.SPSWA,REGS.WCTLC.SPW0E,REGS.WCTLC.SPW1E,REGS.WCTLC.SPSWE & REGS.SPCTL.SPWINEN,REGS.WCTLC.SPLOG);
+	bit  [ 2: 0] SPRIN;
+	always_comb begin
+		case (SDOT.PR)
+			3'h0: SPRIN = REGS.PRISA.S0PRIN;
+			3'h1: SPRIN = REGS.PRISA.S1PRIN;
+			3'h2: SPRIN = REGS.PRISB.S2PRIN;
+			3'h3: SPRIN = REGS.PRISB.S3PRIN;
+			3'h4: SPRIN = REGS.PRISC.S4PRIN;
+			3'h5: SPRIN = REGS.PRISC.S5PRIN;
+			3'h6: SPRIN = REGS.PRISD.S6PRIN;
+			3'h7: SPRIN = REGS.PRISD.S7PRIN;
+		endcase
+	end
+	wire         SON_S = ~SDOT.TP & SCRN_EN[5] & ~(SW_EN & SCRN_EN[6]) & |SPRIN;
+	bit  [ 4: 0] SCCRT_S;
+	always_comb begin
+		case (SDOT.CC)
+			3'h0: SCCRT_S = REGS.CCRSA.S0CCRT;
+			3'h1: SCCRT_S = REGS.CCRSA.S1CCRT;
+			3'h2: SCCRT_S = REGS.CCRSB.S2CCRT;
+			3'h3: SCCRT_S = REGS.CCRSB.S3CCRT;
+			3'h4: SCCRT_S = REGS.CCRSC.S4CCRT;
+			3'h5: SCCRT_S = REGS.CCRSC.S5CCRT;
+			3'h6: SCCRT_S = REGS.CCRSD.S6CCRT;
+			3'h7: SCCRT_S = REGS.CCRSD.S7CCRT;
+		endcase
+	end
+	wire         SCCEN_S = REGS.CCCTL.SPCCEN & ~(CCW_EN & SCRN_EN[6]) & ((REGS.SPCTL.SPCCCS == 2'b00 & SPRIN <= REGS.SPCTL.SPCCN) | 
+	                                                                      (REGS.SPCTL.SPCCCS == 2'b01 & SPRIN == REGS.SPCTL.SPCCN) |
+	                                                                      (REGS.SPCTL.SPCCCS == 2'b10 & SPRIN >= REGS.SPCTL.SPCCN) |
+	                                                                      (REGS.SPCTL.SPCCCS == 2'b11));
+	ScreenDot_t  SDOT_SD;
+	assign       SDOT_SD = {LC[0].CAOS,SCCEN_S,REGS.SPCTL.SPCCCS == 2'b11,SCCRT_S,LC[0].COEN,LC[0].COSL,(SDOT.SD & EN_SHADOW) & SCRN_EN[7],(REGS.CCCTL.BOKN == 3'h0) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD,LC[0].LCEN,SDOT.P,SDOT.DC};
+	//line buffer entries: window masked and compacted
+	ScreenDot_t  EP[3];
+	bit          EON[3];
+	bit  [ 2: 0] EPRI[3];
+	always_comb begin
+		for (int i = 0; i < 3; i++) begin
+			LCfg_t L;
+			bit    WEN;
+			L = LC[SE[i][31:29]];
+			WEN = WinTest(TW0_HIT ^ L.W0A, TW1_HIT ^ L.W1A, SDOT.WN ^ L.SWA, L.W0E, L.W1E, L.SWE & REGS.SPCTL.SPWINEN, L.WLOG);
+			EPRI[i] = SE[i][26:24];
+			EON[i] = SEV[i] && LOK[SE[i][31:29]] && !(WEN & SCRN_EN[6]);
+			EP[i] = {L.CAOS, SE[i][27] & ~(CCW_EN & SCRN_EN[6]), L.SCCM == 2'b11, L.CCRT, L.COEN, L.COSL,
+			         L.SDENR & (SDOT.SD & EN_SHADOW) & SPRIN >= EPRI[i] & SCRN_EN[7],
+			         (REGS.CCCTL.BOKN == L.BOKN) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD, L.LCEN, SE[i][28], SE[i][23:0]};
+		end
+	end
+	ScreenDot_t  BQ[3];
+	bit  [ 2: 0] BQP[3];
+	bit          BQV[3];
+	always_comb begin
+		BQ[0] = EP[0]; BQP[0] = EPRI[0]; BQV[0] = 0;
+		BQ[1] = EP[1]; BQP[1] = EPRI[1]; BQV[1] = 0;
+		BQ[2] = EP[2]; BQP[2] = EPRI[2]; BQV[2] = 0;
+		case ({EON[2],EON[1],EON[0]})
+			3'b001: begin BQ[0] = EP[0]; BQP[0] = EPRI[0]; BQV[0] = 1; end
+			3'b010: begin BQ[0] = EP[1]; BQP[0] = EPRI[1]; BQV[0] = 1; end
+			3'b011: begin BQ[0] = EP[0]; BQP[0] = EPRI[0]; BQV[0] = 1; BQ[1] = EP[1]; BQP[1] = EPRI[1]; BQV[1] = 1; end
+			3'b100: begin BQ[0] = EP[2]; BQP[0] = EPRI[2]; BQV[0] = 1; end
+			3'b101: begin BQ[0] = EP[0]; BQP[0] = EPRI[0]; BQV[0] = 1; BQ[1] = EP[2]; BQP[1] = EPRI[2]; BQV[1] = 1; end
+			3'b110: begin BQ[0] = EP[1]; BQP[0] = EPRI[1]; BQV[0] = 1; BQ[1] = EP[2]; BQP[1] = EPRI[2]; BQV[1] = 1; end
+			3'b111: begin BQV[0] = 1; BQV[1] = 1; BQV[2] = 1; end
+			default:;
+		endcase
+	end
+	//merge the sprite dot (wins ties) and keep the first three
+	ScreenDot_t  M[3];
+	bit          MV[3];
+	always_comb begin
+		M[0] = BQ[0]; M[1] = BQ[1]; M[2] = BQ[2]; MV[0] = BQV[0]; MV[1] = BQV[1]; MV[2] = BQV[2];
+		if (SON_S && (!BQV[0] || SPRIN >= BQP[0])) begin
+			M[0] = SDOT_SD; M[1] = BQ[0]; M[2] = BQ[1]; MV[0] = 1; MV[1] = BQV[0]; MV[2] = BQV[1];
+		end else if (SON_S && (!BQV[1] || SPRIN >= BQP[1])) begin
+			M[1] = SDOT_SD; M[2] = BQ[1]; MV[1] = 1; MV[2] = BQV[1];
+		end else if (SON_S && (!BQV[2] || SPRIN >= BQP[2])) begin
+			M[2] = SDOT_SD; MV[2] = 1;
+		end
+	end
+	
 	ScreenDot_t DOT_FST, DOT_SEC, DOT_THD, DOT_FTH;
 	always @(posedge CLK or negedge RST_N) begin
-		bit         SON, R0ON, N0ON, N1ON, N2ON, N3ON;
-		bit   [2:0] SCAOS, R0CAOS, N0CAOS, N1CAOS, N2CAOS, N3CAOS;
-		bit         R0SFC, N0SFC, N1SFC, N2SFC, N3SFC;
-		bit   [2:0] SPRIN, R0PRIN, N0PRIN, N1PRIN, N2PRIN, N3PRIN;
-		bit         SCCEN, R0CCEN, N0CCEN, N1CCEN, N2CCEN, N3CCEN, LCCCEN;
-		bit         SCCM3, R0CCM3, N0CCM3, N1CCM3, N2CCM3, N3CCM3;
-		bit   [4:0] SCCRT, R0CCRT, N0CCRT, N1CCRT, N2CCRT, N3CCRT, BKCCRT, LCCCRT;
-		bit         SCOEN, R0COEN, N0COEN, N1COEN, N2COEN, N3COEN, BKCOEN;
-		bit         SCOSL, R0COSL, N0COSL, N1COSL, N2COSL, N3COSL, BKCOSL;
-		bit         SSDEN, R0SDEN, N0SDEN, N1SDEN, N2SDEN, N3SDEN, BKSDEN;
-		bit         SBOKEN, R0BOKEN, N0BOKEN, N1BOKEN, N2BOKEN, N3BOKEN;
-		bit         SLCEN, R0LCEN, N0LCEN, N1LCEN, N2LCEN, N3LCEN;
-		ScreenDot_t FST, SEC, THD, FTH;
-		ScreenDot_t BACKD, LAY[6];
-		bit   [2:0] LPRI[6];
-		bit         LON[6];
-		int         RK;
+		bit         BKSDEN;
+		ScreenDot_t FST, SEC, THD, BACKD;
 		
 		if (!RST_N) begin
 			// synopsys translate_off
@@ -2901,136 +2868,16 @@ module VDP2P2 import VDP2P2_PKG::*; (
 			DOT_FTH <= SD_NULL;
 			// synopsys translate_on
 		end
-		else if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
-			SON  =                                                                                        ~SDOT.TP  & SCRN_EN[5] & ~(SW_EN     & SCRN_EN[6]);
-			R0ON = (               RSxREG[0].ON) &                                                        ~R0DOT.TP & SCRN_EN[4] & ~(RxW_EN[0] & SCRN_EN[6]);
-			N0ON = (NSxREG[0].ON | RSxREG[1].ON) &                                                        ~N0DOT.TP & SCRN_EN[0] & ~(NxW_EN[0] & SCRN_EN[6]);
-			N1ON = (NSxREG[1].ON               ) & ~NSxREG[0].CHCN[2] &                                   ~N1DOT.TP & SCRN_EN[1] & ~(NxW_EN[1] & SCRN_EN[6]);
-			N2ON = (NSxREG[2].ON               ) & ~NSxREG[0].CHCN[2] & ~NSxREG[0].CHCN[1] & ~N0_REDUCE & ~N2DOT.TP & SCRN_EN[2] & ~(NxW_EN[2] & SCRN_EN[6]);
-			N3ON = (NSxREG[3].ON               ) & ~NSxREG[0].CHCN[2] & ~NSxREG[1].CHCN[1] & ~N1_REDUCE & ~N3DOT.TP & SCRN_EN[3] & ~(NxW_EN[3] & SCRN_EN[6]);
-			
-			SCAOS = REGS.CRAOFB.SPCAOS;
-			R0CAOS = REGS.CRAOFB.R0CAOS;
-			N0CAOS = NSxREG[0].CAOS;
-			N1CAOS = NSxREG[1].CAOS;
-			N2CAOS = NSxREG[2].CAOS;
-			N3CAOS = NSxREG[3].CAOS;
-			
-			R0SFC = SFCMatch(REGS.SFSEL.R0SFCS,REGS.SFCODE,R0DOT.DC[3:0]);
-			N0SFC = SFCMatch(REGS.SFSEL.N0SFCS,REGS.SFCODE,N0DOT.DC[3:0]);
-			N1SFC = SFCMatch(REGS.SFSEL.N1SFCS,REGS.SFCODE,N1DOT.DC[3:0]);
-			N2SFC = SFCMatch(REGS.SFSEL.N2SFCS,REGS.SFCODE,N2DOT.DC[3:0]);
-			N3SFC = SFCMatch(REGS.SFSEL.N3SFCS,REGS.SFCODE,N3DOT.DC[3:0]);
-			
-			case (SDOT.PR)
-				3'h0: SPRIN = REGS.PRISA.S0PRIN;
-				3'h1: SPRIN = REGS.PRISA.S1PRIN;
-				3'h2: SPRIN = REGS.PRISB.S2PRIN;
-				3'h3: SPRIN = REGS.PRISB.S3PRIN;
-				3'h4: SPRIN = REGS.PRISC.S4PRIN;
-				3'h5: SPRIN = REGS.PRISC.S5PRIN;
-				3'h6: SPRIN = REGS.PRISD.S6PRIN;
-				3'h7: SPRIN = REGS.PRISD.S7PRIN;
-			endcase
-			R0PRIN = RSxREG[0].SPRM == 2'b01 ? {RSxREG[0].PRIN[2:1],R0DOT.PR} : RSxREG[0].SPRM == 2'b10 ? {RSxREG[0].PRIN[2:1],R0DOT.PR & R0SFC} : RSxREG[0].PRIN;
-			N0PRIN = NSxREG[0].SPRM == 2'b01 ? {NSxREG[0].PRIN[2:1],N0DOT.PR} : NSxREG[0].SPRM == 2'b10 ? {NSxREG[0].PRIN[2:1],N0DOT.PR & N0SFC} : NSxREG[0].PRIN; 
-			N1PRIN = NSxREG[1].SPRM == 2'b01 ? {NSxREG[1].PRIN[2:1],N1DOT.PR} : NSxREG[1].SPRM == 2'b10 ? {NSxREG[1].PRIN[2:1],N1DOT.PR & N1SFC} : NSxREG[1].PRIN;
-			N2PRIN = NSxREG[2].SPRM == 2'b01 ? {NSxREG[2].PRIN[2:1],N2DOT.PR} : NSxREG[2].SPRM == 2'b10 ? {NSxREG[2].PRIN[2:1],N2DOT.PR & N2SFC} : NSxREG[2].PRIN;
-			N3PRIN = NSxREG[3].SPRM == 2'b01 ? {NSxREG[3].PRIN[2:1],N3DOT.PR} : NSxREG[3].SPRM == 2'b10 ? {NSxREG[3].PRIN[2:1],N3DOT.PR & N3SFC} : NSxREG[3].PRIN;
-			
-			SCCEN = REGS.CCCTL.SPCCEN & ~(CCW_EN & SCRN_EN[6]) & ((REGS.SPCTL.SPCCCS == 2'b00 & SPRIN <= REGS.SPCTL.SPCCN) | 
-			                                                      (REGS.SPCTL.SPCCCS == 2'b01 & SPRIN == REGS.SPCTL.SPCCN) |
-												                           (REGS.SPCTL.SPCCCS == 2'b10 & SPRIN >= REGS.SPCTL.SPCCN) |
-												                           (REGS.SPCTL.SPCCCS == 2'b11));
-			R0CCEN = (RSxREG[0].SCCM == 2'b01 ? R0DOT.CC : RSxREG[0].SCCM == 2'b10 ? R0SFC & R0DOT.CC : 1'b1) & RSxREG[0].CCEN & ~(CCW_EN & SCRN_EN[6]);
-			N0CCEN = (NSxREG[0].SCCM == 2'b01 ? N0DOT.CC : NSxREG[0].SCCM == 2'b10 ? N0SFC & N0DOT.CC : 1'b1) & NSxREG[0].CCEN & ~(CCW_EN & SCRN_EN[6]);
-			N1CCEN = (NSxREG[1].SCCM == 2'b01 ? N1DOT.CC : NSxREG[1].SCCM == 2'b10 ? N1SFC & N1DOT.CC : 1'b1) & NSxREG[1].CCEN & ~(CCW_EN & SCRN_EN[6]);
-			N2CCEN = (NSxREG[2].SCCM == 2'b01 ? N2DOT.CC : NSxREG[2].SCCM == 2'b10 ? N2SFC & N2DOT.CC : 1'b1) & NSxREG[2].CCEN & ~(CCW_EN & SCRN_EN[6]);
-			N3CCEN = (NSxREG[3].SCCM == 2'b01 ? N3DOT.CC : NSxREG[3].SCCM == 2'b10 ? N3SFC & N3DOT.CC : 1'b1) & NSxREG[3].CCEN & ~(CCW_EN & SCRN_EN[6]);
-			LCCCEN = REGS.CCCTL.LCCCEN & ~(CCW_EN & SCRN_EN[6]);
-			
-			SCCM3 = REGS.SPCTL.SPCCCS == 2'b11;
-			R0CCM3 = RSxREG[0].SCCM == 2'b11;
-			N0CCM3 = NSxREG[0].SCCM == 2'b11;
-			N1CCM3 = NSxREG[1].SCCM == 2'b11;
-			N2CCM3 = NSxREG[2].SCCM == 2'b11;
-			N3CCM3 = NSxREG[3].SCCM == 2'b11;
-			
-			case (SDOT.CC)
-				3'h0: SCCRT = REGS.CCRSA.S0CCRT;
-				3'h1: SCCRT = REGS.CCRSA.S1CCRT;
-				3'h2: SCCRT = REGS.CCRSB.S2CCRT;
-				3'h3: SCCRT = REGS.CCRSB.S3CCRT;
-				3'h4: SCCRT = REGS.CCRSC.S4CCRT;
-				3'h5: SCCRT = REGS.CCRSC.S5CCRT;
-				3'h6: SCCRT = REGS.CCRSD.S6CCRT;
-				3'h7: SCCRT = REGS.CCRSD.S7CCRT;
-			endcase
-			R0CCRT = RSxREG[0].CCRT;
-			N0CCRT = NSxREG[0].CCRT;
-			N1CCRT = NSxREG[1].CCRT;
-			N2CCRT = NSxREG[2].CCRT;
-			N3CCRT = NSxREG[3].CCRT;
-			BKCCRT = REGS.CCRLB.BKCCRT;
-			LCCCRT = REGS.CCRLB.LCCCRT;
-			
-			SCOEN = REGS.CLOFEN.SPCOEN; SCOSL = REGS.CLOFSL.SPCOSL;
-			R0COEN = RSxREG[0].COEN;    R0COSL = RSxREG[0].COSL;
-			N0COEN = NSxREG[0].COEN;    N0COSL = NSxREG[0].COSL;
-			N1COEN = NSxREG[1].COEN;    N1COSL = NSxREG[1].COSL;
-			N2COEN = NSxREG[2].COEN;    N2COSL = NSxREG[2].COSL;
-			N3COEN = NSxREG[3].COEN;    N3COSL = NSxREG[3].COSL;
-			BKCOEN = REGS.CLOFEN.BKCOEN;BKCOSL = REGS.CLOFSL.BKCOSL;
-			
-			BKSDEN = REGS.SDCTL.BKSDEN & (SDOT.SD & EN_SHADOW) &                 & SCRN_EN[7];
-			SSDEN  =                     (SDOT.SD & EN_SHADOW)                   & SCRN_EN[7];
-			R0SDEN = REGS.SDCTL.R0SDEN & (SDOT.SD & EN_SHADOW) & SPRIN >= R0PRIN & SCRN_EN[7];
-			N0SDEN = REGS.SDCTL.N0SDEN & (SDOT.SD & EN_SHADOW) & SPRIN >= N0PRIN & SCRN_EN[7];
-			N1SDEN = REGS.SDCTL.N1SDEN & (SDOT.SD & EN_SHADOW) & SPRIN >= N1PRIN & SCRN_EN[7];
-			N2SDEN = REGS.SDCTL.N2SDEN & (SDOT.SD & EN_SHADOW) & SPRIN >= N2PRIN & SCRN_EN[7];
-			N3SDEN = REGS.SDCTL.N3SDEN & (SDOT.SD & EN_SHADOW) & SPRIN >= N3PRIN & SCRN_EN[7];
-			
-			SBOKEN  = (REGS.CCCTL.BOKN == 3'h0) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			R0BOKEN = (REGS.CCCTL.BOKN == 3'h1) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			N0BOKEN = (REGS.CCCTL.BOKN == 3'h2) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			N1BOKEN = (REGS.CCCTL.BOKN == 3'h4) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			N2BOKEN = (REGS.CCCTL.BOKN == 3'h5) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			N3BOKEN = (REGS.CCCTL.BOKN == 3'h6) & REGS.CCCTL.BOKEN & ~|REGS.RAMCTL.CRMD;
-			
-			SLCEN = REGS.LNCLEN.SPLCEN;
-			R0LCEN = REGS.LNCLEN.R0LCEN;
-			N0LCEN = REGS.LNCLEN.N0LCEN;
-			N1LCEN = REGS.LNCLEN.N1LCEN;
-			N2LCEN = REGS.LNCLEN.N2LCEN;
-			N3LCEN = REGS.LNCLEN.N3LCEN;
-			
-			BACKD = {3'b000,1'b0,1'b0,BKCCRT,BKCOEN,BKCOSL,BKSDEN,1'b0,1'b0,1'b0,BACK_DC};
+		else if (CEVT) begin
+			BKSDEN = REGS.SDCTL.BKSDEN & (SDOT.SD & EN_SHADOW) & SCRN_EN[7];
+			BACKD = {3'b000,1'b0,1'b0,REGS.CCRLB.BKCCRT,REGS.CLOFEN.BKCOEN,REGS.CLOFSL.BKCOSL,BKSDEN,1'b0,1'b0,1'b0,BACK_DC};
 			FST = BACKD;
 			SEC = BACKD;
 			THD = BACKD;
-			
-			//Layers in insertion order: sprite, RBG0, NBG0..3. The three highest priorities win; equal priorities keep insertion order.
-			LAY[0] = {SCAOS,SCCEN,SCCM3,SCCRT,SCOEN,SCOSL,SSDEN,SBOKEN,SLCEN,SDOT.P,SDOT.DC};         LPRI[0] = SPRIN;  LON[0] = SON  && |SPRIN;
-			LAY[1] = {R0CAOS,R0CCEN,R0CCM3,R0CCRT,R0COEN,R0COSL,R0SDEN,R0BOKEN,R0LCEN,R0DOT.P,R0DOT.DC}; LPRI[1] = R0PRIN; LON[1] = R0ON && |R0PRIN;
-			LAY[2] = {N0CAOS,N0CCEN,N0CCM3,N0CCRT,N0COEN,N0COSL,N0SDEN,N0BOKEN,N0LCEN,N0DOT.P,N0DOT.DC}; LPRI[2] = N0PRIN; LON[2] = N0ON && |N0PRIN;
-			LAY[3] = {N1CAOS,N1CCEN,N1CCM3,N1CCRT,N1COEN,N1COSL,N1SDEN,N1BOKEN,N1LCEN,N1DOT.P,N1DOT.DC}; LPRI[3] = N1PRIN; LON[3] = N1ON && |N1PRIN;
-			LAY[4] = {N2CAOS,N2CCEN,N2CCM3,N2CCRT,N2COEN,N2COSL,N2SDEN,N2BOKEN,N2LCEN,N2DOT.P,N2DOT.DC}; LPRI[4] = N2PRIN; LON[4] = N2ON && |N2PRIN;
-			LAY[5] = {N3CAOS,N3CCEN,N3CCM3,N3CCRT,N3COEN,N3COSL,N3SDEN,N3BOKEN,N3LCEN,N3DOT.P,N3DOT.DC}; LPRI[5] = N3PRIN; LON[5] = N3ON && |N3PRIN;
 			if (DISP) begin
-				for (int i=0; i<6; i++) begin
-					RK = 0;
-					for (int j=0; j<6; j++) begin
-						if (j != i && LON[j] && (LPRI[j] > LPRI[i] || (LPRI[j] == LPRI[i] && j < i))) RK = RK + 1;
-					end
-					if (LON[i]) begin
-						case (RK)
-							0: FST = LAY[i];
-							1: SEC = LAY[i];
-							2: THD = LAY[i];
-							default:;
-						endcase
-					end
-				end
+				if (MV[0]) FST = M[0];
+				if (MV[1]) SEC = M[1];
+				if (MV[2]) THD = M[2];
 			end
 			
 			DOT_FST <= FST;
@@ -3043,7 +2890,7 @@ module VDP2P2 import VDP2P2_PKG::*; (
 				DOT_THD <= SEC;
 				DOT_FTH <= SEC;
 			end else if (FST.LCEN) begin
-				DOT_SEC <= {3'b000,LCCCEN,1'b0,LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}};
+				DOT_SEC <= {3'b000,REGS.CCCTL.LCCCEN & ~(CCW_EN & SCRN_EN[6]),1'b0,REGS.CCRLB.LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}};
 				DOT_THD <= SEC;
 				DOT_FTH <= THD;
 			end else begin

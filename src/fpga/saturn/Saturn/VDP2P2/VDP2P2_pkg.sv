@@ -2638,6 +2638,7 @@ package VDP2P2_PKG;
 		bit [3:0]       NxCH;
 		bit [3:0][1:0]  NxCHS;
 		bit [3:0]       NxCH_EN;
+		bit [3:0][2:0]  NxCHC;
 	} BGTap2_t;
 	typedef struct packed {
 		bit [3:0]       NxPN;
