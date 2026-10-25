@@ -1056,10 +1056,10 @@ module VDP2P import VDP2P_PKG::*; (
 		NxLS_ADDR[1] = NxLSAddr(NSxREG[1].LSTA, LS_TBL_OFFS[1], LS_VAL_OFFS[1]);
 		
 		RxRP_ADDR    = RxRPAddr({REGS.RPTAU.RPTA,REGS.RPTAL.RPTA},{~RP_POS[7],RP_POS[6:2]});
-		RxCT_ADDR[0] = RxCTAddr(KAst[CT_RP], RxKA[CT_RP], RPxREG[CT_RP].KTAOS, RPxREG[CT_RP].KDBS);
 		RxCT_ADDR[1] = RxCTAddr(KAst[    1], RxKA[    1], RPxREG[    1].KTAOS, RPxREG[    1].KDBS);
 		RxCTA_ADDR   = RxCTAddr(KAst[    0], RxKA[    0], RPxREG[    0].KTAOS, RPxREG[    0].KDBS);
 		RxCTB_ADDR   = RxCTAddr(KAst[    1], RxKA[    1], RPxREG[    1].KTAOS, RPxREG[    1].KDBS);
+		RxCT_ADDR[0] = CT_RP ? RxCTB_ADDR : RxCTA_ADDR;
 	end
 		
 	
@@ -1727,7 +1727,7 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2P_SDP #(5,32) rp_d1(CLK, RPW_WE, RPW_WA, RPW_WD, 5'd29,  DK1_Q);
 	VDP2P_SDP #(5,32) rp_fr(CLK, RPW_WE, RPW_WA, RPW_WD, RPFR_A, PFR_Q);
 	VDP2P_SDP #(5,32) rp_ff(CLK, RPW_WE, RPW_WA, RPW_WD, RPFF_A, PFF_Q);
-	RotAddr_t    KAx[2],KAy[2];
+	RotAddr_t    KAx[2],KAy[2];   //KAx holds the sum of the line base (KAy) and the per-dot accumulation
 	RotCoord_t   SUBXA,SUBXB;
 	RotCoord_t   SUBYA,SUBYB;
 	RotCoord_t   MULXA;
@@ -1915,10 +1915,11 @@ module VDP2P import VDP2P_PKG::*; (
 						5'd23: begin
 							KAst[N] <= TblAddrToRC(PB_Q);
 							KAy[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
+							KAx[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
 							if (IS_LAST_LINE) begin
 								KAy[N] <= '0;
+								KAx[N] <= '0;
 							end
-							KAx[N] <= '0;
 						end
 					endcase
 				end
@@ -1988,8 +1989,8 @@ module VDP2P import VDP2P_PKG::*; (
 `endif
 		end
 	end
-	assign RxKA[0] = $signed(KAy[0]) + $signed(KAx[0]);
-	assign RxKA[1] = $signed(KAy[1]) + $signed(KAx[1]);
+	assign RxKA[0] = KAx[0];
+	assign RxKA[1] = KAx[1];
 				
 	//Rotattion parameter window
 	wire RPW0_HIT = WHIT8_Q[0];
