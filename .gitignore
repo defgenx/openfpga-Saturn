@@ -70,3 +70,9 @@ sizing/vdp1p/ab/
 sizing/vdp1p/ab_*/
 sizing/vdp1p/x2f/
 sizing/vdp1p/g4/
+sim/**/build_scup/
+sizing/scup/*/out/
+sizing/scup/*/*.log
+sizing/scup/*.out
+sizing/scup/*/
+!sizing/scup/*.sh
