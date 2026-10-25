@@ -14,7 +14,8 @@
 //
 // Client port (same as the 64 bit DDRAM backend that rtl/ddram.sv drives):
 //   busy low: a request given on rd/we is taken at the next clk edge. busy is also low in the clk
-//   cycle in which dout_ready is high so that ddram.sv can store the beat.
+//   cycle in which dout_ready is high (the last word of a beat). Read words come one at a time on
+//   rdata/rvalid/rword; the client assembles beats.
 //   addr   64 bit word index in the chip (halfword address = {addr, 2'b00} + word)
 //   rd     burst of `burstcnt` beats, beat n word k = halfword 4n+k; word 0 is bits 63:48
 //   we     one beat, be[7:6] = word 0 bytes (be[7] = high byte), ... be[1:0] = word 3; only the
@@ -46,8 +47,10 @@ module psram_sync #(
 	input  wire        we,
 	input  wire [63:0] din,
 	input  wire  [7:0] be,
-	output wire [63:0] dout,           // valid in the cycle dout_ready is high
-	output reg         dout_ready,
+	output reg  [15:0] rdata,          // read word, valid in the cycle rvalid is high
+	output reg         rvalid,
+	output reg   [1:0] rword,          // word index inside the beat (0 = bits 63:48 of the beat)
+	output reg         dout_ready,     // with the last word of a beat; busy is low in that cycle
 	output wire        idle,           // no segment running (for tests)
 
 	output wire [21:16] cram_a,
@@ -110,8 +113,6 @@ wire  [7:0] act_be  = HOLD_DIN ? be  : act_be_r;
 reg  [2:0]  w_cur = 3'd0;         // write: next word lane
 reg  [2:0]  w_rem = 3'd0;         // write: words left
 
-reg  [63:0] shift = 64'd0;
-assign dout = shift;
 reg  [1:0]  wcap = 2'd0;
 
 wire        row_end = &act_adr[ROW_LOG2-1:0];
@@ -185,15 +186,16 @@ always @(posedge clk) begin
 	ph <= !ph;
 	rst_pend <= rst_pend || reset;
 	dout_ready <= 1'b0;
+	rvalid <= 1'b0;
 
 	if (!ph) begin
 		// ---- R edge: the chip clock rises; read capture
 		p_clk <= clk_run;
 		smp <= 1'b0;
 		if (smp) begin
-			shift <= {shift[47:0], cram_dq_in};
+			rdata <= cram_dq_in; rword <= wcap;
 			wcap <= wcap + 2'd1;
-			if (wcap == 2'd3 && !rst_pend && !reset) dout_ready <= 1'b1;
+			if (!rst_pend && !reset) begin rvalid <= 1'b1; if (wcap == 2'd3) dout_ready <= 1'b1; end
 		end
 	end else begin
 		// ---- F edge: the chip clock falls; every other pin changes here

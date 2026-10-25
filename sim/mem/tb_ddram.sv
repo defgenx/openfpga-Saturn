@@ -38,13 +38,13 @@ reg  [20:1] bsram_addr = 0; wire [15:0] bsram_dout; reg [15:0] bsram_din = 0; re
 reg  [23:2] ld_addr = 0;    reg [31:0] ld_data = 0; reg ld_wr = 0; wire ld_busy;
 reg  [13:1] cdbuf_waddr = 0; reg [15:0] cdbuf_wdata = 0; reg cdbuf_wwr = 0; wire cdbuf_wbusy;
 
-wire p0_busy, p0_rd, p0_we, p0_dout_ready, p1_busy, p1_rd, p1_we, p1_dout_ready;
-wire [20:0] p0_addr, p1_addr;  wire [7:0] p0_burst, p1_burst, p0_be, p1_be;  wire [63:0] p0_din, p1_din, p0_dout, p1_dout;
+wire p0_busy, p0_rd, p0_we, p0_dout_ready, p0_rvalid, p1_rvalid, p1_busy, p1_rd, p1_we, p1_dout_ready;
+wire [20:0] p0_addr, p1_addr;  wire [7:0] p0_burst, p1_burst, p0_be, p1_be;  wire [63:0] p0_din, p1_din; wire [15:0] p0_rdata, p1_rdata; wire [1:0] p0_rword, p1_rword;
 
 ddram_pocket dut (
 	.clk(clk), .rst(rst),
-	.p0_busy(p0_busy), .p0_addr(p0_addr), .p0_burst(p0_burst), .p0_rd(p0_rd), .p0_we(p0_we), .p0_din(p0_din), .p0_be(p0_be), .p0_dout(p0_dout), .p0_dout_ready(p0_dout_ready),
-	.p1_busy(p1_busy), .p1_addr(p1_addr), .p1_burst(p1_burst), .p1_rd(p1_rd), .p1_we(p1_we), .p1_din(p1_din), .p1_be(p1_be), .p1_dout(p1_dout), .p1_dout_ready(p1_dout_ready),
+	.p0_busy(p0_busy), .p0_addr(p0_addr), .p0_burst(p0_burst), .p0_rd(p0_rd), .p0_we(p0_we), .p0_din(p0_din), .p0_be(p0_be), .p0_rdata(p0_rdata), .p0_rvalid(p0_rvalid), .p0_rword(p0_rword), .p0_dout_ready(p0_dout_ready),
+	.p1_busy(p1_busy), .p1_addr(p1_addr), .p1_burst(p1_burst), .p1_rd(p1_rd), .p1_we(p1_we), .p1_din(p1_din), .p1_be(p1_be), .p1_rdata(p1_rdata), .p1_rvalid(p1_rvalid), .p1_rword(p1_rword), .p1_dout_ready(p1_dout_ready),
 	.ramh_addr(ramh_addr), .ramh_dout(ramh_dout), .ramh_din(ramh_din), .ramh_rd(ramh_rd), .ramh_wr(ramh_wr), .ramh_busy(ramh_busy),
 	.cdram_addr(cdram_addr), .cdram_dout(cdram_dout), .cdram_din(cdram_din), .cdram_rd(cdram_rd), .cdram_wr(cdram_wr), .cdram_busy(cdram_busy),
 	.raml_addr(raml_addr), .raml_dout(raml_dout), .raml_din(raml_din), .raml_rd(raml_rd), .raml_wr(raml_wr), .raml_busy(raml_busy),
@@ -63,11 +63,11 @@ wire [31:0] m0_err, m0_rd, m0_wr, m0_bursts, m0_cel, m0_xrow, m1_err, m1_rd, m1_
 wire i0, i1;
 psram_bench #(.INIT_US(INIT_US)) ps0 (
 	.clk(clk), .reset(rst), .busy(p0_busy), .addr(p0_addr), .burstcnt(p0_burst), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
-	.dout(p0_dout), .dout_ready(p0_dout_ready), .idle(i0),
+	.rdata(p0_rdata), .rvalid(p0_rvalid), .rword(p0_rword), .dout_ready(p0_dout_ready), .idle(i0),
 	.m_err(m0_err), .m_rd(m0_rd), .m_wr(m0_wr), .m_bursts(m0_bursts), .m_cel(m0_cel), .m_xrow(m0_xrow));
 psram_bench #(.INIT_US(INIT_US)) ps1 (
 	.clk(clk), .reset(rst), .busy(p1_busy), .addr(p1_addr), .burstcnt(p1_burst), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
-	.dout(p1_dout), .dout_ready(p1_dout_ready), .idle(i1),
+	.rdata(p1_rdata), .rvalid(p1_rvalid), .rword(p1_rword), .dout_ready(p1_dout_ready), .idle(i1),
 	.m_err(m1_err), .m_rd(m1_rd), .m_wr(m1_wr), .m_bursts(m1_bursts), .m_cel(m1_cel), .m_xrow(m1_xrow));
 
 

@@ -27,7 +27,13 @@ reg         rd = 0, we = 0;
 reg  [63:0] din = 0;
 reg   [7:0] be = 0;
 wire [63:0] dout;
-wire        dout_ready, idle;
+wire        dout_ready, idle, rvalid;
+wire [15:0] rdata;
+wire  [1:0] rword;
+// beats are assembled from the word stream: valid in the dout_ready cycle
+reg  [47:0] asm = 48'd0;
+always @(posedge clk) if (rvalid) asm <= {asm[31:0], rdata};
+assign dout = {asm, rdata};
 
 wire [21:16] cram_a;
 wire [15:0]  cram_dq_out, cram_dq_in;
@@ -35,7 +41,7 @@ wire         cram_dq_oe, cram_clk, cram_adv_n, cram_cre, cram_ce0_n, cram_ce1_n,
 
 psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US)) dut (
 	.clk(clk), .reset(reset), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
-	.dout(dout), .dout_ready(dout_ready), .idle(idle),
+	.rdata(rdata), .rvalid(rvalid), .rword(rword), .dout_ready(dout_ready), .idle(idle),
 	.cram_a(cram_a), .cram_dq_out(cram_dq_out), .cram_dq_oe(cram_dq_oe), .cram_dq_in(cram_dq_in), .cram_clk(cram_clk),
 	.cram_adv_n(cram_adv_n), .cram_cre(cram_cre), .cram_ce0_n(cram_ce0_n), .cram_ce1_n(cram_ce1_n),
 	.cram_oe_n(cram_oe_n), .cram_we_n(cram_we_n), .cram_ub_n(cram_ub_n), .cram_lb_n(cram_lb_n)

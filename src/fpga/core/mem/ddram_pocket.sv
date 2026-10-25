@@ -39,7 +39,9 @@ module ddram_pocket
 	output wire        p0_we,
 	output wire [63:0] p0_din,
 	output wire  [7:0] p0_be,
-	input  wire [63:0] p0_dout,
+	input  wire [15:0] p0_rdata,
+	input  wire        p0_rvalid,
+	input  wire  [1:0] p0_rword,
 	input  wire        p0_dout_ready,
 
 	// PSRAM1 backend
@@ -50,7 +52,9 @@ module ddram_pocket
 	output wire        p1_we,
 	output wire [63:0] p1_din,
 	output wire  [7:0] p1_be,
-	input  wire [63:0] p1_dout,
+	input  wire [15:0] p1_rdata,
+	input  wire        p1_rvalid,
+	input  wire  [1:0] p1_rword,
 	input  wire        p1_dout_ready,
 
 	input  wire [19: 2] ramh_addr,
@@ -645,21 +649,21 @@ always @(posedge clk) begin
 end
 
 // ================================================================ read caches
-wire           a_cache_wren = (a_state == 2'd2) && p0_dout_ready && !p0_busy;
-wire           b_cache_wren = (b_state == 2'd2) && p1_dout_ready && !p1_busy;
+wire           a_cache_wren = (a_state == 2'd2) && p0_rvalid;
+wire           b_cache_wren = (b_state == 2'd2) && p1_rvalid;
 wire [ 31:  0] ramh_cache_q;
 wire [ 15:  0] cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_cache_q,cart_cache_q,bsram_cache_q;
 
-// read address = {line beat, word}; word 0 (bits 63:48 of a beat) is the highest lane, hence the inversion
-ddp_cache_ram #(4, 32) cache0 (clk, {ramh_curr,a_cwr[1:0]}, p0_dout, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:3],~ramh_addr[2]}, ramh_cache_q);
-ddp_cache_ram #(2, 16) cache1 (clk, b_cwr[1:0], p1_dout, b_cache_wren & b_chan == 2'd0, {cdram_rcache_addr[4:3],~cdram_rcache_addr[2:1]}, cdram_cache_q);
-ddp_cache_ram #(2, 16) cache2 (clk, a_cwr[1:0], p0_dout, a_cache_wren & a_chan == 3'd1, {raml_rcache_addr[4:3],~raml_rcache_addr[2:1]}, raml_cache_q);
-ddp_cache_ram #(7, 16) cache3 (clk, b_cwr[6:0], p1_dout, b_cache_wren & b_chan == 2'd1, {vdp1vram_addr[9:3],~vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
-ddp_cache_ram #(2, 16) cache5 (clk, b_cwr[1:0], p1_dout, b_cache_wren & b_chan == 2'd2, {cdbuf_rcache_addr[4:3],~cdbuf_rcache_addr[2:1]}, cdbuf_cache_q);
-ddp_cache_ram #(2, 16) cache6 (clk, a_cwr[1:0], p0_dout, a_cache_wren & a_chan == 3'd2, {cart_rcache_addr[4:3],~cart_rcache_addr[2:1]}, cart_cache_q);
-ddp_cache_ram #(1, 16) cache7 (clk, a_cwr[0:0], p0_dout, a_cache_wren & a_chan == 3'd3, {bsram_rcache_addr[3:3],~bsram_rcache_addr[2:1]}, bsram_cache_q);
+// 16 bit words are written as they arrive, address {beat, word}; read as 16 bit words (32 bit for WRAM-H)
+ddp_cache_ram #(4, 32) cache0 (clk, {ramh_curr,a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:3],ramh_addr[2]}, ramh_cache_q);
+ddp_cache_ram #(2, 16) cache1 (clk, {b_cwr[1:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd0, cdram_rcache_addr[4:1], cdram_cache_q);
+ddp_cache_ram #(2, 16) cache2 (clk, {a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
+ddp_cache_ram #(7, 16) cache3 (clk, {b_cwr[6:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
+ddp_cache_ram #(2, 16) cache5 (clk, {b_cwr[1:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
+ddp_cache_ram #(2, 16) cache6 (clk, {a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd2, cart_rcache_addr[4:1], cart_cache_q);
+ddp_cache_ram #(1, 16) cache7 (clk, {a_cwr[0:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd3, bsram_rcache_addr[3:1], bsram_cache_q);
 
-assign ramh_dout = ramh_ram_sel ? ramh_ram_q : ramh_cache_q;
+assign ramh_dout = ramh_ram_sel ? ramh_ram_q : {ramh_cache_q[15:0], ramh_cache_q[31:16]};
 assign ramh_busy = ramh_fifo_full | ramh_read_busy;
 assign cdram_dout = cdram_cache_q;
 assign cdram_busy = cdram_write_busy | cdram_read_busy | cdram_rcache_busy;
@@ -678,12 +682,12 @@ endmodule
 
 // ---- memories
 
-// read cache: 2**wa beats of 64 bit written at once, read as RB bit words (M10K, registered read address,
-// unregistered output: data written at an edge is visible after it). Word lane 0 is bits RB-1:0.
+// read cache: 2**wa beats of four 16 bit words, written one word at a time (address {beat, word}) and read as RB bit
+// words (M10K, registered read address, unregistered output). RB = 32 returns {word 2k+1, word 2k}.
 module ddp_cache_ram #(parameter wa = 2, parameter RB = 16) (
 	input  wire                               clock,
-	input  wire [wa-1:0]                      wraddress,
-	input  wire [63:0]                        data,
+	input  wire [wa+1:0]                      wraddress,
+	input  wire [15:0]                        data,
 	input  wire                               wren,
 	input  wire [wa+$clog2(64/RB)-1:0]        rdaddress,
 	output wire [RB-1:0]                      q
@@ -692,7 +696,7 @@ module ddp_cache_ram #(parameter wa = 2, parameter RB = 16) (
 `ifdef ALTERA_RESERVED_QIS
 	altsyncram #(
 		.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
-		.width_a(64), .widthad_a(wa), .numwords_a(1 << wa),
+		.width_a(16), .widthad_a(wa + 2), .numwords_a(4 << wa),
 		.width_b(RB), .widthad_b(ra), .numwords_b(1 << ra),
 		.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
 		.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
@@ -704,14 +708,17 @@ module ddp_cache_ram #(parameter wa = 2, parameter RB = 16) (
 		.data_b({RB{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
 	);
 `else
-	reg [63:0] mem [0:(1<<wa)-1];
+	reg [15:0] mem [0:(4<<wa)-1];
 	reg [ra-1:0] rad;
 	always @(posedge clock) begin
 		if (wren) mem[wraddress] <= data;
 		rad <= rdaddress;
 	end
-	wire [63:0] beat = mem[rad[ra-1:ra-wa]];
-	assign q = beat >> (RB * rad[ra-wa-1:0]);
+	generate if (RB == 16) begin : g16
+		assign q = mem[rad];
+	end else begin : g32
+		assign q = {mem[{rad, 1'b1}], mem[{rad, 1'b0}]};
+	end endgenerate
 `endif
 endmodule
 
