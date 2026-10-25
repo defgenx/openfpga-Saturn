@@ -31,4 +31,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE vdp2_wrap.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 source area.qsf
 Q
-docker run --rm --platform linux/amd64 --name vdp2p-map-$TAG -v $D:/build -w /build/sizing/vdp2p/snap/$TAG raetro/quartus:21.1 sh -c "quartus_map p > $TAG.log 2>&1; quartus_cdb p --vqm=$TAG.vqm >> $TAG.log 2>&1"
+QRUN_MAX=3 /Users/adelvecchio/Documents/workspace/openfpga-Saturn/tools/qrun.sh vdp2p-map-$TAG $D /build/sizing/vdp2p/snap/$TAG sh -c "quartus_map p > $TAG.log 2>&1; quartus_cdb p --vqm=$TAG.vqm >> $TAG.log 2>&1"

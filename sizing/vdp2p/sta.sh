@@ -33,4 +33,4 @@ set_global_assignment -name SDC_FILE t.sdc
 set_instance_assignment -name VIRTUAL_PIN ON -to *_P
 source area.qsf
 Q
-docker run --rm --platform linux/amd64 --name vdp2p-sta-$TAG -v $D:/build -w /build/sizing/vdp2p/snap/sta_$TAG raetro/quartus:21.1 sh -c "quartus_map p > map.log 2>&1 && quartus_fit p > fit.log 2>&1 && quartus_sta p > sta.log 2>&1"
+QRUN_MAX=3 /Users/adelvecchio/Documents/workspace/openfpga-Saturn/tools/qrun.sh vdp2p-sta-$TAG $D /build/sizing/vdp2p/snap/sta_$TAG sh -c "quartus_map p > map.log 2>&1 && quartus_fit p > fit.log 2>&1 && quartus_sta p > sta.log 2>&1"
