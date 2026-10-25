@@ -9,6 +9,7 @@ Per-entity tables are in `sizing/pocket-build/`.
 | `pocket-build` full | HLE CD, M68KP, VDP2P, VDP1P, SH2P, PLL_LITE; no feature cuts | 22,509 (122%) | 2,279 / 1,848 | 308 / 308 | 29 / 66 |
 | `pocket-build` lite | same + SCU DSP and SCSP DSP cuts | | 2,119 / 1,848 | | |
 | `main` 7255033 full | same as full + mem-shrink; no feature cuts | 21,996 (119%) | 2,224 / 1,848 | not placed | 29 / 66 |
+| `main` 981e25f full | same + SCSPP; no feature cuts | 21,571 (117%) | 2,180 / 1,848 | not placed | 34 / 66 |
 
 Fitter ALMs per block, full config (`full_sh2p.entities.txt`):
 
