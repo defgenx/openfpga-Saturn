@@ -367,3 +367,16 @@ legal=32 60/60; seeds 31-38 of legal 0/1/2/32 all pass; `+ppm` frame dumps for s
 Scene types 7 and 8 exercise RBG0 and RBG0+RBG1.
 Not covered by the legal generator: 32 bpp NBG0 (needs split banks), interlace, hires with zoom, line scroll and bitmap scenes beyond
 what the random scene types produce.
+
+### Measured fit (quartus_fit through `sizing/vdp2p/sta.sh`, registered wrapper, 17.46 ns)
+
+`PFX=VDP2P2 sh sizing/vdp2p/sta.sh <tag>`; `MACROS="POCKET_CUT_VDP2_RPARAMB ..."` for the cuts.
+
+| Build | map ALMs | fit ALMs | registers | M10K | DSP | setup slack |
+|---|---|---|---|---|---|---|
+| VDP2P2 with line renderer, all features | 4,774 | 4,745 | 5,084 | 32 | 18 | +8.66 ns |
+| plus RPARAMB, EXTCC, LNCOL, MOSAIC, SPRWIN, LINEWIN, BACKLINE cuts | 4,416 | 4,311 | 4,808 | 30 | 18 | +8.52 ns |
+
+The integrated renderer is not smaller than the golden-derived VDP2P2 (4,712 map / 4,740 fit): the line buffer valid bits as a
+true dual port RAM synthesise to 3,072 registers plus 5,000 ALUTs of muxing (8,862 ALMs); a plain simple dual port RAM with the
+scan-out clear sharing the insertion write slot gives the numbers above. The 3,500 target is not met by either build.
