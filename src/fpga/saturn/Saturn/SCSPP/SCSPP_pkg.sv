@@ -1,4 +1,4 @@
-package SCSP_PKG;
+package SCSPP_PKG;
 
 	//Slot control registers, offset 100000+n*20
 	typedef struct packed		//RW,00
@@ -445,12 +445,23 @@ package SCSP_PKG;
 
 	function bit signed [21:0] MDCalc(bit signed [15:0] X, bit signed [15:0] Y, bit [3:0] MDL);
 		bit signed [16:0] TEMP;
+		bit signed [26:0] PM;
 		bit signed [22:0] MD;
+		bit        [10:0] OH;
+		bit        [15:0] M;
 		
 		TEMP = $signed({X[15],X[15:0]}) + $signed({Y[15],Y[15:0]}); 
+		//The right shift by 16-MDL (MDL 5..15) is a multiplication by 2^(MDL-5), which maps onto a DSP block.
+`ifdef POCKET_SCSPP_NODSP_MD
 		MD = $signed($signed({TEMP[16:1],1'b0,6'b000000})>>>(4'h0-MDL));
+		M = MD[16:1];
+`else
+		OH = 11'd1 << (MDL - 4'd5);
+		PM = $signed(TEMP[16:1]) * $signed({1'b0,OH});
+		M = PM[20:5];
+`endif
 		
-		return MDL > 4'd4 ? {{5{MD[16]}},MD[16:1],1'b0} : '0;
+		return MDL > 4'd4 ? {{5{M[15]}},M,1'b0} : '0;
 	endfunction
 	
 	function bit [9:0] LFOFreqDiv(bit [4:0] LFOF);
@@ -495,7 +506,7 @@ package SCSP_PKG;
 	endfunction
 	
 	function bit [22:0] PhaseCalc(SCR5_t SCR5, bit signed [7:0] PLFO_WAVE);
-		bit [26:0] P;
+		bit [27:0] P;
 		bit [3:0] S;
 		bit [10:0] F;
 		bit [14:0] TEMP;
@@ -505,7 +516,12 @@ package SCSP_PKG;
 		F = 11'h400 + SCR5.FNS;
 		TEMP = $signed(PLFO_WAVE) * F[10:4];
 		FM = {{3{TEMP[14]}},TEMP[14:6]};
-		P = {15'b000000000000000,{1'b0,F}+FM}<<S;
+		//The left shift by S (0..15) is a multiplication by 2^S, which maps onto a DSP block.
+`ifdef POCKET_SCSPP_DSP_PHASE
+		P = {16'd0,{1'b0,F}+FM} * (28'd1 << S);
+`else
+		P = {16'd0,{1'b0,F}+FM}<<S;
+`endif
 		
 		return P[26:4];
 	endfunction
@@ -568,9 +584,16 @@ package SCSP_PKG;
 	function bit signed [15:0] VolCalc(bit signed [15:0] WAVE, bit [9:0] LEVEL);
 		bit [22:0] MULT;
 		bit [15:0] RES;
+		bit signed [32:0] PMV;
 		
 		MULT = $signed(WAVE) * ({2'b01,~LEVEL[5:0]});
+`ifndef POCKET_SCSPP_NODSP_VOL
+		//Right shift by LEVEL[9:6] as a multiplication by 2^(15-LEVEL[9:6]).
+		PMV = $signed(MULT[22:7]) * $signed({1'b0,16'd1 << (4'd15 - LEVEL[9:6])});
+		RES = PMV[30:15];
+`else
 		RES = $signed($signed(MULT[22:7])>>>LEVEL[9:6]);
+`endif
 		
 		return RES;
 	endfunction
@@ -599,9 +622,16 @@ package SCSP_PKG;
 	
 	function bit signed [15:0] MVolCalc(bit signed [17:0] WAVE, bit [3:0] MVOL, bit DAC18B);
 		bit [17:0] TEMP1,TEMP2,TEMP3;
+		bit signed [26:0] PM;
 		
 		TEMP1 = DAC18B ? $signed(WAVE)<<<2 : WAVE;
+		//Right shift by ~MVOL[3:1] as a multiplication by 2^MVOL[3:1] and a fixed shift.
+`ifdef POCKET_SCSPP_NODSP_MVOL
 		TEMP2 = $signed($signed(TEMP1)>>>(~MVOL[3:1]));
+`else
+		PM = $signed(TEMP1) * $signed({1'b0,8'd1 << MVOL[3:1]});
+		TEMP2 = PM[24:7];
+`endif
 		TEMP3 = MVOL ? $signed(TEMP2) - (!MVOL[0] ? $signed($signed(TEMP2)>>>2) : '0) : 18'sh0000;
 		
 		return TEMP3[17] && TEMP3[16:15] != 2'b11 ? 16'h8000 : !TEMP3[17] && TEMP3[16:15] != 2'b00 ? 16'h7FFF : TEMP3[15:0];
@@ -638,13 +668,31 @@ package SCSP_PKG;
 		bit [10: 0] MANT;
 		bit [22: 0] T0,T1,T2,T3;
 		bit [ 3: 0] E1,E2,E3;
+		bit [ 3: 0] SH1,SH2,SH3;
+		bit B22,B21,B20,B19,C22,C21;
+		bit [27:0] PMI;
 		
 		SIGN = I[23];
 		
 		T0 = I[22:0] ^ {23{SIGN}};
+`ifdef POCKET_SCSPP_DSP_ITOF
+		//The three normalisation shifts (0/4/8, 0/2, 0/1) are decided from a few bits of the shifted value and applied as
+		//one multiplication by 2^shift.
+		if (T0[22:19] != 4'b0000)      begin SH1 = 4'd0; E1 = 4'h0; B22 = T0[22]; B21 = T0[21]; B20 = T0[20]; B19 = T0[19]; end
+		else if (T0[18:15] != 4'b0000) begin SH1 = 4'd4; E1 = 4'h4; B22 = T0[18]; B21 = T0[17]; B20 = T0[16]; B19 = T0[15]; end
+		else                           begin SH1 = 4'd8; E1 = 4'h8; B22 = T0[14]; B21 = T0[13]; B20 = T0[12]; B19 = T0[11]; end
+		if ({B22,B21} != 2'b00)        begin SH2 = 4'd0; E2 = 4'h0; C22 = B22; C21 = B21; end
+		else                           begin SH2 = 4'd2; E2 = 4'h2; C22 = B20; C21 = B19; end
+		if (C22)                       begin SH3 = 4'd0; E3 = 4'h0; end
+		else if (C21)                  begin SH3 = 4'd1; E3 = 4'h1; end
+		else                           begin SH3 = 4'd1; E3 = 4'h2; end
+		PMI = {5'd0,T0} * {12'd0,16'd1 << (SH1 + SH2 + SH3)};
+		T3 = PMI[22:0];
+`else
 		{E1,T1} = T0[22:19] != 4'b0000 ? {4'h0,T0[22:0]} : T0[18:15] != 4'b0000 ? {4'h4,T0[18:0],4'h0} : {4'h8,T0[14:0],4'h0,4'h0};
 		{E2,T2} = T1[22:21] != 2'b00 ? {4'h0,T1[22:0]} : {4'h2,T1[20:0],2'h0};
 		{E3,T3} = T2[22:22] != 1'b0 ? {4'h0,T2[22:0]} : T2[21:21] != 1'b0 ? {4'h1,T2[21:0],1'h0} : {4'h2,T2[21:0],1'h0};
+`endif
 		
 		EXP = E1 + E2 + E3;
 		MANT = T3[21:11] ^ {11{SIGN}};
@@ -657,13 +705,22 @@ package SCSP_PKG;
 		bit [ 3: 0] EXP;
 		bit [10: 0] MANT;
 		bit [23: 0] RES;
+		bit signed [36:0] PMF;
 	
 		{SIGN,EXP,MANT} = F;
 		
 		if (EXP >= 4'd12)
 			RES = {{12{SIGN}},SIGN,MANT};
 		else
+`ifdef POCKET_SCSPP_DSP_FTOI
+		begin
+			//Right shift by EXP (0..11) as a multiplication by 2^(11-EXP).
+			PMF = $signed({SIGN,~SIGN,MANT,11'h000}) * $signed({1'b0,12'd1 << (4'd11 - EXP)});
+			RES = PMF[34:11];
+		end
+`else
 			RES = $signed($signed({SIGN,~SIGN,MANT,11'h000}) >>> EXP);
+`endif
 	
 		return RES;
 	endfunction

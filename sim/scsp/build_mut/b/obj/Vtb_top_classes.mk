@@ -35,8 +35,8 @@ VM_CLASSES_FAST += \
 VM_CLASSES_SLOW += \
   Vtb_top___024root__Slow \
   Vtb_top___024root__0__Slow \
-  Vtb_top_SCSP_PKG__Slow \
-  Vtb_top_SCSP_PKG__0__Slow \
+  Vtb_top_SCSPP_PKG__Slow \
+  Vtb_top_SCSPP_PKG__0__Slow \
   Vtb_top_REF_SCSP_PKG__Slow \
   Vtb_top_REF_SCSP_PKG__0__Slow \
 

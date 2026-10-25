@@ -1055,7 +1055,11 @@ module Saturn
 	wire SCSP_RES_N = STV_SCSP_RES_N;
 	wire SCPU_RES_N = STV_SCPU_RES_N;
 `endif
+`ifdef POCKET_SCSPP
+	SCSPP SCSP
+`else
 	SCSP SCSP
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),

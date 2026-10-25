@@ -3,7 +3,7 @@
 #   make clean
 ROOT   := $(abspath ../..)
 GOLD   := $(ROOT)/ref/Saturn_MiSTer/rtl/Saturn/SCSP
-NEW    ?= $(ROOT)/src/fpga/saturn/Saturn/SCSP
+NEW    ?= $(ROOT)/src/fpga/saturn/Saturn/SCSPP
 B      ?= build
 SEEDS  ?= 1 2 3 4 5 6
 ROUNDS ?= 400
@@ -24,25 +24,25 @@ $(B)/REF_SCSP_nm.sv: $(B)/REF_SCSP.sv
 	perl -pe 's/if \(REG_WE\[\d\]\) CR[23]\[[0-9: ]+\] <= [^;]*;//' $< > $@
 $(B)/REF_SCSP_pkg.sv: $(GOLD)/SCSP_pkg.sv | $(B)
 	perl -pe 's/\bSCSP_PKG\b/REF_SCSP_PKG/g' $< > $@
-$(B)/NEW_SCSP.sv: $(NEW)/SCSP.sv | $(B)
+$(B)/NEW_SCSPP.sv: $(NEW)/SCSPP.sv | $(B)
 	$(FILTER) $< > $@
-$(B)/NEW_SCSP_pkg.sv: $(NEW)/SCSP_pkg.sv | $(B)
+$(B)/NEW_SCSPP_pkg.sv: $(NEW)/SCSPP_pkg.sv | $(B)
 	cp $< $@
 $(B):
 	mkdir -p $(B)
 
-VFLAGS = --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style --top-module tb_top
+VFLAGS = --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style --top-module tb_top $(EXTRA)
 
 # Default build: MIDI_REGS=0 against the golden without CR2/CR3.
-$(B)/obj/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+$(B)/obj/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
 	verilator $(VFLAGS) -Mdir $(B)/obj \
-	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_nm.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_nm.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
 	@test -x $@
 
 # MIDI_REGS=1 against the unmodified golden: full register read-back.
-$(B)/objm/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+$(B)/objm/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
 	verilator $(VFLAGS) -GMIDI=1 -Mdir $(B)/objm \
-	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
 	@test -x $@
 
 run: $(B)/obj/Vtb_top $(B)/objm/Vtb_top
@@ -57,9 +57,9 @@ clean:
 # EFREG return and MIXS read-back forced to 0). Run: make cut-dsp
 $(B)/REF_SCSP_dspoff.sv: $(B)/REF_SCSP_nm.sv
 	perl -pe 's/assign MPRO0_Q = [^;]*;/assign MPRO0_Q = \x270;/; s/assign DSP_MIXS_Q = [^;]*;/assign DSP_MIXS_Q = \x270;/; s/TEMP = LevelCalc\(EFREG_Q,OP7_SCR8\.EFSDL\);/TEMP = \x270;/' $< > $@
-$(B)/objd/Vtb_top: $(B)/REF_SCSP_dspoff.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSP.sv $(B)/NEW_SCSP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+$(B)/objd/Vtb_top: $(B)/REF_SCSP_dspoff.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
 	verilator $(VFLAGS) -DPOCKET_CUT_SCSP_DSP -Mdir $(B)/objd \
-	  $(B)/NEW_SCSP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_dspoff.sv $(B)/NEW_SCSP.sv tb_top.sv tb.cpp
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_dspoff.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
 	@test -x $@
 .PHONY: cut-dsp
 cut-dsp: $(B)/objd/Vtb_top

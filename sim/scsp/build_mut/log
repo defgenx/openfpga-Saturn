@@ -1,7 +1,3 @@
-MISMATCH clk=516145 ce=203484 RAM_A ref=c93 new=c94
-MISMATCH clk=516146 ce=203485 RAM_A ref=c93 new=c94
-MISMATCH clk=516147 ce=203485 RAM_A ref=c93 new=c94
-MISMATCH clk=516148 ce=203485 RAM_A ref=c93 new=c94
-MISMATCH clk=516149 ce=203486 RAM_A ref=c93 new=c94
-MISMATCH clk=516150 ce=203486 RAM_A ref=c93 new=c94
-FAIL
+seed=2 clks=3367336 samples=2592 nonzero_samples=4758 wav_equal=1
+coverage: irq_clks=3023935 ram_wr_clks=50151 ram_rd_clks=1057711 avec_clks=36 68k_ops=5276 scu_ops=5261
+PASS
