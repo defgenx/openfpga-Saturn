@@ -22,8 +22,12 @@ module tb_top #(parameter MIDI = 0) (
 	output [15:0] R_RAM_D, N_RAM_D,
 	output [ 1:0] R_RAM_WE, N_RAM_WE,
 	output        R_RAM_RD, N_RAM_RD, R_RAM_CS, N_RAM_CS, R_RAM_RFS, N_RAM_RFS,
-	output [15:0] R_SOUND_L, N_SOUND_L, R_SOUND_R, N_SOUND_R
+	output [15:0] R_SOUND_L, N_SOUND_L, R_SOUND_R, N_SOUND_R,
+	output [ 4:0] N_OP7SLOT,
+	output [ 2:0] N_CYC
 );
+	assign N_OP7SLOT = new_i.OP7.SLOT;
+	assign N_CYC = new_i.CYCLE_NUM;
 	REF_SCSP ref_i (
 		.CLK(CLK), .RST_N(RST_N), .CE(CE), .RES_N(RES_N), .CE_R(CE_R), .CE_F(CE_F),
 		.DI(DI), .DO(R_DO), .CS_N(CS_N), .AD_N(AD_N), .DTEN_N(DTEN_N), .REQ_N(REQ_N),

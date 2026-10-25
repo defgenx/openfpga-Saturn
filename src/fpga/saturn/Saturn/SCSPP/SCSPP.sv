@@ -938,7 +938,7 @@ module SCSPP #(
 	//Slot output: one level/pan unit serves the direct path (evaluated at DSEL, one clock
 	//after OP7_SCR8 is latched) and the effect path (evaluated at SLOT1_CE, where ESL/ESR are sampled).
 	bit        STACK_WGEN;
-	bit [17:0] DIR_ACC_L,DIR_ACC_R;
+	bit [17:0] ACC_L,ACC_R;
 	bit        DSEL;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -971,18 +971,23 @@ module SCSPP #(
 	wire signed [15:0] PAN_L  = MX_PAN[4] ? MX_LEV : MX_ATT;
 	wire signed [15:0] PAN_R  = MX_PAN[4] ? MX_ATT : MX_LEV;
 	
+	//One accumulator pair: the direct contribution of a slot is added at DSEL (slot 0 restarts the sum),
+	//the effect contribution at SLOT1_CE. SND_EN[1:0] gate the contributions as they are added.
+	wire [17:0] PAN_LX = {{2{PAN_L[15]}},PAN_L} & {18{DSEL ? SND_EN[0] : SND_EN[1]}};
+	wire [17:0] PAN_RX = {{2{PAN_R[15]}},PAN_R} & {18{DSEL ? SND_EN[0] : SND_EN[1]}};
+	wire        ACC_CLR = DSEL & OP7.SLOT == 5'd0;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			// synopsys translate_off
-			DIR_ACC_L <= 0;
-			DIR_ACC_R <= 0;
+			ACC_L <= 0;
+			ACC_R <= 0;
 			// synopsys translate_on
 		end else if (!RES_N) begin
-			DIR_ACC_L <= 0;
-			DIR_ACC_R <= 0;
-		end else if (DSEL) begin
-			DIR_ACC_L <= (OP7.SLOT == 5'd0 ? 18'd0 : DIR_ACC_L) + {{2{PAN_L[15]}},PAN_L};
-			DIR_ACC_R <= (OP7.SLOT == 5'd0 ? 18'd0 : DIR_ACC_R) + {{2{PAN_R[15]}},PAN_R};
+			ACC_L <= 0;
+			ACC_R <= 0;
+		end else if (DSEL | SLOT1_CE) begin
+			ACC_L <= (ACC_CLR ? 18'd0 : ACC_L) + PAN_LX;
+			ACC_R <= (ACC_CLR ? 18'd0 : ACC_R) + PAN_RX;
 		end
 	end
 	wire STACK_WE = (CYCLE_NUM == 3'd0) & ~OP7.STWINH;
@@ -1267,27 +1272,7 @@ module SCSPP #(
 	
 	
 	//Effect out
-	bit signed [17:0] EFF_ACC_L,EFF_ACC_R;
-	always @(posedge CLK or negedge RST_N) begin
-		if (!RST_N) begin
-			// synopsys translate_off
-			EFF_ACC_L <= '0;
-			EFF_ACC_R <= '0;
-			// synopsys translate_on
-		end else if (!RES_N) begin
-			EFF_ACC_L <= '0;
-			EFF_ACC_R <= '0;
-		end else begin
-			if (SLOT0_EN & CYCLE0_CE) begin
-				EFREG_Q <= EFREG_RAM_Q;
-			end
-			
-			if (SLOT1_CE) begin
-				EFF_ACC_L <= (OP7.SLOT == 5'd0 ? 18'd0 : EFF_ACC_L) + {{2{PAN_L[15]}},PAN_L};
-				EFF_ACC_R <= (OP7.SLOT == 5'd0 ? 18'd0 : EFF_ACC_R) + {{2{PAN_R[15]}},PAN_R};
-			end
-		end
-	end
+	always @(posedge CLK) if (RES_N & SLOT0_EN & CYCLE0_CE) EFREG_Q <= EFREG_RAM_Q;
 	//Out
 	bit [17:0] SUM_L,SUM_R;
 	always @(posedge CLK or negedge RST_N) begin
@@ -1300,8 +1285,8 @@ module SCSPP #(
 			
 		end else begin
 			if (OP7.SLOT == 5'd0 && CYCLE_NUM[2:1] == 2'b00 && CYCLE1_CE) begin
-				SUM_L <= (!SND_EN[0] ? 18'h00000 : DIR_ACC_L) + (!SND_EN[1] ? 18'h00000 : EFF_ACC_L);
-				SUM_R <= (!SND_EN[0] ? 18'h00000 : DIR_ACC_R) + (!SND_EN[1] ? 18'h00000 : EFF_ACC_R);
+				SUM_L <= ACC_L;
+				SUM_R <= ACC_R;
 			end
 		end
 	end

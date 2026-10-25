@@ -195,6 +195,9 @@ static Wav wav_r, wav_n;
 static int ce_acc = 0, ce_phase = 0;
 static bool force_ce = true;
 static uint32_t samp_ctr = 0;
+// SND_EN[1:0] gate each slot's contribution as it is added (the reference gates the sums), so they may only change
+// between the sum latch and the first slot's direct contribution.
+static bool snd_want = false; static uint32_t snd_pend = 0;
 
 static void tick() {
 	// inputs for this clock
@@ -204,6 +207,7 @@ static void tick() {
 	top->CE = ce;
 	ce_phase ^= 1;
 	top->CE_R = ce_phase; top->CE_F = !ce_phase;
+	if (snd_want && top->N_OP7SLOT == 0 && top->N_CYC >= 2 && top->N_CYC <= 5) { top->SND_EN = (top->SND_EN & 4) | snd_pend; snd_want = false; }
 	b68.step();
 	bscu.step();
 	top->CLK = 0; top->eval();
@@ -537,7 +541,7 @@ int main(int argc, char **argv) {
 		}
 		else if (act < 70) { for (int i = 0, n = R->range(1, 24); i < n; i++) rand_read(); }
 		else if (act < 74) { for (int i = 0, n = R->range(1, 8); i < n; i++) wr_ram(R->below(1 << 18), R->next()); }
-		else if (act < 77) { top->ESL = R->next(); top->ESR = R->next(); top->SND_EN = R->below(8); }
+		else if (act < 77) { top->ESL = R->next(); top->ESR = R->next(); { uint32_t e = R->below(8); top->SND_EN = (top->SND_EN & 3) | (e & 4); snd_pend = e & 3; snd_want = true; } }
 		else if (act < 80) { common_cr(); }
 		else if (act < 83) {
 			wr_reg(0x418 + 2 * R->below(3), (R->below(8) << 8) | R->below(256));
