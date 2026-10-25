@@ -688,6 +688,40 @@ module SCUP2
 		else if (DMA_BUS_EN && ABUS_WAIT_CNT) ABUS_WAIT_CNT <= ABUS_WAIT_CNT - 6'd1;
 	end
 	
+	//DMA address and count registers: all load/update conditions in one place
+	wire        dm_idle = DMA_BUS_EN && DMA_ST == DMA_IDLE;
+	wire        dm_pch  = DMA_PEND[0] || DMA_PEND[1] || DMA_PEND[2];
+	wire        dm_i3   = dm_idle && DMA_PEND[3];
+	wire        dm_ich  = dm_idle && !DMA_PEND[3] && dm_pch && !DMD[DMA_PEND_CH].MOD;
+	wire        dm_iind = dm_idle && !DMA_PEND[3] && dm_pch && DMD[DMA_PEND_CH].MOD;
+	wire        dm_ind  = CE_R && RES_N && (DMA_ST == DMA_IND_READ_BBUS ? BBUS_IND_DONE : DMA_ST == DMA_IND_READ_CBUS ? CBUS_IND_DONE : 1'b0);
+	wire        dm_rack = ABUS_READ_ACK || BBUS_READ_ACK || CBUS_READ_ACK;
+	wire        dm_dack = ABUS_DATA_ACK || BBUS_DATA_ACK || CBUS_DATA_ACK;
+	wire        dm_wtn  = (DMA_ST == DMA_CBUS_ABUS && ABUS_DATA_ACK) ||
+	                      ((DMA_ST == DMA_ABUS_BBUS || DMA_ST == DMA_CBUS_BBUS) && BBUS_DATA_ACK) ||
+	                      ((DMA_ST == DMA_ABUS_CBUS || DMA_ST == DMA_BBUS_CBUS) && CBUS_DATA_ACK);
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin DMA_RA <= '0; DMA_WA <= '0; DMA_IA <= '0; DMA_RTN <= '0; DMA_WTN <= '0; DMA_EC <= 0; end
+		else if (!RES_N) begin DMA_RA <= '0; DMA_WA <= '0; DMA_IA <= '0; DMA_RTN <= '0; DMA_WTN <= '0; DMA_EC <= 0; end
+		else begin
+			if (dm_i3 || dm_ich) DMA_RA <= DRSEL;
+			else if (dm_ind && DMA_IND_REG == 2'd2) DMA_RA <= IND_D[26:0];
+			else if (CE_R && dm_rack && (DMA_DSP ? |DMA_WADD : DMA_RADD)) DMA_RA <= DMA_RA_NEW;
+			if (dm_i3 || dm_ich) DMA_WA <= DWSEL;
+			else if (dm_ind && DMA_IND_REG == 2'd1) DMA_WA <= IND_D[26:0];
+			else if (CE_R && dm_dack && |DMA_WADD) DMA_WA <= DMA_WA_NEW;
+			if (dm_iind) DMA_IA <= {DWSEL[26:2],2'b00};
+			else if (DMA_BUS_EN && (BBUS_IND_DONE || CBUS_IND_DONE)) DMA_IA <= DMA_IA_NEW;
+			if (dm_ich) DMA_RTN <= DCSEL;
+			else if (dm_ind && DMA_IND_REG == 2'd0) DMA_RTN <= IND_D[19:0];
+			else if (CE_R && dm_rack && !DMA_DSP) DMA_RTN <= DMA_RTN_NEXT;
+			if (dm_ich) DMA_WTN <= DCSEL;
+			else if (dm_ind && DMA_IND_REG == 2'd0) DMA_WTN <= IND_D[19:0];
+			else if (dm_wtn) DMA_WTN <= DMA_WTN_NEXT;
+			if (dm_ind && DMA_IND_REG == 2'd2) DMA_EC <= IND_D[31];
+		end
+	end
+	
 	//Capture of CPU writes to DR/DW/DC; they land in the clk after the CE_R cycle that processes REG_WWAIT
 	wire        CW_STB = CE_R && RES_N && REG_WWAIT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -809,12 +843,6 @@ module SCUP2
 			CBUS_BURST <= 0;
 			
 			DMA_ST <= DMA_IDLE;
-			DMA_RA <= '0;
-			DMA_WA <= '0;
-			DMA_IA <= '0;
-			DMA_RTN <= '0;
-			DMA_WTN <= '0;
-			DMA_EC <= 0;
 			DMA_CH <= '0;
 			DMA_PEND <= '{4{0}};
 			DMA_DSP <= 0;
@@ -862,12 +890,6 @@ module SCUP2
 			CBUS_BURST <= 0;
 			
 			DMA_ST <= DMA_IDLE;
-			DMA_RA <= '0;
-			DMA_WA <= '0;
-			DMA_IA <= '0;
-			DMA_RTN <= '0;
-			DMA_WTN <= '0;
-			DMA_EC <= 0;
 			DMA_CH <= '0;
 			DMA_PEND <= '{4{0}};
 			DMA_DSP <= 0;
@@ -1950,8 +1972,8 @@ module SCUP2
 					DSTA.DDMV <= 0;//?
 					if (DMA_PEND[3]) begin
 						DMA_PEND[3] <= 0;
-						DMA_RA <= DRSEL;
-						DMA_WA <= DWSEL;
+						;
+						;
 						DMA_RADD <= DSP_ADD[0];
 						DMA_WADD <= DSP_ADD;
 							
@@ -1965,16 +1987,16 @@ module SCUP2
 						DMA_IDX = DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;
 						DMA_PEND[DMA_IDX] <= 0;
 						if (!DMD[DMA_IDX].MOD) begin
-							DMA_RA <= DRSEL;
-							DMA_WA <= DWSEL;
-							DMA_RTN <= DCSEL;
-							DMA_WTN <= DCSEL;
+							;
+							;
+							;
+							;
 							DMA_RADD <= DAD[DMA_IDX].DRA;
 							DMA_WADD <= DAD[DMA_IDX].DWA;
 							DMA_IND <= 0;
 							DMA_ST <= DMA_SELECT;
 						end else begin
-							DMA_IA <= {DWSEL[26:2],2'b00};
+							;
 							DMA_IND <= 1;
 							DMA_ST <= DMA_IND_START;
 						end
@@ -2014,9 +2036,9 @@ module SCUP2
 				DMA_IND_READ_CBUS: if (CE_R) begin
 					if (DMA_ST == DMA_IND_READ_BBUS ? BBUS_IND_DONE : CBUS_IND_DONE) begin
 						case (DMA_IND_REG)
-							2'd0: {DMA_RTN,DMA_WTN} <= {2{IND_D[19:0]}};
-							2'd1: DMA_WA <= IND_D[26:0];
-							2'd2: {DMA_EC,DMA_RA} <= {IND_D[31],IND_D[26:0]};
+							2'd0: ;
+							2'd1: ;
+							2'd2: ;
 						endcase
 						
 						DMA_IND_REG <= DMA_IND_REG + 2'd1;
@@ -2157,7 +2179,7 @@ module SCUP2
 					if (ABUS_DATA_ACK) begin
 						DMA_BUF_RPOS <= DMA_BUF_RPOS + DMA_WTN_DEC;
 						DMA_BUF_SIZE <= DMA_BUF_SIZE - DMA_WTN_DEC;
-						DMA_WTN <= DMA_WTN_NEXT;
+						;
 					end
 					if (ABUS_WRITE_DONE) begin
 						if (!DMA_WTN) begin
@@ -2177,7 +2199,7 @@ module SCUP2
 					if (BBUS_DATA_ACK) begin
 						DMA_BUF_RPOS <= DMA_BUF_RPOS + DMA_WTN_DEC;
 						DMA_BUF_SIZE <= DMA_BUF_SIZE - DMA_WTN_DEC;
-						DMA_WTN <= DMA_WTN_NEXT;
+						;
 					end
 					if (BBUS_WRITE_DONE) begin
 						if (!DMA_WTN) begin
@@ -2199,7 +2221,7 @@ module SCUP2
 					if (CBUS_DATA_ACK) begin
 						DMA_BUF_RPOS <= DMA_BUF_RPOS + DMA_WTN_DEC;
 						DMA_BUF_SIZE <= DMA_BUF_SIZE - DMA_WTN_DEC;
-						DMA_WTN <= DMA_WTN_NEXT;
+						;
 					end
 					if (ECWAIT_N && CBUS_ST == CBUS_WRITE) begin
 						if (!DMA_WTN) begin
@@ -2358,26 +2380,26 @@ module SCUP2
 			if (CE_R) begin
 				if (ABUS_READ_ACK || BBUS_READ_ACK || CBUS_READ_ACK) begin
 					if (!DMA_DSP) begin
-						if (DMA_RADD) DMA_RA <= DMA_RA_NEW;
-						DMA_RTN <= DMA_RTN_NEXT;
+						if (DMA_RADD) ;
+						;
 						
 					end else begin
-						if (DMA_WADD) DMA_RA <= DMA_RA_NEW;
+						if (DMA_WADD) ;
 						if (DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DMA_RA_NEW[26:2];
 					end 
 				end
 				
 				if (ABUS_DATA_ACK || BBUS_DATA_ACK || CBUS_DATA_ACK) begin
 					if (!DMA_DSP) begin
-						if (DMA_WADD) DMA_WA <= DMA_WA_NEW;
+						if (DMA_WADD) ;
 					end else begin
-						if (DMA_WADD) DMA_WA <= DMA_WA_NEW;
+						if (DMA_WADD) ;
 						if (DMA_WADD && !DSP_HOLD) DSP_DW <= DSP_DMA_END ? DSP_DW : DMA_WA_NEW;
 					end 
 				end
 				
 				if (BBUS_IND_DONE || CBUS_IND_DONE) begin
-					DMA_IA <= DMA_IA_NEW;
+					;
 				end
 				
 				if (DMA_END && DMA_DSP) begin
