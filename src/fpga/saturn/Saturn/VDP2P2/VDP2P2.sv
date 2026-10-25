@@ -2728,13 +2728,15 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	wire [31: 0] LBQ[3];
 	bit  [31: 0] LBW[3];
 	bit          LBWE[3];
-	wire [ 2: 0] LBVQ, LBVQB;
+	wire [ 2: 0] LBVQ;
+	wire [ 2: 0] LBVQB = LBVQ;
 	bit  [ 2: 0] LBVW;
 	bit          LBVWE;
 	VDP2P2_SDP #(10,32,0) lb0(CLK, LBWE[0], P2X, LBW[0], LBRA, LBQ[0]);
 	VDP2P2_SDP #(10,32,0) lb1(CLK, LBWE[1], P2X, LBW[1], LBRA, LBQ[1]);
 	VDP2P2_SDP #(10,32,0) lb2(CLK, LBWE[2], P2X, LBW[2], LBRA, LBQ[2]);
-	VDP2P2_LBV lbv(CLK, LBVWE, P2X, LBVW, P1X, LBVQ, XD, LBVQB, SO_RD_D, SXD_D);
+	//the clear after a scan-out read uses the write slot of the insertion that the read blocked
+	VDP2P2_SDP #(10,3,0) lbv(CLK, LBVWE || SO_RD_D, LBVWE ? P2X : SXD_D, LBVWE ? LBVW : 3'b000, LBRA, LBVQ);
 	wire [ 2: 0] NPRI = P2E[26:24], NLID = P2E[31:29];
 	wire         V0 = LBVQ[0], V1 = LBVQ[1], V2 = LBVQ[2];
 	wire         B0 = !V0 || NPRI > LBQ[0][26:24] || (NPRI == LBQ[0][26:24] && NLID < LBQ[0][31:29]);
