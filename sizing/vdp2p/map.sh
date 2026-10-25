@@ -9,7 +9,7 @@ V=${2:-$D/src/fpga/saturn/Saturn/$PFX}
 S=$D/sizing/vdp2p/snap/$TAG
 rm -rf $S; mkdir -p $S
 cp $V/$PFX.sv $V/${PFX}_pkg.sv $V/${PFX}_mem.sv $D/sizing/vdp2/area.qsf $S/
-sed 's/^\tVDP2 u (/\t$PFX u (/; s/module vdp2_wrap/module vdp2_wrap/' $D/sizing/vdp2/vdp2_wrap.sv > $S/vdp2_wrap.sv
+sed "s/^\tVDP2 u (/\t$PFX u (/" $D/sizing/vdp2/vdp2_wrap.sv > $S/vdp2_wrap.sv
 cat > $S/p.qpf <<Q
 PROJECT_REVISION = "p"
 Q
