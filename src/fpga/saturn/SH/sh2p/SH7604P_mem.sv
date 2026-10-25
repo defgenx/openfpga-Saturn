@@ -86,35 +86,26 @@ module SH2P_CACHE_TAG (
 	q);
 
 	input	  clock;
-	input	[18:0]  data;
+	input	[19:0]  data;
 	input	[5:0]  rdaddress;
 	input	[5:0]  wraddress;
 	input	  wren;
-	output	[18:0]  q;
-`ifndef ALTERA_RESERVED_QIS
-// synopsys translate_off
-`endif
-	tri0	  wren;
-`ifndef ALTERA_RESERVED_QIS
-// synopsys translate_on
-`endif
+	output	[19:0]  q;
 
-	wire [18:0] sub_wire0;
-	wire [18:0] q = sub_wire0;
-		
 	altdpram	altdpram_component (
 				.data (data),
 				.inclock (clock),
+				.outclock (clock),
 				.rdaddress (rdaddress),
 				.wraddress (wraddress),
 				.wren (wren),
-				.q (sub_wire0),
+				.q (q),
 				.aclr (1'b0),
 				.byteena (1'b1),
 				.inclocken (1'b1),
+				.outclocken (1'b1),
 				.rdaddressstall (1'b0),
 				.rden (1'b1),
-				//.sclr (1'b0),
 				.wraddressstall (1'b0));
 	defparam
 		altdpram_component.indata_aclr = "OFF",
@@ -123,14 +114,14 @@ module SH2P_CACHE_TAG (
 		altdpram_component.lpm_type = "altdpram",
 		altdpram_component.outdata_aclr = "OFF",
 		altdpram_component.outdata_reg = "UNREGISTERED",
-		altdpram_component.power_up_uninitialized = "TRUE",
+		altdpram_component.power_up_uninitialized = "FALSE",
 		altdpram_component.ram_block_type = "MLAB",
 		altdpram_component.rdaddress_aclr = "OFF",
 		altdpram_component.rdaddress_reg = "UNREGISTERED",
 		altdpram_component.rdcontrol_aclr = "OFF",
 		altdpram_component.rdcontrol_reg = "UNREGISTERED",
 		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram_component.width = 19,
+		altdpram_component.width = 20,
 		altdpram_component.widthad = 6,
 		altdpram_component.width_byteena = 1,
 		altdpram_component.wraddress_aclr = "OFF",
