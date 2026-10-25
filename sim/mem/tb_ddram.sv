@@ -66,7 +66,7 @@ ddram_pocket dut (
 // ---------------------------------------------------------------- two PSRAM chips
 wire [31:0] m0_err, m0_rd, m0_wr, m0_bursts, m0_cel, m0_xrow, m1_err, m1_rd, m1_wr, m1_bursts, m1_cel, m1_xrow;
 wire i0, i1;
-psram_bench #(.INIT_US(INIT_US)) ps0 (
+psram_bench #(.INIT_US(INIT_US), .CNT_W(5), .ALIGNED(1'b1)) ps0 (
 	.clk(clk), .reset(rst), .busy(p0_busy), .addr(p0_addr), .cnt(p0_cnt), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
 	.rdata(p0_rdata), .rvalid(p0_rvalid), .rlast(p0_rlast), .idle(i0),
 	.m_err(m0_err), .m_rd(m0_rd), .m_wr(m0_wr), .m_bursts(m0_bursts), .m_cel(m0_cel), .m_xrow(m0_xrow));

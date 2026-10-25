@@ -104,7 +104,7 @@ wire        p0_busy, p0_rd, p0_we, p1_busy, p1_rd, p1_we;
 wire [22:0] p0_addr, p1_addr;  wire [9:0] p0_cnt, p1_cnt;  wire [3:0] p0_be, p1_be;  wire [31:0] p0_din, p1_din;
 wire [15:0] p0_rdata, p1_rdata;  wire p0_rvalid, p1_rvalid, p0_rlast, p1_rlast;
 
-psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0)) psram0 (
+psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0), .CNT_W(5), .ALIGNED(1'b1)) psram0 (
 	.clk(clk_ram), .reset(rst_ram), .init_go(sdram_ready), .busy(p0_busy), .addr(p0_addr), .cnt(p0_cnt), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
 	.rdata(p0_rdata), .rvalid(p0_rvalid), .rlast(p0_rlast), .idle(),
 	.cram_a(cram0_a), .cram_dq_out(cram0_dq_o), .cram_dq_oe(cram0_dq_oe), .cram_dq_in(cram0_dq_i), .cram_clk(cram0_clk),
