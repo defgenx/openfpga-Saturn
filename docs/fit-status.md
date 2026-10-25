@@ -10,6 +10,7 @@ Per-entity tables are in `sizing/pocket-build/`.
 | `pocket-build` lite | same + SCU DSP and SCSP DSP cuts | | 2,119 / 1,848 | | |
 | `main` 7255033 full | same as full + mem-shrink; no feature cuts | 21,996 (119%) | 2,224 / 1,848 | not placed | 29 / 66 |
 | `main` 981e25f full | same + SCSPP; no feature cuts | 21,571 (117%) | 2,180 / 1,848 | not placed | 34 / 66 |
+| `main` a2992a4 full | same + VDP2P 4,740, mem CD ring in PSRAM1, SH2P fixes | 21,368 (116%) | 2,162 / 1,848 | not placed | 41 / 66 |
 
 Fitter ALMs per block, full config (`full_sh2p.entities.txt`):
 
