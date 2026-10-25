@@ -64,8 +64,9 @@ cdd_pocket dut (
 );
 
 // ---------------------------------------------------------------- ring memory model, ddram_pocket handshake:
-// a write is taken on rg_wr and busy stays high for 20 clocks (the PSRAM write); a read raises busy the clock after
-// rg_rd rises and drops it after 2..40 clocks, now and then 1500 (a VDP1 burst ahead on the chip)
+// a write is taken on rg_wr and busy stays high for 4 clk_sys until the chip starts it (after any read in progress);
+// a read raises busy the clock after rg_rd rises and drops it after 2..40 clk_sys, now and then 500 (a VDP1 burst
+// ahead on the chip, about 1000 clk_ram)
 reg [15:0] rmem [0:16383];
 assign rg_q = rmem[rg_ra];
 integer wcnt = 0, rcnt = 0, nslow = 0, nrd = 0, rg_ovf_chk = 0;
@@ -74,13 +75,13 @@ always @(posedge clk) begin
 	rg_rd_d <= rg_rd;
 	if (rg_wr) begin
 		if (rg_wbusy) begin $display("FAIL: ring write while busy"); $finish; end
-		rmem[{rg_wa, 1'b0}] <= rg_wd[31:16]; rmem[{rg_wa, 1'b1}] <= rg_wd[15:0]; rg_wbusy <= 1; wcnt <= 17;
+		rmem[{rg_wa, 1'b0}] <= rg_wd[31:16]; rmem[{rg_wa, 1'b1}] <= rg_wd[15:0]; rg_wbusy <= 1; wcnt <= 4;
 	end else if (rg_wbusy) begin
-		if (wcnt == 0) rg_wbusy <= 0; else wcnt <= wcnt - 1;
+		if (wcnt == 0) begin if (!rg_rbusy) rg_wbusy <= 0; end else wcnt <= wcnt - 1;
 	end
 	if (rg_rd && !rg_rd_d) begin
 		rg_rbusy <= 1; nrd = nrd + 1;
-		if (nrd % 700 == 0) begin rcnt <= 1500; nslow = nslow + 1; end else rcnt <= 2 + ($urandom % 39);
+		if (nrd % 700 == 0) begin rcnt <= 500; nslow = nslow + 1; end else rcnt <= 2 + ($urandom % 39);
 	end else if (rg_rbusy) begin
 		if (rcnt == 0) rg_rbusy <= 0; else rcnt <= rcnt - 1;
 	end
