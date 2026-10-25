@@ -8,14 +8,15 @@
 //   * the single 64 bit DDR3 master is two 64 bit masters, one per PSRAM chip, so a WRAM-H line fill
 //     on PSRAM0 and a VDP1 texture burst on PSRAM1 run at the same time. Their request/ready
 //     semantics are those of a DDRAM port (see psram_sync.sv: request taken when busy is low, beats
-//     flagged by dout_ready, busy low in that cycle).
+//     rvalid/rlast, busy low in the rlast cycle).
 //   * channel to chip:   PSRAM0  ramh raml cart bsram bios + the loader port
 //                        PSRAM1  vdp1vram cdram cdbuf (+ the cdbuf write port)
 //     The VDP1 framebuffer is not here: vdp1_fb_pocket.sv holds it (vdp1fb_* are kept, inert).
 //   * ST-V channels (eeprom, rax) are removed; the loader port (32 bit, for the bridge load path) and
 //     the cdbuf write port (sector data from the APF side) are added. The bios channel is not
 //     implemented (bios_* are inert: the BIOS arrives through the loader port).
-//   * the cache RAMs are 64 bit write / 16 or 32 bit read M10K memories (no output muxes).
+//   * the PSRAM backend is word (16 bit) oriented: halfword address, word count, 32 bit write data with
+//     byte enables; the read caches take the words as they arrive (M10K, no output muxes).
 //
 // PSRAM0 map (byte offsets; the MiSTer DDR3 offsets of the same regions, cartridge moved to die 1):
 //   0x000000 BIOS 512 KB       0x100000 backup RAM image 64 KB     0x200000 WRAM-L 1 MB
@@ -31,31 +32,29 @@ module ddram_pocket
 	input  wire        clk,
 	input  wire        rst,
 
-	// PSRAM0 backend (psram_sync client port)
+	// PSRAM0 backend (psram_sync client port: halfword address, word count)
 	input  wire        p0_busy,
-	output wire [20:0] p0_addr,
-	output wire  [7:0] p0_burst,
+	output wire [22:0] p0_addr,
+	output wire  [9:0] p0_cnt,
 	output wire        p0_rd,
 	output wire        p0_we,
-	output wire [63:0] p0_din,
-	output wire  [7:0] p0_be,
+	output wire [31:0] p0_din,
+	output wire  [3:0] p0_be,
 	input  wire [15:0] p0_rdata,
 	input  wire        p0_rvalid,
-	input  wire  [1:0] p0_rword,
-	input  wire        p0_dout_ready,
+	input  wire        p0_rlast,
 
 	// PSRAM1 backend
 	input  wire        p1_busy,
-	output wire [20:0] p1_addr,
-	output wire  [7:0] p1_burst,
+	output wire [22:0] p1_addr,
+	output wire  [9:0] p1_cnt,
 	output wire        p1_rd,
 	output wire        p1_we,
-	output wire [63:0] p1_din,
-	output wire  [7:0] p1_be,
+	output wire [31:0] p1_din,
+	output wire  [3:0] p1_be,
 	input  wire [15:0] p1_rdata,
 	input  wire        p1_rvalid,
-	input  wire  [1:0] p1_rword,
-	input  wire        p1_dout_ready,
+	input  wire        p1_rlast,
 
 	input  wire [19: 2] ramh_addr,
 	output wire [31: 0] ramh_dout,
@@ -131,38 +130,27 @@ module ddram_pocket
 	output wire         cdbuf_wbusy
 );
 
-// 64 bit word indexes of the regions (the sums are concatenations: the regions are aligned)
-localparam [20:0] RAMH_W64   = 21'h060000;   // 0x300000
-localparam [20:0] BACKUP_W64 = 21'h020000;   // 0x100000
-localparam [20:0] CART_W64   = 21'h100000;   // 0x800000 (die 1)
-localparam [20:0] CDRAM_W64  = 21'h010000;   // PSRAM1 0x080000
-localparam [20:0] CDBUF_W64  = 21'h020000;   // PSRAM1 0x100000
-
 assign vdp1fb_dout = 16'h0000;
 assign vdp1fb_busy = 1'b0;
 assign bios_busy = 1'b0;
 
-// byte enables of a 16 bit write into the 64 bit word, lane = word address [2:1]
-function automatic [7:0] be16(input [1:0] lane, input [1:0] be);
-	be16 = {6'd0, be} << (6 - 2 * lane);
-endfunction
-
-// ---- chip A (PSRAM0) and chip B (PSRAM1) masters
-reg  [20: 0] a_addr, b_addr;
-reg  [31: 0] a_wd, b_wd;                    // the 64 bit write data is this word twice
-reg  [ 7: 0] a_be, b_be;
-reg  [ 2: 0] a_left;                        // beats still to receive (1, 2 or 4 at the start)
-reg  [ 7: 0] b_left;
+// ---- chip A (PSRAM0) and chip B (PSRAM1) masters; addresses are halfword (16 bit word) addresses
+// region bases (word address): BACKUP 0x80000, CART 0x400000 (die 1), RAMH 0x180000, CDRAM 0x40000, CDBUF 0x80000
+reg  [22: 0] a_addr, b_addr;
+reg  [31: 0] a_wd, b_wd;                    // word 0 in [31:16]
+reg  [ 3: 0] a_be, b_be;                    // byte enables of word 0 {hi, lo}, word 1 {hi, lo}
+reg  [ 4: 0] a_cnt;                         // words of the request: 1, 2, 8 or 16
+reg  [ 9: 0] b_cnt;
 reg          a_read = 0, a_write = 0, b_read = 0, b_write = 0;
 reg  [ 2: 0] a_chan;                        // 0 ramh 1 raml 2 cart 3 bsram 4 loader
 reg  [ 1: 0] b_chan;                        // 0 cdram 1 vdp1vram 2 cdbuf 3 cdbuf write
-reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read beats
-reg  [ 1: 0] a_cwr;
-reg  [ 6: 0] b_cwr;
-assign p0_addr = a_addr;  assign p0_burst = {5'd0, a_left};  assign p0_rd = a_read;  assign p0_we = a_write;
-assign p0_din  = {2{a_wd}};  assign p0_be = a_be;
-assign p1_addr = b_addr;  assign p1_burst = b_left;  assign p1_rd = b_read;  assign p1_we = b_write;
-assign p1_din  = {2{b_wd}};  assign p1_be = b_be;
+reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read words
+reg  [ 3: 0] a_cw;                          // cache word index of the next read word
+reg  [ 8: 0] b_cw;
+assign p0_addr = a_addr;  assign p0_cnt = {5'd0, a_cnt};  assign p0_rd = a_read;  assign p0_we = a_write;
+assign p0_din  = a_wd;    assign p0_be = a_be;
+assign p1_addr = b_addr;  assign p1_cnt = b_cnt;          assign p1_rd = b_read;  assign p1_we = b_write;
+assign p1_din  = b_wd;    assign p1_be = b_be;
 
 // ---- per-channel state
 reg  [ 19:  5] ramh_tag[4];
@@ -374,86 +362,85 @@ always @(posedge clk) begin
 		a_write <= 0;
 		a_read  <= 0;
 	end
-	else if(!p0_busy) begin
-		a_write <= 0;
-		a_read  <= 0;
+	else begin
+		if (!p0_busy) begin
+			a_write <= 0;
+			a_read  <= 0;
 
-		case (a_state)
+			case (a_state)
 			0: begin
-				a_left <= 3'd1;
-				a_cwr  <= '0;
+				a_cnt <= 5'd1;
+				a_cw  <= '0;
 				if (!ramh_fifo_empty) begin
-					a_addr  <= RAMH_W64 | {4'b0000, ramh_write_addr[19:3]};
+					a_addr  <= {4'b0011, ramh_write_addr[19:2], 1'b0};
 					a_wd    <= ramh_write_data;
-					a_be    <= ramh_write_addr[2] ? {4'b0000,ramh_write_be} : {ramh_write_be,4'b0000};
+					a_be    <= ramh_write_be;
+					a_cnt   <= 5'd2;
 					a_write <= 1;
 					a_chan  <= 3'd0;
 					a_state <= 2'd1;
 				end
 				else if (ramh_read_busy) begin
-					a_addr  <= RAMH_W64 | {4'b0000, ramh_tag[ramh_curr], 2'b00};
-					a_be    <= 8'hFF;
+					a_addr  <= {4'b0011, ramh_tag[ramh_curr], 4'b0000};
 					a_read  <= 1;
-					a_left  <= 3'd4;
+					a_cnt   <= 5'd16;
 					a_chan  <= 3'd0;
 					a_state <= 2'd2;
 				end
 				else if (raml_write_busy) begin
 					raml_write_busy <= 0;
-					a_addr  <= {2'b00,raml_write_addr[21:3]};
-					a_wd    <= {2{raml_write_data}};
-					a_be    <= be16(raml_write_addr[2:1], raml_be);
+					a_addr  <= {2'b00, raml_write_addr};
+					a_wd    <= {raml_write_data, 16'h0000};
+					a_be    <= {raml_be, 2'b00};
 					a_write <= 1;
 					a_chan  <= 3'd1;
 					a_state <= 2'd1;
 				end
 				else if (raml_read_busy) begin
-					a_addr  <= {2'b00,raml_rcache_addr[21:5],2'b00};
-					a_be    <= 8'hFF;
+					a_addr  <= {2'b00, raml_rcache_addr[21:5], 4'b0000};
 					a_read  <= 1;
-					a_left  <= 3'd4;
+					a_cnt   <= 5'd16;
 					a_chan  <= 3'd1;
 					a_state <= 2'd2;
 				end
 				else if (cart_write_busy) begin
 					cart_write_busy <= 0;
-					a_addr  <= CART_W64 | {1'b0,cart_write_addr[22:3]};
-					a_wd    <= {2{cart_write_data}};
-					a_be    <= be16(cart_write_addr[2:1], cart_be);
+					a_addr  <= {1'b1, cart_write_addr};
+					a_wd    <= {cart_write_data, 16'h0000};
+					a_be    <= {cart_be, 2'b00};
 					a_write <= 1;
 					a_chan  <= 3'd2;
 					a_state <= 2'd1;
 				end
 				else if (cart_read_busy) begin
-					a_addr  <= CART_W64 | {1'b0,cart_rcache_addr[22:5],2'b00};
-					a_be    <= 8'hFF;
+					a_addr  <= {1'b1, cart_rcache_addr[22:5], 4'b0000};
 					a_read  <= 1;
-					a_left  <= 3'd4;
+					a_cnt   <= 5'd16;
 					a_chan  <= 3'd2;
 					a_state <= 2'd2;
 				end
 				else if (bsram_write_busy) begin
 					bsram_write_busy <= 0;
-					a_addr  <= bsram_write_addr[20] ? CART_W64 | {4'b0000,bsram_write_addr[19:3]} : BACKUP_W64 | {8'd0,bsram_write_addr[15:3]};
-					a_wd    <= {2{bsram_write_data}};
-					a_be    <= be16(bsram_write_addr[2:1], bsram_be);
+					a_addr  <= bsram_write_addr[20] ? {1'b1, 3'b000, bsram_write_addr[19:1]} : {4'b0001, 4'b0000, bsram_write_addr[15:1]};
+					a_wd    <= {bsram_write_data, 16'h0000};
+					a_be    <= {bsram_be, 2'b00};
 					a_write <= 1;
 					a_chan  <= 3'd3;
 					a_state <= 2'd1;
 				end
 				else if (bsram_read_busy) begin
-					a_addr  <= bsram_rcache_addr[20] ? CART_W64 | {4'b0000,bsram_rcache_addr[19:4],1'b0} : BACKUP_W64 | {8'd0,bsram_rcache_addr[15:4],1'b0};
-					a_be    <= 8'hFF;
+					a_addr  <= bsram_rcache_addr[20] ? {1'b1, 3'b000, bsram_rcache_addr[19:4], 3'b000} : {4'b0001, 4'b0000, bsram_rcache_addr[15:4], 3'b000};
 					a_read  <= 1;
-					a_left  <= 3'd2;
+					a_cnt   <= 5'd8;
 					a_chan  <= 3'd3;
 					a_state <= 2'd2;
 				end
 				else if (ld_write_busy) begin
 					ld_write_busy <= 0;
-					a_addr  <= ld_waddr[23:3];
+					a_addr  <= {ld_waddr, 1'b0};
 					a_wd    <= ld_wdata;
-					a_be    <= ld_waddr[2] ? 8'h0F : 8'hF0;
+					a_be    <= 4'hF;
+					a_cnt   <= 5'd2;
 					a_write <= 1;
 					a_chan  <= 3'd4;
 					a_state <= 2'd1;
@@ -464,18 +451,20 @@ always @(posedge clk) begin
 				a_state <= 0;
 			end
 
-			2'd2: if (p0_dout_ready) begin
-				a_cwr <= a_cwr + 2'd1;
-				a_left <= a_left - 3'd1;
-				if (a_left == 3'd1) begin
-					if (a_chan == 3'd0) ramh_read_busy <= 0;
-					if (a_chan == 3'd1) begin raml_read_busy <= 0; raml_rcache_busy <= 1; end
-					if (a_chan == 3'd2) begin cart_read_busy <= 0; cart_rcache_busy <= 1; end
-					if (a_chan == 3'd3) begin bsram_read_busy <= 0; bsram_rcache_busy <= 1; end
-					a_state <= 0;
-				end
+			default: ;
+			endcase
+		end
+
+		if (a_state == 2'd2) begin
+			if (p0_rvalid) a_cw <= a_cw + 4'd1;
+			if (p0_rlast) begin
+				if (a_chan == 3'd0) ramh_read_busy <= 0;
+				if (a_chan == 3'd1) begin raml_read_busy <= 0; raml_rcache_busy <= 1; end
+				if (a_chan == 3'd2) begin cart_read_busy <= 0; cart_rcache_busy <= 1; end
+				if (a_chan == 3'd3) begin bsram_read_busy <= 0; bsram_rcache_busy <= 1; end
+				a_state <= 0;
 			end
-		endcase
+		end
 	end
 end
 
@@ -568,62 +557,59 @@ always @(posedge clk) begin
 		b_write <= 0;
 		b_read  <= 0;
 	end
-	else if(!p1_busy) begin
-		b_write <= 0;
-		b_read  <= 0;
+	else begin
+		if (!p1_busy) begin
+			b_write <= 0;
+			b_read  <= 0;
 
-		case (b_state)
+			case (b_state)
 			0: begin
-				b_left <= 8'd1;
+				b_cnt <= 10'd1;
+				b_cw  <= '0;
 				if (cdram_write_busy) begin
 					cdram_write_busy <= 0;
-					b_addr  <= CDRAM_W64 | {5'b00000,cdram_write_addr[18:3]};
-					b_wd    <= {2{cdram_write_data}};
-					b_be    <= be16(cdram_write_addr[2:1], cdram_be);
+					b_addr  <= {4'b0000, 1'b1, cdram_write_addr};
+					b_wd    <= {cdram_write_data, 16'h0000};
+					b_be    <= {cdram_be, 2'b00};
 					b_write <= 1;
 					b_chan  <= 2'd0;
 					b_state <= 2'd1;
 				end
 				else if (cdram_read_busy) begin
-					b_addr  <= CDRAM_W64 | {5'b00000,cdram_rcache_addr[18:5],2'b00};
-					b_be    <= 8'hFF;
+					b_addr  <= {4'b0000, 1'b1, cdram_rcache_addr[18:5], 4'b0000};
 					b_read  <= 1;
-					b_left  <= 8'd4;
+					b_cnt   <= 10'd16;
 					b_chan  <= 2'd0;
-					b_cwr   <= '0;
 					b_state <= 2'd2;
 				end
 				else if (!vdp1vram_fifo_empty) begin
-					b_addr  <= {5'b00000,vdp1vram_write_addr[18:3]};
-					b_wd    <= {2{vdp1vram_write_data}};
-					b_be    <= be16(vdp1vram_write_addr[2:1], vdp1vram_write_be);
+					b_addr  <= {5'b00000, vdp1vram_write_addr};
+					b_wd    <= {vdp1vram_write_data, 16'h0000};
+					b_be    <= {vdp1vram_write_be, 2'b00};
 					b_write <= 1;
 					b_chan  <= 2'd1;
 					b_state <= 2'd1;
 				end
 				else if (vdp1vram_read_busy) begin
-					b_addr  <= vdp1vram_rcache_blen ? {5'b00000,vdp1vram_rcache_addr[18:3]} : {5'b00000,vdp1vram_rcache_addr[18:5],2'b00};
-					b_be    <= 8'hFF;
+					b_addr  <= vdp1vram_rcache_blen ? {5'b00000, vdp1vram_rcache_addr} : {5'b00000, vdp1vram_rcache_addr[18:5], 4'b0000};
 					b_read  <= 1;
-					b_left  <= vdp1vram_rcache_blen ? {1'b0,vdp1vram_rcache_blen[8:2]} + {7'b0000000,|vdp1vram_rcache_blen[1:0]} : 8'd4;
+					b_cnt   <= vdp1vram_rcache_blen ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
 					b_chan  <= 2'd1;
-					b_cwr   <= vdp1vram_rcache_blen ? {vdp1vram_rcache_addr[9:3]} : {vdp1vram_rcache_addr[9:5],2'b00};
+					b_cw    <= vdp1vram_rcache_blen ? vdp1vram_rcache_addr[9:1] : {vdp1vram_rcache_addr[9:5], 4'b0000};
 					b_state <= 2'd2;
 				end
 				else if (cdbuf_read_busy) begin
-					b_addr  <= CDBUF_W64 | {6'b000000,cdbuf_rcache_addr[13:5],2'b00};
-					b_be    <= 8'hFF;
+					b_addr  <= {4'b0001, 6'b000000, cdbuf_rcache_addr[13:5], 4'b0000};
 					b_read  <= 1;
-					b_left  <= 8'd4;
+					b_cnt   <= 10'd16;
 					b_chan  <= 2'd2;
-					b_cwr   <= '0;
 					b_state <= 2'd2;
 				end
 				else if (cdbuf_wwrite_busy) begin
 					cdbuf_wwrite_busy <= 0;
-					b_addr  <= CDBUF_W64 | {6'b000000,cdbuf_wwrite_addr[13:3]};
-					b_wd    <= {2{cdbuf_wwrite_data}};
-					b_be    <= be16(cdbuf_wwrite_addr[2:1], 2'b11);
+					b_addr  <= {4'b0001, 6'b000000, cdbuf_wwrite_addr};
+					b_wd    <= {cdbuf_wwrite_data, 16'h0000};
+					b_be    <= 4'b1100;
 					b_write <= 1;
 					b_chan  <= 2'd3;
 					b_state <= 2'd1;
@@ -634,17 +620,19 @@ always @(posedge clk) begin
 				b_state <= 0;
 			end
 
-			2'd2: if (p1_dout_ready) begin
-				b_cwr <= b_cwr + 7'd1;
-				b_left <= b_left - 8'd1;
-				if (b_left == 8'd1) begin
-					if (b_chan == 2'd0) begin cdram_read_busy <= 0; cdram_rcache_busy <= 1; end
-					if (b_chan == 2'd1) begin vdp1vram_read_busy <= 0; vdp1vram_rcache_busy <= 1; end
-					if (b_chan == 2'd2) begin cdbuf_read_busy <= 0; cdbuf_rcache_busy <= 1; end
-					b_state <= 0;
-				end
+			default: ;
+			endcase
+		end
+
+		if (b_state == 2'd2) begin
+			if (p1_rvalid) b_cw <= b_cw + 9'd1;
+			if (p1_rlast) begin
+				if (b_chan == 2'd0) begin cdram_read_busy <= 0; cdram_rcache_busy <= 1; end
+				if (b_chan == 2'd1) begin vdp1vram_read_busy <= 0; vdp1vram_rcache_busy <= 1; end
+				if (b_chan == 2'd2) begin cdbuf_read_busy <= 0; cdbuf_rcache_busy <= 1; end
+				b_state <= 0;
 			end
-		endcase
+		end
 	end
 end
 
@@ -654,14 +642,14 @@ wire           b_cache_wren = (b_state == 2'd2) && p1_rvalid;
 wire [ 31:  0] ramh_cache_q;
 wire [ 15:  0] cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_cache_q,cart_cache_q,bsram_cache_q;
 
-// 16 bit words are written as they arrive, address {beat, word}; read as 16 bit words (32 bit for WRAM-H)
-ddp_cache_ram #(4, 32) cache0 (clk, {ramh_curr,a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:3],ramh_addr[2]}, ramh_cache_q);
-ddp_cache_ram #(2, 16) cache1 (clk, {b_cwr[1:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd0, cdram_rcache_addr[4:1], cdram_cache_q);
-ddp_cache_ram #(2, 16) cache2 (clk, {a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
-ddp_cache_ram #(7, 16) cache3 (clk, {b_cwr[6:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
-ddp_cache_ram #(2, 16) cache5 (clk, {b_cwr[1:0],p1_rword}, p1_rdata, b_cache_wren & b_chan == 2'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
-ddp_cache_ram #(2, 16) cache6 (clk, {a_cwr[1:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd2, cart_rcache_addr[4:1], cart_cache_q);
-ddp_cache_ram #(1, 16) cache7 (clk, {a_cwr[0:0],p0_rword}, p0_rdata, a_cache_wren & a_chan == 3'd3, bsram_rcache_addr[3:1], bsram_cache_q);
+// 16 bit words are written as they arrive (address = word index inside the line); read as 16 bit words (32 bit for WRAM-H)
+ddp_cache_ram #(6, 32) cache0 (clk, {ramh_curr,a_cw}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:2]}, ramh_cache_q);
+ddp_cache_ram #(4, 16) cache1 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 2'd0, cdram_rcache_addr[4:1], cdram_cache_q);
+ddp_cache_ram #(4, 16) cache2 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
+ddp_cache_ram #(9, 16) cache3 (clk, b_cw, p1_rdata, b_cache_wren & b_chan == 2'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
+ddp_cache_ram #(4, 16) cache5 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 2'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
+ddp_cache_ram #(4, 16) cache6 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd2, cart_rcache_addr[4:1], cart_cache_q);
+ddp_cache_ram #(3, 16) cache7 (clk, a_cw[2:0], p0_rdata, a_cache_wren & a_chan == 3'd3, bsram_rcache_addr[3:1], bsram_cache_q);
 
 assign ramh_dout = ramh_ram_sel ? ramh_ram_q : {ramh_cache_q[15:0], ramh_cache_q[31:16]};
 assign ramh_busy = ramh_fifo_full | ramh_read_busy;
@@ -682,22 +670,22 @@ endmodule
 
 // ---- memories
 
-// read cache: 2**wa beats of four 16 bit words, written one word at a time (address {beat, word}) and read as RB bit
-// words (M10K, registered read address, unregistered output). RB = 32 returns {word 2k+1, word 2k}.
-module ddp_cache_ram #(parameter wa = 2, parameter RB = 16) (
+// read cache: 2**AW words of 16 bit, written one word at a time and read as RB bit words (M10K, registered read
+// address, unregistered output). RB = 32 returns {word 2k+1, word 2k}.
+module ddp_cache_ram #(parameter AW = 4, parameter RB = 16) (
 	input  wire                               clock,
-	input  wire [wa+1:0]                      wraddress,
+	input  wire [AW-1:0]                      wraddress,
 	input  wire [15:0]                        data,
 	input  wire                               wren,
-	input  wire [wa+$clog2(64/RB)-1:0]        rdaddress,
+	input  wire [AW-$clog2(RB/16)-1:0]        rdaddress,
 	output wire [RB-1:0]                      q
 );
-	localparam ra = wa + $clog2(64/RB);
+	localparam RA = AW - $clog2(RB/16);
 `ifdef ALTERA_RESERVED_QIS
 	altsyncram #(
 		.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
-		.width_a(16), .widthad_a(wa + 2), .numwords_a(4 << wa),
-		.width_b(RB), .widthad_b(ra), .numwords_b(1 << ra),
+		.width_a(16), .widthad_a(AW), .numwords_a(1 << AW),
+		.width_b(RB), .widthad_b(RA), .numwords_b(1 << RA),
 		.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
 		.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
 	) ram (
@@ -708,8 +696,8 @@ module ddp_cache_ram #(parameter wa = 2, parameter RB = 16) (
 		.data_b({RB{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
 	);
 `else
-	reg [15:0] mem [0:(4<<wa)-1];
-	reg [ra-1:0] rad;
+	reg [15:0] mem [0:(1<<AW)-1];
+	reg [RA-1:0] rad;
 	always @(posedge clock) begin
 		if (wren) mem[wraddress] <= data;
 		rad <= rdaddress;
