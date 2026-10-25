@@ -46,7 +46,41 @@ Rejected after analysis (reasons are structural, not guesses):
 
 ## 3. Measured
 
-(see the table at the end of this file, updated with each measurement)
+`quartus_map` ALM estimate after each step (area profile, standalone `scsp_wrap`, `SND_EN` tied high), then `quartus_fit` at the checkpoints.
+The fitter charges the standalone top 117 ALMs for its 233 virtual pins; the in-system SCSP is about 9% below the standalone figure
+(1,995 in the measured Pocket compile against 2,193 standalone for the shrunk `SCSP`).
+
+| Step | map ALM | map ALUT | regs | DSP | note |
+|---|---|---|---|---|---|
+| `SCSP` (shrunk, main) | 2,174 | 3,155 | 1,643 | 5 | **fit 2,193**, 30 RAM blocks |
+| shared sweep bus, shared level/pan unit | 2,061 | 2,972 | 1,644 | 5 | |
+| + shared master volume, 68K copy of the slot registers, RAM output registers, SCU/68K address merge | 1,962 | 2,853 | 1,504 | 5 | |
+| + merged RAM blocks, MPRO 68K copy as one RAM | 1,963 | 2,862 | 1,509 | 5 | the 4-way envelope shifts were +20 ALUT and were reverted |
+| + one accumulator pair (direct+effect), SND_EN gating per contribution | 1,899 | 2,741 | 1,473 | 5 | |
+| + sample-offset loop arithmetic (two add/sub units) | 1,878 | 2,695 | 1,473 | 5 | |
+| + DSP B operand negation through the carry | 1,865 | 2,669 | 1,473 | 5 | |
+| + level/pan, FM modulation, master volume, volume shift on DSP blocks | 1,766 | | 1,473 | 10 | per block: level/pan -42 (2 blocks), FM -24, master volume -18, volume shift -15; phase shift -16 for 2 blocks, FtoI 0, ItoF -5 (not used) |
+| + DSP-side copies of COEF, MEMS, EFREG with RAM output registers | 1,756 | 2,523 | 1,420 | 10 | |
+| **final, `quartus_fit`** | **fit 1,782** | 2,546 | 1,413 | 10 | 30 RAM blocks (= `SCSP`), 100 ALMs of MLAB |
+
+Result: **2,193 -> 1,782 fitter ALMs standalone (-18.7%)**; scaled by the standalone-to-system ratio of 0.91 that is about 1,620 in the
+system against the 1,400 target. The target was not reached; the bottom-up reasons are in section 2 (what is left is arithmetic and
+muxing that every serialisation attempt cost as much as it saved) and the remaining profile (`sizing/scspp/profile.py`): 68K read mux
+~200 ALUT, level/pan unit + accumulators ~210, sound-RAM address mux and phase/offset adders ~200, DSP datapath ~700, EG ~170.
+
+M10K: 30 blocks, the same as `SCSP`; DSP blocks: 10 (5 more than `SCSP`).
+
+## 3a. Deviations from the reference
+
+- `SOUND_L/R` lag `SUM_L/SUM_R` and `CR0` by up to two clk_sys (one master-volume unit, outputs registered). WAV identical.
+- `SND_EN[1:0]` gate each slot's contribution when it is added instead of gating the two sums; identical while `SND_EN` is constant
+  (tied to 3'b111 in `saturn_pocket.sv`). The bench changes `SND_EN[1:0]` only between the sum latch and the first slot's direct contribution.
+- The SCU must not issue a request or a configuration cycle while `RDY_N` is high (the SCU request address stays in `A` until the
+  request completes), and the 68K must hold `SCA` while a read is pending (no `SCPU_RA` copy).
+- First sample periods after `RES_N`: the stage-staggered sweeps are kept so the transients (the records that flow through the pipeline
+  right after `RES_N`) are identical; register accesses within 3 sample periods after `RES_N` are not tested, as before. `RST_N` low must come
+  with `RES_N` low. MIDI registers CR2/CR3 read 0 as in the shrunk core.
+- Weakly tested (not caught by the mutation runs): the sweep address stage of SCR1/SCR2, the `RES_N` clear of the output-register latches.
 
 ## 4. Verification
 
