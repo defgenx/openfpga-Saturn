@@ -241,3 +241,28 @@ Ablations of the 5,221-ALM design for sizing the remaining work: priority/colour
 ALMs when cut to two layers; pattern name conversion 199; rotation microcode arithmetic 257; RBG0+RBG1 1,179 in total.
 Findings: flip-flop removal alone changes ALMs little (they share ALMs with logic), narrow shared adders do not pay (operand
 muxes cost as much), and moving adders to DSP blocks removes ALUTs far faster than ALMs (81 ALUT for 17 ALM).
+
+## 9. Clean-sheet attempt (VDP2P2, macro `POCKET_VDP2P2`)
+
+`src/fpga/saturn/Saturn/VDP2P2/` starts as VDP2P (selected in `Saturn.sv` by `POCKET_VDP2P2`, listed in `saturn_pocket.qip`);
+`make -C sim vdp2 DUT=VDP2P2` and `vdp2-ppm` run the same differential sim (200 seeds, 4 PPM frames identical).
+
+First clean-sheet block: the NBG access decode from the cycle pattern nibble per bank (type and layer straight from the nibble,
+per-bank PN/CH/VS validity once, per-layer flags derived from it) in place of the 4 x 4 x 3 full expressions. Measured
+(`sizing/vdp2p/map.sh` with `PFX=VDP2P2`): 4,720 -> 4,712 ALMs (ALUT +4). Quartus had already factored the original expressions,
+so re-encoding combinational decode does not pay.
+
+Why the remaining plan in the brief does not reach 3,500 (measured and computed, not forecast):
+
+| idea | finding |
+|---|---|
+| one time-multiplexed dot decoder / priority engine | hi-res gives 4 clk per pixel for 6 layers: two lanes needed, and a two-lane insertion network is as large as the parallel rank selection (about 480 ALUT); layer records in RAM only remove register muxes (~100 ALUT) |
+| line buffers instead of register pipelines | 6 layers x 704 px x 16 bit x 2 buffers = 135 kbit: 14 M10K or about 1,000 ALMs of MLAB; the budget is net M10K <= 30 and 16 are already used |
+| one shared fetch/address engine | the address unit is already shared across the four banks (VDP2P step in vdp2.md); the decode in front of it measured above |
+| flip-flop removal | ALMs are LUT-bound (4,656 flip-flops in 4,712 ALMs): removing 287 flip-flops saved 40 ALMs |
+| sharing narrow arithmetic between lanes/layers | operand muxes cost as much as the adders (rotation lanes: +3 ALM) |
+| adders in DSP | 10 x 19-bit adders: -81 ALUT but -17 ALM |
+
+What remains is the feature logic itself (RBG 1,179 ALMs, priority/colour about 760, scroll about 450, cell data about 550 in the
+5,221-ALM profile). Reaching 3,500 in-system needs either feature cuts or a different memory budget (line buffers), not a
+restructuring of this datapath.
