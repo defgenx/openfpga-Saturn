@@ -927,10 +927,10 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	
 	always_comb begin
-		NxOFFX[0] = NX[0] + NSX[0];
-		NxOFFX[1] = NX[1] + NSX[1];
-		NxOFFX[2] = NX[2] + NSX[2];
-		NxOFFX[3] = NX[3] + NSX[3];
+		NxOFFX[0] = XS[0];
+		NxOFFX[1] = XS[1];
+		NxOFFX[2] = XS[2];
+		NxOFFX[3] = XS[3];
 		NxOFFY[0] = NMOSY[0] + NVCSY[0];
 		NxOFFY[1] = NMOSY[1] + NVCSY[1];
 		NxOFFY[2] = NMOSY[2];
@@ -1530,7 +1530,7 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	
 	//Scroll data  
-	ScrollData_t NX[4];
+	ScrollData_t XS[4];   //NX + NSX: kept as one sum
 	ScrollData_t NSX[4];
 	ScrollData_t NY[4];
 	ScrollData_t NSY[4];
@@ -1546,7 +1546,7 @@ module VDP2P import VDP2P_PKG::*; (
 		
 		if (!RST_N) begin
 			// synopsys translate_off
-			NX <= '{4{'0}};
+			XS <= '{4{'0}};
 			NSX <= '{4{'0}};
 			NY <= '{4{'0}};
 			NSY <= '{4{'0}};
@@ -1566,13 +1566,13 @@ module VDP2P import VDP2P_PKG::*; (
 			
 			if (DOT_CE_R) begin
 				if (NPN_FETCH && (CELLX | {HRES[1],2'b00}) == 3'd7) begin
-					NX[0] <= NX[0] + CX[0] + LZMX[0];
+					XS[0] <= XS[0] + CX[0] + LZMX[0];
 					CX[0] <= '0;
-					NX[1] <= NX[1] + CX[1] + LZMX[1];
+					XS[1] <= XS[1] + CX[1] + LZMX[1];
 					CX[1] <= '0;
-					NX[2] <= NX[2] + CX[2] + 19'h00100;
+					XS[2] <= XS[2] + CX[2] + 19'h00100;
 					CX[2] <= '0;
-					NX[3] <= NX[3] + CX[3] + 19'h00100;
+					XS[3] <= XS[3] + CX[3] + 19'h00100;
 					CX[3] <= '0;
 				end
 				if (NBG_FETCH_START_EN || CELLX == 3'h7) begin
@@ -1599,11 +1599,11 @@ module VDP2P import VDP2P_PKG::*; (
 					LS_RD = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,N2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
 					case (VA2.LS_POS[1:0])
 						2'b00: begin
-							                                                NX[{1'b0,N2}] <= '0;
-							if (!NSxREG[{1'b0,N2}].LSCX)              begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; end
-							else if (LS_RD)                           begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; end
+							                                                XS[{1'b0,N2}] <= NSX[{1'b0,N2}];
+							if (!NSxREG[{1'b0,N2}].LSCX)              begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; end
+							else if (LS_RD)                           begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; end
 							
-							                                                NX[{1'b1,N2}] <= '0;
+							                                                XS[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
 					                                                      NSX[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
 						end
 						2'b01: begin
