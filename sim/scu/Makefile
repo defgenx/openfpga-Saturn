@@ -13,6 +13,11 @@ SRC   := ../../src/fpga/saturn/Saturn/SCUP
 B     := build_scup
 FILES := SCUP_DSP_PKG SCUP_RAM SCUP_PKG SCUP_DSP SCUP
 endif
+ifeq ($(DUT),SCUP2)
+SRC   := ../../src/fpga/saturn/Saturn/SCUP2
+B     := build_scup2
+FILES := SCUP2_DSP_PKG SCUP2_RAM SCUP2_PKG SCUP2_DSP SCUP2
+endif
 SEEDS ?= 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 CYCLES ?= 3000000
 VFLAGS := --quiet --cc --exe --build -O2 --x-assign 0 --x-initial 0 -Wno-fatal -Wno-lint -Wno-style \

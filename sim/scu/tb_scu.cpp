@@ -448,6 +448,7 @@ int main(int argc, char** argv) {
 
 	d = new Vtb_scu;
 	// initial inputs
+	bool last_ce_r = false;
 	d->RST_N = 0; d->RES_N = 1; d->CE_R = 0; d->CE_F = 0; d->CA = 0; d->CDI = 0;
 	cpu_release(); d->CCS3_N = 1; d->CBACK_N = 1; d->ECDI = 0; d->ECWAIT_N = 1; d->ADI = 0; d->AWAIT_N = 1;
 	d->AIRQ_N = 1; d->BDI = 0; d->BRDY1_N = 1; d->IRQ1_N = 1; d->BRDY2_N = 1; d->IRQV_N = 1; d->IRQH_N = 1;
@@ -466,9 +467,9 @@ int main(int argc, char** argv) {
 		switch (ce_mode) {
 		case 0: ce_r = !(cyc & 1); ce_f = (cyc & 1); break;
 		case 1: ce_r = (cyc & 3) == 0; ce_f = (cyc & 3) == 2; break;
-		default: { uint32_t r = rng.below(4); ce_r = (r == 0); ce_f = (r == 1); break; }
+		default: { uint32_t r = rng.below(4); ce_r = (r == 0) && !last_ce_r; ce_f = (r == 1); break; }   // as in the system, CE_R is never in two consecutive clks
 		}
-		d->CE_R = ce_r; d->CE_F = ce_f;
+		d->CE_R = ce_r; d->CE_F = ce_f; last_ce_r = ce_r;
 		models_tick(ce_r);
 		if (ce_r) {
 			cpu_tick(d->CWAIT_N, d->CDO);
