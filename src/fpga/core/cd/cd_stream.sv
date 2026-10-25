@@ -8,8 +8,9 @@
 //                                        lead-out ring sector) out of cd_data/cd_ck/cd_audio
 // All positions are FADs (LBA + 150), 24 bits.
 //
-// Memory: sector ring in the external 16-bit async SRAM (8 slots x 4 KB), TOC in one
-// 512 x 32 dual-clock RAM (cd_toc_ram). No other block RAM.
+// Memory: sector ring in PSRAM1 through ddram_pocket (8 slots x 4 KB, 16 bit words: rg_* ports), TOC in one
+// 512 x 32 dual-clock RAM (cd_toc_ram). The bridge words wait in a 64 entry FIFO (one M10K pair) because
+// PSRAM1 can be busy for a few microseconds with a VDP1 burst.
 //
 // Bridge map (clk_74a):
 //   0x6xxxxxxx  TOC file (2048 bytes, big-endian words, data slot "CD TOC", pushed at load)
@@ -48,17 +49,17 @@ module cd_stream #(
 	input  wire        t_done,
 	input  wire [2:0]  t_err,
 
-	// 16-bit async SRAM
-	output reg  [16:0] sram_a = 17'd0,
-	output reg  [15:0] sram_dq_o = 16'd0,
-	output reg         sram_dq_oe = 1'b0,
-	input  wire [15:0] sram_dq_i,
-	output reg         sram_oe_n = 1'b1,
-	output reg         sram_we_n = 1'b1,
-	output wire        sram_ub_n,
-	output wire        sram_lb_n,
-	output wire        sram_req,             // an access is pending or running
-	input  wire        sram_gnt,             // the shared SRAM is ours (tie high when dedicated)
+	// sector ring memory, 16384 x 16 (ddram_pocket handshake: a write of two words (one bridge word) is a one clock
+	// pulse taken when !rg_wbusy; a read keeps rg_rd high, waits two clocks, then for !rg_rbusy, and rg_q is valid
+	// in that clock)
+	output reg         rg_wr = 1'b0,
+	output reg  [12:0] rg_wa = 13'd0,        // word pair
+	output reg  [31:0] rg_wd = 32'd0,        // {first word, second word}
+	input  wire        rg_wbusy,
+	output reg         rg_rd = 1'b0,
+	output wire [13:0] rg_ra,
+	input  wire [15:0] rg_q,
+	input  wire        rg_rbusy,
 
 	// disc
 	output reg         disc_ok = 1'b0,
@@ -105,7 +106,8 @@ module cd_stream #(
 	output wire        cd_ck,
 	output wire        cd_audio,
 
-	output reg  [7:0]  err_cnt = 8'd0        // bridge reads that ended with an error
+	output reg  [7:0]  err_cnt = 8'd0,       // bridge reads that ended with an error
+	output reg  [7:0]  ovf_cnt = 8'd0        // bridge words lost to a full ring FIFO (saturating)
 );
 
 // ------------------------------------------------------------------ bridge side (clk_74a)
@@ -174,54 +176,66 @@ always @(posedge clk) begin
 end
 wire commit_ev = cm_s[3] != cm_s[2];
 wire rw_ev     = rw_s[3] != rw_s[2];
-wire done_ev   = dn_s[3] != dn_s[2];
+wire done_sync = dn_s[3] != dn_s[2];
 
-// ------------------------------------------------------------------ SRAM port
-reg        w_pend = 1'b0, r_pend = 1'b0;
-reg [2:0]  ss = 3'd0;
-reg        half = 1'b0;
+// ------------------------------------------------------------------ ring memory port
+reg        r_pend = 1'b0;
+reg [3:0]  ss = 4'd0;
 reg        sr_rv = 1'b0;
 reg [15:0] sr_d = 16'd0;
 wire [13:0] fd_sr_a;
 wire        fd_sr_rq;
-
-assign sram_req = w_pend | r_pend | (ss != 3'd0);
-assign sram_ub_n = 1'b0;
-assign sram_lb_n = 1'b0;
+assign rg_ra = fd_sr_a;
 
 // rw_a / rw_d hold still for at least 30 clk_74a cycles after rw_t toggles (one bridge word)
-wire [15:0] w_half0 = BRIDGE_LITTLE ? rw_d[15:0]  : {rw_d[23:16], rw_d[31:24]};
-wire [15:0] w_half1 = BRIDGE_LITTLE ? rw_d[31:16] : {rw_d[7:0],   rw_d[15:8]};
+localparam FW = 6;
+reg [44:0]   wq [0:(1<<FW)-1];
+reg [FW:0]   wq_w = 0, wq_r = 0;
+reg [44:0]   wq_q;
+wire         wq_empty = (wq_w == wq_r);
+wire         wq_full  = (wq_w - wq_r) == (1 << FW);
+always @(posedge clk) begin
+	if (rw_ev) begin
+		if (!wq_full) begin wq[wq_w[FW-1:0]] <= {rw_a, rw_d}; wq_w <= wq_w + 1'd1; end
+		else if (ovf_cnt != 8'hFF) ovf_cnt <= ovf_cnt + 8'd1;
+	end
+	wq_q <= wq[wq_r[FW-1:0]];
+end
+wire [15:0] w_half0 = BRIDGE_LITTLE ? wq_q[15:0]  : {wq_q[23:16], wq_q[31:24]};
+wire [15:0] w_half1 = BRIDGE_LITTLE ? wq_q[31:16] : {wq_q[7:0],   wq_q[15:8]};
 
 always @(posedge clk) begin
 	sr_rv <= 1'b0;
-	if (rw_ev) w_pend <= 1'b1;
+	rg_wr <= 1'b0;
 	if (fd_sr_rq) r_pend <= 1'b1;
 	case (ss)
-	3'd0: begin
-		sram_dq_oe <= 1'b0; sram_we_n <= 1'b1; sram_oe_n <= 1'b1;
-		if (w_pend && sram_gnt) begin
-			w_pend <= 1'b0; half <= 1'b0; ss <= 3'd1;
-		end else if (r_pend && sram_gnt) begin
-			r_pend <= 1'b0; sram_a <= {3'd0, fd_sr_a}; sram_oe_n <= 1'b0; ss <= 3'd5;
-		end
+	4'd0: if (r_pend) begin
+		r_pend <= 1'b0; rg_rd <= 1'b1; ss <= 4'd8;
+	end else if (!wq_empty && !rg_wbusy) begin
+		ss <= 4'd1;
 	end
-	3'd1: begin
-		sram_a <= {3'd0, rw_a, half};
-		sram_dq_o <= half ? w_half1 : w_half0;
-		sram_dq_oe <= 1'b1;
-		ss <= 3'd2;
+	4'd1: ss <= 4'd2;                       // wq_q settles
+	4'd2: begin
+		rg_wa <= wq_q[44:32];
+		rg_wd <= {w_half0, w_half1};
+		rg_wr <= 1'b1; ss <= 4'd3;
 	end
-	3'd2: begin sram_we_n <= 1'b0; ss <= 3'd3; end
-	3'd3: begin
-		sram_we_n <= 1'b1;
-		if (half) ss <= 3'd0;
-		else begin half <= 1'b1; ss <= 3'd1; end
-	end
-	3'd5: ss <= 3'd6;
-	3'd6: begin sr_d <= sram_dq_i; sr_rv <= 1'b1; sram_oe_n <= 1'b1; ss <= 3'd0; end
-	default: ss <= 3'd0;
+	4'd3: ss <= 4'd4;
+	4'd4: ss <= 4'd5;                       // rg_wbusy rises
+	4'd5: if (!rg_wbusy) begin wq_r <= wq_r + 1'd1; ss <= 4'd0; end
+	4'd8: ss <= 4'd9;
+	4'd9: ss <= 4'd10;
+	4'd10: if (!rg_rbusy) begin sr_d <= rg_q; sr_rv <= 1'b1; rg_rd <= 1'b0; ss <= 4'd0; end
+	default: ss <= 4'd0;
 	endcase
+end
+
+// a sector is complete when its last bridge word has reached the ring memory: wait for the FIFO to drain
+reg  done_pend = 1'b0;
+wire done_ev = done_pend && wq_empty && ss == 4'd0 && !rg_wbusy && !rw_ev;
+always @(posedge clk) begin
+	if (done_sync) done_pend <= 1'b1;
+	else if (done_ev) done_pend <= 1'b0;
 end
 
 // ------------------------------------------------------------------ ring bookkeeping

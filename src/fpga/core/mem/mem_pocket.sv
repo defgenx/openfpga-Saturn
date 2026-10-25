@@ -2,9 +2,9 @@
 //
 //   SDRAM  64 MB  VDP2 VRAM A/B + SCSP RAM           sdram_pocket
 //   PSRAM0 16 MB  BIOS, backup RAM, WRAM-L, WRAM-H, cartridge   psram_sync + ddram_pocket (chip A)
-//   PSRAM1 16 MB  VDP1 VRAM, CD block DRAM, CD sector buffer     psram_sync + ddram_pocket (chip B)
-//   SRAM   256 KB VDP1 framebuffer 0 + the CD sector ring        sram_pocket + vdp1_fb_pocket
-//   M10K          VDP1 framebuffer 1                              vdp1_fb_pocket
+//   PSRAM1 16 MB  VDP1 VRAM, CD block DRAM, CD sector buffer, CD sector ring   psram_sync + ddram_pocket (chip B)
+//   SRAM   256 KB VDP1 framebuffer 0 + the tail of framebuffer 1  sram_pocket + vdp1_fb_pocket
+//   M10K          VDP1 framebuffer 1, columns 0-191               vdp1_fb_pocket
 //
 // Client ports are those the Saturn emu wrapper uses for sdram1 / ddram (names as in the submodules).
 // All clk_ram logic assumes clk_ram = 2 x clk_sys, phase aligned. Tri-states for the pins belong in
@@ -75,11 +75,9 @@ module mem_pocket #(
 	input  wire [17:1] FB1_A, input wire [15:0] FB1_D, input wire [1:0] FB1_WE, input wire FB1_RD, output wire [15:0] FB1_Q,
 	output wire        FB_RDY,
 
-	// ---- CD sector ring (cd_stream pin-level SRAM client, clk_sys domain)
-	input  wire [16:0] cd_sram_a, input wire [15:0] cd_sram_dq_o, input wire cd_sram_dq_oe, input wire cd_sram_oe_n, input wire cd_sram_we_n,
-	input  wire        cd_sram_ub_n, input wire cd_sram_lb_n, input wire cd_sram_req,
-	output wire        cd_sram_gnt,
-	output wire [15:0] cd_sram_dq_i,
+	// ---- CD sector ring in PSRAM1 (cd_stream, clk_sys domain; ddram_pocket handshakes)
+	input  wire [12:0] ringw_addr, input wire [31:0] ringw_data, input wire ringw_wr, output wire ringw_busy,
+	input  wire [13:0] ring_addr, output wire [15:0] ring_dout, input wire ring_rd, output wire ring_busy,
 
 	// ---- bridge loader (clk_74a)
 	input  wire        clk_74a,
@@ -139,10 +137,12 @@ ddram_pocket ddram (
 	.bios_addr(26'd0), .bios_din(16'd0), .bios_wr(2'b00), .bios_busy(),
 	.bsram_addr(bsram_addr), .bsram_dout(bsram_dout), .bsram_din(bsram_din), .bsram_rd(bsram_rd), .bsram_wr(bsram_wr), .bsram_busy(bsram_busy),
 	.ld_addr(l_addr), .ld_data(l_data), .ld_wr(l_wr), .ld_busy(l_busy),
-	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy));
+	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy),
+	.ringw_addr(ringw_addr), .ringw_data(ringw_data), .ringw_wr(ringw_wr), .ringw_busy(ringw_busy),
+	.ring_addr(ring_addr), .ring_dout(ring_dout), .ring_rd(ring_rd), .ring_busy(ring_busy));
 
 // ---------------------------------------------------------------- SRAM, framebuffers
-wire        fb_hint, fb_req, fb_we, fb_ready, fb_done;
+wire        fb_req, fb_we, fb_ready, fb_done;
 wire [16:0] fb_a;  wire [15:0] fb_d, fb_q;  wire [1:0] fb_be;
 wire  [7:0] fb_drop;
 
@@ -150,16 +150,14 @@ sram_pocket sram (
 	.clk(clk_ram),
 	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
 	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n),
-	.cd_a(cd_sram_a), .cd_dq_o(cd_sram_dq_o), .cd_dq_oe(cd_sram_dq_oe), .cd_oe_n(cd_sram_oe_n), .cd_we_n(cd_sram_we_n),
-	.cd_ub_n(cd_sram_ub_n), .cd_lb_n(cd_sram_lb_n), .cd_req(cd_sram_req), .cd_gnt(cd_sram_gnt), .cd_dq_i(cd_sram_dq_i),
-	.fb_hint(fb_hint), .fb_req(fb_req), .fb_we(fb_we), .fb_a(fb_a), .fb_d(fb_d), .fb_be(fb_be), .fb_ready(fb_ready), .fb_q(fb_q), .fb_done(fb_done));
+	.fb_req(fb_req), .fb_we(fb_we), .fb_a(fb_a), .fb_d(fb_d), .fb_be(fb_be), .fb_ready(fb_ready), .fb_q(fb_q), .fb_done(fb_done));
 
 vdp1_fb_pocket fb (
 	.clk_sys(clk_sys), .clk_ram(clk_ram), .rst(rst_ram), .FB_MODE3(FB_MODE3),
 	.FB0_A(FB0_A), .FB0_D(FB0_D), .FB0_WE(FB0_WE), .FB0_RD(FB0_RD), .FB0_Q(FB0_Q),
 	.FB1_A(FB1_A), .FB1_D(FB1_D), .FB1_WE(FB1_WE), .FB1_RD(FB1_RD), .FB1_Q(FB1_Q),
 	.FB_RDY(FB_RDY), .dbg_drop(fb_drop),
-	.sr_hint(fb_hint), .sr_req(fb_req), .sr_we(fb_we), .sr_a(fb_a), .sr_d(fb_d), .sr_be(fb_be), .sr_ready(fb_ready), .sr_q(fb_q), .sr_done(fb_done));
+	.sr_req(fb_req), .sr_we(fb_we), .sr_a(fb_a), .sr_d(fb_d), .sr_be(fb_be), .sr_ready(fb_ready), .sr_q(fb_q), .sr_done(fb_done));
 
 endmodule
 

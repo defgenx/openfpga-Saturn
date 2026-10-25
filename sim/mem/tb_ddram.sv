@@ -37,6 +37,8 @@ reg  [26:1] bios_addr = 0;  reg [15:0] bios_din = 0; reg [1:0] bios_wr = 0; wire
 reg  [20:1] bsram_addr = 0; wire [15:0] bsram_dout; reg [15:0] bsram_din = 0; reg bsram_rd = 0; reg [1:0] bsram_wr = 0; wire bsram_busy;
 reg  [23:2] ld_addr = 0;    reg [31:0] ld_data = 0; reg ld_wr = 0; wire ld_busy;
 reg  [13:1] cdbuf_waddr = 0; reg [15:0] cdbuf_wdata = 0; reg cdbuf_wwr = 0; wire cdbuf_wbusy;
+reg  [12:0] ringw_addr = 0; reg [31:0] ringw_data = 0; reg ringw_wr = 0; wire ringw_busy;
+reg  [13:0] ring_addr = 0; wire [15:0] ring_dout; reg ring_rd = 0; wire ring_busy;
 
 wire p0_busy, p0_rd, p0_we, p0_rlast, p0_rvalid, p1_busy, p1_rd, p1_we, p1_rlast, p1_rvalid;
 wire [22:0] p0_addr, p1_addr;  wire [9:0] p0_cnt, p1_cnt;  wire [3:0] p0_be, p1_be;  wire [31:0] p0_din, p1_din;
@@ -56,7 +58,9 @@ ddram_pocket dut (
 	.bios_addr(bios_addr), .bios_din(bios_din), .bios_wr(bios_wr), .bios_busy(bios_busy),
 	.bsram_addr(bsram_addr), .bsram_dout(bsram_dout), .bsram_din(bsram_din), .bsram_rd(bsram_rd), .bsram_wr(bsram_wr), .bsram_busy(bsram_busy),
 	.ld_addr(ld_addr), .ld_data(ld_data), .ld_wr(ld_wr), .ld_busy(ld_busy),
-	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy)
+	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy),
+	.ringw_addr(ringw_addr), .ringw_data(ringw_data), .ringw_wr(ringw_wr), .ringw_busy(ringw_busy),
+	.ring_addr(ring_addr), .ring_dout(ring_dout), .ring_rd(ring_rd), .ring_busy(ring_busy)
 );
 
 // ---------------------------------------------------------------- two PSRAM chips
@@ -282,6 +286,30 @@ task automatic cdb_read(input [13:1] a);
 	end
 endtask
 
+// CD ring, as cd_stream drives it: 32 bit writes (one per bridge word) behind a busy poll, sequential 16 bit reads
+reg [15:0] sh_ring [0:16383];  reg sv_ring [0:16383];
+integer rgk;
+initial for (rgk = 0; rgk < 16384; rgk = rgk + 1) sv_ring[rgk] = 0;
+task automatic ring_write(input [12:0] a, input [31:0] d);
+	begin
+		@(posedge clk); while (ringw_busy) @(posedge clk);
+		ringw_addr <= a; ringw_data <= d; ringw_wr <= 1'b1;
+		@(posedge clk); ringw_wr <= 1'b0;
+		sh_ring[{a, 1'b0}] = d[31:16]; sh_ring[{a, 1'b1}] = d[15:0]; sv_ring[{a, 1'b0}] = 1; sv_ring[{a, 1'b1}] = 1;
+		repeat (2) @(posedge clk);
+	end
+endtask
+task automatic ring_read(input [13:0] a);
+	begin
+		@(posedge clk); ring_addr <= a; ring_rd <= 1'b1;
+		repeat (2) @(posedge clk);
+		while (ring_busy) @(posedge clk);
+		ring_rd <= 1'b0;
+		if (sv_ring[a] && ring_dout !== sh_ring[a]) begin errs = errs + 1; if (errs < 10) $display("%0t ring read %h got %h exp %h", $time, a, ring_dout, sh_ring[a]); end
+		@(posedge clk);
+	end
+endtask
+
 // loader: 32 bit writes into the cartridge window (PSRAM0 byte 0x900000 +), the bridge's bursty word stream
 
 // ---------------------------------------------------------------- stimulus
@@ -289,7 +317,7 @@ integer n_ops = 400, nq = 200, k, r;
 integer kc, kv, kd, kl, rc, rv, rd, rl;
 reg [19:2] ra, rac;
 initial if (!$value$plusargs("N=%d", n_ops)) n_ops = 400;
-integer done_cpu = 0, done_vdp = 0, done_cd = 0, done_ld = 0;
+integer done_cpu = 0, done_vdp = 0, done_cd = 0, done_ld = 0, done_ring = 0, kr, rs, rw0;
 integer ldbase;
 
 initial begin
@@ -358,6 +386,18 @@ initial begin
 				repeat (30) @(posedge clk);                    // a bridge word every ~430 ns
 			end
 			done_ld = 1;
+		end
+		// CD ring: a sector (588 bridge words) written into a slot at the bridge pace, then read back word by word at
+		// the CD word rate (a read every 324 clk_sys = 648 clk_ram) while the next slot is being written
+		begin
+			for (rs = 0; rs < 3; rs = rs + 1) begin
+				for (kr = 0; kr < 588; kr = kr + 1) begin
+					ring_write({rs[2:0], 10'd0} + kr, $urandom);
+					repeat (36) @(posedge clk);                    // a bridge word every ~25 clk_sys
+					if (rs > 0 && kr % 6 == 0) ring_read({rs[2:0] - 3'd1, 11'd0} + 2 * kr + (kr % 2));
+				end
+			end
+			done_ring = 1;
 		end
 	join
 	// loader readback through the cart channel
