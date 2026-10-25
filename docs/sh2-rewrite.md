@@ -183,39 +183,49 @@ as well. The new EX path adds the register-file read and MLAB write setup; the r
 
 ## 8. Measurements (as built)
 
-Method: standalone `quartus_fit` (21.1, 5CEBA4F23C8, area profile, one processor, virtual pins), `sizing/sh2p/`. The
-pair is `sizing/sh2p/pair_wrap.sv` (MSH + SSH with the Saturn.sv tie-offs; `SH2_MOD=SH7604` golden, `SH7604P` new).
-"ALMs" = fitter "Logic utilization (in ALMs)". These standalone numbers are about 1.25x the per-block
-"ALMs needed" of the full-system fit in [integration.md](integration.md) (3,475 for one golden CPU there, 4,332 here);
-the last row scales by that ratio (3,475 / 4,332 = 0.80) to compare against the 4,000 budget.
+Method: standalone `quartus_fit` (21.1, 5CEBA4F23C8, area profile, one processor, virtual pins), `sizing/sh2p/`, queued with
+`tools/qrun.sh`. The pair is `sizing/sh2p/pair_wrap.sv` (MSH + SSH with the Saturn.sv tie-offs; `SH2_MOD=SH7604` golden,
+`SH7604P` new). "ALMs" = fitter "Logic utilization (in ALMs)". Standalone numbers are about 1.25x the in-system per-block
+numbers of [integration.md](integration.md) (4,332 here vs 3,475 for one golden CPU there).
 
-| | golden | SH7604P | change |
-|---|---|---|---|
-| Pair, ALMs (standalone fit) | 8,538 | **6,070** | -29% |
-| One CPU, ALMs | 4,269 (4,332 single fit) | 3,035 | -29% |
-| Pair, RAM blocks (M10K) | 8 | 16 | +8 |
-| Pair, DSP | 6 | 6 | 0 |
-| Pair, scaled to the integration metric | ~6,900 | **~4,900** | budget 4,000: not met, 22% over |
+Final state (no extra M10K: cache tags in MLAB, decode control word registered in flip-flops as in the golden):
 
-Per block, one CPU (fitter ALMs in the pair fit; golden = single-CPU fit, [sh2.md](sh2.md) numbers in brackets are map ALUT):
+| | golden | SH7604P |
+|---|---|---|
+| Pair, ALMs (standalone fit) | 8,538 | **6,321** (-26%) |
+| One CPU | 4,269 | 3,076 (MSH) / 3,096 (SSH) |
+| Pair, RAM blocks | 8 | 8 |
+| Pair, DSP | 6 | 6 |
+| In-system pair (full Pocket build, main d31e6c5, which still had the M10K variant) | ~6,900 (integration run) | 5,642 |
 
-| Block | golden | SH7604P | notes |
-|---|---|---|---|
-| SH2P_core | 1,545 | 1,219 | of which ALU 241, decode logic 216, decode ROM 31 (+2 M10K), register file 74 |
-| BSC | 345 | 329 | unchanged FSM |
-| CACHE | 776 | 300 | epoch purge, per-set MLAB word, tags in 2 M10K |
-| DIVU | 447 (521 needed) | 251 | serial, in place in DVDNT |
-| DMAC | 427 (561 needed) | 278 | MLAB channel registers |
-| MULT | 220 (248) | 147 | |
-| INTC / FRT / WDT / MSBY | 124 / 101 / 47 / 7 | 110 / 101 / 47 / 8 | |
-| glue (SH7604P top) | ~150 | ~165 | divider, read-data mux, bus mux |
+An earlier variant used 2 M10K for the decode control-word ROM and 2 for the cache tags per CPU: pair 6,070 ALMs. The
+device has no M10K left, so both went back to logic/MLAB (+251 ALMs for the pair). A logic ROM for the control word
+costs more than registering the decoded word (decode + ROM logic: 900 ALUT vs 590).
+
+Per block, one CPU (fitter ALMs in the pair fit, MSH / SSH):
+
+| Block | golden (single fit) | SH7604P |
+|---|---|---|
+| SH2P_core | 1,545 | 1,205 / 1,236 (ALU 227, decode 260, register file 74) |
+| BSC | 345 | 347 / 344 |
+| CACHE | 776 | 424 / 413 (epoch purge; tags 120 in MLAB) |
+| DIVU | 447 | 251 |
+| DMAC | 427 | 269 / 273 |
+| MULT | 220 | 143 |
+| INTC / FRT / WDT | 124 / 101 / 47 | 108 / 99 / 47 |
+
+Tried and rejected after measuring:
+* BSC with the CBUS and DBUS request paths merged into one: 604 -> 545 ALMs standalone, but 329 -> 352 in the pair
+  (constants from the instantiation prune the separate paths better); reverted.
+* Class numbering in tree order (+160 ALUT) or by Hamming-distance ordering (no gain) for the decode ROM.
+* DSP blocks for adders/shifters: a DSP mac handles 27-bit operands and has no carry-in/flag outputs, so a 32-bit ALU
+  add with its flags needs two DSPs plus soft logic; estimated net gain under 15 ALMs per CPU, not built.
 
 Timing (`quartus_sta`, slow 85C, `sizing/sh2p/fmax/`, core with registered ports, clock constraint 17.46 ns = 57.27 MHz
-single cycle): worst setup slack -6.2 ns, i.e. longest path 23.7 ns (the golden core measured 19.6 ns on the same kind of
-wrapper in [sh2.md](sh2.md)). It closes with the same 2-cycle setup / 1-cycle hold multicycle that the golden core already
-needs (34.9 ns available, 11 ns margin). The critical path starts at the decode ROM output (M10K, address register
-updated only on CE_R) and ends in the ID-stage PC/IR registers. Paths that are really single-cycle (cache lookup, register
-file write on the F slot, scrubber) are short.
+single cycle): worst setup slack -6.2 ns, i.e. longest path 23.7 ns (the golden core measured 19.6 ns in
+[sh2.md](sh2.md)). It closes with the same 2-cycle setup / 1-cycle hold multicycle that the golden core already needs
+(34.9 ns available). That measurement was taken with the M10K decode ROM on the critical path; with the control word
+back in flip-flops the path is the golden one plus the register-file read.
 
 ## 9. Verification results and deviations
 
@@ -242,11 +252,12 @@ Deviations from the golden (none is visible to software running on the Saturn; e
 4. INTC reproduces the golden simulation behaviour for an `ICR.NMIE` write in the same clock as an NMI edge.
 5. The M10K count rises by 4 per CPU (2 decode ROM, 2 cache tags).
 
-## 10. What would still be needed for 4,000
+## 10. Remaining gap
 
-The pair is 29% below the golden but still about 22% above the budget in the integration metric. Remaining sub-blocks in
-order: core 1,219 (control and operand/result muxes ~650, ALU 241, decode 250, regfile 74), BSC 329, cache 300, DMAC 278,
-DIVU 251, glue 165, MULT 147, INTC/FRT/WDT 258. Floors found by the block authors: DMAC/DIVU/FRT/WDT are close to the
-interface-imposed read/write mux cost; the remaining levers are (a) hoisting the shared register-window decode and the
-`IBUS_DO` gating out of the blocks (~60), (b) merging the duplicated CBUS/DBUS paths of the BSC (~60), (c) dropping the
-RD_SAVE forwarding level of the core (~45), (d) lookup state of the cache into M10K (~40), (e) a leaner ALU (~60).
+In-system the pair is 5,642 ALMs (measured before the M10K removal, about 5,900 now) against a target of 4,400. The
+biggest pieces per CPU: core ~1,220 (ALU ~230, decode ~260, register file 74, control and operand muxes ~650), BSC ~345,
+cache ~420, DMAC ~270, DIVU ~250, MULT ~145, INTC/FRT/WDT ~250, glue ~165. The block authors found DMAC, DIVU, FRT and WDT
+close to the cost imposed by exact register read/write timing at their interfaces; no single large inefficiency is
+left in the core (component ablations: B-operand special sources ~110 ALUT, RD_SAVE forwarding ~60, SR ~34, PC ~30,
+MA formatting ~68). A further 1,200+ ALMs would need either dropping exactness somewhere or sharing logic between the
+two CPUs, which the per-CPU port list of `SH7604P` rules out.
