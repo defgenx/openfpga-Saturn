@@ -2574,7 +2574,7 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	wire [ 7: 0] LOK = {2'b00, LAYER_OK, 1'b0};
 	wire [ 9: 0] XP = HRES[1] ? {SCRNX,SCRNX0} : {1'b0,SCRNX};
 	bit  [ 9: 0] XD;
-	always @(posedge CLK) if (CEVT) XD <= XP - XOFF;
+	always @(posedge CLK) if (CEVT) XD <= XP - (HRES[1] ? XOFF + XOFF : XOFF);
 	wire         LSTART = NBG_FETCH_START_EN && DOT_CE_R;
 
 	//arrival of character words
@@ -2600,19 +2600,6 @@ module VDP2P2 import VDP2P2_PKG::*; (
 		end
 	end
 	wire         FEMPTY = FCNT == 4'd0;
-`ifdef DBGARR
-	always @(posedge CLK) begin
-		if (AV && V_CNT == 9'd40) $display("ARR h=%0d l=%0d cnt=%0d cell=%0d att=%03x w=%08x", H_CNT, AL, AREC[20:18], AREC[7:0], AREC[17:8], AWD);
-		if (ASEQ == 3'd1 && V_CNT == 9'd40 && H_CNT < 60) $display("  vis h=%0d nxch=%b en=%b cnt3=%0d bank=%0d reccnt=%0d cellx=%0d usel", H_CNT, BG2.NxCH, BG2.NxCH_EN, BG2.NxCHC[0], BG2.NxCHS[0], RECQ[20:18], RECQ[7:0]);
-		if (DOT_CE_R && V_CNT == 9'd40 && H_CNT < 60 && H_CNT >= 20) $display("  ev h=%0d pnen=%b pnfetch=%b chen=%b mt=%b hit=%b pn_en=%b nbgpnfetch=%b", H_CNT, E_PNEN, VA2.NxPN_FETCH, E_CHEN, MT, HIT, NBG_PN_EN[0], NBG_PN_FETCH[0]);
-		if (SO_RD_D && V_CNT == 9'd40 && XD >= 6 && XD <= 10) $display("  scan h=%0d xd=%0d v=%b e0=%08x e1=%08x", H_CNT, XD, LBVQB, LBQ[0], LBQ[1]);
-		if (P2V && V_CNT == 9'd40 && P2X >= 6 && P2X <= 10) $display("  wr h=%0d x=%0d we=%b%b%b v0=%b b0=%b", H_CNT, P2X, LBWE[0],LBWE[1],LBWE[2], LBVQ, B0);
-		if (DOT_CE_R && V_CNT == 9'd40 && BG0.NxCH[0] && !E_CHEN[0]) $display("  MISS h=%0d mt=%b bkch=%b%b%b%b pnf=%b pncyc=%b ul=%0d uo=%05x usel=%0d nib=%x%x%x%x cyt=%0d gt=%b%b%b%b chv=%b%b%b%b", H_CNT, MT, BKCH[0][0], BKCH[1][0], BKCH[2][0], BKCH[3][0], VA2.NxPN_FETCH[0], NxPN_CYC[0], UL, UO, USEL, NBG_NIB[0],NBG_NIB[1],NBG_NIB[2],NBG_NIB[3], CYT, NBG_GT[0],NBG_GT[1],NBG_GT[2],NBG_GT[3], NBG_CHV[0],NBG_CHV[1],NBG_CHV[2],NBG_CHV[3]);
-		if (LSTART && V_CNT == 9'd40) $display("LSTART h=%0d nsx0=%05x", H_CNT, NSX[0]);
-		if (WBUSY && WDONE && V_CNT == 9'd40) $display("  walker done l=%0d k=%0d xk=%05x cnt=%0d cell=%0d", WL, WK, WXK, WCNT, WCELL);
-		if (P0V && V_CNT == 9'd40 && P0MOVE) $display("  ins x=%0d lid=%0d dc=%08x tp=%b pri=%0d cdp=%03x md=%08x chcn=%0d", P0X, P0LID, P0DC, P0D.TP, P0PRI, P0CDP, M0DC, P0CHCN);
-	end
-`endif
 	
 	//walker: per layer next screen pixel and its source position (kept in a small RAM between words)
 	bit  [ 9: 0] WK;
@@ -2768,7 +2755,13 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	//scan-out
 	bit  [31: 0] SE[3];
 	bit  [ 2: 0] SEV;
-		always @(posedge CLK) if (SO_RD_D) begin SE[0] <= LBQ[0]; SE[1] <= LBQ[1]; SE[2] <= LBQ[2]; SEV <= LBVQB; end
+		//the golden's dots stay as they were while its dot window (DOT_FETCH) is off, e.g. on the line after the last visible one
+	bit          DFL;
+	always @(posedge CLK) begin
+		if (LSTART) DFL <= 1'b0;
+		else if (DOT_FETCH && DOT_CE_R) DFL <= 1'b1;
+		if (SO_RD_D && DFL) begin SE[0] <= LBQ[0]; SE[1] <= LBQ[1]; SE[2] <= LBQ[2]; SEV <= LBVQB; end
+	end
 	wire TW0_HIT = HRES[1] ? WHIT33_Q[0] : WHIT34[0];
 	wire TW1_HIT = HRES[1] ? WHIT33_Q[1] : WHIT34[1];
 	wire CCW_EN    =   WinTest(TW0_HIT ^ REGS.WCTLD.CCW0A,TW1_HIT ^ REGS.WCTLD.CCW1A,SDOT.WN ^ REGS.WCTLD.CCSWA,REGS.WCTLD.CCW0E,REGS.WCTLD.CCW1E,REGS.WCTLD.CCSWE & REGS.SPCTL.SPWINEN,REGS.WCTLD.CCLOG);

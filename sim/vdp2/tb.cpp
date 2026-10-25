@@ -235,13 +235,14 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 // ---------------- legal cycle patterns (decode-at-arrival renderer) ----------------
 // Both bank rows carry the same pattern with VRAMD/VRBMD clear, so a layer's access hits whichever half holds its data.
 // Per layer: one pattern name slot, then the character words of its colour depth, contiguous, at least PNSP slots later.
-static int g_legal = 0, g_feat = 0, g_pnsp = 4, g_nostop = 0, g_fill = -1, g_nowr = 0, g_noflip = 0;
+static int g_legal = 0, g_feat = 0, g_pnsp = 4, g_nostop = 0, g_fill = -1, g_nowr = 0, g_noflip = 0, g_hsp = 0, g_qt[2] = {0, 0};
 static void legalize(Rng& rng, Cfg& c) {
 	bool hires = (g_feat & 1) != 0;
 	int hres = hires ? 2 + rng.below(2) : rng.below(2);
 	R_(0x00) = 0x8000 | hres;
 	R_(0x0E) = (R_(0x0E) & 0x00FF & ~0x0300) | ((uint16_t)rng.below(3) << 12);
 	R_(0x0E) &= ~0x00FF;
+	if (getenv("LEG_CRAMRAMP")) R_(0x0E) = 0;
 	R_(0x02) = 0;
 	int cap = hires ? 4 : 8;
 	int words_of[5] = {1, 2, 4, 4, 8};
@@ -251,6 +252,9 @@ static void legalize(Rng& rng, Cfg& c) {
 		chcn[l] = rng.below(mx);
 	}
 	if (getenv("LEG_CHCN")) { const char* e = getenv("LEG_CHCN"); for (int l = 0; l < 4; l++) chcn[l] = e[l] - '0'; }
+	int zm[4] = {0, 0, 0, 0}, npn[4] = {1, 1, 1, 1};
+	if ((g_feat & 2) && !hires) for (int l = 0; l < 2; l++) if (rng.chance(60)) { zm[l] = 1 + 2 * rng.below(2); chcn[l] = zm[l] == 3 ? 1 : 0; }   // 1/2 reduction at 4 and 8 bits per dot; the golden's 1/4 mode takes the third cell's attributes from the second
+	if (getenv("LEG_ZM")) { const char* e = getenv("LEG_ZM"); for (int l = 0; l < 4; l++) { zm[l] = e[l] - '0'; if (zm[l]) chcn[l] = zm[l] == 3 ? 1 : 0; } }
 	int pn[4], ch0[4], nw[4];
 	int used[8];
 	for (int tries = 0; tries < 200; tries++) {
@@ -258,22 +262,31 @@ static void legalize(Rng& rng, Cfg& c) {
 		int cnt = 0;
 		for (int l = 0; l < 4; l++) {
 			on[l] = getenv("LEG_ON") ? ((atoi(getenv("LEG_ON")) >> l) & 1) : rng.chance(75);
-			nw[l] = words_of[chcn[l]];
+			nw[l] = zm[l] == 0 ? words_of[chcn[l]] : zm[l] == 1 ? 2 : 4;
+			npn[l] = zm[l] == 0 ? 1 : zm[l] == 2 ? 4 : 2;
 		}
 		for (int l = 0; l < 4; l++) {
 			if (!on[l]) continue;
 			bool placed = false;
-			for (int a = 0; a < 60 && !placed; a++) {
-				int h = rng.below(2), s = 4 * h + rng.below(5 - nw[l] > 0 ? 5 - nw[l] : 1);
-				if (nw[l] > 4 || s + nw[l] > 4 * h + 4) continue;
-				int p = h ? rng.below(s - g_pnsp + 1 > 0 ? s - g_pnsp + 1 : 1) : 4 + rng.below(4);
-				if (!h && s + 8 - p < g_pnsp) continue;
-				if (h && s - g_pnsp < 0) continue;
-				if (used[p]) continue;
+			for (int a = 0; a < 80 && !placed; a++) {
+				int p, s;
+				if (hires) {
+					if (nw[l] > 2) break;
+					p = rng.below(4); s = rng.below(4);
+					if (s + nw[l] > 4 || s < p || s > p + 2 + g_hsp) continue;
+				} else {
+					int h = rng.below(2); s = 4 * h + rng.below(5 - nw[l] > 0 ? 5 - nw[l] : 1);
+					if (nw[l] > 4 || s + nw[l] > 4 * h + 4) continue;
+					p = h ? rng.below(5 - npn[l]) : 4 + rng.below(5 - npn[l]);
+					if (h && s - p < g_pnsp) continue;
+					if (!h && s + 8 - (p + npn[l] - 1) < g_pnsp) continue;
+				}
 				bool free_ = true;
-				for (int k = 0; k < nw[l]; k++) if (used[s + k] || s + k == p) free_ = false;
+				for (int k = 0; k < npn[l]; k++) if (used[p + k]) free_ = false;
+				for (int k = 0; k < nw[l]; k++) if (used[s + k] || (s + k >= p && s + k < p + npn[l])) free_ = false;
 				if (!free_) continue;
-				used[p] = 1; for (int k = 0; k < nw[l]; k++) used[s + k] = 1;
+				for (int k = 0; k < npn[l]; k++) used[p + k] = 1;
+				for (int k = 0; k < nw[l]; k++) used[s + k] = 1;
 				pn[l] = p; ch0[l] = s; placed = true;
 			}
 			if (!placed) on[l] = 0;
@@ -281,17 +294,34 @@ static void legalize(Rng& rng, Cfg& c) {
 		}
 		if (cnt > 0) break;
 	}
+	if (getenv("LEG_FORCE")) { int p0, s0; sscanf(getenv("LEG_FORCE"), "%d,%d", &p0, &s0); pn[0] = p0; ch0[0] = s0; for (int l = 1; l < 4; l++) on[l] = 0; on[0] = 1; }
 	int row[8];
 	for (int& t : row) t = 0xE;
-	for (int l = 0; l < 4; l++) if (on[l]) { row[pn[l]] = l; for (int k = 0; k < nw[l]; k++) row[ch0[l] + k] = 4 + l; }
+	for (int l = 0; l < 4; l++) if (on[l]) { for (int k = 0; k < npn[l]; k++) row[pn[l] + k] = l; for (int k = 0; k < nw[l]; k++) row[ch0[l] + k] = 4 + l; }
 	for (int b : {0x10 / 2, 0x14 / 2, 0x18 / 2, 0x1C / 2}) setbank(c.r, b, row);
 	R_(0x20) = (on[0] | (on[1] << 1) | (on[2] << 2) | (on[3] << 3)) | ((uint16_t)rng.below(16) << 8);
 	R_(0x28) = (chcn[0] << 4) | (rng.below(2)) | (chcn[1] << 12) | (rng.below(2) << 8);
 	R_(0x2A) = (chcn[2] & 1) << 1 | rng.below(2) | (chcn[3] & 1) << 5 | rng.below(2) << 4;
-	g_noflip = chcn[1] >= 2;   // NBG1 at 16 bit/dot: the golden takes the high byte flip from the previous cell
+	g_noflip = chcn[1] >= 2 || getenv("LEG_NOFLIP");   // NBG1 at 16 bit/dot: the golden takes the high byte flip from the previous cell
 	R_(0x22) = 0; R_(0x98) = 0; R_(0x9A) = 0;
+	if (g_feat & 32) R_(0x22) = (rng.below(16) << 8) | (rng.below(16) << 12) | rng.below(32);   // mosaic
 	R_(0x78) = 1; R_(0x7A) = 0; R_(0x7C) = 1; R_(0x7E) = 0;
 	R_(0x88) = 1; R_(0x8A) = 0; R_(0x8C) = 1; R_(0x8E) = 0;
+	for (int l = 0; l < 2; l++) {
+		int zmx = 0x100;
+		if (g_feat & 2) {
+			switch (zm[l]) {
+			case 0: zmx = (g_feat & 256) ? (rng.chance(50) ? 0x100 : 0x040 + rng.below(0xC1)) : 0x100; break;   // enlargement only with feature 256: the golden shows stale cells where consecutive pattern names match
+			case 1: case 3: zmx = 0x200; break;   // the golden only follows reduction exactly at the maximum ratio
+			case 2: zmx = 0x400; break;
+			}
+		}
+		if (getenv("LEG_ZMX")) zmx = strtol(getenv("LEG_ZMX"), 0, 16);
+		int base = l ? 0x88 : 0x78;
+		R_(base) = (zmx >> 8) & 7; R_(base + 2) = (zmx & 0xFF) << 8;
+		if (zm[l] == 1 || zm[l] == 3) R_(0x98) |= 1 << (8 * l);
+		if (zm[l] == 2) { R_(0x98) |= 2 << (8 * l); R_(l ? 0x80 : 0x70) &= ~4; g_qt[l] = 1; }   // 4 cells: offset + 7 x 4 dots must stay inside the 32-dot window
+	}
 }
 
 // ---------------- main ----------------
@@ -311,6 +341,7 @@ int main(int argc, char** argv) {
 		else if (!strcmp(argv[i], "+nostop")) g_nostop = 1;
 		else if (!strcmp(argv[i], "+nowr")) g_nowr = 1;
 		else if (!strncmp(argv[i], "+fill=", 6)) g_fill = atoi(argv[i] + 6);
+		else if (!strncmp(argv[i], "+hsp=", 5)) g_hsp = atoi(argv[i] + 5);
 		else if (!strncmp(argv[i], "+pnsp=", 6)) g_pnsp = atoi(argv[i] + 6);
 	}
 	Rng rng(seed);
@@ -334,7 +365,7 @@ int main(int argc, char** argv) {
 	// initial programming: all registers, color RAM, a few VRAM words
 	auto W = [&](uint32_t a, uint16_t d, int gap = 0, int dqm = 0) { bus.q.push_back({0, a, {d}, dqm, gap}); };
 	for (int a = 0; a < 0x120; a += 2) if (a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C) W(0x180000 + a, cfg.r[a / 2], rng.below(3));
-	for (int i = 0; i < 2048; i += (rng.chance(10) ? 1 : 1)) W(0x100000 + 2 * i, (rng.chance(30) ? 0 : rng.next()), 0);
+	for (int i = 0; i < 2048; i += (rng.chance(10) ? 1 : 1)) W(0x100000 + 2 * i, getenv("LEG_CRAMRAMP") ? (i & 0x3FF) : (rng.chance(30) ? 0 : rng.next()), 0);
 	W(0x180000, cfg.r[0]);   // TVMD last
 
 	long t = 0;
@@ -343,7 +374,7 @@ int main(int argc, char** argv) {
 	std::vector<uint8_t> img[2]; int wline[2] = {0, 0}, wmax[2] = {0, 0};
 	std::vector<std::vector<uint8_t>> line[2];
 	std::vector<uint8_t> curline[2];
-	int saved = 0; long mism_total = 0; bool warm = false; long warm_t0 = 150000;
+	int saved = 0; long mism_total = 0; bool warm = false; long warm_t0 = 1100000;   // the golden shows stale first lines in its first frames
 	bool rdy_n_prev = true;
 	long covc[16] = {0};
 	std::deque<Op> pend_cfg;     // register writes that change VRAM access addressing: issued during vertical blank only
@@ -418,7 +449,8 @@ int main(int argc, char** argv) {
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
 						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0xAE) || (ra >= 0xB0 && ra <= 0xBE) || (ra >= 0xD8 && ra <= 0xDE) || ra == 0xD6;   // WCTLD: its rotation parameter window bits pick the table for coefficient addresses   // registers that form VRAM addresses: blanking only
 						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
-						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);   // keep RBG1 on/off as programmed
+						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);
+						if (g_legal && ((ra == 0x70 && g_qt[0]) || (ra == 0x80 && g_qt[1]))) wv &= ~4;   // keep RBG1 on/off as programmed
 						Op o{0, (uint32_t)(0x180000 + ra), {wv}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
 						if (unsafe || g_legal) pend_cfg.push_back(o); else bus.q.push_back(o);
 					}
@@ -456,7 +488,7 @@ int main(int argc, char** argv) {
 		// A colour-depth or reduction register changed during blanking leaves stale bytes in the dot data for the first
 		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
 		VlWide<3> rmc = rm, dmc = dm;
-		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1) || curline[1].size() < 6))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
+		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1) || curline[1].size() < 6 || line[1].empty()))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
 		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
 			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
