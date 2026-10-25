@@ -750,6 +750,9 @@ module Saturn
 `ifdef POCKET_CUT_SMPC_HLE
 `define SMPC_IS_HLE
 `endif
+`ifdef POCKET_SMPC_SERV
+`define SMPC_IS_HLE
+`endif
 `ifndef SMPC_IS_HLE
 	bit MRES_N;
 	bit CE32K;
@@ -848,7 +851,11 @@ module Saturn
 		end
 	end
 	
+`ifdef POCKET_SMPC_SERV
+	SMPC_SERV SMPC
+`else
 	SMPC_HLE SMPC
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),

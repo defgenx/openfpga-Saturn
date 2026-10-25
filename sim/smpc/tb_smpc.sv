@@ -85,7 +85,13 @@ module tb_smpc;
 		.R70_I(1'b0), .R71_I(1'b0), .R72_O(CDRES_L), .R73_O(),
 		.EXL_N(EXL_L), .EXT_RTC(RTC), .DBG_EXT(8'h00));
 
-	SMPC_HLE hle (
+`ifndef HLE_MOD
+`define HLE_MOD SMPC_HLE
+`endif
+`ifndef HLE_PARAMS
+`define HLE_PARAMS
+`endif
+	`HLE_MOD `HLE_PARAMS hle (
 		.CLK(CLK), .RST_N(RST_N), .CE(CE), .MRES_N(MRES_N), .TIME_SET(1'b1), .EXT_RTC(RTC), .AC(AC),
 		.A(CA), .DI(CDI), .DO(DO_H), .CS_N(CS_N), .RW_N(MWR_N),
 		.SRES_N(1'b1), .IRQV_N(IRQV_N), .EXL_N(EXL_H),
