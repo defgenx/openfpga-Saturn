@@ -446,14 +446,20 @@ package SCSPP_PKG;
 	function bit signed [21:0] MDCalc(bit signed [15:0] X, bit signed [15:0] Y, bit [3:0] MDL);
 		bit signed [16:0] TEMP;
 		bit signed [26:0] PM;
+		bit signed [22:0] MD;
 		bit        [10:0] OH;
 		bit        [15:0] M;
 		
 		TEMP = $signed({X[15],X[15:0]}) + $signed({Y[15],Y[15:0]}); 
 		//The right shift by 16-MDL (MDL 5..15) is a multiplication by 2^(MDL-5), which maps onto a DSP block.
+`ifdef POCKET_SCSPP_NODSP_MD
+		MD = $signed($signed({TEMP[16:1],1'b0,6'b000000})>>>(4'h0-MDL));
+		M = MD[16:1];
+`else
 		OH = 11'd1 << (MDL - 4'd5);
 		PM = $signed(TEMP[16:1]) * $signed({1'b0,OH});
 		M = PM[20:5];
+`endif
 		
 		return MDL > 4'd4 ? {{5{M[15]}},M,1'b0} : '0;
 	endfunction
@@ -511,7 +517,11 @@ package SCSPP_PKG;
 		TEMP = $signed(PLFO_WAVE) * F[10:4];
 		FM = {{3{TEMP[14]}},TEMP[14:6]};
 		//The left shift by S (0..15) is a multiplication by 2^S, which maps onto a DSP block.
+`ifdef POCKET_SCSPP_NODSP_PHASE
+		P = {16'd0,{1'b0,F}+FM}<<S;
+`else
 		P = {16'd0,{1'b0,F}+FM} * (28'd1 << S);
+`endif
 		
 		return P[26:4];
 	endfunction
@@ -609,8 +619,12 @@ package SCSPP_PKG;
 		
 		TEMP1 = DAC18B ? $signed(WAVE)<<<2 : WAVE;
 		//Right shift by ~MVOL[3:1] as a multiplication by 2^MVOL[3:1] and a fixed shift.
+`ifdef POCKET_SCSPP_NODSP_MVOL
+		TEMP2 = $signed($signed(TEMP1)>>>(~MVOL[3:1]));
+`else
 		PM = $signed(TEMP1) * $signed({1'b0,8'd1 << MVOL[3:1]});
 		TEMP2 = PM[24:7];
+`endif
 		TEMP3 = MVOL ? $signed(TEMP2) - (!MVOL[0] ? $signed($signed(TEMP2)>>>2) : '0) : 18'sh0000;
 		
 		return TEMP3[17] && TEMP3[16:15] != 2'b11 ? 16'h8000 : !TEMP3[17] && TEMP3[16:15] != 2'b00 ? 16'h7FFF : TEMP3[15:0];

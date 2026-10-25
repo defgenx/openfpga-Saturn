@@ -31,7 +31,7 @@ $(B)/NEW_SCSPP_pkg.sv: $(NEW)/SCSPP_pkg.sv | $(B)
 $(B):
 	mkdir -p $(B)
 
-VFLAGS = --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style --top-module tb_top
+VFLAGS = --cc --exe --build -j 4 -O2 -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style --top-module tb_top $(EXTRA)
 
 # Default build: MIDI_REGS=0 against the golden without CR2/CR3.
 $(B)/obj/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
