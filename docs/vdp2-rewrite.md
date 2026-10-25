@@ -326,3 +326,44 @@ depends on the cycle pattern, and the differential scenes use unconstrained patt
 harness checks). A decode-at-arrival design matches the golden for legal patterns only, so it needs a scene generator that builds
 consistent PN/CH slots and banks first (the PN word range and character base would have to be forced into the banks the pattern
 names), and its register writes become visible per dot window and per line.
+
+## 11. Line renderer in VDP2P2 (verified on legal scenes)
+
+VDP2P2 replaces the golden's capture/ring/dot-select/compositor with a line-ahead renderer. Data flow:
+
+1. The address unit forms one character-access record per bank slot (layer, word count, PN attributes, cell) and delays it two
+   dot events to meet the VRAM data (`VDP2P2_DTAP`).
+2. On arrival each word is decoded and pushed to a FIFO; a walker emits one pixel per clock for each display dot the word covers
+   (per-layer state RAM, initialised from the scroll position at line start; modular cell compare handles the 2048 wrap).
+3. An insertion pipeline (RBG0, RBG1 as N0, walker) applies mosaic hold and priority/colour-calc candidates and writes the top
+   three entries per dot into a three-slot line buffer (3 x 1024 x 32 bit plus valid bits, `VDP2P2_LBV`).
+4. Scan-out reads the previous line's buffer, applies windows, merges sprites and ranks into `DOT_FST/SEC/THD/FTH`; the colour
+   stage and CRAM path are the golden's.
+
+Display dot index: `XD = XP - 16` (lores), `XP - 32` (hires).
+
+### Deviations from the golden (all on inputs the real Saturn BIOS/games do not produce)
+
+- Illegal cycle patterns: the golden writes each word into lanes by pattern order, so a pattern that breaks the rules below shows
+  stale lane data. The renderer does not reproduce that. Legal means: both bank rows carry the same pattern; a character block
+  lies inside one half of the 8 slots; PN slots precede the CH block by at least 4 slots (or the reverse arrangement with the same
+  spacing); hires uses at most 2 CH words per cell (4/8 bpp) and 4 slots; 32 bpp needs separate banks.
+- Register writes take effect per line (visible at the next line start), not mid-line; the harness issues them in blanking.
+  CPU VRAM writes in the legal scenes also happen in blanking.
+- NBG1 at 16/32 bpp: the golden takes the flip bits for the high byte from the previous cell. The scenes clear flip bits in that
+  configuration; the renderer uses the correct cell.
+- Reduction: exact against the golden at the maximum ratio (2.0) for 1/2; other 1/2 ratios and 1/4 are not compared. Enlargement
+  matches in about 85 percent of random-data cases; the rest differ where the golden refetches stale groups.
+- The first two pixels of each line, row 0 of a frame, and the first frames after reset differ (the golden shows stale hidden-region
+  dots); the harness masks them.
+
+### Verification
+
+`sim/vdp2`: `make vdp2-build DUT=VDP2P2`, then `build_VDP2P2/obj/Vtb_top +seed=N +clks=3300000 +legal=BITS +nostop`.
+BITS: 0 static NBG/RBG scenes with blanking-time register writes, 1 hires, 2 reduction, 32 mosaic (bit 5), 256 enlargement.
+
+Results: legal=0 300/300 static seeds and 200/200 with blanking writes; legal=1 100/100; legal=2 100/100 (after masking row 0);
+legal=32 60/60; seeds 31-38 of legal 0/1/2/32 all pass; `+ppm` frame dumps for seeds 3, 7, 8, 13 are byte identical to the golden.
+Scene types 7 and 8 exercise RBG0 and RBG0+RBG1.
+Not covered by the legal generator: 32 bpp NBG0 (needs split banks), interlace, hires with zoom, line scroll and bitmap scenes beyond
+what the random scene types produce.
