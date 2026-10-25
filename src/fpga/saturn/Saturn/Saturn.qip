@@ -56,3 +56,6 @@ set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) CD/hle/
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) CD/hle/serv/serv_state.v ]
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) CD/hle/serv/serv_top.v ]
 set_global_assignment -name SEARCH_PATH [file join $::quartus(qip_path) CD/hle ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) SMPC_SERV.sv ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) SMPC_SERV/smpc_rf_top.v ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) SMPC_SERV/smpc_rf_ram.v ]

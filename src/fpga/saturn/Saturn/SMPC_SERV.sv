@@ -1,7 +1,7 @@
 // SMPC with the command, INTBACK, pad and RTC behaviour as firmware on a SERV core (firmware/smpc).
 // Same ports as SMPC_HLE. Hardware: SH-2 register interface, output pins, 4 MHz tick counter, event flags,
 // IREG/OREG storage. See docs/smpc-serv.md.
-module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, parameter RAM_AW = 5) (
+module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, parameter RAM_AW = 5) (
 	input              CLK,
 	input              RST_N,
 	input              CE,
@@ -75,10 +75,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	reg  [31:0] ird_r = 32'd0, rom_d = 32'd0;
 	reg         iack = 1'b0, dack = 1'b0;
 
-`ifdef SMPC_RF_M10K
-	serv_rf_top
-`else
+`ifdef SMPC_RF_MLAB
 	smpc_rf_top
+`else
+	serv_rf_top
 `endif
 	#(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 		.clk(CLK), .i_rst(!RST_N || !MRES_N), .i_timer_irq(1'b0),
@@ -95,7 +95,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		iack  <= ic && !iack;
 	end
 
-	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] ramw [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram0 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram1 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram2 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram3 [0:(1<<RAM_AW)-1];
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
 	wire        sel_rom = da[31:30] == 2'b00;
@@ -103,10 +106,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	wire [RAM_AW-1:0] ra = da[RAM_AW+1:2];
 	wire [ 7:0] mi      = da[9:2];        // MMIO word index
 	always @(posedge CLK) if (dgo && dwe && sel_ram) begin
-		if (dsel[0]) ramw[ra][ 7: 0] <= dd[ 7: 0];
-		if (dsel[1]) ramw[ra][15: 8] <= dd[15: 8];
-		if (dsel[2]) ramw[ra][23:16] <= dd[23:16];
-		if (dsel[3]) ramw[ra][31:24] <= dd[31:24];
+		if (dsel[0]) ram0[ra] <= dd[ 7: 0];
+		if (dsel[1]) ram1[ra] <= dd[15: 8];
+		if (dsel[2]) ram2[ra] <= dd[23:16];
+		if (dsel[3]) ram3[ra] <= dd[31:24];
 	end
 
 	reg [31:0] mm_q;
@@ -126,7 +129,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		endcase
 	end
 
-	assign drd = sel_ram ? ramw[ra] : sel_mm ? mm_q : rom_d;
+	assign drd = sel_ram ? {ram3[ra], ram2[ra], ram1[ra], ram0[ra]} : sel_mm ? mm_q : rom_d;
 
 	// ---------------------------------------------------------------- state
 	always @(posedge CLK or negedge RST_N) begin
