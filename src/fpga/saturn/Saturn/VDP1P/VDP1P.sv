@@ -400,13 +400,13 @@ module VDP1P (
 	wire [11: 0] GK = COMM_ACC ? COL_HEIGHT - COL_D : 12'd0;
 	wire [ 2: 0] GIDX = GSEQ < 4'd7 ? (GSEQ[0] ? 3'd0 : 3'd3) + {1'b0,(GSEQ[2:1] - (GSEQ[0] ? 2'd0 : 2'd1))} : (DIR[0] ? 3'd3 : 3'd0) + (GSEQ[2:0] - 3'd7);
 	wire [16: 0] GS_Q;
+	wire [16: 0] GPROD = GK * GS_Q;
 	wire         GSIDE = GIDX >= 3'd3;
 	wire [ 1: 0] GTW = COMM_ACC ? {1'b0,GSIDE} : (GSIDE ? POLY_S1 : POLY_S);
 	wire [14: 0] GTC = GRD_TBL[GTW][14:0];
 	wire [ 1: 0] GCH = GSIDE ? GIDX[1:0] - 2'd3 : GIDX[1:0];
 	wire [ 4: 0] GBASE = GCH == 2'd0 ? GTC[4:0] : GCH == 2'd1 ? GTC[9:5] : GTC[14:10];
-	wire signed [35: 0] GPW = $signed({19'b0,GBASE,12'd0}) + $signed({1'b0,GK}) * $signed(GS_Q);   // one DSP block: multiplier plus addend
-	wire [16: 0] GSUM = GPW[16:0];
+	wire [16: 0] GSUM = {GBASE,12'd0} + GPROD;
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
 	bit  [16: 0] GS_WD;
@@ -585,7 +585,6 @@ module VDP1P (
 			if (EDGE_PS[1]) LEFT_VERT.Y  <= LEFT_VERT.Y  + {{12{POLY_LDIRY}},1'b1};
 			if (EDGE_PS[2]) RIGHT_VERT.X <= RIGHT_VERT.X + {{12{POLY_RDIRX}},1'b1};
 			if (EDGE_PS[3]) RIGHT_VERT.Y <= RIGHT_VERT.Y + {{12{POLY_RDIRY}},1'b1};
-			if (GL_WE) GN <= 12'd0;
 			if (GL_WE) begin
 				case (GL_CH)
 					2'd0: {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= GSUM;
@@ -1014,7 +1013,9 @@ module VDP1P (
 					if (LINE_DRAW_STEP) begin
 						LINE_VERTA.X <= LINE_VERTA.X + {{11{LINE_DIRX}},1'b1};
 						
-						GN <= GN + 12'd1;
+						{LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} + ({LINE_GHCOLOR_STEP.R.INT,LINE_GHCOLOR_STEP.R.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.R.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.R.DIR);
+						{LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} + ({LINE_GHCOLOR_STEP.G.INT,LINE_GHCOLOR_STEP.G.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.G.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.G.DIR);
+						{LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} + ({LINE_GHCOLOR_STEP.B.INT,LINE_GHCOLOR_STEP.B.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.B.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.B.DIR);
 					end
 					  
 					if ((LINE_VERTA.X == LINE_VERTB.X && LINE_DRAW_STEP) || (IS_PAT_EC && EC_FIND && TEXT_X_READ_STEP)) begin
@@ -1058,7 +1059,9 @@ module VDP1P (
 						end
 						LINE_ERROR <= NEXT_LINE_ERROR;
 					
-						GN <= GN + 12'd1;
+						{LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} <= {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} + ({LINE_GHCOLOR_STEP.R.INT,LINE_GHCOLOR_STEP.R.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.R.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.R.DIR);
+						{LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} <= {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} + ({LINE_GHCOLOR_STEP.G.INT,LINE_GHCOLOR_STEP.G.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.G.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.G.DIR);
+						{LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} <= {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} + ({LINE_GHCOLOR_STEP.B.INT,LINE_GHCOLOR_STEP.B.FRAC}^{17{DIR[0]^LINE_GHCOLOR_STEP.B.DIR}}) + (DIR[0]^LINE_GHCOLOR_STEP.B.DIR);
 					end
 
 					if (IS_PAT_EC && EC_FIND && TEXT_X_READ_STEP) begin
@@ -1195,17 +1198,6 @@ module VDP1P (
 	bit  [11: 0] DRAW_Y;
 	Pattern_t    DRAW_PAT;
 	RGB_t        DRAW_GHCOLOR;
-	// Colour of the pixel being started: row start colour +/- (steps so far) * line step, one DSP block per channel
-	// (the golden core accumulates the step per drawn pixel; same value modulo 2^17).
-	bit  [11: 0] GN;
-	wire [35: 0] GM_R = {24'd0,GN} * {19'd0,Q_R}, GM_G = {24'd0,GN} * {19'd0,Q_G}, GM_B = {24'd0,GN} * {19'd0,Q_B};
-	wire [16: 0] GP_R = (DIR[0] ^ NS_DIR[0]) ? {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} - GM_R[16:0] : {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} + GM_R[16:0];
-	wire [16: 0] GP_G = (DIR[0] ^ NS_DIR[1]) ? {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} - GM_G[16:0] : {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} + GM_G[16:0];
-	wire [16: 0] GP_B = (DIR[0] ^ NS_DIR[2]) ? {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} - GM_B[16:0] : {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} + GM_B[16:0];
-	// registered copy of the colour sum (valid one clock after GN, Q or the row colour change; pixels start at least two clocks apart);
-	// the full result is registered so that the adder maps into the DSP block
-	bit  [16: 0] GPQ_R,GPQ_G,GPQ_B;
-	always @(posedge CLK) begin GPQ_R <= GP_R; GPQ_G <= GP_G; GPQ_B <= GP_B; end
 	bit  [15: 0] DRAW_BACK_C;
 	bit          FB_DRAW_PEND;
 	bit          FB_READ_PEND;
@@ -1237,7 +1229,7 @@ module VDP1P (
 							if (!(CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END)) begin
 								if (!(TEXT_X_READ_STEP && EC_FIND && IS_PAT_EC)) begin
 									DRAW_PAT <= PAT;
-									DRAW_GHCOLOR <= {GPQ_B[16:12],GPQ_G[16:12],GPQ_R[16:12]};
+									DRAW_GHCOLOR <= RGBFtoI(LINE_GHCOLOR);
 								end
 								FBD_RAS <= LINE_DRAW_STEP && (CMD.CMDCTRL.COMM <= 4'h1) && &LINE_VERTA.X[3:0];
 							end
