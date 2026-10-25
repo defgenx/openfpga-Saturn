@@ -927,12 +927,12 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	
 	always_comb begin
-		NxOFFX[0] = NX[0] + NSX[0];
-		NxOFFX[1] = NX[1] + NSX[1];
-		NxOFFX[2] = NX[2] + NSX[2];
-		NxOFFX[3] = NX[3] + NSX[3];
-		NxOFFY[0] = NMOSY[0] + NVCSY[0];
-		NxOFFY[1] = NMOSY[1] + NVCSY[1];
+		NxOFFX[0] = XS[0];
+		NxOFFX[1] = XS[1];
+		NxOFFX[2] = XS[2];
+		NxOFFX[3] = XS[3];
+		NxOFFY[0] = NYOFS[0];
+		NxOFFY[1] = NYOFS[1];
 		NxOFFY[2] = NMOSY[2];
 		NxOFFY[3] = NMOSY[3];
 	end
@@ -1056,10 +1056,10 @@ module VDP2P import VDP2P_PKG::*; (
 		NxLS_ADDR[1] = NxLSAddr(NSxREG[1].LSTA, LS_TBL_OFFS[1], LS_VAL_OFFS[1]);
 		
 		RxRP_ADDR    = RxRPAddr({REGS.RPTAU.RPTA,REGS.RPTAL.RPTA},{~RP_POS[7],RP_POS[6:2]});
-		RxCT_ADDR[0] = RxCTAddr(KAst[CT_RP], RxKA[CT_RP], RPxREG[CT_RP].KTAOS, RPxREG[CT_RP].KDBS);
 		RxCT_ADDR[1] = RxCTAddr(KAst[    1], RxKA[    1], RPxREG[    1].KTAOS, RPxREG[    1].KDBS);
 		RxCTA_ADDR   = RxCTAddr(KAst[    0], RxKA[    0], RPxREG[    0].KTAOS, RPxREG[    0].KDBS);
 		RxCTB_ADDR   = RxCTAddr(KAst[    1], RxKA[    1], RPxREG[    1].KTAOS, RPxREG[    1].KDBS);
+		RxCT_ADDR[0] = CT_RP ? RxCTB_ADDR : RxCTA_ADDR;
 	end
 		
 	
@@ -1530,15 +1530,32 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	
 	//Scroll data  
-	ScrollData_t NX[4];
+	ScrollData_t XS[4];   //NX + NSX: kept as one sum
 	ScrollData_t NSX[4];
 	ScrollData_t NY[4];
 	ScrollData_t NSY[4];
 	ScrollData_t NVCSY[2];
 	ScrollData_t NMOSY[4];
 	CoordInc_t   LZMX[2];
+	ScrollData_t CX[4];
+	ScrollData_t NCX[4];
+	//19-bit adders of the scroll counters in DSP blocks (ONE is a registered 1 so the constant operand is kept)
+	bit          ONE;
+	always @(posedge CLK or negedge RST_N) if (!RST_N) ONE <= 1'b0; else ONE <= 1'b1;
+	ScrollData_t CXN[2], XSN[2], NCXN[2], NMOSYN[2];
+	wire         NLS2 = VA2.LS_POS[2];
+	VDP2P_DADD d_cx0(ONE, CX[0],  {8'h00,LZMX[0]}, CXN[0]);
+	VDP2P_DADD d_cx1(ONE, CX[1],  {8'h00,LZMX[1]}, CXN[1]);
+	VDP2P_DADD d_xs0(ONE, XS[0],  CXN[0], XSN[0]);
+	VDP2P_DADD d_xs1(ONE, XS[1],  CXN[1], XSN[1]);
+	VDP2P_DADD d_nx0(ONE, NCX[0], {8'h00,LZMX[0]}, NCXN[0]);
+	VDP2P_DADD d_nx1(ONE, NCX[1], {8'h00,LZMX[1]}, NCXN[1]);
+	VDP2P_DADD d_ms0(ONE, NY[{1'b0,NLS2}], NSY[{1'b0,NLS2}], NMOSYN[0]);
+	VDP2P_DADD d_ms1(ONE, NY[{1'b1,NLS2}], NSY[{1'b1,NLS2}], NMOSYN[1]);
+	ScrollData_t NYOFS[2];
+	VDP2P_DADD d_ny0(ONE, NMOSY[0], NVCSY[0], NYOFS[0]);
+	VDP2P_DADD d_ny1(ONE, NMOSY[1], NVCSY[1], NYOFS[1]);
 	always @(posedge CLK or negedge RST_N) begin
-		ScrollData_t CX[4];
 		bit  [31: 0] LS_WD;
 		bit          LS_RD;
 		bit          N2;
@@ -1546,7 +1563,7 @@ module VDP2P import VDP2P_PKG::*; (
 		
 		if (!RST_N) begin
 			// synopsys translate_off
-			NX <= '{4{'0}};
+			XS <= '{4{'0}};
 			NSX <= '{4{'0}};
 			NY <= '{4{'0}};
 			NSY <= '{4{'0}};
@@ -1557,8 +1574,8 @@ module VDP2P import VDP2P_PKG::*; (
 		else begin
 			if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
 				if (NPN_FETCH) begin
-					CX[0] <= CX[0] + LZMX[0];
-					CX[1] <= CX[1] + LZMX[1];
+					CX[0] <= CXN[0];
+					CX[1] <= CXN[1];
 					CX[2] <= CX[2] + 19'h00100;
 					CX[3] <= CX[3] + 19'h00100;
 				end
@@ -1566,13 +1583,13 @@ module VDP2P import VDP2P_PKG::*; (
 			
 			if (DOT_CE_R) begin
 				if (NPN_FETCH && (CELLX | {HRES[1],2'b00}) == 3'd7) begin
-					NX[0] <= NX[0] + CX[0] + LZMX[0];
+					XS[0] <= XSN[0];
 					CX[0] <= '0;
-					NX[1] <= NX[1] + CX[1] + LZMX[1];
+					XS[1] <= XSN[1];
 					CX[1] <= '0;
-					NX[2] <= NX[2] + CX[2] + 19'h00100;
+					XS[2] <= XS[2] + CX[2] + 19'h00100;
 					CX[2] <= '0;
-					NX[3] <= NX[3] + CX[3] + 19'h00100;
+					XS[3] <= XS[3] + CX[3] + 19'h00100;
 					CX[3] <= '0;
 				end
 				if (NBG_FETCH_START_EN || CELLX == 3'h7) begin
@@ -1599,11 +1616,11 @@ module VDP2P import VDP2P_PKG::*; (
 					LS_RD = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,N2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
 					case (VA2.LS_POS[1:0])
 						2'b00: begin
-							                                                NX[{1'b0,N2}] <= '0;
-							if (!NSxREG[{1'b0,N2}].LSCX)              begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; end
-							else if (LS_RD)                           begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; end
+							                                                XS[{1'b0,N2}] <= NSX[{1'b0,N2}];
+							if (!NSxREG[{1'b0,N2}].LSCX)              begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; end
+							else if (LS_RD)                           begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; end
 							
-							                                                NX[{1'b1,N2}] <= '0;
+							                                                XS[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
 					                                                      NSX[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
 						end
 						2'b01: begin
@@ -1625,10 +1642,10 @@ module VDP2P import VDP2P_PKG::*; (
 							else if (LS_RD)                           begin LZMX[{1'b0,N2}] <= LS_WD[18:8]; end
 							
 							if (!MOSAIC_VCNT || !NSxREG[{1'b0,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b0,N2}] <= NY[{1'b0,N2}] + NSY[{1'b0,N2}];
+								NMOSY[{1'b0,N2}] <= NMOSYN[0];
 							end
 							if (!MOSAIC_VCNT || !NSxREG[{1'b1,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b1,N2}] <= NY[{1'b1,N2}] + NSY[{1'b1,N2}];
+								NMOSY[{1'b1,N2}] <= NMOSYN[1];
 							end
 						end
 					endcase
@@ -1727,15 +1744,20 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2P_SDP #(5,32) rp_d1(CLK, RPW_WE, RPW_WA, RPW_WD, 5'd29,  DK1_Q);
 	VDP2P_SDP #(5,32) rp_fr(CLK, RPW_WE, RPW_WA, RPW_WD, RPFR_A, PFR_Q);
 	VDP2P_SDP #(5,32) rp_ff(CLK, RPW_WE, RPW_WA, RPW_WD, RPFF_A, PFF_Q);
-	RotAddr_t    KAx[2],KAy[2];
+	RotAddr_t    KAx[2],KAy[2];   //KAx holds the sum of the line base (KAy) and the per-dot accumulation
 	RotCoord_t   SUBXA,SUBXB;
 	RotCoord_t   SUBYA,SUBYB;
 	RotCoord_t   MULXA;
 	RotCoord_t   MULYA;
 	RotCoord_t   ACCX,ACCY;
 	RotCoord_t   SUMX, SUMY;
-	assign SUMX = $signed(ACCX) + $signed(MultRC(MULXA, ($signed(SUBXA) - $signed(SUBXB))));
-	assign SUMY = $signed(ACCY) + $signed(MultRC(MULYA, ($signed(SUBYA) - $signed(SUBYB))));
+	//One multiplier and adder for both lanes: the operands only change at DOT_CE_R, so X is evaluated in the slot
+	//DOTCLK_DIV==1 and Y in the slot 2; the sums are read at the next DOT_CE_R (slot 3).
+	wire         SUMSY = DOTCLK_DIV[1];
+	RotCoord_t   SUMC;
+	assign SUMC = $signed(SUMSY ? ACCY : ACCX) + $signed(MultRC(SUMSY ? MULYA : MULXA, ($signed(SUMSY ? SUBYA : SUBXA) - $signed(SUMSY ? SUBYB : SUBXB))));
+	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd1) SUMX <= SUMC;
+	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd2) SUMY <= SUMC;
 	//Per-table rotation state in block RAM (word = table A/B). Xsp/Ysp accumulate one entry per DOTCLK_DIV slot.
 	wire [31:0]  XYST_Q, XP_Q, YP_Q, DX_Q, DY_Q, SPX_Q, SPY_Q;
 	reg          XST_WE, YST_WE, DX_WE, XP_WE, SPX_WE, SPY_WE;
@@ -1910,10 +1932,11 @@ module VDP2P import VDP2P_PKG::*; (
 						5'd23: begin
 							KAst[N] <= TblAddrToRC(PB_Q);
 							KAy[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
+							KAx[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
 							if (IS_LAST_LINE) begin
 								KAy[N] <= '0;
+								KAx[N] <= '0;
 							end
-							KAx[N] <= '0;
 						end
 					endcase
 				end
@@ -1983,8 +2006,8 @@ module VDP2P import VDP2P_PKG::*; (
 `endif
 		end
 	end
-	assign RxKA[0] = $signed(KAy[0]) + $signed(KAx[0]);
-	assign RxKA[1] = $signed(KAy[1]) + $signed(KAx[1]);
+	assign RxKA[0] = KAx[0];
+	assign RxKA[1] = KAx[1];
 				
 	//Rotattion parameter window
 	wire RPW0_HIT = WHIT8_Q[0];
@@ -2160,7 +2183,9 @@ module VDP2P import VDP2P_PKG::*; (
 	CellParam_t     RBG_CDP[2];
 	bit [31: 0]     NBG_CH[4];
 	always @(posedge CLK or negedge RST_N) begin
-		bit [31: 0] PN_WD[4];
+		bit [31: 0] PN_WD[2];
+		PN_t        PNW;
+		int         x;
 		bit [31: 0] VS_WD[2];
 		bit [31: 0] LS_WD[2];
 		bit [ 1: 0] PN_CNT[4];
@@ -2192,25 +2217,22 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 		else begin
 			if (CE_R) begin
-				for (int i=0; i<4; i++) begin
-					if (BG2.NxPN[i] && BG_PIPE[1].NxPN_EN[i]) begin
-						case (BG2.NxPNS[i])
-							2'd0: PN_WD[i] = RA0_BUF;
-							2'd1: PN_WD[i] = RA1_BUF;
-							2'd2: PN_WD[i] = RB0_BUF;
-							2'd3: PN_WD[i] = RB1_BUF;
+				//layers 0/1 write at DOT_CE_R (DOTCLK_DIV==3), layers 2/3 at DOT_CE_F (DOTCLK_DIV==1): one converter per pair
+				for (int j=0; j<2; j++) begin
+					x = (DOTCLK_DIV == 2'd1) ? j + 2 : j;
+					if (BG2.NxPN[x] && BG_PIPE[1].NxPN_EN[x]) begin
+						case (BG2.NxPNS[x])
+							2'd0: PN_WD[j] = RA0_BUF;
+							2'd1: PN_WD[j] = RA1_BUF;
+							2'd2: PN_WD[j] = RB0_BUF;
+							2'd3: PN_WD[j] = RB1_BUF;
 						endcase
-						
-						if (i <= 1) begin
-							PN_CNT[i] = BG2.NxPN_CNT[i];
-							if (DOTCLK_DIV == 2'd3) begin
-								PN_PIPE[0][{(NSxREG[i].ZMQT|NSxREG[i].ZMHF)&PN_CNT[i][0],NSxREG[i].ZMQT&PN_CNT[i][1],1'b0}|i] <= !NSxREG[i].PNC.NxPNB ? PN_WD[i] : PNData(NSxREG[i].PNC, NSxREG[i].CHSZ, NSxREG[i].CHCN, PN_WD[i][31:16]);
-							end
-						end else begin
-							PN_CNT[i] = 0;
-							if (DOTCLK_DIV == 2'd1/*(!BG2.NxPNS[i][1] && DOTCLK_DIV == 2'd1) || (BG2.NxPNS[i][1] && DOTCLK_DIV == 2'd3)*/) begin
-								PN_PIPE[0][i] <= !NSxREG[i].PNC.NxPNB ? PN_WD[i] : PNData(NSxREG[i].PNC, NSxREG[i].CHSZ, NSxREG[i].CHCN, PN_WD[i][31:16]);
-							end
+						PNW = !NSxREG[x].PNC.NxPNB ? PN_WD[j] : PNData(NSxREG[x].PNC, NSxREG[x].CHSZ, NSxREG[x].CHCN, PN_WD[j][31:16]);
+						if (DOTCLK_DIV == 2'd3) begin
+							PN_CNT[j] = BG2.NxPN_CNT[j];
+							PN_PIPE[0][{(NSxREG[j].ZMQT|NSxREG[j].ZMHF)&PN_CNT[j][0],NSxREG[j].ZMQT&PN_CNT[j][1],1'b0}|j] <= PNW;
+						end else if (DOTCLK_DIV == 2'd1) begin
+							PN_PIPE[0][x] <= PNW;
 						end
 					end
 				end
@@ -2227,17 +2249,6 @@ module VDP2P import VDP2P_PKG::*; (
 						endcase
 						VS[i].INT  <= VS_WD[i][26:16];
 						VS[i].FRAC <= VS_WD[i][15: 8];
-					end
-				end
-				
-				for (int i=0; i<4; i++) begin
-					if (BG2.NxCH[i]) begin
-						case (BG2.NxCHS[i])
-							2'd0: NBG_CH[i] <= RA0_BUF;
-							2'd1: NBG_CH[i] <= RA1_BUF;
-							2'd2: NBG_CH[i] <= RB0_BUF;
-							2'd3: NBG_CH[i] <= RB1_BUF;
-						endcase
 					end
 				end
 				
@@ -2388,234 +2399,102 @@ module VDP2P import VDP2P_PKG::*; (
 	//writes of the batch that the golden performs at the next DOT_CE_R are done one array per clock in the window
 	//after the previous event (inputs are stable then), through one lane network. The only reader of NBG_CDC/NBG_CDP
 	//is the cell boundary copy, which is moved one event earlier (see NDC_WE_E) so that it sees the same state.
-	bit [ 3: 0] C_CNT[4];
-	bit         C_HF[8];
-	bit         C_PR[8];
-	bit         C_CC[8];
-	bit [ 6: 0] C_PALN[8];
-	bit [31: 0] C_CH[4];
-	bit [ 2: 0] C_CHCN[4];
-	bit         C_CHEN[4];
-	bit         C_NEN[4];
-	bit  [ 3: 0] C_E4H, C_E4L, C_E8, C_E16, C_E32, C_DPH, C_DPL;
-	always_comb begin
-C_NEN[3] = 0;
-				if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
-					C_CNT[3] = BG3.NxCH_CNT[0];
-					C_PALN[3] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[7] = !NSxREG[0].BMEN ? PN4E[7].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[3] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[7] = !NSxREG[0].BMEN ? PN4E[7].HF : 1'b0;
-					C_PR[3] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[7] = !NSxREG[0].BMEN ? PN4E[7].PR : NSxREG[0].BMPR;
-					C_CC[3] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[7] = !NSxREG[0].BMEN ? PN4E[7].CC : NSxREG[0].BMCC;
-					C_CH[3] = NBG_CH[0];
-					C_CHCN[3] = NSxREG[0].CHCN;
-					C_CHEN[3] = BG2.NxCH_EN[0];
-					C_NEN[3] = BG3.NxCH[0];
-				end else if (BG3.NxCH[1] && NSxREG[1].CHCN[1]) begin
-					C_CNT[3] = BG3.NxCH_CNT[1];
-					C_PALN[3] = !NSxREG[1].BMEN ? PN4E[1].PALN : {NSxREG[1].BMP,4'b0000}; C_PALN[7] = !NSxREG[1].BMEN ? PN4E[7].PALN : {NSxREG[1].BMP,4'b0000};
-					C_HF[3] = !NSxREG[1].BMEN ? PN4E[1].HF : 1'b0;                        C_HF[7] = !NSxREG[1].BMEN ? PN4E[7].HF : 1'b0;
-					C_PR[3] = !NSxREG[1].BMEN ? PN4E[1].PR : NSxREG[1].BMPR;              C_PR[7] = !NSxREG[1].BMEN ? PN4E[7].PR : NSxREG[1].BMPR;
-					C_CC[3] = !NSxREG[1].BMEN ? PN4E[1].CC : NSxREG[1].BMCC;              C_CC[7] = !NSxREG[1].BMEN ? PN4E[7].CC : NSxREG[1].BMCC;
-					C_CH[3] = NBG_CH[1];
-					C_CHCN[3] = {1'b0,NSxREG[1].CHCN[1:0]};
-					C_CHEN[3] = BG2.NxCH_EN[1];
-					C_NEN[3] = BG3.NxCH[1];
-				end else if (BG3.NxCH[1] && ((NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) || 
-																(NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF))) begin
-					C_CNT[3] = BG3.NxCH_CNT[1];
-					C_PALN[3] = !NSxREG[1].BMEN ? PN4E[5].PALN : {NSxREG[1].BMP,4'b0000}; C_PALN[7] = !NSxREG[1].BMEN ? PN4E[7].PALN : {NSxREG[1].BMP,4'b0000};
-					C_HF[3] = !NSxREG[1].BMEN ? PN4E[5].HF : 1'b0;                        C_HF[7] = !NSxREG[1].BMEN ? PN4E[7].HF : 1'b0;
-					C_PR[3] = !NSxREG[1].BMEN ? PN4E[5].PR : NSxREG[1].BMPR;              C_PR[7] = !NSxREG[1].BMEN ? PN4E[7].PR : NSxREG[1].BMPR;
-					C_CC[3] = !NSxREG[1].BMEN ? PN4E[5].CC : NSxREG[1].BMCC;              C_CC[7] = !NSxREG[1].BMEN ? PN4E[7].CC : NSxREG[1].BMCC;
-					C_CH[3] = NBG_CH[1];
-					C_CHCN[3] = {2'b00,NSxREG[1].CHCN[0]};
-					C_CHEN[3] = BG2.NxCH_EN[1];
-					C_NEN[3] = BG3.NxCH[1];
-				end else begin
-					C_CNT[3] = BG3.NxCH_CNT[3];
-					C_PALN[3] = !NSxREG[3].BMEN ? PN4E[3].PALN : {NSxREG[3].BMP,4'b0000}; C_PALN[7] = !NSxREG[3].BMEN ? PN4E[7].PALN : {NSxREG[3].BMP,4'b0000};
-					C_HF[3] = !NSxREG[3].BMEN ? PN4E[3].HF : 1'b0;                        C_HF[7] = !NSxREG[3].BMEN ? PN4E[7].HF : 1'b0;
-					C_PR[3] = !NSxREG[3].BMEN ? PN4E[3].PR : NSxREG[3].BMPR;              C_PR[7] = !NSxREG[3].BMEN ? PN4E[7].PR : NSxREG[3].BMPR;
-					C_CC[3] = !NSxREG[3].BMEN ? PN4E[3].CC : NSxREG[3].BMCC;              C_CC[7] = !NSxREG[3].BMEN ? PN4E[7].CC : NSxREG[3].BMCC;
-					C_CH[3] = NBG_CH[3];
-					C_CHCN[3] = {2'b00,NSxREG[3].CHCN[0]};
-					C_CHEN[3] = BG2.NxCH_EN[3];
-					C_NEN[3] = BG3.NxCH[3];
-				end
-				
-C_NEN[2] = 0;
-				if (BG3.NxCH[0] && NSxREG[0].CHCN[2:1]) begin
-					C_CNT[2] = BG3.NxCH_CNT[0];
-					C_PALN[2] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[6] = !NSxREG[0].BMEN ? PN4E[6].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[2] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[6] = !NSxREG[0].BMEN ? PN4E[6].HF : 1'b0;
-					C_PR[2] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[6] = !NSxREG[0].BMEN ? PN4E[6].PR : NSxREG[0].BMPR;
-					C_CC[2] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[6] = !NSxREG[0].BMEN ? PN4E[6].CC : NSxREG[0].BMCC;
-					C_CH[2] = NBG_CH[0];
-					C_CHCN[2] = NSxREG[0].CHCN;
-					C_CHEN[2] = BG2.NxCH_EN[0];
-					C_NEN[2] = BG3.NxCH[0];
-				end else if (BG3.NxCH[0] && ((NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) || 
-																(NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF))) begin
-					C_CNT[2] = BG3.NxCH_CNT[0];
-					C_PALN[2] = !NSxREG[0].BMEN ? PN4E[4].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[6] = !NSxREG[0].BMEN ? PN4E[6].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[2] = !NSxREG[0].BMEN ? PN4E[4].HF : 1'b0;                        C_HF[6] = !NSxREG[0].BMEN ? PN4E[6].HF : 1'b0;
-					C_PR[2] = !NSxREG[0].BMEN ? PN4E[4].PR : NSxREG[0].BMPR;              C_PR[6] = !NSxREG[0].BMEN ? PN4E[6].PR : NSxREG[0].BMPR;
-					C_CC[2] = !NSxREG[0].BMEN ? PN4E[4].CC : NSxREG[0].BMCC;              C_CC[6] = !NSxREG[0].BMEN ? PN4E[6].CC : NSxREG[0].BMCC;
-					C_CH[2] = NBG_CH[0];
-					C_CHCN[2] = NSxREG[0].CHCN;
-					C_CHEN[2] = BG2.NxCH_EN[0];
-					C_NEN[2] = BG3.NxCH[0];
-				end else begin
-					C_CNT[2] = BG3.NxCH_CNT[2];
-					C_PALN[2] = !NSxREG[2].BMEN ? PN4E[2].PALN : {NSxREG[2].BMP,4'b0000}; C_PALN[6] = !NSxREG[2].BMEN ? PN4E[2].PALN : {NSxREG[2].BMP,4'b0000};
-					C_HF[2] = !NSxREG[2].BMEN ? PN4E[2].HF : 1'b0;                        C_HF[6] = !NSxREG[2].BMEN ? PN4E[2].HF : 1'b0;
-					C_PR[2] = !NSxREG[2].BMEN ? PN4E[2].PR : NSxREG[2].BMPR;              C_PR[6] = !NSxREG[2].BMEN ? PN4E[2].PR : NSxREG[2].BMPR;
-					C_CC[2] = !NSxREG[2].BMEN ? PN4E[2].CC : NSxREG[2].BMCC;              C_CC[6] = !NSxREG[2].BMEN ? PN4E[2].CC : NSxREG[2].BMCC;
-					C_CH[2] = NBG_CH[2];
-					C_CHCN[2] = {2'b00,NSxREG[2].CHCN[0]};
-					C_CHEN[2] = BG2.NxCH_EN[2];
-					C_NEN[2] = BG3.NxCH[2];
-				end
-				
-C_NEN[1] = 0;
-				if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
-					C_CNT[1] = BG3.NxCH_CNT[0];
-					C_PALN[1] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[5] = !NSxREG[0].BMEN ? PN4E[5].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[1] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[5] = !NSxREG[0].BMEN ? PN4E[5].HF : 1'b0;
-					C_PR[1] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[5] = !NSxREG[0].BMEN ? PN4E[5].PR : NSxREG[0].BMPR;
-					C_CC[1] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[5] = !NSxREG[0].BMEN ? PN4E[5].CC : NSxREG[0].BMCC;
-					C_CH[1] = NBG_CH[0];
-					C_CHCN[1] = NSxREG[0].CHCN;
-					C_CHEN[1] = BG2.NxCH_EN[0];
-					C_NEN[1] = BG3.NxCH[0];
-				end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b000 && (NSxREG[1].ZMHF || NSxREG[1].ZMQT)) begin
-					C_CNT[1] = BG3.NxCH_CNT[1];
-					C_PALN[1] = !NSxREG[1].BMEN ? PN4E[1].PALN : {NSxREG[1].BMP,4'b0000}; C_PALN[5] = !NSxREG[1].BMEN ? PN4E[5].PALN : {NSxREG[1].BMP,4'b0000};
-					C_HF[1] = !NSxREG[1].BMEN ? PN4E[1].HF : 1'b0;                        C_HF[5] = !NSxREG[1].BMEN ? PN4E[5].HF : 1'b0;
-					C_PR[1] = !NSxREG[1].BMEN ? PN4E[1].PR : NSxREG[1].BMPR;              C_PR[5] = !NSxREG[1].BMEN ? PN4E[5].PR : NSxREG[1].BMPR;
-					C_CC[1] = !NSxREG[1].BMEN ? PN4E[1].CC : NSxREG[1].BMCC;              C_CC[5] = !NSxREG[1].BMEN ? PN4E[5].CC : NSxREG[1].BMCC;
-					C_CH[1] = NBG_CH[1];
-					C_CHCN[1] = NSxREG[1].CHCN;
-					C_CHEN[1] = BG2.NxCH_EN[1];
-					C_NEN[1] = BG3.NxCH[1] & (!BG3.NxCH_CNT[1][1] | (NSxREG[1].ZMHF & ~NSxREG[1].ZMQT));
-				end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
-					C_CNT[1] = BG3.NxCH_CNT[1];
-					C_PALN[1] = !NSxREG[1].BMEN ? PN4E[1].PALN : {NSxREG[1].BMP,4'b0000}; C_PALN[5] = !NSxREG[1].BMEN ? PN4E[5].PALN : {NSxREG[1].BMP,4'b0000};
-					C_HF[1] = !NSxREG[1].BMEN ? PN4E[1].HF : 1'b0;                        C_HF[5] = !NSxREG[1].BMEN ? PN4E[5].HF : 1'b0;
-					C_PR[1] = !NSxREG[1].BMEN ? PN4E[1].PR : NSxREG[1].BMPR;              C_PR[5] = !NSxREG[1].BMEN ? PN4E[5].PR : NSxREG[1].BMPR;
-					C_CC[1] = !NSxREG[1].BMEN ? PN4E[1].CC : NSxREG[1].BMCC;              C_CC[5] = !NSxREG[1].BMEN ? PN4E[5].CC : NSxREG[1].BMCC;
-					C_CH[1] = NBG_CH[1];
-					C_CHCN[1] = NSxREG[1].CHCN;
-					C_CHEN[1] = BG2.NxCH_EN[1];
-					C_NEN[1] = BG3.NxCH[1];
-				end else begin
-					C_CNT[1] = BG3.NxCH_CNT[1];
-					C_PALN[1] = !NSxREG[1].BMEN ? PN4E[1].PALN : {NSxREG[1].BMP,4'b0000}; C_PALN[5] = !NSxREG[1].BMEN ? PN4E[5].PALN : {NSxREG[1].BMP,4'b0000};
-					C_HF[1] = !NSxREG[1].BMEN ? PN4E[1].HF : 1'b0;                        C_HF[5] = !NSxREG[1].BMEN ? PN4E[5].HF : 1'b0;
-					C_PR[1] = !NSxREG[1].BMEN ? PN4E[1].PR : NSxREG[1].BMPR;              C_PR[5] = !NSxREG[1].BMEN ? PN4E[5].PR : NSxREG[1].BMPR;
-					C_CC[1] = !NSxREG[1].BMEN ? PN4E[1].CC : NSxREG[1].BMCC;              C_CC[5] = !NSxREG[1].BMEN ? PN4E[5].CC : NSxREG[1].BMCC;
-					C_CH[1] = NBG_CH[1];
-					C_CHCN[1] = {1'b0,NSxREG[1].CHCN[1:0]};
-					C_CHEN[1] = BG2.NxCH_EN[1];
-					C_NEN[1] = BG3.NxCH[1];
-				end
-				
-C_NEN[0] = 0;
-				if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b000 && (NSxREG[0].ZMHF || NSxREG[0].ZMQT)) begin
-					C_CNT[0] = BG3.NxCH_CNT[0];
-					C_PALN[0] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[4] = !NSxREG[0].BMEN ? PN4E[4].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[0] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[4] = !NSxREG[0].BMEN ? PN4E[4].HF : 1'b0;
-					C_PR[0] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[4] = !NSxREG[0].BMEN ? PN4E[4].PR : NSxREG[0].BMPR;
-					C_CC[0] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[4] = !NSxREG[0].BMEN ? PN4E[4].CC : NSxREG[0].BMCC;
-					C_CH[0] = NBG_CH[0];
-					C_CHCN[0] = NSxREG[0].CHCN;
-					C_CHEN[0] = BG2.NxCH_EN[0];
-					C_NEN[0] = BG3.NxCH[0] & (!BG3.NxCH_CNT[0][1] | (NSxREG[0].ZMHF & ~NSxREG[0].ZMQT));
-				end else if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF) begin
-					C_CNT[0] = BG3.NxCH_CNT[0];
-					C_PALN[0] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[4] = !NSxREG[0].BMEN ? PN4E[4].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[0] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[4] = !NSxREG[0].BMEN ? PN4E[4].HF : 1'b0;
-					C_PR[0] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[4] = !NSxREG[0].BMEN ? PN4E[4].PR : NSxREG[0].BMPR;
-					C_CC[0] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[4] = !NSxREG[0].BMEN ? PN4E[4].CC : NSxREG[0].BMCC;
-					C_CH[0] = BG2.NxCH_EN[0] ? NBG_CH[0] : '0;
-					C_CHCN[0] = NSxREG[0].CHCN;
-					C_CHEN[0] = BG2.NxCH_EN[0];
-					C_NEN[0] = BG3.NxCH[0] & !BG3.NxCH_CNT[0][1];
-				end else begin
-					C_CNT[0] = BG3.NxCH_CNT[0];
-					C_PALN[0] = !NSxREG[0].BMEN ? PN4E[0].PALN : {NSxREG[0].BMP,4'b0000}; C_PALN[4] = !NSxREG[0].BMEN ? PN4E[4].PALN : {NSxREG[0].BMP,4'b0000};
-					C_HF[0] = !NSxREG[0].BMEN ? PN4E[0].HF : 1'b0;                        C_HF[4] = !NSxREG[0].BMEN ? PN4E[4].HF : 1'b0;
-					C_PR[0] = !NSxREG[0].BMEN ? PN4E[0].PR : NSxREG[0].BMPR;              C_PR[4] = !NSxREG[0].BMEN ? PN4E[4].PR : NSxREG[0].BMPR;
-					C_CC[0] = !NSxREG[0].BMEN ? PN4E[0].CC : NSxREG[0].BMCC;              C_CC[4] = !NSxREG[0].BMEN ? PN4E[4].CC : NSxREG[0].BMCC;
-					C_CH[0] = BG2.NxCH_EN[0] ? NBG_CH[0] : '0;
-					C_CHCN[0] = NSxREG[0].CHCN;
-					C_CHEN[0] = BG2.NxCH_EN[0];
-					C_NEN[0] = BG3.NxCH[0];
-				end
-				
-		begin : g_en
-			bit z0, z1, k4h, k4l, k8, v;
-			//array 3 (character data of NBG3, borrowed by NBG1/NBG0 at high colour depth)
-			z1 = NSxREG[1].ZMQT && NSxREG[1].ON;
-			v = C_NEN[3] & C_CHEN[3];
-			k4h = !C_CNT[3][2] && C_CNT[3][1:0] == 2'b11 && z1;
-			k4l = !C_CNT[3][2] && ((C_CNT[3][1:0] == 2'b00 && !z1) || (C_CNT[3][1:0] == 2'b10 && z1));
-			k8  = !C_CNT[3][2] && ((C_CNT[3][1] == 1'b0 && !(NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF && NSxREG[1].ON)) || (C_CNT[3][1] == 1'b1 && NSxREG[1].ZMHF && NSxREG[1].ON));
-			C_E4H[3] = v && C_CHCN[3] == 3'b000 && k4h;
-			C_E4L[3] = v && C_CHCN[3] == 3'b000 && !k4h && k4l;
-			C_E8[3]  = v && C_CHCN[3] == 3'b001 && k8;
-			C_E16[3] = v && (C_CHCN[3] == 3'b010 || C_CHCN[3] == 3'b011) && !C_CNT[3][2];
-			C_E32[3] = v && C_CHCN[3] == 3'b100;
-			//array 2
-			z0 = NSxREG[0].ZMQT && NSxREG[0].ON;
-			v = C_NEN[2] & C_CHEN[2];
-			k4h = !C_CNT[2][2] && C_CNT[2][1:0] == 2'b11 && z0;
-			k4l = !C_CNT[2][2] && ((C_CNT[2][1:0] == 2'b00 && !z0) || (C_CNT[2][1:0] == 2'b10 && z0));
-			k8  = !C_CNT[2][2] && ((C_CNT[2][1] == 1'b0 && !(NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF && NSxREG[0].ON)) || (C_CNT[2][1] == 1'b1 && NSxREG[0].ZMHF && NSxREG[0].ON));
-			C_E4H[2] = v && C_CHCN[2] == 3'b000 && k4h;
-			C_E4L[2] = v && C_CHCN[2] == 3'b000 && !k4h && k4l;
-			C_E8[2]  = v && C_CHCN[2] == 3'b001 && k8;
-			C_E16[2] = v && (C_CHCN[2] == 3'b010 || C_CHCN[2] == 3'b011) && !C_CNT[2][2];
-			C_E32[2] = v && C_CHCN[2] == 3'b100;
-			//array 1
-			v = C_NEN[1] & C_CHEN[1];
-			k4h = C_CNT[1][0] && (NSxREG[1].ZMHF || NSxREG[1].ZMQT) && NSxREG[1].ON;
-			k4l = !C_CNT[1][2:0];
-			k8  = !C_CNT[1][2] && !C_CNT[1][1];
-			C_E4H[1] = v && C_CHCN[1] == 3'b000 && k4h;
-			C_E4L[1] = v && C_CHCN[1] == 3'b000 && !k4h && k4l;
-			C_E8[1]  = v && C_CHCN[1] == 3'b001 && k8;
-			C_E16[1] = v && (C_CHCN[1] == 3'b010 || C_CHCN[1] == 3'b011) && !C_CNT[1][2];
-			C_E32[1] = v && C_CHCN[1] == 3'b100;
-			//array 0
-			v = C_NEN[0] & C_CHEN[0];
-			k4h = C_CNT[0][0] && (NSxREG[0].ZMHF || NSxREG[0].ZMQT) && NSxREG[0].ON;
-			k4l = !C_CNT[0][2:0];
-			k8  = !C_CNT[0][2] && !C_CNT[0][1];
-			C_E4H[0] = v && C_CHCN[0] == 3'b000 && k4h;
-			C_E4L[0] = v && C_CHCN[0] == 3'b000 && !k4h && k4l;
-			C_E8[0]  = v && C_CHCN[0] == 3'b001 && k8;
-			C_E16[0] = v && (C_CHCN[0] == 3'b010 || C_CHCN[0] == 3'b011) && !C_CNT[0][2];
-			C_E32[0] = v && C_CHCN[0] == 3'b100;
-			//character parameter writes: the same conditions; 16 and 32 bits per dot write them only for arrays 0 and 1 (32: array 0)
-			C_DPH = C_E4H;
-			C_DPL = C_E4L | C_E8 | {1'b0,1'b0,C_E16[1],C_E16[0]} | {3'b000,C_E32[0]};
-		end
-	end
-	
 	bit  [ 2: 0] CSEQ;
 	bit          NHF1_HOLD;
 	always @(posedge CLK) begin
 		if (DOT_CE_R) CSEQ <= 3'd1;
-		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd4) ? 3'd0 : CSEQ + 3'd1;
-		if (CSEQ == 3'd3) NHF1_HOLD <= C_HF[1];
+		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd5) ? 3'd0 : CSEQ + 3'd1;
 	end
-	wire         CVIS = CSEQ != 3'd0;
+	wire         CVIS = CSEQ != 3'd0 && CSEQ != 3'd5;
 	wire [ 1: 0] CAI  = 2'd0 - CSEQ[1:0];   //1,2,3,4 -> 3,2,1,0
-	wire         S_E4H = CVIS & C_E4H[CAI], S_E4L = CVIS & C_E4L[CAI], S_E8 = CVIS & C_E8[CAI], S_E16 = CVIS & C_E16[CAI], S_E32 = CVIS & C_E32[CAI];
-	wire [31: 0] S_CH  = C_CH[CAI];
-	wire [ 2: 0] S_CNT = C_CNT[CAI][2:0];
-	wire         S_HFL = C_HF[CAI], S_HFH = C_HF[{1'b1,CAI}], S_HF16 = (CAI == 2'd3) ? NHF1_HOLD : C_HF[CAI];
+	//Fetched character words: the golden loads NBG_CH[l] at DOT_CE_R from the bank buffers. The chains read them in the
+	//window before that event, so each word is loaded after its last reader (layer 3 after the visit of array 3, ...
+	//layer 0 after the visit of array 0) through one bank multiplexer; the bank buffers and BG2 are stable in the window.
+	wire [ 1: 0] CHL = 2'd1 - CSEQ[1:0];   //CSEQ 2,3,4,5 -> layer 3,2,1,0
+	wire [ 1: 0] CHS = BG2.NxCHS[CHL];
+	wire [31: 0] CHD = CHS == 2'd0 ? RA0_BUF : CHS == 2'd1 ? RA1_BUF : CHS == 2'd2 ? RB0_BUF : RB1_BUF;
+	always @(posedge CLK) if (CSEQ >= 3'd2 && BG2.NxCH[CHL]) NBG_CH[CHL] <= CHD;
+
+	//Array selection for the visited array CAI (the golden evaluates the four arrays in parallel; the visits are
+	//sequential, so only the selectors are computed): V_SL layer whose character word, count and enable are used,
+	//V_KL layer whose bitmap registers apply, V_EL/V_EH the pattern name entries of the low/high plane.
+	reg  [ 1: 0] V_SL, V_KL;
+	reg  [ 2: 0] V_EL, V_EH, V_CHCN;
+	reg          V_NEN;
+	always_comb begin
+		V_SL = 2'd0; V_KL = 2'd0; V_EL = 3'd0; V_EH = 3'd0; V_CHCN = 3'd0; V_NEN = 1'b0;
+		case (CAI)
+		2'd3: begin
+			if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
+				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 7; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
+			end else if (BG3.NxCH[1] && NSxREG[1].CHCN[1]) begin
+				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 7; V_CHCN = {1'b0,NSxREG[1].CHCN[1:0]}; V_NEN = BG3.NxCH[1];
+			end else if (BG3.NxCH[1] && ((NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) || (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF))) begin
+				V_SL = 1; V_KL = 1; V_EL = 5; V_EH = 7; V_CHCN = {2'b00,NSxREG[1].CHCN[0]}; V_NEN = BG3.NxCH[1];
+			end else begin
+				V_SL = 3; V_KL = 3; V_EL = 3; V_EH = 7; V_CHCN = {2'b00,NSxREG[3].CHCN[0]}; V_NEN = BG3.NxCH[3];
+			end
+		end
+		2'd2: begin
+			if (BG3.NxCH[0] && NSxREG[0].CHCN[2:1]) begin
+				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 6; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
+			end else if (BG3.NxCH[0] && ((NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) || (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF))) begin
+				V_SL = 0; V_KL = 0; V_EL = 4; V_EH = 6; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
+			end else begin
+				V_SL = 2; V_KL = 2; V_EL = 2; V_EH = 2; V_CHCN = {2'b00,NSxREG[2].CHCN[0]}; V_NEN = BG3.NxCH[2];
+			end
+		end
+		2'd1: begin
+			if (BG3.NxCH[0] && NSxREG[0].CHCN[2]) begin
+				V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 5; V_CHCN = NSxREG[0].CHCN; V_NEN = BG3.NxCH[0];
+			end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b000 && (NSxREG[1].ZMHF || NSxREG[1].ZMQT)) begin
+				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = NSxREG[1].CHCN; V_NEN = BG3.NxCH[1] & (!BG3.NxCH_CNT[1][1] | (NSxREG[1].ZMHF & ~NSxREG[1].ZMQT));
+			end else if (BG3.NxCH[1] && NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
+				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = NSxREG[1].CHCN; V_NEN = BG3.NxCH[1];
+			end else begin
+				V_SL = 1; V_KL = 1; V_EL = 1; V_EH = 5; V_CHCN = {1'b0,NSxREG[1].CHCN[1:0]}; V_NEN = BG3.NxCH[1];
+			end
+		end
+		default: begin
+			V_SL = 0; V_KL = 0; V_EL = 0; V_EH = 4; V_CHCN = NSxREG[0].CHCN;
+			if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b000 && (NSxREG[0].ZMHF || NSxREG[0].ZMQT))
+				V_NEN = BG3.NxCH[0] & (!BG3.NxCH_CNT[0][1] | (NSxREG[0].ZMHF & ~NSxREG[0].ZMQT));
+			else if (BG3.NxCH[0] && NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF)
+				V_NEN = BG3.NxCH[0] & !BG3.NxCH_CNT[0][1];
+			else
+				V_NEN = BG3.NxCH[0];
+		end
+		endcase
+	end
+	wire         V_BM = NSxREG[V_KL].BMEN;
+	wire [ 6: 0] S_PL  = V_BM ? {NSxREG[V_KL].BMP,4'b0000} : PN4E[V_EL].PALN;
+	wire [ 6: 0] S_PH  = V_BM ? {NSxREG[V_KL].BMP,4'b0000} : PN4E[V_EH].PALN;
+	wire         S_PRL = V_BM ? NSxREG[V_KL].BMPR : PN4E[V_EL].PR;
+	wire         S_PRH = V_BM ? NSxREG[V_KL].BMPR : PN4E[V_EH].PR;
+	wire         S_CCL = V_BM ? NSxREG[V_KL].BMCC : PN4E[V_EL].CC;
+	wire         S_CCH = V_BM ? NSxREG[V_KL].BMCC : PN4E[V_EH].CC;
+	wire         S_HFL = V_BM ? 1'b0 : PN4E[V_EL].HF;
+	wire         S_HFH = V_BM ? 1'b0 : PN4E[V_EH].HF;
+	always @(posedge CLK) if (CSEQ == 3'd3) NHF1_HOLD <= S_HFL;
+	wire         S_HF16 = (CAI == 2'd3) ? NHF1_HOLD : S_HFL;
+	wire [ 2: 0] S_CNT = BG3.NxCH_CNT[V_SL][2:0];
+	wire [31: 0] S_CH  = NBG_CH[V_SL];
+	//write enables of the visited array (same conditions as the golden's per-array case statements)
+	wire         S_V   = CVIS & V_NEN & BG2.NxCH_EN[V_SL];
+	VDP2NSRegs_t S_R;
+	assign       S_R = NSxREG[CAI[0]];
+	wire         S_Z   = S_R.ZMQT && S_R.ON;
+	wire         S_K4H = CAI[1] ? (!S_CNT[2] && S_CNT[1:0] == 2'b11 && S_Z) : (S_CNT[0] && (S_R.ZMHF || S_R.ZMQT) && S_R.ON);
+	wire         S_K4L = CAI[1] ? (!S_CNT[2] && ((S_CNT[1:0] == 2'b00 && !S_Z) || (S_CNT[1:0] == 2'b10 && S_Z))) : !S_CNT;
+	wire         S_K8  = CAI[1] ? (!S_CNT[2] && ((S_CNT[1] == 1'b0 && !(S_R.CHCN == 3'b001 && S_R.ZMHF && S_R.ON)) || (S_CNT[1] == 1'b1 && S_R.ZMHF && S_R.ON))) : (!S_CNT[2] && !S_CNT[1]);
+	wire         S_E4H = S_V && V_CHCN == 3'b000 && S_K4H;
+	wire         S_E4L = S_V && V_CHCN == 3'b000 && !S_K4H && S_K4L;
+	wire         S_E8  = S_V && V_CHCN == 3'b001 && S_K8;
+	wire         S_E16 = S_V && (V_CHCN == 3'b010 || V_CHCN == 3'b011) && !S_CNT[2];
+	wire         S_E32 = S_V && V_CHCN == 3'b100;
+	//character parameter writes: the same conditions; 16 bits per dot write them for arrays 0 and 1, 32 bits per dot for array 0
+	wire         S_DPH = S_E4H;
+	wire         S_DPL = S_E4L | S_E8 | (S_E16 & ~CAI[1]) | (S_E32 & (CAI == 2'd0));
 	bit  [ 3: 0] IL[8], IH[8];
 	bit  [ 7: 0] EL, EH;
 	always_comb begin
@@ -2660,12 +2539,12 @@ C_NEN[0] = 0;
 	end
 	//Character parameters (priority, colour calculation flag, palette number) of the cell being assembled: entry n=CAI is the
 	//low part (written when C_DPL), n+4 the high part (C_DPH). Words of 9 bits in two small RAMs.
-	wire [ 8: 0] CDP_LO_D = {C_PR[CAI],         C_CC[CAI],         C_PALN[CAI]};
-	wire [ 8: 0] CDP_HI_D = {C_PR[{1'b1,CAI}],  C_CC[{1'b1,CAI}],  C_PALN[{1'b1,CAI}]};
+	wire [ 8: 0] CDP_LO_D = {S_PRL, S_CCL, S_PL};
+	wire [ 8: 0] CDP_HI_D = {S_PRH, S_CCH, S_PH};
 	wire [ 1: 0] CPP;
 	wire [ 8: 0] CDPA_LO_Q, CDPA_HI_Q;
-	VDP2P_SDP #(2,9) cdpa_lo(CLK, CVIS & C_DPL[CAI], CAI, CDP_LO_D, CPP, CDPA_LO_Q);
-	VDP2P_SDP #(2,9) cdpa_hi(CLK, CVIS & C_DPH[CAI], CAI, CDP_HI_D, CPP, CDPA_HI_Q);
+	VDP2P_SDP #(2,9) cdpa_lo(CLK, S_DPL, CAI, CDP_LO_D, CPP, CDPA_LO_Q);
+	VDP2P_SDP #(2,9) cdpa_hi(CLK, S_DPH, CAI, CDP_HI_D, CPP, CDPA_HI_Q);
 
 	//Pipeline taps: stage 2, 3 and 4 of the access pipelines are read back from block RAM (see VDP2P_DTAP)
 	always_comb begin
@@ -2790,7 +2669,6 @@ C_NEN[0] = 0;
 	assign RxCDP[1] = RBG_CDP[1];
 	
 	
-	ScrollData_t NCX[4];
 	always @(posedge CLK or negedge RST_N) begin
 		ScrollData_t X[4];
 		
@@ -2800,8 +2678,8 @@ C_NEN[0] = 0;
 			// synopsys translate_on
 		end
 		else begin
-			X[0] = NCX[0] + LZMX[0];
-			X[1] = NCX[1] + LZMX[1];
+			X[0] = NCXN[0];
+			X[1] = NCXN[1];
 			X[2] = NCX[2] + 19'h00100;
 			X[3] = NCX[3] + 19'h00100;
 			if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
@@ -3311,6 +3189,13 @@ C_NEN[0] = 0;
 	
 	DotColor_t DCOL;
 	bit        HB_INT3;
+	//colour calculation ratios: the products go to DSP blocks
+	wire [ 5: 0] CC_RA = !REGS.CCCTL.CCMD ? {1'b0,~CCRT} : 6'h20;
+	wire [ 5: 0] CC_RB = !REGS.CCCTL.CCMD ? {1'b0,CCRT}+6'd1 : 6'h20;
+	wire [13: 0] CC_SR, CC_SG, CC_SB;
+	VDP2P_RATIO ccr(CFST.R, CSEC.R, CC_RA, CC_RB, CC_SR);
+	VDP2P_RATIO ccg(CFST.G, CSEC.G, CC_RA, CC_RB, CC_SG);
+	VDP2P_RATIO ccb(CFST.B, CSEC.B, CC_RA, CC_RB, CC_SB);
 	always @(posedge CLK or negedge RST_N) begin
 		DotColor_t C;
 		
@@ -3319,7 +3204,9 @@ C_NEN[0] = 0;
 			DCOL <= DC_NULL;
 			// synopsys translate_on
 		end else begin
-			C <= ColorCalc(CFST, CSEC, CCRT, CCENFST, REGS.CCCTL.CCMD);
+			C.R <= !CCENFST ? CFST.R : (CC_SR[12:5] | {8{CC_SR[13]}});
+			C.G <= !CCENFST ? CFST.G : (CC_SG[12:5] | {8{CC_SG[13]}});
+			C.B <= !CCENFST ? CFST.B : (CC_SB[12:5] | {8{CC_SB[13]}});
 			if (DOT_CE_R || DOT_CE_F) begin
 				DCOL.B <= Shadow(ColorOffset(C.B, REGS.COAB.COBL, REGS.COBB.COBL, COEN, COSL), SDEN); 
 				DCOL.G <= Shadow(ColorOffset(C.G, REGS.COAG.COGR, REGS.COBG.COGR, COEN, COSL), SDEN); 
