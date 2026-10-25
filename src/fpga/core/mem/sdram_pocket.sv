@@ -97,7 +97,7 @@ assign dram_cke = 1'b1;
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-reg [15:0] cap_n, w0_q;
+reg [15:0] cap_n;
 always @(negedge clk) cap_n <= dram_dq_i;
 wire [15:0] dq_cap = CAP_NEG ? cap_n : dram_dq_i;
 
@@ -178,13 +178,11 @@ reg  [5:0] cyc;
 reg        old_rd, old_wr;
 assign ch2rdy = ~(sc_wr_p | sc_rd_p);
 
+// A SCSP request is not overwritten before its CAS: requests are >= 20 clk_ram apart and ACT + CAS take
+// at most 16 + 3 cycles after the capture, so the CAS reads sc_addr / sc_din / sc_be / sc_t0 directly.
 reg        s_act  [2:3];     // ACT issued, CAS due
 reg        s_wr   [2:3];
 reg        s_dum  [2:3];
-reg  [9:0] s_col  [2:3];
-reg [15:0] s_d    [2:3];
-reg  [1:0] s_be   [2:3];
-reg  [5:0] s_t0   [2:3];
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
@@ -306,25 +304,24 @@ always @(posedge clk) begin
 			c_cmd = CMD_ACT; c_ba = 2'd2;
 			if ((sc_rd_p | sc_wr_p) && !sc_addr[17]) begin
 				c_a = row_a(8'd64 + {1'b0, sc_addr[16:10]});
-				s_act[2] <= 1'b1; s_wr[2] <= sc_wr_p; s_dum[2] <= 1'b0; s_col[2] <= sc_addr[9:0];
-				s_d[2] <= sc_din; s_be[2] <= sc_be; s_t0[2] <= sc_t0;
+				s_act[2] <= 1'b1; s_wr[2] <= sc_wr_p; s_dum[2] <= 1'b0;
 				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 			end else begin
 				c_a = row_a(scr[2]); scr[2] <= scr_next(scr[2], 1'b1);
-				s_act[2] <= 1'b1; s_wr[2] <= 1'b0; s_dum[2] <= 1'b1; s_col[2] <= '0; s_t0[2] <= cyc;
+				s_act[2] <= 1'b1; s_wr[2] <= 1'b0; s_dum[2] <= 1'b1;
 			end
 		end
 		4'd1: if (s_act[2]) begin
 			s_act[2] <= 1'b0;
-			c_ba = 2'd2; c_a = col_a(s_col[2]);
-			if (s_wr[2]) begin c_cmd = CMD_WR; c_dq = s_d[2]; c_oe = 1'b1; c_dqm = ~s_be[2]; end
+			c_ba = 2'd2; c_a = col_a(s_dum[2] ? 10'd0 : sc_addr[9:0]);
+			if (s_wr[2]) begin c_cmd = CMD_WR; c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be; end
 			else begin
 				c_cmd = CMD_RD; c_tv = 1'b1;
 				if (s_dum[2]) c_tk = 3'd7;
 				else begin
 					c_tk = 3'd4; c_ti = dl_wi;
 					dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
-					dl_t0[dl_wi] <= s_t0[2];
+					dl_t0[dl_wi] <= sc_t0;
 					dl_wi <= ~dl_wi;
 				end
 			end
@@ -335,25 +332,24 @@ always @(posedge clk) begin
 			c_cmd = CMD_ACT; c_ba = 2'd3;
 			if ((sc_rd_p | sc_wr_p) && sc_addr[17]) begin
 				c_a = row_a(8'd64 + {1'b0, sc_addr[16:10]});
-				s_act[3] <= 1'b1; s_wr[3] <= sc_wr_p; s_dum[3] <= 1'b0; s_col[3] <= sc_addr[9:0];
-				s_d[3] <= sc_din; s_be[3] <= sc_be; s_t0[3] <= sc_t0;
+				s_act[3] <= 1'b1; s_wr[3] <= sc_wr_p; s_dum[3] <= 1'b0;
 				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 			end else begin
 				c_a = row_a(scr[3]); scr[3] <= scr_next(scr[3], 1'b1);
-				s_act[3] <= 1'b1; s_wr[3] <= 1'b0; s_dum[3] <= 1'b1; s_col[3] <= '0; s_t0[3] <= cyc;
+				s_act[3] <= 1'b1; s_wr[3] <= 1'b0; s_dum[3] <= 1'b1;
 			end
 		end
 		4'd3: if (s_act[3]) begin
 			s_act[3] <= 1'b0;
-			c_ba = 2'd3; c_a = col_a(s_col[3]);
-			if (s_wr[3]) begin c_cmd = CMD_WR; c_dq = s_d[3]; c_oe = 1'b1; c_dqm = ~s_be[3]; end
+			c_ba = 2'd3; c_a = col_a(s_dum[3] ? 10'd0 : sc_addr[9:0]);
+			if (s_wr[3]) begin c_cmd = CMD_WR; c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be; end
 			else begin
 				c_cmd = CMD_RD; c_tv = 1'b1;
 				if (s_dum[3]) c_tk = 3'd7;
 				else begin
 					c_tk = 3'd4; c_ti = dl_wi;
 					dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
-					dl_t0[dl_wi] <= s_t0[3];
+					dl_t0[dl_wi] <= sc_t0;
 					dl_wi <= ~dl_wi;
 				end
 			end
@@ -376,16 +372,23 @@ always @(posedge clk) begin
 	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
+	// word 0 and word 1 land one cycle apart, both after the previous set was sampled (F + 8)
 	if (t_v[4]) begin
-		w0_q <= dq_cap;
-		if (t_k[4] == 3'd4) begin dl_d[t_i[4]] <= dq_cap; dl_ld[t_i[4]] <= 1'b1; end
+		case (t_k[4])
+			3'd0: dout_a0[31:16] <= dq_cap;
+			3'd1: dout_b0[31:16] <= dq_cap;
+			3'd2: dout_a1[31:16] <= dq_cap;
+			3'd3: dout_b1[31:16] <= dq_cap;
+			3'd4: begin dl_d[t_i[4]] <= dq_cap; dl_ld[t_i[4]] <= 1'b1; end
+			default: ;
+		endcase
 	end
 	if (t_v[5]) begin
 		case (t_k[5])
-			3'd0: dout_a0 <= {w0_q, dq_cap};
-			3'd1: dout_b0 <= {w0_q, dq_cap};
-			3'd2: dout_a1 <= {w0_q, dq_cap};
-			3'd3: dout_b1 <= {w0_q, dq_cap};
+			3'd0: dout_a0[15:0] <= dq_cap;
+			3'd1: dout_b0[15:0] <= dq_cap;
+			3'd2: dout_a1[15:0] <= dq_cap;
+			3'd3: dout_b1[15:0] <= dq_cap;
 			default: ;
 		endcase
 	end

@@ -33,3 +33,10 @@ sizing/**/out_*/
 sim/cdb/build/
 firmware/cdb/build/
 sim/sh2/build_*/
+sizing/mem/snap/
+sizing/mem/db/
+sizing/mem/incremental_db/
+sizing/mem/out_*/
+sizing/mem/m_*.q*
+sizing/mem/*.log
+sizing/mem/*.out
