@@ -404,8 +404,8 @@ Disassembly of section .text:
  4ac:	4805                	li	a6,1
  4ae:	03072023          	sw	a6,32(a4)
  4b2:	00c9a683          	lw	a3,12(s3)
- 4b6:	0035d893          	srli	a7,a1,0x3
- 4ba:	0028f893          	andi	a7,a7,2
+ 4b6:	0055d893          	srli	a7,a1,0x5
+ 4ba:	0108f8b3          	and	a7,a7,a6
  4be:	8abd                	andi	a3,a3,15
  4c0:	d354                	sw	a3,36(a4)
  4c2:	0015d693          	srli	a3,a1,0x1
@@ -414,8 +414,8 @@ Disassembly of section .text:
  4ce:	00259893          	slli	a7,a1,0x2
  4d2:	0188f893          	andi	a7,a7,24
  4d6:	0116e6b3          	or	a3,a3,a7
- 4da:	0055d893          	srli	a7,a1,0x5
- 4de:	0108f8b3          	and	a7,a7,a6
+ 4da:	0035d893          	srli	a7,a1,0x3
+ 4de:	0028f893          	andi	a7,a7,2
  4e2:	0116e6b3          	or	a3,a3,a7
  4e6:	0246e693          	ori	a3,a3,36
  4ea:	d714                	sw	a3,40(a4)

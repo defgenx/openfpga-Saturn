@@ -77,8 +77,8 @@ static void ib_status(u32 t) {
 	for (i = 0; i < 7; i++) oreg(1 + i, rtc[i]);
 	oreg(8, 1);
 	oreg(9, MM(R_IN) & 15);
-	oreg(10, ((p & DOTSEL) ? 0x40 : 0) | 0x24 | ((p & SSHRES) ? 0x10 : 0) | ((p & MSHNMI) ? 8 : 0) | ((p & SYSRES) ? 2 : 0) | ((p & SNDRES) ? 1 : 0));
-	oreg(11, ((p & CDRES) ? 0x40 : 0) | 2);
+	oreg(10, 0x24 | (p >> 1 & 0x40) | (p << 2 & 0x18) | (p >> 3 & 2) | (p >> 5 & 1));
+	oreg(11, (p & CDRES) | 2);
 	for (i = 0; i < 4; i++) oreg(12 + i, smem[i]);
 	wait_until(t + 933 - opt - nop);
 	if (ir[1] & 8) { ib_exec = 1; ib_optim = !(ir[1] & 2); cont_prev = 0; }

@@ -11,7 +11,7 @@ ifeq ($(HLE),SMPC_SERV)
 HLE_DEFS := "-DHLE_PARAMS=\#(.ROM_AW($(ROMAW)),.RAM_AW(6))"
 endif
 FWHEX := $(SRC)/SMPC_SERV/smpc_fw.hex
-SERVV := $(wildcard $(SRC)/CD/hle/serv/*.v)
+SERVV := $(wildcard $(SRC)/CD/hle/serv/*.v) $(wildcard $(SRC)/SMPC_SERV/*.v)
 FILES := $(SRC)/SMPC/HMCS400_pkg.sv $(SRC)/SMPC/HMCS400_core.sv $(SRC)/SMPC/HMCS400_mem.sv $(SRC)/SMPC/SMPC_pkg.sv \
          $(SRC)/SMPC/SMPC.sv $(SRC)/SMPC_HLE.sv $(SRC)/SMPC_SERV.sv $(SERVV)
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-UNOPTFLAT \

@@ -74,7 +74,12 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	reg  [31:0] drd = 32'd0, ird_r = 32'd0, rom_d = 32'd0;
 	reg         iack = 1'b0, dack = 1'b0;
 
-	serv_rf_top #(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
+`ifdef SMPC_RF_M10K
+	serv_rf_top
+`else
+	smpc_rf_top
+`endif
+	#(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 		.clk(CLK), .i_rst(!RST_N || !MRES_N), .i_timer_irq(1'b0),
 		.o_ibus_adr(ia), .o_ibus_cyc(ic), .i_ibus_rdt(ird_r), .i_ibus_ack(iack),
 		.o_dbus_adr(da), .o_dbus_dat(dd), .o_dbus_sel(dsel), .o_dbus_we(dwe), .o_dbus_cyc(dc),
@@ -89,10 +94,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		iack  <= ic && !iack;
 	end
 
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram0 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram1 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram2 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram3 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] ramw [0:(1<<RAM_AW)-1];
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
 	reg         rwait = 1'b0;
@@ -101,10 +103,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	wire [RAM_AW-1:0] ra = da[RAM_AW+1:2];
 	wire [ 7:0] mi      = da[9:2];        // MMIO word index
 	always @(posedge CLK) if (dgo && dwe && sel_ram) begin
-		if (dsel[0]) ram0[ra] <= dd[7:0];
-		if (dsel[1]) ram1[ra] <= dd[15:8];
-		if (dsel[2]) ram2[ra] <= dd[23:16];
-		if (dsel[3]) ram3[ra] <= dd[31:24];
+		if (dsel[0]) ramw[ra][ 7: 0] <= dd[ 7: 0];
+		if (dsel[1]) ramw[ra][15: 8] <= dd[15: 8];
+		if (dsel[2]) ramw[ra][23:16] <= dd[23:16];
+		if (dsel[3]) ramw[ra][31:24] <= dd[31:24];
 	end
 
 	reg [31:0] mm_q;
@@ -137,7 +139,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 			dack <= (dgo && !sel_rom) || rwait;
 			rwait <= dgo && sel_rom;
 			if (rwait) drd <= rom_d;
-			else if (dgo) drd <= sel_ram ? {ram3[ra], ram2[ra], ram1[ra], ram0[ra]} : mm_q;
+			else if (dgo) drd <= sel_ram ? ramw[ra] : mm_q;
 			if (CE) TICKS <= TICKS + 24'd1;
 			RW_N_OLD <= RW_N; CS_N_OLD <= CS_N;
 			IRQV_N_OLD <= IRQV_N; RTC64_OLD <= EXT_RTC[64];
