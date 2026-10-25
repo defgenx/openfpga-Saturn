@@ -13,4 +13,4 @@ for s in $steps; do
     vqm) cmd="$cmd quartus_cdb $n --vqm=$n.vqm > vqm.log 2>&1;" ;;
   esac
 done
-docker run --rm --platform linux/amd64 --name vdp1rw-$n-$$ -v $W:/build -w /build/sizing/vdp1p/$n raetro/quartus:21.1 sh -c "$cmd" 
+QRUN_MAX=3 /Users/adelvecchio/Documents/workspace/openfpga-Saturn/tools/qrun.sh vdp1rw-$n-$$ $W /build/sizing/vdp1p/$n sh -c "$cmd"

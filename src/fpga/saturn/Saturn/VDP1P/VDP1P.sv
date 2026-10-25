@@ -1,3 +1,6 @@
+`ifndef POCKET_VDP1P_NO_ROWFLOOR
+`define POCKET_VDP1P_ROWFLOOR
+`endif
 module VDP1P (
 	input              CLK,
 	input              RST_N,
@@ -448,6 +451,11 @@ module VDP1P (
 	// 8 cycles after EDGE_INIT (first read in the row set-up at least 40 cycles later).
 	wire         CLIP_H;
 	VDP1P_CLIPH CLIPH(CLK, EN, EN && CMD_ST == CMDS_EDGE_INIT, VERTA.X, VERTD.X, VERTB.X, VERTC.X, SYS_CLIP_X1, SYS_CLIP_X2, CMD.CMDPMOD.PCLP, CLIP_H);
+`ifdef POCKET_VDP1P_ROWFLOOR
+	bit  [ 1: 0] EI_N;
+	always @(posedge CLK) if (CMD_ST != CMDS_EDGE_INIT) EI_N <= 0; else if (EN) EI_N <= EI_N + 2'd1;
+	wire [12: 0] EI_SUB = EI_N[1] ? (EI_N[0] ? VERTC.Y - VERTB.Y : VERTC.X - VERTB.X) : (EI_N[0] ? VERTD.Y - VERTA.Y : VERTD.X - VERTA.X);
+`endif
 	bit  [ 8: 0] CMD_DELAY;
 	bit  [ 9: 0] PENALTY_CNT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -782,11 +790,21 @@ module VDP1P (
 				CMDS_EDGE_INIT: begin
 					LEFT_VERT <= VERTA;
 					RIGHT_VERT <= VERTB;
+					DIR <= '0;
+`ifdef POCKET_VDP1P_ROWFLOOR
+					// one edge difference per cycle (four cycles); the golden core takes one
+					case (EI_N)
+						2'd0: begin POLY_LSX <= Abs(EI_SUB); POLY_LDIRX <= EI_SUB[12]; end
+						2'd1: begin POLY_LSY <= Abs(EI_SUB); POLY_LDIRY <= EI_SUB[12]; end
+						2'd2: begin POLY_RSX <= Abs(EI_SUB); POLY_RDIRX <= EI_SUB[12]; end
+						2'd3: begin POLY_RSY <= Abs(EI_SUB); POLY_RDIRY <= EI_SUB[12]; end
+					endcase
+					if (EI_N == 2'd3) CMD_ST <= CMDS_POLYGON_CALCE;
+`else
 					NEW_POLY_LSX = VERTD.X - VERTA.X;
 					NEW_POLY_LSY = VERTD.Y - VERTA.Y;
 					NEW_POLY_RSX = VERTC.X - VERTB.X;
 					NEW_POLY_RSY = VERTC.Y - VERTB.Y;
-					
 					POLY_LSX <= Abs(NEW_POLY_LSX);
 					POLY_LSY <= Abs(NEW_POLY_LSY);
 					POLY_RSX <= Abs(NEW_POLY_RSX);
@@ -795,11 +813,8 @@ module VDP1P (
 					POLY_LDIRY <= NEW_POLY_LSY[12];
 					POLY_RDIRX <= NEW_POLY_RSX[12];
 					POLY_RDIRY <= NEW_POLY_RSY[12];
-					
-					DIR <= '0;
-					
-					
 					CMD_ST <= CMDS_POLYGON_CALCE;
+`endif
 				end
 				
 				CMDS_LINE_INIT: begin
