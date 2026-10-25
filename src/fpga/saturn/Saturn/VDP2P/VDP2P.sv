@@ -3172,6 +3172,13 @@ module VDP2P import VDP2P_PKG::*; (
 	
 	DotColor_t DCOL;
 	bit        HB_INT3;
+	//colour calculation ratios: the products go to DSP blocks
+	wire [ 5: 0] CC_RA = !REGS.CCCTL.CCMD ? {1'b0,~CCRT} : 6'h20;
+	wire [ 5: 0] CC_RB = !REGS.CCCTL.CCMD ? {1'b0,CCRT}+6'd1 : 6'h20;
+	wire [13: 0] CC_SR, CC_SG, CC_SB;
+	VDP2P_RATIO ccr(CFST.R, CSEC.R, CC_RA, CC_RB, CC_SR);
+	VDP2P_RATIO ccg(CFST.G, CSEC.G, CC_RA, CC_RB, CC_SG);
+	VDP2P_RATIO ccb(CFST.B, CSEC.B, CC_RA, CC_RB, CC_SB);
 	always @(posedge CLK or negedge RST_N) begin
 		DotColor_t C;
 		
@@ -3180,7 +3187,9 @@ module VDP2P import VDP2P_PKG::*; (
 			DCOL <= DC_NULL;
 			// synopsys translate_on
 		end else begin
-			C <= ColorCalc(CFST, CSEC, CCRT, CCENFST, REGS.CCCTL.CCMD);
+			C.R <= !CCENFST ? CFST.R : (CC_SR[12:5] | {8{CC_SR[13]}});
+			C.G <= !CCENFST ? CFST.G : (CC_SG[12:5] | {8{CC_SG[13]}});
+			C.B <= !CCENFST ? CFST.B : (CC_SB[12:5] | {8{CC_SB[13]}});
 			if (DOT_CE_R || DOT_CE_F) begin
 				DCOL.B <= Shadow(ColorOffset(C.B, REGS.COAB.COBL, REGS.COBB.COBL, COEN, COSL), SDEN); 
 				DCOL.G <= Shadow(ColorOffset(C.G, REGS.COAG.COGR, REGS.COBG.COGR, COEN, COSL), SDEN); 

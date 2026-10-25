@@ -306,3 +306,15 @@ module VDP2P_REGRAM #(
 	end
 	assign Q = vld[RA] ? w : '0;
 endmodule
+
+// Two 8x6 products and their sum (colour calculation of one channel).
+(* multstyle = "dsp" *)
+module VDP2P_RATIO (
+	input  [ 7:0] A,
+	input  [ 7:0] B,
+	input  [ 5:0] RA,
+	input  [ 5:0] RB,
+	output [13:0] S
+);
+	assign S = (A * RA) + (B * RB);
+endmodule
