@@ -83,3 +83,4 @@ sizing/mem/out_*/
 sizing/mem/m_*.q*
 sizing/mem/*.log
 sizing/mem/*.out
+sizing/vdp1p/snap/

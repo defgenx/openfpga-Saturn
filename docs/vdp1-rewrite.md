@@ -115,6 +115,12 @@ Quartus ignores it for this register. Ablation of the whole colour and gouraud d
 491 ALUT and 266 registers, so that datapath, not the bus or display, is the largest single item; rotation addressing alone is 20 ALUT, the
 pattern address adder 35 ALUT.
 
+DSP offload (tried, not kept): Quartus maps `c + n*q` and `c - n*q` into one "independent 18x18 plus 36" block with no ALUT in a small test
+(`sizing/vdp1p/dsp/`) when the whole 17-bit sum feeds a register, but not when only the top five bits are used, with an enable on the result
+register, or with the low bits kept by `preserve`. The gouraud pixel colour (row colour +/- step count * line step, 3 blocks) only uses bits 16:12
+of the sum; in the design the adders stayed in logic (3,110 ALUT against 3,100 before, 5 DSP blocks) and the change was backed out.
+Direct `cyclonev_mac` instances were not tried: the simulation model is encrypted and the mode and operand mapping is undocumented here.
+
 Ablation (map ALUT removed when the logic is replaced by a trivial wire, from the g3 design of 3,146): EDGE_INIT differences and abs 100,
 pre-clip compares 83 (built as a one-comparator unit, fitter -11 ALMs together with the 4-cycle EDGE_INIT), row-texture constants 62,
 texture-width constants 43, row arithmetic 32. Even if every remaining item cost nothing, they total about 140 ALUT (about 60 ALMs).
