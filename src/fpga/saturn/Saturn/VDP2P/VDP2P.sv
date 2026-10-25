@@ -2165,7 +2165,9 @@ module VDP2P import VDP2P_PKG::*; (
 	CellParam_t     RBG_CDP[2];
 	bit [31: 0]     NBG_CH[4];
 	always @(posedge CLK or negedge RST_N) begin
-		bit [31: 0] PN_WD[4];
+		bit [31: 0] PN_WD[2];
+		PN_t        PNW;
+		int         x;
 		bit [31: 0] VS_WD[2];
 		bit [31: 0] LS_WD[2];
 		bit [ 1: 0] PN_CNT[4];
@@ -2197,25 +2199,22 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 		else begin
 			if (CE_R) begin
-				for (int i=0; i<4; i++) begin
-					if (BG2.NxPN[i] && BG_PIPE[1].NxPN_EN[i]) begin
-						case (BG2.NxPNS[i])
-							2'd0: PN_WD[i] = RA0_BUF;
-							2'd1: PN_WD[i] = RA1_BUF;
-							2'd2: PN_WD[i] = RB0_BUF;
-							2'd3: PN_WD[i] = RB1_BUF;
+				//layers 0/1 write at DOT_CE_R (DOTCLK_DIV==3), layers 2/3 at DOT_CE_F (DOTCLK_DIV==1): one converter per pair
+				for (int j=0; j<2; j++) begin
+					x = (DOTCLK_DIV == 2'd1) ? j + 2 : j;
+					if (BG2.NxPN[x] && BG_PIPE[1].NxPN_EN[x]) begin
+						case (BG2.NxPNS[x])
+							2'd0: PN_WD[j] = RA0_BUF;
+							2'd1: PN_WD[j] = RA1_BUF;
+							2'd2: PN_WD[j] = RB0_BUF;
+							2'd3: PN_WD[j] = RB1_BUF;
 						endcase
-						
-						if (i <= 1) begin
-							PN_CNT[i] = BG2.NxPN_CNT[i];
-							if (DOTCLK_DIV == 2'd3) begin
-								PN_PIPE[0][{(NSxREG[i].ZMQT|NSxREG[i].ZMHF)&PN_CNT[i][0],NSxREG[i].ZMQT&PN_CNT[i][1],1'b0}|i] <= !NSxREG[i].PNC.NxPNB ? PN_WD[i] : PNData(NSxREG[i].PNC, NSxREG[i].CHSZ, NSxREG[i].CHCN, PN_WD[i][31:16]);
-							end
-						end else begin
-							PN_CNT[i] = 0;
-							if (DOTCLK_DIV == 2'd1/*(!BG2.NxPNS[i][1] && DOTCLK_DIV == 2'd1) || (BG2.NxPNS[i][1] && DOTCLK_DIV == 2'd3)*/) begin
-								PN_PIPE[0][i] <= !NSxREG[i].PNC.NxPNB ? PN_WD[i] : PNData(NSxREG[i].PNC, NSxREG[i].CHSZ, NSxREG[i].CHCN, PN_WD[i][31:16]);
-							end
+						PNW = !NSxREG[x].PNC.NxPNB ? PN_WD[j] : PNData(NSxREG[x].PNC, NSxREG[x].CHSZ, NSxREG[x].CHCN, PN_WD[j][31:16]);
+						if (DOTCLK_DIV == 2'd3) begin
+							PN_CNT[j] = BG2.NxPN_CNT[j];
+							PN_PIPE[0][{(NSxREG[j].ZMQT|NSxREG[j].ZMHF)&PN_CNT[j][0],NSxREG[j].ZMQT&PN_CNT[j][1],1'b0}|j] <= PNW;
+						end else if (DOTCLK_DIV == 2'd1) begin
+							PN_PIPE[0][x] <= PNW;
 						end
 					end
 				end
