@@ -28,7 +28,7 @@ module psram_bench #(
 wire [21:16] a; wire [15:0] dq_out, dq_in; wire dq_oe, cclk, adv_n, cre, ce0_n, ce1_n, oe_n, we_n, ub_n, lb_n;
 
 psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US), .HOLD_DIN(1)) ctl (
-	.clk(clk), .reset(reset), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
+	.clk(clk), .reset(reset), .init_go(1'b0), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
 	.rdata(rdata), .rvalid(rvalid), .rword(rword), .dout_ready(dout_ready), .idle(idle),
 	.cram_a(a), .cram_dq_out(dq_out), .cram_dq_oe(dq_oe), .cram_dq_in(dq_in), .cram_clk(cclk),
 	.cram_adv_n(adv_n), .cram_cre(cre), .cram_ce0_n(ce0_n), .cram_ce1_n(ce1_n),

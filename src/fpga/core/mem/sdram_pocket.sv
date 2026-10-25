@@ -148,7 +148,7 @@ reg        v_wsel [0:1];     // write is to bank (group + 2*half) : half
 reg  [9:0] v_wcol [0:1];
 reg  [7:0] v_wrow [0:1];
 
-// scrub counters: banks 0/1 cover 64 rows, banks 2/3 cover 192
+// scrub counters: banks 0/1 cover 64 rows, banks 2/3 cover 256
 reg  [7:0] scr [0:3];
 reg  [3:0] v_act;            // ACT issued for the slot, CAS due
 
@@ -162,7 +162,7 @@ function automatic [1:0] lane_be(input [7:0] be);
 	lane_be = |be[7:6] ? be[7:6] : |be[5:4] ? be[5:4] : |be[3:2] ? be[3:2] : be[1:0];
 endfunction
 function automatic [7:0] scr_next(input [7:0] s, input big);
-	scr_next = big ? (s == 8'd191 ? 8'd0 : s + 8'd1) : (s == 8'd63 ? 8'd0 : s + 8'd1);
+	scr_next = big ? s + 8'd1 : {2'd0, s[5:0] + 6'd1};   // banks 0/1: 64 rows, banks 2/3: all 256 (rows 192-255 are unused, scrubbing them is harmless)
 endfunction
 
 wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the half, write

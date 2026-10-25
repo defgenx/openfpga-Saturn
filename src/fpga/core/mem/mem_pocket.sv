@@ -106,14 +106,14 @@ wire        p0_busy, p0_rd, p0_we, p0_ready, p1_busy, p1_rd, p1_we, p1_ready;
 wire [20:0] p0_addr, p1_addr;  wire [7:0] p0_burst, p0_be, p1_burst, p1_be;  wire [63:0] p0_din, p1_din;
 wire [15:0] p0_rdata, p1_rdata;  wire [1:0] p0_rword, p1_rword;  wire p0_rvalid, p1_rvalid;
 
-psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(INIT_US), .HOLD_DIN(1)) psram0 (
-	.clk(clk_ram), .reset(rst_ram), .busy(p0_busy), .addr(p0_addr), .burstcnt(p0_burst), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
+psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0), .HOLD_DIN(1)) psram0 (
+	.clk(clk_ram), .reset(rst_ram), .init_go(sdram_ready), .busy(p0_busy), .addr(p0_addr), .burstcnt(p0_burst), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
 	.rdata(p0_rdata), .rvalid(p0_rvalid), .rword(p0_rword), .dout_ready(p0_ready), .idle(),
 	.cram_a(cram0_a), .cram_dq_out(cram0_dq_o), .cram_dq_oe(cram0_dq_oe), .cram_dq_in(cram0_dq_i), .cram_clk(cram0_clk),
 	.cram_adv_n(cram0_adv_n), .cram_cre(cram0_cre), .cram_ce0_n(cram0_ce0_n), .cram_ce1_n(cram0_ce1_n),
 	.cram_oe_n(cram0_oe_n), .cram_we_n(cram0_we_n), .cram_ub_n(cram0_ub_n), .cram_lb_n(cram0_lb_n));
-psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(INIT_US), .HOLD_DIN(1)) psram1 (
-	.clk(clk_ram), .reset(rst_ram), .busy(p1_busy), .addr(p1_addr), .burstcnt(p1_burst), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
+psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0), .HOLD_DIN(1)) psram1 (
+	.clk(clk_ram), .reset(rst_ram), .init_go(sdram_ready), .busy(p1_busy), .addr(p1_addr), .burstcnt(p1_burst), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
 	.rdata(p1_rdata), .rvalid(p1_rvalid), .rword(p1_rword), .dout_ready(p1_ready), .idle(),
 	.cram_a(cram1_a), .cram_dq_out(cram1_dq_o), .cram_dq_oe(cram1_dq_oe), .cram_dq_in(cram1_dq_i), .cram_clk(cram1_clk),
 	.cram_adv_n(cram1_adv_n), .cram_cre(cram1_cre), .cram_ce0_n(cram1_ce0_n), .cram_ce1_n(cram1_ce1_n),

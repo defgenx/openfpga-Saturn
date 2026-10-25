@@ -40,7 +40,7 @@ wire [15:0]  cram_dq_out, cram_dq_in;
 wire         cram_dq_oe, cram_clk, cram_adv_n, cram_cre, cram_ce0_n, cram_ce1_n, cram_oe_n, cram_we_n, cram_ub_n, cram_lb_n;
 
 psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US)) dut (
-	.clk(clk), .reset(reset), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
+	.clk(clk), .reset(reset), .init_go(1'b0), .busy(busy), .addr(addr), .burstcnt(burstcnt), .rd(rd), .we(we), .din(din), .be(be),
 	.rdata(rdata), .rvalid(rvalid), .rword(rword), .dout_ready(dout_ready), .idle(idle),
 	.cram_a(cram_a), .cram_dq_out(cram_dq_out), .cram_dq_oe(cram_dq_oe), .cram_dq_in(cram_dq_in), .cram_clk(cram_clk),
 	.cram_adv_n(cram_adv_n), .cram_cre(cram_cre), .cram_ce0_n(cram_ce0_n), .cram_ce1_n(cram_ce1_n),
