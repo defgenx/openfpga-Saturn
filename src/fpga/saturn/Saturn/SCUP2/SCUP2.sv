@@ -2415,8 +2415,8 @@ module SCUP2
 					DSP_DW <= {DSP_DSO[24:0],2'b00};
 				end
 				if (DSP_DMA_SET) begin
-					DSP_ADD <= DSP_DSO[17:15];
-					DSP_HOLD <= DSP_DSO[14];
+					DSP_ADD <= DSP_DMAC[3:1];
+					DSP_HOLD <= DSP_DMAC[0];
 				end
 			end
 		end
@@ -2474,6 +2474,7 @@ module SCUP2
 	wire DSP_SEL = REG_SEL && CA[7:0] >= 8'h80 && CA[7:0] <= 8'h8F;	//25FE0080-25FE008F
 	
 	bit [31:0] DSP_DSO;
+	bit  [3:0] DSP_DMAC;
 	bit        DSP_RA0_SET;
 	bit        DSP_WA0_SET;
 	bit        DSP_DMA_SET;
@@ -2483,6 +2484,7 @@ module SCUP2
 	//(PPAF reads 0: stopped, no flags), no DSP DMA or interrupt is ever requested.
 	assign DSP_DO = '0;
 	assign DSP_DSO = '0;
+	assign DSP_DMAC = '0;
 	assign DSP_RA0_SET = 0;
 	assign DSP_WA0_SET = 0;
 	assign DSP_DMA_SET = 0;
@@ -2509,6 +2511,7 @@ module SCUP2
 		.RE(DSP_SEL & REG_RWAIT & REG_WAIT_DELAY == 3'd2 & CE_F),
 		
 		.DSO(DSP_DSO),
+		.DMAC(DSP_DMAC),
 		.RA0W(DSP_RA0_SET),
 		.WA0W(DSP_WA0_SET),
 		.DMAW(DSP_DMA_SET),

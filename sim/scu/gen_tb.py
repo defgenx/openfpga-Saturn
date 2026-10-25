@@ -35,7 +35,10 @@ def gen(top, ref, dut, params, ins, outs, extra=""):
         for n, w in outs: t += ",\n\t\t.%s(%s_%s)" % (n, tag, n)
         s.append(t + "\n\t);\n")
     for i, (n, w) in enumerate(outs):
-        s.append("\tassign MM[%d] = R_%s !== D_%s;\n" % (i, n, n))
+        if n == "DSO" and DUT != "SCU" and DUT != "SCUP":
+            s.append("\tassign MM[%d] = (R_RA0W | R_WA0W) && (R_DSO[24:0] !== D_DSO[24:0]);\n" % i)   # DSO is only used with RA0W/WA0W; the DMA control bits have their own port
+        else:
+            s.append("\tassign MM[%d] = R_%s !== D_%s;\n" % (i, n, n))
     for n, w in outs: s.append("\tassign %s = R_%s;\n" % (n, n))
     s.append("endmodule\n")
     open(OUT + top + ".sv", "w").write("".join(s))

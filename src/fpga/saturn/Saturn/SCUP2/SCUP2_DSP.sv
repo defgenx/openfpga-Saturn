@@ -14,6 +14,7 @@ module SCUP2_DSP (
 	input             RE,
 	
 	output     [31:0] DSO,
+	output      [3:0] DMAC,
 	output            RA0W,
 	output            WA0W,
 	output            DMAW,
@@ -497,7 +498,8 @@ module SCUP2_DSP (
 	assign DMA_RUN = T0;
 	assign DMA_LAST = (TN0_NEXT == 8'd0);
 	
-	assign DSO = DECI.DMA.ST ? IC : D1BUS;
+	assign DSO = D1BUS;
+	assign DMAC = IC[17:14];
 	assign RA0W = DECI.D1BUS.RA0W & RUN & CE;
 	assign WA0W = DECI.D1BUS.WA0W & RUN & CE;
 	assign DMAW = DECI.DMA.ST & RUN & CE;
