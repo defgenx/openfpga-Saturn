@@ -2473,41 +2473,8 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 	assign EMPTY = ~|AMOUNT;
 	assign FULL = AMOUNT[l];
 	
-	altdpram	altdpram_component (
-				.data (DATA),
-				.inclock (CLK),
-				.rdaddress (RADDR),
-				.wraddress (WADDR),
-				.wren (WRREQ),
-				.q (sub_wire0),
-				.aclr (1'b0),
-				.byteena (1'b1),
-				.inclocken (1'b1),
-				.rdaddressstall (1'b0),
-				.rden (1'b1),
-//				.sclr (1'b0),
-				.wraddressstall (1'b0));
-	defparam
-		altdpram_component.indata_aclr = "OFF",
-		altdpram_component.indata_reg = "INCLOCK",
-		altdpram_component.intended_device_family = "Cyclone V",
-		altdpram_component.lpm_type = "altdpram",
-		altdpram_component.outdata_aclr = "OFF",
-		altdpram_component.outdata_reg = "UNREGISTERED",
-		altdpram_component.ram_block_type = "MLAB",
-		altdpram_component.rdaddress_aclr = "OFF",
-		altdpram_component.rdaddress_reg = "UNREGISTERED",
-		altdpram_component.rdcontrol_aclr = "OFF",
-		altdpram_component.rdcontrol_reg = "UNREGISTERED",
-		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram_component.width = 16,
-		altdpram_component.widthad = l,
-		altdpram_component.width_byteena = 1,
-		altdpram_component.wraddress_aclr = "OFF",
-		altdpram_component.wraddress_reg = "INCLOCK",
-		altdpram_component.wrcontrol_aclr = "OFF",
-		altdpram_component.wrcontrol_reg = "INCLOCK";
-		
+	VDP1P_MLAB #(.W(16),.AW(l)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	
 	assign Q = NULL ? '0 : sub_wire0;
 
 endmodule
@@ -2523,40 +2490,7 @@ module VDP1P_COL_TBL (
 
 	wire [15:0] sub_wire0;
 
-	altdpram	altdpram0 (
-				.data (DATA),
-				.inclock (CLK),
-				.rdaddress (RDADDR[3:0]),
-				.wraddress (WRADDR[3:0]),
-				.wren (WREN),
-				.q (sub_wire0),
-				.aclr (1'b0),
-				.byteena (1'b1),
-				.inclocken (1'b1),
-				.rdaddressstall (1'b0),
-				.rden (1'b1),
-				//.sclr (1'b0),
-				.wraddressstall (1'b0));
-	defparam
-		altdpram0.indata_aclr = "OFF",
-		altdpram0.indata_reg = "INCLOCK",
-		altdpram0.intended_device_family = "Cyclone V",
-		altdpram0.lpm_type = "altdpram",
-		altdpram0.outdata_aclr = "OFF",
-		altdpram0.outdata_reg = "UNREGISTERED",
-		altdpram0.ram_block_type = "MLAB",
-		altdpram0.rdaddress_aclr = "OFF",
-		altdpram0.rdaddress_reg = "UNREGISTERED",
-		altdpram0.rdcontrol_aclr = "OFF",
-		altdpram0.rdcontrol_reg = "UNREGISTERED",
-		altdpram0.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram0.width = 16,
-		altdpram0.widthad = 4,
-		altdpram0.width_byteena = 1,
-		altdpram0.wraddress_aclr = "OFF",
-		altdpram0.wraddress_reg = "INCLOCK",
-		altdpram0.wrcontrol_aclr = "OFF",
-		altdpram0.wrcontrol_reg = "INCLOCK";
+	VDP1P_MLAB #(.W(16),.AW(4)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
 
 	assign Q =  sub_wire0;
 
@@ -2599,6 +2533,8 @@ module VDP1P_DIV_STEP
 endmodule
 
 
+// Simple dual port RAM in M10K with the read address registered on the falling edge: for a register-sourced RA the
+// value is what an asynchronous MLAB read gives before the next rising edge. RA must not come from another such RAM.
 module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
 	input          CLK,
 	input          WE,
@@ -2607,29 +2543,31 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
 	input [AW-1:0] RA,
 	output [W-1:0] Q
 );
-	altdpram altdpram_component (
-		.data (D), .inclock (CLK), .rdaddress (RA), .wraddress (WA), .wren (WE), .q (Q),
-		.aclr (1'b0), .byteena (1'b1), .inclocken (1'b1), .rdaddressstall (1'b0), .rden (1'b1), .wraddressstall (1'b0));
-	defparam
-		altdpram_component.indata_aclr = "OFF",
-		altdpram_component.indata_reg = "INCLOCK",
-		altdpram_component.intended_device_family = "Cyclone V",
-		altdpram_component.lpm_type = "altdpram",
-		altdpram_component.outdata_aclr = "OFF",
-		altdpram_component.outdata_reg = "UNREGISTERED",
-		altdpram_component.ram_block_type = "MLAB",
-		altdpram_component.rdaddress_aclr = "OFF",
-		altdpram_component.rdaddress_reg = "UNREGISTERED",
-		altdpram_component.rdcontrol_aclr = "OFF",
-		altdpram_component.rdcontrol_reg = "UNREGISTERED",
-		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram_component.width = W,
-		altdpram_component.widthad = AW,
-		altdpram_component.width_byteena = 1,
-		altdpram_component.wraddress_aclr = "OFF",
-		altdpram_component.wraddress_reg = "INCLOCK",
-		altdpram_component.wrcontrol_aclr = "OFF",
-		altdpram_component.wrcontrol_reg = "INCLOCK";
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(AW), .widthad_b(AW), .width_a(W), .width_b(W), .width_byteena_a(1)
+	) ram (
+		.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(~CLK), .data_a(D), .wren_a(WE), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({W{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [W-1:0] mem [0:(1<<AW)-1];
+	reg [W-1:0] q = '0;
+	always @(posedge CLK) if (WE) mem[WA] <= D;
+	always @(negedge CLK) q <= mem[RA];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
+`endif
 endmodule
 
 
