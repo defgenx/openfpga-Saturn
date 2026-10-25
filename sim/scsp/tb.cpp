@@ -199,19 +199,28 @@ static uint32_t samp_ctr = 0;
 // between the sum latch and the first slot's direct contribution.
 static bool snd_want = false; static uint32_t snd_pend = 0;
 
-static void tick() {
-	// inputs for this clock
+static bool ce_cur = false, ce_primed = false;
+// clock enables of the next clock; applied before the falling edge, as they come from registers in the core
+static void ce_advance() {
 	ce_acc += 225792;
-	bool ce = false;
-	if (ce_acc >= 572728) { ce_acc -= 572728; ce = true; }
-	top->CE = ce;
+	ce_cur = false;
+	if (ce_acc >= 572728) { ce_acc -= 572728; ce_cur = true; }
+	top->CE = ce_cur;
 	ce_phase ^= 1;
 	top->CE_R = ce_phase; top->CE_F = !ce_phase;
+}
+
+static void tick() {
+	// inputs for this clock
+	if (!ce_primed) { ce_advance(); ce_primed = true; }
+	bool ce = ce_cur;
 	if (snd_want && top->N_OP7SLOT == 0 && top->N_CYC >= 2 && top->N_CYC <= 5) { top->SND_EN = (top->SND_EN & 4) | snd_pend; snd_want = false; }
 	b68.step();
 	bscu.step();
 	top->CLK = 0; top->eval();
 	top->CLK = 1; top->eval();
+	ce_advance();
+	top->CLK = 0; top->eval();   // falling edge before the compare: M10K reads that sample their address there settle
 	clk_count++;
 	if (ce) {
 		ce_count++;
