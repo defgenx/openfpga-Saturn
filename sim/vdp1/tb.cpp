@@ -467,6 +467,10 @@ static bool cycle(bool rst_n, bool res_n) {
 	      unsigned long long LL = r->diff_top__DOT__u_r__DOT__LINE_GHCOLOR, NL = r->diff_top__DOT__u_n__DOT__LINE_GHCOLOR;
 	      printf("  [%llu] %s GOLD int %x %x %x %x %x %x  NEW %x %x %x %x %x %x GK=%d dir0=%d LINE g=%014llx n=%014llx\n", (unsigned long long)T->cyc, bad ? "BAD" : "ok ", g[0],g[1],g[2],g[3],g[4],g[5], n[0],n[1],n[2],n[3],n[4],n[5], (int)r->diff_top__DOT__u_n__DOT__GK, (int)r->diff_top__DOT__u_n__DOT__DIR, LL, NL);
 	  } }
+	  { auto* r = t->rootp; if (getenv("DBGWB") && T->cyc>=395 && T->cyc<=410) { printf("  [%llu]",(unsigned long long)T->cyc);
+#define P(x) printf(" " #x "=%d/%d",(int)r->diff_top__DOT__u_r__DOT__##x,(int)r->diff_top__DOT__u_n__DOT__##x);
+	      P(CPU_VRAM_BUSY) P(VRAM_ST) P(CPU_VRAM_ACCESS) P(BURST) P(VRAM_SEL) P(CMD_ST) P(FRAME_START) P(CPU_VRAM_RPEND) P(CPU_VRAM_WPEND)
+	      printf("\n"); } }
 	  if ((st != last || stn != lastn) && nprint < DBGST && (!getenv("DBGSCEN") || atoi(getenv("DBGSCEN")) == T->scen)) { nprint++; printf("  [%llu] CMD_ST gold=%d new=%d\n", (unsigned long long)T->cyc, st, stn); last = st; lastn = stn; } }
 #endif
 	bool rdy = !a.rdy_n.get();

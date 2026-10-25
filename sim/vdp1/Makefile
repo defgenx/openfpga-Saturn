@@ -22,9 +22,12 @@ VFLAGS_RF = -DPOCKET_VDP1P_ROWFLOOR
 else
 VFLAGS_RF = -DPOCKET_VDP1P_NO_ROWFLOOR
 endif
-gen/REF_VDP1.sv: $(REF)/VDP1.sv $(ROWFLOOR_PATCH)
+gen/REF_VDP1.sv: $(REF)/VDP1.sv $(ROWFLOOR_PATCH) gen/rf_$(ROWFLOOR).stamp
 	@mkdir -p gen
 	perl -pe 's/\bVDP1/REF_VDP1/g' $< | ROWFLOOR=$(ROWFLOOR) perl $(ROWFLOOR_PATCH) > $@
+gen/rf_$(ROWFLOOR).stamp:
+	@mkdir -p gen; rm -f gen/rf_*.stamp gen/REF_VDP1.sv; rm -rf obj; touch $@
+
 gen/REF_VDP1_pkg.sv: $(REF)/VDP1_pkg.sv
 	@mkdir -p gen
 	perl -pe 's/\bVDP1/REF_VDP1/g' $< > $@
