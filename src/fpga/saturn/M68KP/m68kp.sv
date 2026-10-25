@@ -2503,8 +2503,8 @@ endmodule
 //
 
 // Register file storage: 32 x N RAM, one write port.
-// MLAB (default): asynchronous read. M68KP_REGS_M10K: registered read address (one clk later, needed at enT1 only,
-// at least four clk after the address registers change), no ALMs, two more M10K.
+// Default: M10K read on the falling edge (see mp_feram). M68KP_REGS_M10K: registered read address (one clk later, needed at
+// enT1 only, at least four clk after the address registers change).
 `ifdef M68KP_REGS_M10K
 module mp_regram8( input clk, input we, input [4:0] wa, input [7:0] wd, input [4:0] ra, output [7:0] rd);
 	(* ramstyle = "M10K, no_rw_check" *) reg [7:0] m [32];
@@ -2526,16 +2526,61 @@ module mp_regram16( input clk, input we, input [4:0] wa, input [15:0] wd, input 
 	assign rd = m[rar];
 endmodule
 `else
+// Default: M10K read on the falling edge, cycle-identical to an asynchronous MLAB read when ra is register-sourced.
 module mp_regram8( input clk, input we, input [4:0] wa, input [7:0] wd, input [4:0] ra, output [7:0] rd);
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] m [32];
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(32), .numwords_b(32), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(5), .widthad_b(5), .width_a(8), .width_b(8), .width_byteena_a(1)
+	) ram (
+		.address_a(wa), .address_b(ra), .clock0(clk), .clock1(~clk), .data_a(wd), .wren_a(we), .q_b(rd),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({8{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [7:0] m [32];
+	reg [7:0] q = '0;
 	always_ff @( posedge clk) if( we) m[wa] <= wd;
-	assign rd = m[ra];
+	always_ff @( negedge clk) q <= m[ra];
+	assign rd = q;
+`ifdef POCKET_FE_CHECK
+	reg [4:0] ra_neg;
+	reg       ra_ok = 0;
+	always @(negedge clk) begin ra_neg <= ra; ra_ok <= 1; end
+	always @(posedge clk) if (ra_ok && ra_neg !== ra) $display("FE_ADDR_LATE %m ra %0h -> %0h", ra_neg, ra);
+`endif
+`endif
 endmodule
 
 module mp_regram16( input clk, input we, input [4:0] wa, input [15:0] wd, input [4:0] ra, output [15:0] rd);
-	(* ramstyle = "MLAB, no_rw_check" *) reg [15:0] m [32];
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(32), .numwords_b(32), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(5), .widthad_b(5), .width_a(16), .width_b(16), .width_byteena_a(1)
+	) ram (
+		.address_a(wa), .address_b(ra), .clock0(clk), .clock1(~clk), .data_a(wd), .wren_a(we), .q_b(rd),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({16{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [15:0] m [32];
+	reg [15:0] q = '0;
 	always_ff @( posedge clk) if( we) m[wa] <= wd;
-	assign rd = m[ra];
+	always_ff @( negedge clk) q <= m[ra];
+	assign rd = q;
+`ifdef POCKET_FE_CHECK
+	reg [4:0] ra_neg;
+	reg       ra_ok = 0;
+	always @(negedge clk) begin ra_neg <= ra; ra_ok <= 1; end
+	always @(posedge clk) if (ra_ok && ra_neg !== ra) $display("FE_ADDR_LATE %m ra %0h -> %0h", ra_neg, ra);
+`endif
+`endif
 endmodule
 `endif
 
