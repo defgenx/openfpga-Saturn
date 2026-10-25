@@ -2640,6 +2640,7 @@ module VDP2P2 import VDP2P2_PKG::*; (
 	wire [18: 0] WZ    = WL[1] ? 19'h00100 : {8'h00,LZMX[WL[0]]};
 	//mosaic phase per layer: the dots of a block repeat the first one
 	bit  [ 3: 0] PHN[4], PHR0;
+	wire         WPHADV = WBUSY && !WDONE && WINR && P0FREE && !R0PEND && !R1PEND;
 	always @(posedge CLK) begin
 		if (FPOP) begin
 			{WL,WCNT,WWD,WATT,WCELL} <= RFIFO_Q;
@@ -2650,12 +2651,10 @@ module VDP2P2 import VDP2P2_PKG::*; (
 			else if (!WINR || (P0FREE && !R0PEND && !R1PEND)) begin
 				WK <= WK + 10'd1;
 				WXK <= WXK + WZ;
-				if (WINR) PHN[WL] <= PHN[WL] == REGS.MZCTL.MZSZH ? 4'd0 : PHN[WL] + 4'd1;
 			end
 		end
 		if (LSTART) begin WINIT <= 3'd4; WBUSY <= 1'b0; end
 		else if (WINIT != 3'd0) WINIT <= WINIT - 3'd1;
-		if (LSTART) begin PHN[0] <= 4'd0; PHN[1] <= 4'd0; PHN[2] <= 4'd0; PHN[3] <= 4'd0; PHR0 <= 4'd0; end
 	end
 	wire [ 2: 0] WJ  = WSD[2:0] ^ {3{WATT[2]}};
 	bit  [31: 0] WDC;
@@ -2711,6 +2710,8 @@ module VDP2P2 import VDP2P2_PKG::*; (
 				P0V <= WK < 10'd704; P0X <= WK; P0DC <= WDC; P0CDP <= {WATT[1],WATT[0],WATT[9:3],1'b0}; P0LID <= {1'b0,WL} + 3'd2; P0PH <= PHN[WL];
 			end
 		end
+		if (WPHADV && !FPOP) PHN[WL] <= PHN[WL] == REGS.MZCTL.MZSZH ? 4'd0 : PHN[WL] + 4'd1;
+		if (LSTART) begin PHN[0] <= 4'd0; PHN[1] <= 4'd0; PHN[2] <= 4'd0; PHN[3] <= 4'd0; PHR0 <= 4'd0; end
 		if (P0MOVE) begin
 			P1V <= !P0D.TP && |P0PRI;
 			P1X <= P0X;
