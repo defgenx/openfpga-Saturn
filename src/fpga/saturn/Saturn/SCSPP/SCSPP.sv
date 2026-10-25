@@ -1196,10 +1196,11 @@ module SCSPP #(
 			endcase
 			
 			BS = !MPRO1_Q.BSEL ? {{2{TEMP_Q[23]}},TEMP_Q} : SFT_REG;
+			//B or its negation: the +1 of the two's complement goes in as the adder carry.
 			if (MPRO1_Q.ZERO)
 				B = '0;
 			else if (MPRO1_Q.NEGB)
-				B = 26'd0 - BS;
+				B = ~BS;
 			else
 				B = BS;
 				
@@ -1224,7 +1225,7 @@ module SCSPP #(
 				if (OP7.SLOT == 5'd31 && SLOT1_CE) 
 					MDEC_CT <= MDEC_CT - 16'd1;
 				
-				SFT_REG <= MUL + B;
+				SFT_REG <= MUL + B + {25'd0,~MPRO1_Q.ZERO & MPRO1_Q.NEGB};
 
 				if (MPRO1_Q.YRL)
 					Y_REG <= INPUTS;

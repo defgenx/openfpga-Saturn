@@ -1,0 +1,30 @@
+# Area profile: global assignments from the shipped PSX Pocket core apf_top.qsf (OPTIMIZATION_TECHNIQUE AREA ... seed 13). OPTIMIZATION_MODE is left at its default there.
+set_global_assignment -name OPTIMIZATION_TECHNIQUE "AREA"
+set_global_assignment -name MUX_RESTRUCTURE "ON"
+set_global_assignment -name STATE_MACHINE_PROCESSING "MINIMAL BITS"
+set_global_assignment -name AUTO_RESOURCE_SHARING "ON"
+set_global_assignment -name PRE_MAPPING_RESYNTHESIS "OFF"
+set_global_assignment -name ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP "OFF"
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING "OFF"
+set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC "OFF"
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION "OFF"
+set_global_assignment -name PHYSICAL_SYNTHESIS_ASYNCHRONOUS_SIGNAL_PIPELINING "OFF"
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
+set_global_assignment -name ALM_REGISTER_PACKING_EFFORT HIGH
+set_global_assignment -name SEED 13
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name OPTIMIZATION_MODE "BALANCED"
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name AUTO_ROM_RECOGNITION ON
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name TOP_LEVEL_ENTITY scsp_wrap
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_a10
+set_global_assignment -name VERILOG_MACRO "POCKET_SCSPP=1"
+set_global_assignment -name SYSTEMVERILOG_FILE snap_a10/SCSPP_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE snap_a10/SCSPP.sv
+set_global_assignment -name SYSTEMVERILOG_FILE snap_a10/scsp_wrap.sv
+set_instance_assignment -name VIRTUAL_PIN ON -to *
