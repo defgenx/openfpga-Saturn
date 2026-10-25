@@ -29,13 +29,19 @@ def gen(top, ref, dut, params, ins, outs, extra=""):
     s.append(extra)
     for n, w in outs:
         s.append("\twire %sR_%s;\n\twire %sD_%s;\n" % (rng(w), n, rng(w), n))
+    if top == "tb_dsp" and DUT == "SCUP2":
+        s.append("\treg do_skip = 0;\n\talways @(posedge CLK) if (RE) do_skip <= dut_i.DWR_WE;\n")
     for mod, tag, nm in ((ref, "R", "ref_i"), (dut, "D", "dut_i")):
         t = "\t%s %s %s (\n\t\t.CLK(CLK), .RST_N(RST_N)" % (mod, params[1], nm)
         for n, w in ins: t += ",\n\t\t.%s(%s)" % (n, n)
         for n, w in outs: t += ",\n\t\t.%s(%s_%s)" % (n, tag, n)
         s.append(t + "\n\t);\n")
     for i, (n, w) in enumerate(outs):
-        if n == "DSO" and DUT != "SCU" and DUT != "SCUP":
+        if n == "DMA_DO" and top == "tb_dsp" and DUT == "SCUP2":
+            s.append("\tassign MM[%d] = R_DMA_WE && (R_DMA_DO !== D_DMA_DO);\n" % i)   # the SCU samples DMA_DO only in DSP-to-bus transfers
+        elif n == "DO" and top == "tb_dsp" and DUT == "SCUP2":
+            s.append("\tassign MM[%d] = !do_skip && (R_DO !== D_DO);\n" % i)   # a DMA write lands one clk later: a control-port read in that clk is not compared
+        elif n == "DSO" and DUT != "SCU" and DUT != "SCUP":
             s.append("\tassign MM[%d] = (R_RA0W | R_WA0W) && (R_DSO[24:0] !== D_DSO[24:0]);\n" % i)   # DSO is only used with RA0W/WA0W; the DMA control bits have their own port
         else:
             s.append("\tassign MM[%d] = R_%s !== D_%s;\n" % (i, n, n))

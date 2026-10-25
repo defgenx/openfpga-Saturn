@@ -704,20 +704,21 @@ module SCUP2
 		if (!RST_N) begin DMA_RA <= '0; DMA_WA <= '0; DMA_IA <= '0; DMA_RTN <= '0; DMA_WTN <= '0; DMA_EC <= 0; end
 		else if (!RES_N) begin DMA_RA <= '0; DMA_WA <= '0; DMA_IA <= '0; DMA_RTN <= '0; DMA_WTN <= '0; DMA_EC <= 0; end
 		else begin
-			if (dm_i3 || dm_ich) DMA_RA <= DRSEL;
+			//a later statement of the original block wins: acknowledge update, then indirect table word, then idle load
+			if (CE_R && dm_rack && (DMA_DSP ? |DMA_WADD : DMA_RADD)) DMA_RA <= DMA_RA_NEW;
 			else if (dm_ind && DMA_IND_REG == 2'd2) DMA_RA <= IND_D[26:0];
-			else if (CE_R && dm_rack && (DMA_DSP ? |DMA_WADD : DMA_RADD)) DMA_RA <= DMA_RA_NEW;
-			if (dm_i3 || dm_ich) DMA_WA <= DWSEL;
+			else if (dm_i3 || dm_ich) DMA_RA <= DRSEL;
+			if (CE_R && dm_dack && |DMA_WADD) DMA_WA <= DMA_WA_NEW;
 			else if (dm_ind && DMA_IND_REG == 2'd1) DMA_WA <= IND_D[26:0];
-			else if (CE_R && dm_dack && |DMA_WADD) DMA_WA <= DMA_WA_NEW;
-			if (dm_iind) DMA_IA <= {DWSEL[26:2],2'b00};
-			else if (DMA_BUS_EN && (BBUS_IND_DONE || CBUS_IND_DONE)) DMA_IA <= DMA_IA_NEW;
-			if (dm_ich) DMA_RTN <= DCSEL;
+			else if (dm_i3 || dm_ich) DMA_WA <= DWSEL;
+			if (DMA_BUS_EN && (BBUS_IND_DONE || CBUS_IND_DONE)) DMA_IA <= DMA_IA_NEW;
+			else if (dm_iind) DMA_IA <= {DWSEL[26:2],2'b00};
+			if (CE_R && dm_rack && !DMA_DSP) DMA_RTN <= DMA_RTN_NEXT;
 			else if (dm_ind && DMA_IND_REG == 2'd0) DMA_RTN <= IND_D[19:0];
-			else if (CE_R && dm_rack && !DMA_DSP) DMA_RTN <= DMA_RTN_NEXT;
-			if (dm_ich) DMA_WTN <= DCSEL;
+			else if (dm_ich) DMA_RTN <= DCSEL;
+			if (dm_wtn) DMA_WTN <= DMA_WTN_NEXT;
 			else if (dm_ind && DMA_IND_REG == 2'd0) DMA_WTN <= IND_D[19:0];
-			else if (dm_wtn) DMA_WTN <= DMA_WTN_NEXT;
+			else if (dm_ich) DMA_WTN <= DCSEL;
 			if (dm_ind && DMA_IND_REG == 2'd2) DMA_EC <= IND_D[31];
 		end
 	end
