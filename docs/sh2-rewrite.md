@@ -192,8 +192,8 @@ Final state (no extra M10K: cache tags in MLAB, decode control word registered i
 
 | | golden | SH7604P |
 |---|---|---|
-| Pair, ALMs (standalone fit) | 8,538 | **6,321** (-26%) |
-| One CPU | 4,269 | 3,076 (MSH) / 3,096 (SSH) |
+| Pair, ALMs (standalone fit) | 8,538 | **6,346** (-26%) |
+| One CPU | 4,269 | 3,072 (MSH) / 3,126 (SSH) |
 | Pair, RAM blocks | 8 | 8 |
 | Pair, DSP | 6 | 6 |
 | In-system pair (full Pocket build, main d31e6c5, which still had the M10K variant) | ~6,900 (integration run) | 5,642 |
@@ -206,12 +206,12 @@ Per block, one CPU (fitter ALMs in the pair fit, MSH / SSH):
 
 | Block | golden (single fit) | SH7604P |
 |---|---|---|
-| SH2P_core | 1,545 | 1,205 / 1,236 (ALU 227, decode 260, register file 74) |
-| BSC | 345 | 347 / 344 |
-| CACHE | 776 | 424 / 413 (epoch purge; tags 120 in MLAB) |
-| DIVU | 447 | 251 |
-| DMAC | 427 | 269 / 273 |
-| MULT | 220 | 143 |
+| SH2P_core | 1,545 | 1,174 / 1,240 (ALU 223, decode 249, register file 72) |
+| BSC | 345 | 353 / 347 |
+| CACHE | 776 | 422 / 420 (epoch purge; tags in MLAB, asynchronous read) |
+| DIVU | 447 | 250 / 247 |
+| DMAC | 427 | 273 / 276 |
+| MULT | 220 | 175 (143 with the first version, which missed 1-clock timing by 4 ns) |
 | INTC / FRT / WDT | 124 / 101 / 47 | 108 / 99 / 47 |
 
 Tried and rejected after measuring:
@@ -220,6 +220,13 @@ Tried and rejected after measuring:
 * Class numbering in tree order (+160 ALUT) or by Hamming-distance ordering (no gain) for the decode ROM.
 * DSP blocks for adders/shifters: a DSP mac handles 27-bit operands and has no carry-in/flag outputs, so a 32-bit ALU
   add with its flags needs two DSPs plus soft logic; estimated net gain under 15 ALMs per CPU, not built.
+
+Single-cycle timing of the whole CPU (`sizing/sh2p/cpu_sta`, 17.46 ns, slow 85C): every path inside DMAC, DIVU, cache, BSC,
+FRT, INTC, WDT, MSBY and the register file meets 17.46 ns (DMAC internal +6.0 ns, DIVU +2.6, cache +2.0, INTC +1.9,
+register file MLAB +0.1). Violating paths are core-internal (worst -4.8) and peripheral-to-core inputs that run through the
+core's long logic (INTC/DMAC/DIVU/BSC vector value to the PC registers, -3 to -4.4; the golden core has the same structure
+and is covered by the same multicycle). Two defects found and fixed this way: the MULT product/accumulate path (-4.0 ns,
+golden +0.55; now +3.6) and the TAS zero flag taken over 32 bits behind the cache read data (-2.9 ns; now byte only).
 
 Timing (`quartus_sta`, slow 85C, `sizing/sh2p/fmax/`, core with registered ports, clock constraint 17.46 ns = 57.27 MHz
 single cycle): worst setup slack -6.2 ns, i.e. longest path 23.7 ns (the golden core measured 19.6 ns in
