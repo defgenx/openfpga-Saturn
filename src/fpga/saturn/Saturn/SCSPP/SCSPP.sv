@@ -1141,7 +1141,6 @@ module SCSPP #(
 	bit          DSP_WRITE;
 	bit          DSP_READ_NOFL1,DSP_READ_NOFL2;
 	
-	wire [ 1: 0] RB = CR1.RBL | {2{MPRO1_Q.TABLE}};
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
 	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
 	
@@ -1254,8 +1253,12 @@ module SCSPP #(
 						ADRS_REG <= {{4{INPUTS[23]}},INPUTS[23:16]};
 				end
 				
-				//Ring buffer: the word address is masked to the buffer size (RB), then added to RBP*4096.
-				DSP_MEMA_REG <= {CR1.RBP,12'h000} + {3'b000,ADDR[16:1] & {RB == 2'b11,RB[1],RB != 2'b00,13'h1FFF}};
+				case (CR1.RBL | {2{MPRO1_Q.TABLE}})
+					2'b00: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {6'b000000,ADDR[13:1]};
+					2'b01: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {5'b00000,ADDR[14:1]};
+					2'b10: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {4'b0000,ADDR[15:1]};
+					2'b11: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {3'b000,ADDR[16:1]};
+				endcase
 				DSP_OUT_REG <= !MPRO1_Q.NOFL ? DSPItoF(SHFT_OUT) : SHFT_OUT[23:8];
 				DSP_READ <= MPRO1_Q.MRD;
 				DSP_READ_NOFL1 <= MPRO1_Q.NOFL;
