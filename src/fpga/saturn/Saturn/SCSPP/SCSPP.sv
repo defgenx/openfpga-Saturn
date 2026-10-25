@@ -586,11 +586,10 @@ module SCSPP #(
 	end
 	bit [18:0] SO_RAM_D;
 	bit [18:0] SO_RAM_Q;
-	SCSPP_SO_RAM SO_RAM(CLK, OP3.SLOT, SO_RAM_D, SLOT1_CE, OP2.SLOT, SO_RAM_Q);
-	
 	bit  [13:0] PHASE_FRAC_RAM_D;
 	bit  [13:0] PHASE_FRAC_RAM_Q;
-	SCSPP_PHASE_RAM PHASE_FRAC_RAM(CLK, OP3.SLOT, PHASE_FRAC_RAM_D, SLOT1_CE, OP2.SLOT, PHASE_FRAC_RAM_Q);
+	//Sample offset and phase fraction share one block (same write and read addresses).
+	SCSPP_RAM_W #(33) SO_RAM(CLK, OP3.SLOT, {PHASE_FRAC_RAM_D,SO_RAM_D}, SLOT1_CE, OP2.SLOT, {PHASE_FRAC_RAM_Q,SO_RAM_Q});
 	
 	//Operation 3:  
 	SCR0_t       OP3_SCR0;
@@ -1967,12 +1966,7 @@ module SCSPP #(
 					end else if (MADRS_SEL) begin
 						REG_Q <= MADRS_RAM_Q & MADRS_MASK;
 					end else if (MPRO_SEL) begin
-						case (REG_A[2:1])
-							2'b00: REG_Q <= MPRO_RAM_Q[63:48] & MPRO_MASK[63:48];
-							2'b01: REG_Q <= MPRO_RAM_Q[47:32] & MPRO_MASK[47:32];
-							2'b10: REG_Q <= MPRO_RAM_Q[31:16] & MPRO_MASK[31:16];
-							2'b11: REG_Q <= MPRO_RAM_Q[15: 0] & MPRO_MASK[15: 0];
-						endcase
+						REG_Q <= MPRO_MIR_Q;
 					end else if (TEMP_SEL) begin
 						case (REG_A[1])
 							1'b0: REG_Q <= TEMP_RAM_Q[31:16] & TEMP_MASK[31:16];
@@ -2056,22 +2050,24 @@ module SCSPP #(
 	SCSPP_RAM_8X2 #(5) SCR_SCR0(CLK, SW_A2, SW_D & SCR0_MASK, SCR_WE0, SCR0_RA, SCR_SCR0_Q);
 	assign OP2_SA = SCR_SA_Q; assign OP2_LSA = SCR_LSA_Q; assign OP2_LEA = SCR_LEA_Q; assign OP2_SCR4 = SCR_SCR4_Q;
 	assign OP4_SCR1 = SCR_SCR1_Q; assign OP6_SCR3 = SCR_SCR3_Q; assign OP7_SCR7 = SCR_SCR7_Q; assign OP7_SCR8 = SCR_SCR8_Q;
-	SCSPP_RAM_OR #(5) SCR_SA  (CLK, SW_A2, SW_D & SA_MASK,   SCR_WE1, SA_RA, CYCLE0_CE, ~RES_N, SCR_SA_Q);
-	SCSPP_RAM_OR #(5) SCR_LSA (CLK, SW_A2, SW_D & LSA_MASK,  SCR_WE2, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_LSA_Q);
-	SCSPP_RAM_OR #(5) SCR_LEA (CLK, SW_A2, SW_D & LEA_MASK,  SCR_WE3, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_LEA_Q);
 	SCSPP_RAM_OR #(5) SCR_SCR1(CLK, SW_A4, SW_D & SCR1_MASK, SCR_WE4, OP4.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR1_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR2(CLK, SW_A4, SW_D & SCR2_MASK, SCR_WE5, SCR2_RA, SCR_SCR2_Q);
 	SCSPP_RAM_OR #(5) SCR_SCR3(CLK, SW_A6, SW_D & SCR3_MASK, SCR_WE6, OP6.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR3_Q);
-	SCSPP_RAM_OR #(5) SCR_SCR4(CLK, SW_A2, SW_D & SCR4_MASK, SCR_WE7, OP2.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR4_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR5(CLK, SW_A1, SW_D & SCR5_MASK, SCR_WE8, SCR5_RA, SCR_SCR5_Q);
 	SCSPP_RAM_8X2 #(5) SCR_SCR6(CLK, SW_A1, SW_D & SCR6_MASK, SCR_WE9, SCR6_RA, SCR_SCR6_Q);
-	SCSPP_RAM_OR #(5) SCR_SCR7(CLK, SW_A, SW_D & SCR7_MASK, SCR_WE10,OP7.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR7_Q);
-	SCSPP_RAM_OR #(5) SCR_SCR8(CLK, SW_A, SW_D & SCR8_MASK, SCR_WE11,OP7.SLOT, CYCLE0_CE, ~RES_N, SCR_SCR8_Q);
+	//Registers read by one stage share a block: OP2 (SA, LSA, LEA, SCR4) and OP7 (SCR7, SCR8).
+	wire [63:0] G2_Q;
+	SCSPP_RAM_ORN #(8) SCR_G2(CLK, SW_A2, {4{SW_D}}, {SCR_WE7,SCR_WE3,SCR_WE2,SCR_WE1}, OP2.SLOT, CYCLE0_CE, ~RES_N, G2_Q);
+	assign SCR_SA_Q = G2_Q[15:0]; assign SCR_LSA_Q = G2_Q[31:16]; assign SCR_LEA_Q = G2_Q[47:32]; assign SCR_SCR4_Q = G2_Q[63:48];
+	wire [31:0] G7_Q;
+	SCSPP_RAM_ORN #(4) SCR_G7(CLK, SW_A, {SW_D & SCR8_MASK, SW_D & SCR7_MASK}, {SCR_WE11,SCR_WE10}, OP7.SLOT, CYCLE0_CE, ~RES_N, G7_Q);
+	assign SCR_SCR7_Q = G7_Q[15:0]; assign SCR_SCR8_Q = G7_Q[31:16];
 	
 	//68K-side copy of the slot registers, address {register, slot}; the pipeline RAMs above are read by the pipeline only.
 	//The sweep writes one register index per clock (SWC), every index within one slot period.
-	bit [3:0] SWC;
-	always @(posedge CLK) SWC <= SWC + 4'd1;
+	bit [8:0] SWC9;
+	wire [3:0] SWC = SWC9[3:0];
+	always @(posedge CLK) SWC9 <= SWC9 + 9'd1;
 	wire        MIR_SEL = REG_A[11:10] == 2'b00 & (REG_A[4:1] < 4'd12);
 	wire [ 1:0] MIR_WE  = SWEEP ? 2'b11 : REG_WE & {2{MIR_SEL & CYCLE1_CE}};
 	wire [ 8:0] MIR_WA  = SWEEP ? {SWC,OP7.SLOT} : {REG_A[4:1],REG_A[9:5]};
@@ -2103,9 +2099,10 @@ module SCSPP #(
 	wire       MPRO1_SEL = MPRO_SEL & (REG_A[2:1] == 3'h2>>1);
 	wire       MPRO2_SEL = MPRO_SEL & (REG_A[2:1] == 3'h4>>1);
 	wire       MPRO3_SEL = MPRO_SEL & (REG_A[2:1] == 3'h6>>1);
-	bit [63:0] MPRO_RAM_Q;
 	bit [63:0] MPRO_DRAM_Q;
-	SCSPP_MPRO_RAM MPRO_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}}), REG_A[9:3], MPRO_RAM_Q);
+	bit [15:0] MPRO_MIR_Q;
+	//68K-side copy of the program RAM, one 16-bit word per address; the sweep walks it with SWC9.
+	SCSPP_RAM_8X2 #(9) MPRO_MIR(CLK, OP7.RST ? SWC9 : REG_A[9:1], SW_D, OP7.RST ? 2'b11 : REG_WE & {2{MPRO_SEL & CYCLE1_CE}}, REG_A[9:1], MPRO_MIR_Q);
 	//Written at CYCLE1_CE only, so an entry changes between DSP steps, not under the step in flight.
 	SCSPP_MPRO_RAM MPRO_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}} & {8{CYCLE1_CE}}), DSP_MPRO_STEP, MPRO_DRAM_Q);
 	
@@ -3345,4 +3342,93 @@ module SCSPP_RAM_OR
 		altsyncram_component.width_a = 16,
 		altsyncram_component.width_b = 16,
 		altsyncram_component.width_byteena_a = 2;
+endmodule
+
+//Plain RAM of width W (no byte enables, registered read address).
+module SCSPP_RAM_W
+#(
+	parameter W = 16,
+	parameter addr_width = 5
+)
+(
+	input                    CLK,
+	input  [addr_width-1:0]  WRADDR,
+	input           [W-1:0]  DATA,
+	input                    WREN,
+	input  [addr_width-1:0]  RDADDR,
+	output          [W-1:0]  Q
+);
+	altsyncram	altsyncram_component (
+				.address_a (WRADDR), .byteena_a (1'b1), .clock0 (CLK), .data_a (DATA), .wren_a (WREN),
+				.address_b (RDADDR), .q_b (Q), .aclr0 (1'b0), .aclr1 (1'b0),
+				.addressstall_a (1'b0), .addressstall_b (1'b0), .byteena_b (1'b1),
+				.clock1 (1'b1), .clocken0 (1'b1), .clocken1 (1'b1), .clocken2 (1'b1), .clocken3 (1'b1),
+				.data_b ({W{1'b1}}), .eccstatus (), .q_a (), .rden_a (1'b1), .rden_b (1'b1), .wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK0",
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "BYPASS",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**addr_width,
+		altsyncram_component.numwords_b = 2**addr_width,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "NONE",
+		altsyncram_component.outdata_reg_b = "UNREGISTERED",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.read_during_write_mode_mixed_ports = "DONT_CARE",
+		altsyncram_component.widthad_a = addr_width,
+		altsyncram_component.widthad_b = addr_width,
+		altsyncram_component.width_a = W,
+		altsyncram_component.width_b = W,
+		altsyncram_component.width_byteena_a = 1;
+endmodule
+
+//SCSPP_RAM_OR with NB byte lanes (width 8*NB).
+module SCSPP_RAM_ORN
+#(
+	parameter NB = 8,
+	parameter addr_width = 5
+)
+(
+	input                    CLK,
+	input  [addr_width-1:0]  WRADDR,
+	input         [8*NB-1:0] DATA,
+	input          [NB-1:0]  WREN,
+	input  [addr_width-1:0]  RDADDR,
+	input                    EN,
+	input                    CLR,
+	output        [8*NB-1:0] Q
+);
+	altsyncram	altsyncram_component (
+				.address_a (WRADDR), .byteena_a (WREN), .clock0 (CLK), .data_a (DATA), .wren_a (|WREN),
+				.address_b (RDADDR), .q_b (Q), .aclr0 (1'b0), .aclr1 (CLR),
+				.addressstall_a (1'b0), .addressstall_b (1'b0), .byteena_b (1'b1),
+				.clock1 (CLK), .clocken0 (1'b1), .clocken1 (1'b1), .clocken2 (1'b1), .clocken3 (EN),
+				.data_b ({8*NB{1'b1}}), .eccstatus (), .q_a (), .rden_a (1'b1), .rden_b (1'b1), .wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.byte_size = 8,
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "NORMAL",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**addr_width,
+		altsyncram_component.numwords_b = 2**addr_width,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "CLEAR1",
+		altsyncram_component.outdata_reg_b = "CLOCK1",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.read_during_write_mode_mixed_ports = "DONT_CARE",
+		altsyncram_component.widthad_a = addr_width,
+		altsyncram_component.widthad_b = addr_width,
+		altsyncram_component.width_a = 8*NB,
+		altsyncram_component.width_b = 8*NB,
+		altsyncram_component.width_byteena_a = NB;
 endmodule
