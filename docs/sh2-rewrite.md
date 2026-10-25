@@ -188,7 +188,7 @@ Method: standalone `quartus_fit` (21.1, 5CEBA4F23C8, area profile, one processor
 `SH7604P` new). "ALMs" = fitter "Logic utilization (in ALMs)". Standalone numbers are about 1.25x the in-system per-block
 numbers of [integration.md](integration.md) (4,332 here vs 3,475 for one golden CPU there).
 
-Final state (no extra M10K: cache tags in MLAB, decode control word registered in flip-flops as in the golden):
+Final state without extra M10K (cache tags in MLAB, decode control word registered in flip-flops as in the golden); the M10K variant below is the current default:
 
 | | golden | SH7604P |
 |---|---|---|
@@ -233,6 +233,32 @@ single cycle): worst setup slack -6.2 ns, i.e. longest path 23.7 ns (the golden 
 [sh2.md](sh2.md)). It closes with the same 2-cycle setup / 1-cycle hold multicycle that the golden core already needs
 (34.9 ns available). That measurement was taken with the M10K decode ROM on the critical path; with the control word
 back in flip-flops the path is the golden one plus the register-file read.
+
+### 8.1 Current default (M10K allowed again): decode ROM and cache tags in M10K
+
+Pair fit 6,069 ALMs, 16 RAM blocks, 6 DSP (golden 8,538 / 8 / 6): -29%. Includes the leaner ALU, the MULT 1-clock timing fix
+and the TAS zero-flag fix. ptest 76 PASS, soak 400 PASS (seeds 6000-6099), unit tests divu/dmac/mult/intc/frt/wdt/msby PASS.
+
+### 8.2 Interleaving MSH and SSH on one datapath: measured sharing potential
+
+`SH7604P_PAIR` with one execute cone shared by both CPUs on alternate clk_sys phases was evaluated with a synthesis probe
+(`sizing/sh2p/pairprobe/`): `SH2P_cone` is the combinational execute cone of the core (operand select with load forwarding,
+immediate, ALU, address / write-data select, SR update). `pair_two` instantiates it twice; `pair_one` instantiates it once behind
+a 2:1 mux on every input (the thread select) with its outputs registered (the staging registers a two-stage barrel needs).
+Standalone fit, virtual pins on both sides:
+
+| | cone ALUT | top ALUT | flops |
+|---|---|---|---|
+| two cones | 777 + 763 | - | 0 |
+| one cone + input muxes + staging | 993 | 107 | 193 |
+
+Sharing the cone removes about 440 ALUT (28%) of the 1,540, i.e. roughly 170 ALMs for the pair after the 193 staging flops.
+Adding the decoder (about 250 ALMs per CPU, shared with a few input muxes and a class register) gives about 200 more, so
+sharing everything the two cores can share saves about 400 ALMs (6%) of the 6,069. It would put the pair near 5,700, not 4,400.
+Two further costs: (1) the barrel needs the two CPUs on opposite clk_sys phases, so SSH's whole bus (cache, BSC, arbitration)
+shifts by one clk_sys against MSH, which the memory controllers of the Saturn, keyed to the CE_R/CE_F phases, would see as a
+half-cycle shift of the SSH bus; (2) the verification target would no longer be the golden pair cycle for cycle. For these
+reasons the interleaved core was not built beyond the probe.
 
 ## 9. Verification results and deviations
 
