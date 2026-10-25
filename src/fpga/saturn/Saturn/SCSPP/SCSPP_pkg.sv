@@ -517,10 +517,10 @@ package SCSPP_PKG;
 		TEMP = $signed(PLFO_WAVE) * F[10:4];
 		FM = {{3{TEMP[14]}},TEMP[14:6]};
 		//The left shift by S (0..15) is a multiplication by 2^S, which maps onto a DSP block.
-`ifdef POCKET_SCSPP_NODSP_PHASE
-		P = {16'd0,{1'b0,F}+FM}<<S;
-`else
+`ifdef POCKET_SCSPP_DSP_PHASE
 		P = {16'd0,{1'b0,F}+FM} * (28'd1 << S);
+`else
+		P = {16'd0,{1'b0,F}+FM}<<S;
 `endif
 		
 		return P[26:4];
@@ -587,7 +587,7 @@ package SCSPP_PKG;
 		bit signed [32:0] PMV;
 		
 		MULT = $signed(WAVE) * ({2'b01,~LEVEL[5:0]});
-`ifdef POCKET_SCSPP_DSP_VOL
+`ifndef POCKET_SCSPP_NODSP_VOL
 		//Right shift by LEVEL[9:6] as a multiplication by 2^(15-LEVEL[9:6]).
 		PMV = $signed(MULT[22:7]) * $signed({1'b0,16'd1 << (4'd15 - LEVEL[9:6])});
 		RES = PMV[30:15];
