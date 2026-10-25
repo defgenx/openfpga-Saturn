@@ -60,7 +60,10 @@ always @(posedge clk) begin
 end
 
 // ---------------------------------------------------------------- expander
-reg  [58:0] cur;
+// the FIFO entry stays in the RAM output (registered read address) until it is done, then rbin moves on
+reg [AW-1:0] rra;
+wire [58:0] cur = mem[rra];
+always @(posedge clk) rra <= rbin[AW-1:0];
 reg   [1:0] st = 2'd0;       // 0 idle, 1 pop wait, 2 write 0, 3 write 1
 reg         second = 1'b0;
 wire  [2:0] c_sel  = cur[58:56];
@@ -78,8 +81,6 @@ always @(posedge clk) begin
 	o_wr <= 1'b0;
 	case (st)
 	2'd0: if (!empty) begin
-		cur <= mem[rbin[AW-1:0]];
-		rbin <= rbin + 1'd1; rgray <= b2g(rbin + 1'd1);
 		st <= 2'd1; second <= 1'b0;
 	end
 	2'd1: st <= 2'd2;
@@ -88,12 +89,13 @@ always @(posedge clk) begin
 		if (c_sel[0]) begin
 			o_addr <= {c_off[23:2]};
 			o_data <= LD_LITTLE ? {b0, b1, b2, b3} : {b0, b1, b2, b3};
-			st <= 2'd0;
+			st <= 2'd0; rbin <= rbin + 1'd1; rgray <= b2g(rbin + 1'd1);
 		end else begin
 			// byte -> {FF, byte}; two bytes per 32 bit write
 			o_addr <= (c_sel[1] ? 22'h040000 : 22'h200000) | {c_off[22:2], second};   // base + 2 * offset + 4 * second, as word index (no overlap: offsets < 512 KB)
 			o_data <= second ? {8'hFF, b2, 8'hFF, b3} : {8'hFF, b0, 8'hFF, b1};
-			if (second) st <= 2'd0; else begin second <= 1'b1; st <= 2'd3; end
+			if (second) begin st <= 2'd0; rbin <= rbin + 1'd1; rgray <= b2g(rbin + 1'd1); end
+			else begin second <= 1'b1; st <= 2'd3; end
 		end
 	end
 	2'd3: st <= 2'd2;          // let o_busy rise before the second write

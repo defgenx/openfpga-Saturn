@@ -1,0 +1,23 @@
+mem_pocket                           ALM    1848  ALUT   1862  REG   2041  Mbit-kb    843  DSP 115
+  ddram_pocket:ddram|                  ALM     445  ALUT    644  REG    866  Mbit-kb     43  DSP 15
+    ddp_cache_ram:cache0|                ALM       0  ALUT      0  REG      0  Mbit-kb      1  DSP  1
+    ddp_cache_ram:cache1|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_cache_ram:cache2|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_cache_ram:cache3|                ALM       0  ALUT      0  REG      0  Mbit-kb      8  DSP  1
+    ddp_cache_ram:cache5|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_cache_ram:cache6|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_cache_ram:cache7|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_cache_ram:cache8|                ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  1
+    ddp_infifo:ramh_fifo|                ALM      16  ALUT     19  REG     71  Mbit-kb      0  DSP  2
+    ddp_infifo:vdp1vram_fifo|            ALM      18  ALUT     19  REG     53  Mbit-kb      0  DSP  1
+    ddp_ram:ramh_ram|                    ALM      11  ALUT      0  REG     36  Mbit-kb     32  DSP  4
+  load_pocket:loader|                  ALM      55  ALUT     79  REG    136  Mbit-kb     14  DSP  2
+  psram_sync:psram0|                   ALM     102  ALUT    195  REG    111  Mbit-kb      0  DSP  0
+  psram_sync:psram1|                   ALM      98  ALUT    200  REG    116  Mbit-kb      0  DSP  0
+  sdram_pocket:sdram|                  ALM     263  ALUT    389  REG    526  Mbit-kb      0  DSP  0
+    sdram_clk_out:u_clk|                 ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  0
+      altddio_out:ddio|                    ALM       0  ALUT      0  REG      0  Mbit-kb      0  DSP  0
+  sram_pocket:sram|                    ALM      21  ALUT     15  REG     63  Mbit-kb      0  DSP  0
+  vdp1_fb_pocket:fb|                   ALM     218  ALUT    339  REG    223  Mbit-kb    786  DSP 98
+        decode_41a:rden_decode_b|            ALM       2  ALUT      6  REG      0  Mbit-kb      0  DSP  0
+        decode_bla:decode2|                  ALM       2  ALUT      6  REG      0  Mbit-kb      0  DSP  0

@@ -3,9 +3,9 @@
 // Same FB interface as the VDP1 module (FBn_A/D/WE/RD/Q, FB_RDY, FB_MODE3) with the address
 // translation that Saturn_MiSTer's emu does, so rtl/Saturn/Saturn.sv and VDP1 are unchanged.
 //
-//   FB0  external 128K x 16 SRAM (sram_pocket), words FB_BASE .. FB_BASE + 90111
-//   FB1  index < 65536 (columns 0-255): M10K, 65536 x 16
-//        index 65536 .. 90111 (columns 256-351): the SRAM tail, words FB_BASE + 90112 ..
+//   FB0  external 128K x 16 SRAM (sram_pocket), words FB0_BASE .. FB0_BASE + 90111 (0xA000 ..)
+//   FB1  index < 49152 (columns 0-191): M10K, 49152 x 16
+//        index 49152 .. 90111 (columns 192-351): the SRAM tail, words 0x0000 .. 0x9FFF
 // Both hold the first 352 columns of the 512 x 256 buffer (index = x*256 + y, as MiSTer's M10K part).
 // Writes with x >= 352 are dropped and reads return 0 (MiSTer keeps those columns in DDR3).
 //
@@ -23,7 +23,8 @@
 `default_nettype none
 
 module vdp1_fb_pocket #(
-	parameter int FB_BASE = 16384,
+	parameter int FB_BASE = 40960,                 // FB0 in the SRAM, after the FB1 tail
+	parameter int M1_WORDS = 49152,                // FB1 words in the M10K
 	parameter int STALL   = 192
 ) (
 	input  wire        clk_sys,
@@ -45,7 +46,6 @@ module vdp1_fb_pocket #(
 	output wire  [7:0] dbg_drop,           // SRAM writes lost to a full FIFO (saturating)
 
 	// sram_pocket framebuffer port (clk_ram)
-	output wire        sr_hint,
 	output reg         sr_req,
 	output reg         sr_we,
 	output reg  [16:0] sr_a,
@@ -58,7 +58,7 @@ module vdp1_fb_pocket #(
 
 localparam int COLS = 352;
 localparam int WORDS = COLS * 256;
-localparam [16:0] TAIL_BASE = FB_BASE + WORDS;
+localparam [16:0] TAIL_BASE = 17'(-M1_WORDS);      // SRAM word of FB1 index M1_WORDS is 0
 
 function automatic [16:0] xlate(input mode3, input [17:1] a);
 	xlate = mode3 ? a[17:1] : {a[9:1], a[17:10]};
@@ -68,20 +68,20 @@ function automatic [16:0] sram_a0(input [16:0] i);
 	sram_a0 = FB_BASE[16:0] + i;
 endfunction
 function automatic [16:0] sram_a1(input [16:0] i);
-	sram_a1 = TAIL_BASE + {1'b0, i[15:0]};
+	sram_a1 = TAIL_BASE + i;
 endfunction
 
 wire [16:0] i0 = xlate(FB_MODE3, FB0_A);
 wire [16:0] i1 = xlate(FB_MODE3, FB1_A);
 wire        in0 = i0 < WORDS;
 wire        in1 = i1 < WORDS;
-wire        mm1 = !i1[16];                 // FB1 in M10K (always in range)
-wire        t1  = i1[16] && in1;           // FB1 in the SRAM tail
+wire        mm1 = i1 < M1_WORDS;           // FB1 in M10K (always in range)
+wire        t1  = !mm1 && in1;             // FB1 in the SRAM tail
 wire [16:0] sa0 = sram_a0(i0);
 wire [16:0] sa1 = sram_a1(i1);
 
 // ---------------------------------------------------------------- FB1 M10K part
-// 65536 x 16 simple dual port, byte enables, address registered (read data one clock after the address)
+// 49152 x 16 simple dual port, byte enables, address registered (read data one clock after the address)
 reg [15:0] m1_q;
 reg        m1_sel, t1_sel;
 reg [15:0] fb1_sq;                         // SRAM tail data (clk_ram)
@@ -91,8 +91,8 @@ reg [15:0] fb1_sq;                         // SRAM tail data (clk_ram)
 // but cannot be written per byte lane.
 altsyncram #(
 	.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
-	.width_a(16), .widthad_a(16), .numwords_a(65536), .width_byteena_a(2),
-	.width_b(16), .widthad_b(16), .numwords_b(65536),
+	.width_a(16), .widthad_a(16), .numwords_a(49152), .width_byteena_a(2),
+	.width_b(16), .widthad_b(16), .numwords_b(49152),
 	.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
 	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
 ) fb1_ram (
@@ -103,10 +103,10 @@ altsyncram #(
 	.data_b({16{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
 );
 `else
-reg [15:0] m1 [0:65535];
+reg [15:0] m1 [0:M1_WORDS-1];
 always @(posedge clk_sys) begin
-	if (FB1_WE[0] && !i1[16]) m1[i1[15:0]][7:0]  <= FB1_D[7:0];
-	if (FB1_WE[1] && !i1[16]) m1[i1[15:0]][15:8] <= FB1_D[15:8];
+	if (FB1_WE[0] && mm1) m1[i1[15:0]][7:0]  <= FB1_D[7:0];
+	if (FB1_WE[1] && mm1) m1[i1[15:0]][15:8] <= FB1_D[15:8];
 	m1_q <= m1[i1[15:0]];
 end
 `endif
@@ -125,12 +125,12 @@ wire [8:0] occ0 = wptr0 - rptr0, occ1 = wptr1 - rptr1;
 wire       full0 = occ0 >= 9'd255, full1 = occ1 >= 9'd255;
 wire       stall = occ0 >= STALL || occ1 >= STALL;
 wire       ne0 = (wptr0_d != rptr0), ne1 = (wptr1_d != rptr1);
-reg [34:0] wf0_q, wf1_q;           // synchronous read, so the FIFOs map to M10K
+reg  [7:0] wra0, wra1;           // registered read address: the RAM output is the entry one clock after rptr
+wire [34:0] wf0_q = wf0[wra0], wf1_q = wf1[wra1];
 always @(posedge clk_ram) begin
 	wptr0_d <= wptr0; wptr1_d <= wptr1;
-	wf0_q <= wf0[rptr0[7:0]]; wf1_q <= wf1[rptr1[7:0]];
+	wra0 <= rptr0[7:0]; wra1 <= rptr1[7:0];
 end
-assign sr_hint = ne0 || ne1;
 
 reg  [7:0] wf_drop = 8'd0;
 assign dbg_drop = wf_drop;

@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-// Testbench for cdd_pocket: SH-1 serial host model, APF bridge target model, async SRAM model.
+// Testbench for cdd_pocket: SH-1 serial host model, APF bridge target model, sector ring memory model (ddram_pocket handshake).
 // Writes a log that check.py replays through cdd_model.py. Plusargs: +DISC=A|B +LOG=file +CE=<clk per CE>
 module tb_cdd;
 
@@ -41,9 +41,12 @@ wire [31:0] t_off, t_baddr, t_len;
 reg         t_ack = 0, t_done = 0;
 reg  [2:0]  t_err = 0;
 
-wire [16:0] sram_a; wire [15:0] sram_dq_o; wire sram_dq_oe, sram_oe_n, sram_we_n, sram_ub_n, sram_lb_n;
-wire [15:0] dq;
-assign dq = sram_dq_oe ? sram_dq_o : 16'hzzzz;
+wire        rg_wr, rg_rd;
+wire [13:0] rg_ra;
+wire [12:0] rg_wa;
+wire [31:0] rg_wd;
+wire [15:0] rg_q;
+reg         rg_wbusy = 0, rg_rbusy = 0;
 
 cdd_pocket dut (
 	.CLK(clk), .RST_N(rst_n), .CDD_CE(CE),
@@ -55,15 +58,34 @@ cdd_pocket dut (
 	.target_dataslot_read(t_read), .target_dataslot_id(t_id), .target_dataslot_slotoffset(t_off),
 	.target_dataslot_bridgeaddr(t_baddr), .target_dataslot_length(t_len),
 	.target_dataslot_ack(t_ack), .target_dataslot_done(t_done), .target_dataslot_err(t_err),
-	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(dq),
-	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n), .sram_req(), .sram_gnt(1'b1),
+	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+	.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 	.DISC_OK(DISC_OK), .DBG(DBG), .STALL(STALL)
 );
 
-// ---------------------------------------------------------------- SRAM model (async, 128K x 16)
-reg [15:0] smem [0:131071];
-assign dq = (!sram_oe_n && sram_we_n) ? smem[sram_a] : 16'hzzzz;
-always @(posedge sram_we_n) if (!sram_ub_n && !sram_lb_n) smem[sram_a] <= dq;
+// ---------------------------------------------------------------- ring memory model, ddram_pocket handshake:
+// a write is taken on rg_wr and busy stays high for 4 clk_sys until the chip starts it (after any read in progress);
+// a read raises busy the clock after rg_rd rises and drops it after 2..40 clk_sys, now and then 500 (a VDP1 burst
+// ahead on the chip, about 1000 clk_ram)
+reg [15:0] rmem [0:16383];
+assign rg_q = rmem[rg_ra];
+integer wcnt = 0, rcnt = 0, nslow = 0, nrd = 0, rg_ovf_chk = 0;
+reg rg_rd_d = 0;
+always @(posedge clk) begin
+	rg_rd_d <= rg_rd;
+	if (rg_wr) begin
+		if (rg_wbusy) begin $display("FAIL: ring write while busy"); $finish; end
+		rmem[{rg_wa, 1'b0}] <= rg_wd[31:16]; rmem[{rg_wa, 1'b1}] <= rg_wd[15:0]; rg_wbusy <= 1; wcnt <= 4;
+	end else if (rg_wbusy) begin
+		if (wcnt == 0) begin if (!rg_rbusy) rg_wbusy <= 0; end else wcnt <= wcnt - 1;
+	end
+	if (rg_rd && !rg_rd_d) begin
+		rg_rbusy <= 1; nrd = nrd + 1;
+		if (nrd % 700 == 0) begin rcnt <= 500; nslow = nslow + 1; end else rcnt <= 2 + ($urandom % 39);
+	end else if (rg_rbusy) begin
+		if (rcnt == 0) rg_rbusy <= 0; else rcnt <= rcnt - 1;
+	end
+end
 
 // ---------------------------------------------------------------- bridge: files, TOC push, target commands
 reg [31:0] f0 [0:139999];

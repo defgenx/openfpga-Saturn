@@ -23,6 +23,7 @@
 //   0x300000 WRAM-H 1 MB       0x800000-0xFFFFFF cartridge window 8 MB (ROM, RAM carts, backup cart)
 // PSRAM1 map:
 //   0x000000 VDP1 VRAM 512 KB  0x080000 CD block DRAM 512 KB      0x100000 CD sector buffer 16 KB
+//   0x108000 CD sector ring 32 KB (8 slots x 4 KB)
 //
 
 `default_nettype none
@@ -117,7 +118,8 @@ module ddram_pocket
 	input  wire [ 1: 0] bsram_wr,
 	output wire         bsram_busy,
 
-	// loader: one 32 bit write to a PSRAM0 byte address (bits 23:2), data = two image words, first word in [31:16]
+	// loader: one 32 bit write to a PSRAM0 byte address (bits 23:2), data = two image words, first word in [31:16];
+	// ld_addr / ld_data stay unchanged until ld_busy has fallen (the request is not copied here)
 	input  wire [23: 2] ld_addr,
 	input  wire [31: 0] ld_data,
 	input  wire         ld_wr,
@@ -127,7 +129,18 @@ module ddram_pocket
 	input  wire [13: 1] cdbuf_waddr,
 	input  wire [15: 0] cdbuf_wdata,
 	input  wire         cdbuf_wwr,
-	output wire         cdbuf_wbusy
+	output wire         cdbuf_wbusy,
+
+	// CD sector ring: one 32 bit write (word pair) per bridge word, and 16 bit reads through a 32 byte line cache
+	// ringw_addr / ringw_data stay unchanged until ringw_busy has fallen (not copied here)
+	input  wire [12: 0] ringw_addr,          // word pair index
+	input  wire [31: 0] ringw_data,          // {first word, second word}
+	input  wire         ringw_wr,
+	output wire         ringw_busy,
+	input  wire [13: 0] ring_addr,
+	output wire [15: 0] ring_dout,
+	input  wire         ring_rd,
+	output wire         ring_busy
 );
 
 assign vdp1fb_dout = 16'h0000;
@@ -139,15 +152,14 @@ assign bios_busy = 1'b0;
 reg  [22: 0] a_addr, b_addr;
 reg  [31: 0] a_wd, b_wd;                    // word 0 in [31:16]
 reg  [ 3: 0] a_be, b_be;                    // byte enables of word 0 {hi, lo}, word 1 {hi, lo}
-reg  [ 4: 0] a_cnt;                         // words of the request: 1, 2, 8 or 16
-reg  [ 9: 0] b_cnt;
 reg          a_read = 0, a_write = 0, b_read = 0, b_write = 0;
 reg  [ 2: 0] a_chan;                        // 0 ramh 1 raml 2 cart 3 bsram 4 loader
-reg  [ 1: 0] b_chan;                        // 0 cdram 1 vdp1vram 2 cdbuf 3 cdbuf write
+reg  [ 2: 0] b_chan;                        // 0 cdram 1 vdp1vram 2 cdbuf 3 cdbuf write 4 ring read
 reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read words
 reg  [ 3: 0] a_cw;                          // cache word index of the next read word
 reg  [ 8: 0] b_cw;
-assign p0_addr = a_addr;  assign p0_cnt = {5'd0, a_cnt};  assign p0_rd = a_read;  assign p0_we = a_write;
+wire [9:0] a_cnt, b_cnt;
+assign p0_addr = a_addr;  assign p0_cnt = a_cnt;  assign p0_rd = a_read;  assign p0_we = a_write;
 assign p0_din  = a_wd;    assign p0_be = a_be;
 assign p1_addr = b_addr;  assign p1_cnt = b_cnt;          assign p1_rd = b_read;  assign p1_we = b_write;
 assign p1_din  = b_wd;    assign p1_be = b_be;
@@ -185,7 +197,12 @@ reg  [ 13:  1] cdbuf_rcache_addr;
 reg            cdbuf_rcache_dirty;
 reg            cdbuf_rcache_busy;
 reg            cdbuf_read_busy;
+reg  [ 13:  0] ring_rcache_addr;
+reg            ring_rcache_dirty;
+reg            ring_rcache_busy;
+reg            ring_read_busy;
 reg  [ 13:  1] cdbuf_wwrite_addr;
+reg            ringw_write_busy;
 reg  [ 15:  0] cdbuf_wwrite_data;
 reg            cdbuf_wwrite_busy;
 
@@ -203,16 +220,18 @@ reg  [ 15:  0] bsram_write_data;
 reg  [  1:  0] bsram_be;
 reg            bsram_read_busy,bsram_write_busy;
 
-reg  [ 23:  2] ld_waddr;
-reg  [ 31:  0] ld_wdata;
 reg            ld_write_busy;
 assign ld_busy = ld_write_busy;
 assign cdbuf_wbusy = cdbuf_wwrite_busy;
+assign ringw_busy = ringw_write_busy;
 
+// words of the request: writes 2 (WRAM-H, loader, ring) or 1, reads 8 (backup RAM) or 16 (a line), VDP1 bursts blen
+assign a_cnt = a_write ? ((a_chan == 3'd0 || a_chan == 3'd4) ? 10'd2 : 10'd1) : (a_chan == 3'd3 ? 10'd8 : 10'd16);
+assign b_cnt = b_write ? (b_chan == 3'd5 ? 10'd2 : 10'd1) : (b_chan == 3'd1 && vdp1vram_rcache_blen != 0) ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
 reg            old_rst;
 reg            ramh_rd_old,ramh_wr_old;
 reg            cdram_rd_old,cdram_wr_old;
-reg            cdbuf_rd_old,cdbuf_wwr_old;
+reg            cdbuf_rd_old,cdbuf_wwr_old,ring_rd_old,ringw_wr_old;
 reg            raml_rd_old,raml_wr_old;
 reg            vdp1vram_rd_old,vdp1vram_wr_old;
 reg            cart_rd_old,cart_wr_old;
@@ -222,6 +241,7 @@ always @(posedge clk) begin
 	{ramh_rd_old,ramh_wr_old} <= {ramh_rd,|ramh_wr};
 	{cdram_rd_old,cdram_wr_old} <= {cdram_rd,|cdram_wr};
 	{cdbuf_rd_old,cdbuf_wwr_old} <= {cdbuf_rd,cdbuf_wwr};
+	{ring_rd_old,ringw_wr_old} <= {ring_rd,ringw_wr};
 	{raml_rd_old,raml_wr_old} <= {raml_rd,|raml_wr};
 	{vdp1vram_rd_old,vdp1vram_wr_old} <= {vdp1vram_rd,|vdp1vram_wr};
 	{cart_rd_old,cart_wr_old} <= {cart_rd,|cart_wr};
@@ -237,7 +257,7 @@ wire           vdp1vram_fifo_wrreq,vdp1vram_fifo_rdreq;
 assign ramh_fifo_wrreq = (|ramh_wr && !ramh_wr_old);
 assign ramh_fifo_rdreq = (a_state == 2'd1 && !p0_busy && a_chan == 3'd0);
 assign vdp1vram_fifo_wrreq = (|vdp1vram_wr && !vdp1vram_wr_old);
-assign vdp1vram_fifo_rdreq = (b_state == 2'd1 && !p1_busy && b_chan == 2'd1);
+assign vdp1vram_fifo_rdreq = (b_state == 2'd1 && !p1_busy && b_chan == 3'd1);
 
 wire [ 53:  0] ramh_fifo_dout;
 wire           ramh_fifo_empty,ramh_fifo_full;
@@ -351,8 +371,6 @@ always @(posedge clk) begin
 			bsram_write_busy <= 1;
 		end
 		if (ld_wr && !ld_wr_old) begin
-			ld_waddr <= ld_addr;
-			ld_wdata <= ld_data;
 			ld_write_busy <= 1;
 		end
 	end
@@ -369,13 +387,11 @@ always @(posedge clk) begin
 
 			case (a_state)
 			0: begin
-				a_cnt <= 5'd1;
 				a_cw  <= '0;
 				if (!ramh_fifo_empty) begin
 					a_addr  <= {4'b0011, ramh_write_addr[19:2], 1'b0};
 					a_wd    <= ramh_write_data;
 					a_be    <= ramh_write_be;
-					a_cnt   <= 5'd2;
 					a_write <= 1;
 					a_chan  <= 3'd0;
 					a_state <= 2'd1;
@@ -383,7 +399,6 @@ always @(posedge clk) begin
 				else if (ramh_read_busy) begin
 					a_addr  <= {4'b0011, ramh_tag[ramh_curr], 4'b0000};
 					a_read  <= 1;
-					a_cnt   <= 5'd16;
 					a_chan  <= 3'd0;
 					a_state <= 2'd2;
 				end
@@ -399,7 +414,6 @@ always @(posedge clk) begin
 				else if (raml_read_busy) begin
 					a_addr  <= {2'b00, raml_rcache_addr[21:5], 4'b0000};
 					a_read  <= 1;
-					a_cnt   <= 5'd16;
 					a_chan  <= 3'd1;
 					a_state <= 2'd2;
 				end
@@ -415,7 +429,6 @@ always @(posedge clk) begin
 				else if (cart_read_busy) begin
 					a_addr  <= {1'b1, cart_rcache_addr[22:5], 4'b0000};
 					a_read  <= 1;
-					a_cnt   <= 5'd16;
 					a_chan  <= 3'd2;
 					a_state <= 2'd2;
 				end
@@ -431,16 +444,14 @@ always @(posedge clk) begin
 				else if (bsram_read_busy) begin
 					a_addr  <= bsram_rcache_addr[20] ? {1'b1, 3'b000, bsram_rcache_addr[19:4], 3'b000} : {4'b0001, 4'b0000, bsram_rcache_addr[15:4], 3'b000};
 					a_read  <= 1;
-					a_cnt   <= 5'd8;
 					a_chan  <= 3'd3;
 					a_state <= 2'd2;
 				end
 				else if (ld_write_busy) begin
 					ld_write_busy <= 0;
-					a_addr  <= {ld_waddr, 1'b0};
-					a_wd    <= ld_wdata;
+					a_addr  <= {ld_addr, 1'b0};
+					a_wd    <= ld_data;
 					a_be    <= 4'hF;
-					a_cnt   <= 5'd2;
 					a_write <= 1;
 					a_chan  <= 3'd4;
 					a_state <= 2'd1;
@@ -470,10 +481,10 @@ end
 
 // ================================================================ chip B: cdram vdp1vram cdbuf (+ write)
 always @(posedge clk) begin
-	{cdram_rcache_busy,vdp1vram_rcache_busy,cdbuf_rcache_busy} <= '0;
+	{cdram_rcache_busy,vdp1vram_rcache_busy,cdbuf_rcache_busy,ring_rcache_busy} <= '0;
 	if (rst_pulse) begin
-		{cdram_rcache_dirty,vdp1vram_rcache_dirty,cdbuf_rcache_dirty} <= '1;
-		{cdram_read_busy,vdp1vram_read_busy,cdbuf_read_busy} <= '0;
+		{cdram_rcache_dirty,vdp1vram_rcache_dirty,cdbuf_rcache_dirty,ring_rcache_dirty} <= '1;
+		{cdram_read_busy,vdp1vram_read_busy,cdbuf_read_busy,ring_read_busy} <= '0;
 		vdp1vram_rcache_blen <= '0;
 	end
 	else begin
@@ -516,10 +527,18 @@ always @(posedge clk) begin
 			cdbuf_rcache_busy <= 1;
 			cdbuf_rcache_dirty <= 0;
 		end
+		if (ring_rd && !ring_rd_old) begin
+			if (ring_addr[13:4] != ring_rcache_addr[13:4] || ring_rcache_dirty) begin
+				ring_read_busy <= 1;
+			end
+			ring_rcache_addr <= ring_addr;
+			ring_rcache_busy <= 1;
+			ring_rcache_dirty <= 0;
+		end
 	end
 
 	if (rst_pulse) begin
-		{cdram_write_busy,cdbuf_wwrite_busy} <= 0;
+		{cdram_write_busy,cdbuf_wwrite_busy,ringw_write_busy} <= 0;
 	end
 	else begin
 		if (|cdram_wr && !cdram_wr_old) begin
@@ -541,6 +560,10 @@ always @(posedge clk) begin
 					vdp1vram_rcache_dirty <= 1;
 				end
 			end
+		end
+		if (ringw_wr && !ringw_wr_old) begin
+			ring_rcache_dirty <= 1;                        // any ring write drops the ring read line
+			ringw_write_busy <= 1;
 		end
 		if (cdbuf_wwr && !cdbuf_wwr_old) begin
 			if (cdbuf_waddr[13:5] == cdbuf_rcache_addr[13:5]) begin
@@ -564,7 +587,6 @@ always @(posedge clk) begin
 
 			case (b_state)
 			0: begin
-				b_cnt <= 10'd1;
 				b_cw  <= '0;
 				if (cdram_write_busy) begin
 					cdram_write_busy <= 0;
@@ -572,14 +594,13 @@ always @(posedge clk) begin
 					b_wd    <= {cdram_write_data, 16'h0000};
 					b_be    <= {cdram_be, 2'b00};
 					b_write <= 1;
-					b_chan  <= 2'd0;
+					b_chan  <= 3'd0;
 					b_state <= 2'd1;
 				end
 				else if (cdram_read_busy) begin
 					b_addr  <= {4'b0000, 1'b1, cdram_rcache_addr[18:5], 4'b0000};
 					b_read  <= 1;
-					b_cnt   <= 10'd16;
-					b_chan  <= 2'd0;
+					b_chan  <= 3'd0;
 					b_state <= 2'd2;
 				end
 				else if (!vdp1vram_fifo_empty) begin
@@ -587,23 +608,36 @@ always @(posedge clk) begin
 					b_wd    <= {vdp1vram_write_data, 16'h0000};
 					b_be    <= {vdp1vram_write_be, 2'b00};
 					b_write <= 1;
-					b_chan  <= 2'd1;
+					b_chan  <= 3'd1;
 					b_state <= 2'd1;
 				end
 				else if (vdp1vram_read_busy) begin
 					b_addr  <= vdp1vram_rcache_blen ? {5'b00000, vdp1vram_rcache_addr} : {5'b00000, vdp1vram_rcache_addr[18:5], 4'b0000};
 					b_read  <= 1;
-					b_cnt   <= vdp1vram_rcache_blen ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
-					b_chan  <= 2'd1;
+					b_chan  <= 3'd1;
 					b_cw    <= vdp1vram_rcache_blen ? vdp1vram_rcache_addr[9:1] : {vdp1vram_rcache_addr[9:5], 4'b0000};
 					b_state <= 2'd2;
 				end
 				else if (cdbuf_read_busy) begin
 					b_addr  <= {4'b0001, 6'b000000, cdbuf_rcache_addr[13:5], 4'b0000};
 					b_read  <= 1;
-					b_cnt   <= 10'd16;
-					b_chan  <= 2'd2;
+					b_chan  <= 3'd2;
 					b_state <= 2'd2;
+				end
+				else if (ring_read_busy) begin
+					b_addr  <= {4'b0001, 4'b0000, 1'b1, ring_rcache_addr[13:4], 4'b0000};
+					b_read  <= 1;
+					b_chan  <= 3'd4;
+					b_state <= 2'd2;
+				end
+				else if (ringw_write_busy) begin
+					ringw_write_busy <= 0;
+					b_addr  <= {4'b0001, 4'b0000, 1'b1, ringw_addr, 1'b0};
+					b_wd    <= ringw_data;
+					b_be    <= 4'hF;
+					b_write <= 1;
+					b_chan  <= 3'd5;
+					b_state <= 2'd1;
 				end
 				else if (cdbuf_wwrite_busy) begin
 					cdbuf_wwrite_busy <= 0;
@@ -611,7 +645,7 @@ always @(posedge clk) begin
 					b_wd    <= {cdbuf_wwrite_data, 16'h0000};
 					b_be    <= 4'b1100;
 					b_write <= 1;
-					b_chan  <= 2'd3;
+					b_chan  <= 3'd3;
 					b_state <= 2'd1;
 				end
 			end
@@ -627,9 +661,10 @@ always @(posedge clk) begin
 		if (b_state == 2'd2) begin
 			if (p1_rvalid) b_cw <= b_cw + 9'd1;
 			if (p1_rlast) begin
-				if (b_chan == 2'd0) begin cdram_read_busy <= 0; cdram_rcache_busy <= 1; end
-				if (b_chan == 2'd1) begin vdp1vram_read_busy <= 0; vdp1vram_rcache_busy <= 1; end
-				if (b_chan == 2'd2) begin cdbuf_read_busy <= 0; cdbuf_rcache_busy <= 1; end
+				if (b_chan == 3'd0) begin cdram_read_busy <= 0; cdram_rcache_busy <= 1; end
+				if (b_chan == 3'd1) begin vdp1vram_read_busy <= 0; vdp1vram_rcache_busy <= 1; end
+				if (b_chan == 3'd2) begin cdbuf_read_busy <= 0; cdbuf_rcache_busy <= 1; end
+				if (b_chan == 3'd4) begin ring_read_busy <= 0; ring_rcache_busy <= 1; end
 				b_state <= 0;
 			end
 		end
@@ -640,15 +675,16 @@ end
 wire           a_cache_wren = (a_state == 2'd2) && p0_rvalid;
 wire           b_cache_wren = (b_state == 2'd2) && p1_rvalid;
 wire [ 31:  0] ramh_cache_q;
-wire [ 15:  0] cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_cache_q,cart_cache_q,bsram_cache_q;
+wire [ 15:  0] ring_cache_q, cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_cache_q,cart_cache_q,bsram_cache_q;
 
 // 16 bit words are written as they arrive (address = word index inside the line); read as 16 bit words (32 bit for WRAM-H)
 ddp_cache_ram #(6, 32) cache0 (clk, {ramh_curr,a_cw}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:2]}, ramh_cache_q);
-ddp_cache_ram #(4, 16) cache1 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 2'd0, cdram_rcache_addr[4:1], cdram_cache_q);
+ddp_cache_ram #(4, 16) cache1 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd0, cdram_rcache_addr[4:1], cdram_cache_q);
 ddp_cache_ram #(4, 16) cache2 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
-ddp_cache_ram #(9, 16) cache3 (clk, b_cw, p1_rdata, b_cache_wren & b_chan == 2'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
-ddp_cache_ram #(4, 16) cache5 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 2'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
+ddp_cache_ram #(9, 16) cache3 (clk, b_cw, p1_rdata, b_cache_wren & b_chan == 3'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
+ddp_cache_ram #(4, 16) cache5 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
 ddp_cache_ram #(4, 16) cache6 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd2, cart_rcache_addr[4:1], cart_cache_q);
+ddp_cache_ram #(4, 16) cache8 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd4, ring_rcache_addr[3:0], ring_cache_q);
 ddp_cache_ram #(3, 16) cache7 (clk, a_cw[2:0], p0_rdata, a_cache_wren & a_chan == 3'd3, bsram_rcache_addr[3:1], bsram_cache_q);
 
 assign ramh_dout = ramh_ram_sel ? ramh_ram_q : {ramh_cache_q[15:0], ramh_cache_q[31:16]};
@@ -660,6 +696,8 @@ assign raml_busy = raml_write_busy | raml_read_busy | raml_rcache_busy;
 assign vdp1vram_dout = vdp1vram_cache_q;
 assign vdp1vram_busy = vdp1vram_fifo_full | vdp1vram_read_busy | vdp1vram_rcache_busy;
 assign cdbuf_dout = cdbuf_cache_q;
+assign ring_dout = ring_cache_q;
+assign ring_busy = ring_read_busy | ring_rcache_busy;
 assign cdbuf_busy = cdbuf_read_busy | cdbuf_rcache_busy;
 assign cart_dout = cart_cache_q;
 assign cart_busy = cart_write_busy | cart_read_busy | cart_rcache_busy;
@@ -742,7 +780,7 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	output wire          EMPTY,
 	output wire          FULL
 );
-	reg [W-1:0] mem [0:(1<<l)-1];
+	reg [W-1:0] mem [0:(1<<l)-1];   // an entry is read only after the count shows it
 	reg [l-1:0] RADDR = '0, WADDR = '0;
 	reg [l:0]   AMOUNT = '0;
 	always @(posedge CLK) begin

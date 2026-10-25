@@ -1,14 +1,11 @@
-// tb_fb: vdp1_fb_pocket + sram_pocket + SRAM model, with a VDP1-style stimulus and a cd_stream-style
-// client sharing the SRAM pins.
+// tb_fb: vdp1_fb_pocket + sram_pocket + SRAM model, with a VDP1-style stimulus.
 //
 //   A  draw     random pixel writes and read-modify-write on FB0 (SRAM) and FB1 (M10K) with the VDP1 FB_RDY
 //               protocol; throughput in pixels per microsecond
 //   B  display  one 16 bit read per dot (8 clk_sys), erase write to the same pixel at DCE_R; FB0_Q must
 //               hold the pre-erase pixel; latency from address change to valid FB0_Q
-//   C  vberase  VBlank erase: one FB0 write every 2 clk_sys for a whole region while the CD ring reads
-//               and writes the same SRAM; no write may be lost, CD data must stay intact
-//   +CDBURST    the CD ring takes a bridge word every ~25 clk_sys during test C (a sector burst): the
-//               erase FIFO overflows, drops are reported and the run fails (known limit, docs/memory.md)
+//   C  vberase  VBlank erase: one FB0 write every 2 clk_sys for a whole region; no write may be lost
+//   B2, D       FB1 display across the M10K / SRAM tail boundary, concurrent erase and draw on both SRAM streams
 //   -DSRAMAA_PS=n  SRAM access time in the model (default 10000; 30000 makes the controller fail)
 //   +N=count    operations in test A
 
@@ -36,7 +33,7 @@ reg         fb0_rd = 0, fb1_rd = 0;
 wire [15:0] fb0_q, fb1_q;
 wire        fb_rdy;
 wire  [7:0] fb_drop;
-wire        sr_hint, sr_req, sr_we, sr_ready, sr_done;
+wire        sr_req, sr_we, sr_ready, sr_done;
 wire [16:0] sr_a; wire [15:0] sr_d, sr_q; wire [1:0] sr_be;
 
 vdp1_fb_pocket fb (
@@ -44,20 +41,16 @@ vdp1_fb_pocket fb (
 	.FB0_A(fb0_a), .FB0_D(fb0_d), .FB0_WE(fb0_we), .FB0_RD(fb0_rd), .FB0_Q(fb0_q),
 	.FB1_A(fb1_a), .FB1_D(fb1_d), .FB1_WE(fb1_we), .FB1_RD(fb1_rd), .FB1_Q(fb1_q),
 	.FB_RDY(fb_rdy), .dbg_drop(fb_drop),
-	.sr_hint(sr_hint), .sr_req(sr_req), .sr_we(sr_we), .sr_a(sr_a), .sr_d(sr_d), .sr_be(sr_be), .sr_ready(sr_ready), .sr_q(sr_q), .sr_done(sr_done)
+	.sr_req(sr_req), .sr_we(sr_we), .sr_a(sr_a), .sr_d(sr_d), .sr_be(sr_be), .sr_ready(sr_ready), .sr_q(sr_q), .sr_done(sr_done)
 );
 
 wire [16:0] sram_a; wire [15:0] sram_dq_o, sram_dq_i; wire sram_dq_oe, sram_oe_n, sram_we_n, sram_ub_n, sram_lb_n;
-reg  [16:0] cd_a = 0; reg [15:0] cd_dq_o = 0; reg cd_dq_oe = 0, cd_oe_n = 1, cd_we_n = 1, cd_req = 0;
-wire        cd_gnt; wire [15:0] cd_dq_i;
 
 sram_pocket sr (
 	.clk(clk_ram),
 	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
 	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n),
-	.cd_a(cd_a), .cd_dq_o(cd_dq_o), .cd_dq_oe(cd_dq_oe), .cd_oe_n(cd_oe_n), .cd_we_n(cd_we_n), .cd_ub_n(1'b0), .cd_lb_n(1'b0),
-	.cd_req(cd_req), .cd_gnt(cd_gnt), .cd_dq_i(cd_dq_i),
-	.fb_hint(sr_hint), .fb_req(sr_req), .fb_we(sr_we), .fb_a(sr_a), .fb_d(sr_d), .fb_be(sr_be), .fb_ready(sr_ready), .fb_q(sr_q), .fb_done(sr_done)
+	.fb_req(sr_req), .fb_we(sr_we), .fb_a(sr_a), .fb_d(sr_d), .fb_be(sr_be), .fb_ready(sr_ready), .fb_q(sr_q), .fb_done(sr_done)
 );
 
 // pins with transport delays
@@ -86,10 +79,10 @@ sram_model #(.T_AA(`SRAMAA_PS)) smem (.a(a_d), .dq(dq), .oe_n(oen_d), .we_n(wen_
 reg [15:0] sh0 [0:90111];
 reg [15:0] sh1 [0:90111];
 integer errs = 0, i;
-// FB0 at SRAM word 16384, the FB1 tail (index 65536 ..) at 16384 + 90112
+// FB1 index 49152 .. 90111 (columns 192-351) at SRAM word 0 .., FB0 at SRAM word 40960 ..
 initial for (i = 0; i < 90112; i = i + 1) begin
-	sh0[i] = 16'h0; sh1[i] = 16'h0; smem.mem[16384 + i] = 16'h0;
-	if (i < 65536) fb.m1[i] = 16'h0; else smem.mem[106496 + i - 65536] = 16'h0;
+	sh0[i] = 16'h0; sh1[i] = 16'h0; smem.mem[40960 + i] = 16'h0;
+	if (i < 49152) fb.m1[i] = 16'h0; else smem.mem[i - 49152] = 16'h0;
 end
 
 function automatic [17:1] vaddr(input [8:0] x, input [7:0] y);   // VDP1 FBn_A for pixel (x,y), normal mode
@@ -143,48 +136,6 @@ task automatic draw_r(input integer fb_sel, input [8:0] x, input [7:0] y);
 	end
 endtask
 
-// ---------------------------------------------------------------- CD ring client (cd_stream-like, clk_sys)
-reg [15:0] cdmem [0:16383];
-integer cd_n = 0, cd_err = 0, cd_active = 0;
-reg cd_run = 0;
-task automatic cd_write_word(input [13:0] a, input [15:0] d);
-	begin
-		cd_req <= 1;
-		@(posedge clk_sys); while (!cd_gnt) @(posedge clk_sys);
-		cd_a <= {3'd0, a}; cd_dq_o <= d; cd_dq_oe <= 1;
-		@(posedge clk_sys); cd_we_n <= 0;
-		@(posedge clk_sys); cd_we_n <= 1;
-		@(posedge clk_sys); cd_dq_oe <= 0; cdmem[a] = d;
-	end
-endtask
-task automatic cd_read_word(input [13:0] a);
-	reg [15:0] g;
-	begin
-		cd_req <= 1;
-		@(posedge clk_sys); while (!cd_gnt) @(posedge clk_sys);
-		cd_a <= {3'd0, a}; cd_oe_n <= 0;
-		@(posedge clk_sys); @(posedge clk_sys);
-		g = cd_dq_i; cd_oe_n <= 1;
-		if (g !== cdmem[a]) begin cd_err = cd_err + 1; if (cd_err < 5) $display("%0t CD read %h exp %h at %h", $time, g, cdmem[a], a); end
-	end
-endtask
-integer cdw;
-integer cd_gap = 600;                 // clk_sys between bridge words: 88K words/s at 2x speed is one per 650
-initial begin if ($test$plusargs("CDBURST")) cd_gap = 12; end   // a sector burst at the bridge's full rate
-always @(posedge cd_run) begin : cdloop
-	integer k;
-	for (k = 0; k < 16384; k = k + 1) cdmem[k] = 16'hxxxx;
-	cdw = 0;
-	while (cd_run) begin
-		// one bridge word (>= 30 clk_74a = 25 clk_sys): two halves, a feed read every 8th word
-		cd_write_word(cdw[13:0], $urandom); cd_req <= 1; cd_write_word(cdw[13:0] + 1, $urandom); cd_req <= 0;
-		cd_n = cd_n + 2;
-		if (cdw % 16 == 0) begin cd_read_word(cdw[13:0]); cd_req <= 0; cd_n = cd_n + 1; end
-		cdw = cdw + 2;
-		repeat (cd_gap) @(posedge clk_sys);
-	end
-end
-
 // ---------------------------------------------------------------- stimulus
 integer t, bx, by, px, py, k2, pass;
 reg [15:0] rd16;
@@ -224,7 +175,7 @@ initial begin
 	// ---- B: display read + erase, FB0 is the display buffer
 	pass = errs;
 	for (by = 0; by < 4; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) begin
-		rd16 = $urandom; sh0[idx_of(bx, by)] = rd16; smem.mem[16384 + idx_of(bx, by)] = rd16;
+		rd16 = $urandom; sh0[idx_of(bx, by)] = rd16; smem.mem[40960 + idx_of(bx, by)] = rd16;
 	end
 	for (by = 0; by < 4; by = by + 1) begin
 		for (bx = 0; bx < 352; bx = bx + 1) begin
@@ -257,9 +208,8 @@ initial begin
 	end
 	$display("tb_fb: B display: pixel on FB0_Q within %0d clk_sys of the address change (worst of %0d), errors %0d", lat_max, lat_n, errs - pass);
 
-	// ---- C: VBlank erase with the CD ring using the same SRAM
+	// ---- C: VBlank erase
 	pass = errs;
-	cd_run = 1;
 	repeat (4) @(posedge clk_sys);
 	for (t = 0; t < 30000; t = t + 1) begin
 		@(posedge clk_sys);
@@ -270,22 +220,20 @@ initial begin
 		@(posedge clk_sys);
 		fb0_we <= 2'b00;
 	end
-	cd_run = 0;
 	repeat (4000) @(posedge clk_sys);
 	for (t = 0; t < 352 * 85; t = t + 37) begin
 		draw_r(0, t % 352, (t / 352) % 85);
 	end
-	$display("tb_fb: C vberase: 30000 writes at 1 per 2 clk_sys with %0d CD accesses, FIFO drops %0d, errors %0d, CD read errors %0d",
-	         cd_n, fb_drop, errs - pass, cd_err);
+	$display("tb_fb: C vberase: 30000 writes at 1 per 2 clk_sys, FIFO drops %0d, errors %0d", fb_drop, errs - pass);
 
-	// ---- B2: FB1 is the display buffer, tail columns 256..351 come from the SRAM
+	// ---- B2: FB1 is the display buffer, tail columns 192..351 come from the SRAM
 	pass = errs; lat_max = 0; lat_n = 0;
-	for (by = 0; by < 4; by = by + 1) for (bx = 250; bx < 352; bx = bx + 1) begin
+	for (by = 0; by < 4; by = by + 1) for (bx = 186; bx < 352; bx = bx + 1) begin
 		rd16 = $urandom; sh1[idx_of(bx, by)] = rd16;
-		if (bx < 256) fb.m1[idx_of(bx, by)] = rd16; else smem.mem[106496 + idx_of(bx, by) - 65536] = rd16;
+		if (bx < 192) fb.m1[idx_of(bx, by)] = rd16; else smem.mem[idx_of(bx, by) - 49152] = rd16;
 	end
 	for (by = 0; by < 4; by = by + 1) begin
-		for (bx = 250; bx < 352; bx = bx + 1) begin
+		for (bx = 186; bx < 352; bx = bx + 1) begin
 			@(posedge clk_sys);
 			fb1_a <= vaddr(bx, by);
 			expq = sh1[idx_of(bx, by)];
@@ -309,7 +257,7 @@ initial begin
 			repeat (3) @(posedge clk_sys);
 		end
 	end
-	$display("tb_fb: B2 FB1 display (M10K to tail boundary at column 256): valid within %0d clk_sys (worst of %0d), errors %0d", lat_max, lat_n, errs - pass);
+	$display("tb_fb: B2 FB1 display (M10K to tail boundary at column 192): valid within %0d clk_sys (worst of %0d), errors %0d", lat_max, lat_n, errs - pass);
 
 	// ---- D: VBlank erase of the FB1 tail (one write per 2 clk_sys) while FB0 is drawn into with the FB_RDY protocol,
 	// and the other way round: FB0 erase while FB1 tail draws
@@ -319,9 +267,9 @@ initial begin
 			integer e;
 			for (e = 0; e < 20000; e = e + 1) begin
 				@(posedge clk_sys);
-				fb1_a <= vaddr(256 + (e % 96), (e / 96) % 208);
+				fb1_a <= vaddr(192 + (e % 160), (e / 160) % 208);
 				fb1_d <= 16'h2000 + e; fb1_we <= 2'b11;
-				sh1[idx_of(256 + (e % 96), (e / 96) % 208)] = 16'h2000 + e;
+				sh1[idx_of(192 + (e % 160), (e / 160) % 208)] = 16'h2000 + e;
 				@(posedge clk_sys);
 				fb1_we <= 2'b00;
 			end
@@ -336,7 +284,7 @@ initial begin
 	join
 	repeat (2000) @(posedge clk_sys);
 	for (t = 0; t < 20000; t = t + 53) begin
-		bx = 256 + (t % 96); by = (t / 96) % 208;
+		bx = 192 + (t % 160); by = (t / 160) % 208;
 		@(posedge clk_sys); fb1_a <= vaddr(bx, by);
 		repeat (10) @(posedge clk_sys);
 		if (fb1_q !== sh1[idx_of(bx, by)]) begin errs = errs + 1; if (errs - pass < 10) $display("D tail erase (%0d,%0d) got %h exp %h", bx, by, fb1_q, sh1[idx_of(bx, by)]); end
@@ -356,7 +304,7 @@ initial begin
 		begin : draw1
 			integer d;
 			for (d = 0; d < 3000; d = d + 1) begin
-				px = 256 + $urandom % 96; py = 100 + $urandom % 156;
+				px = 192 + $urandom % 160; py = 100 + $urandom % 156;
 				if ($urandom % 3) draw_w(1, px, py, $urandom, 2'b11); else draw_r(1, px, py);
 			end
 		end
@@ -369,7 +317,7 @@ initial begin
 	$display("tb_fb: D concurrent erase and draw on both SRAM streams: FIFO drops %0d, errors %0d", fb_drop, errs - pass);
 
 	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes)", s_err, s_rd, s_wr);
-	if (errs == 0 && cd_err == 0 && fb_drop == 0 && s_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");
+	if (errs == 0 && fb_drop == 0 && s_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");
 	$finish;
 end
 

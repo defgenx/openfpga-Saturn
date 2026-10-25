@@ -1,6 +1,6 @@
 // hps2cdd drop-in for the Pocket: same core-facing ports as Saturn_MiSTer's HPS2CDD (the SH-1
 // serial link and the CD_DATA/CD_CK/CD_AUDIO sector stream), plus the Pocket-side ports that
-// replace the ARM: APF bridge/target commands, the 16-bit SRAM and the disc header replay.
+// replace the ARM: APF bridge/target commands, the sector ring memory port and the disc header replay.
 //
 //   cdd_link  serial link        (this file's thin layer)
 //   cdd_ctl   CDD command set    (saturncdd.cpp behaviour)
@@ -53,17 +53,15 @@ module cdd_pocket #(
 	input  wire        target_dataslot_done,
 	input  wire [2:0]  target_dataslot_err,
 
-	// SRAM pins (drive through a tri-state at the top)
-	output wire [16:0] sram_a,
-	output wire [15:0] sram_dq_o,
-	output wire        sram_dq_oe,
-	input  wire [15:0] sram_dq_i,
-	output wire        sram_oe_n,
-	output wire        sram_we_n,
-	output wire        sram_ub_n,
-	output wire        sram_lb_n,
-	output wire        sram_req,
-	input  wire        sram_gnt,
+	// sector ring memory (see cd_stream)
+	output wire        rg_wr,
+	output wire [12:0] rg_wa,
+	output wire [31:0] rg_wd,
+	input  wire        rg_wbusy,
+	output wire        rg_rd,
+	output wire [13:0] rg_ra,
+	input  wire [15:0] rg_q,
+	input  wire        rg_rbusy,
 
 	output wire        DISC_OK,
 	output wire [15:0] DBG,
@@ -111,8 +109,8 @@ cd_stream #(.RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDG
 	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
-	.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
-	.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n), .sram_req(sram_req), .sram_gnt(sram_gnt),
+	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+	.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 	.disc_ok(DISC_OK), .disc_new(disc_new), .boot_busy(BOOT_BUSY), .boot_wr(BOOT_WR),
 	.boot_addr(BOOT_ADDR), .boot_data(BOOT_DATA),
 	.ntracks(ntracks), .ntbcd(ntbcd), .toc_end(toc_end), .hack_wwf(hack_wwf), .hack_rr(hack_rr),
@@ -122,7 +120,7 @@ cd_stream #(.RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDG
 	.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
 	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
 	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
-	.err_cnt()
+	.err_cnt(), .ovf_cnt()
 );
 
 endmodule

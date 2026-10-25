@@ -48,15 +48,17 @@ CD_COMREQ_N, CD_COMSYNC_N, CD_DATA[17:0], CD_CK, CD_AUDIO`). The ARM-facing port
 
 | Block | Where | Size |
 |---|---|---|
-| Sector ring | **256 KB SRAM** (16-bit async, the Pocket's `sram_*` pins), 8 slots x 4 KB at SRAM word addr `{slot[2:0], word[10:0]}` | 32 KB used |
+| Sector ring | **PSRAM1** through `ddram_pocket` (`rg_*` ports), 8 slots x 4 KB at ring word addr `{slot[2:0], word[10:0]}`, byte 0x108000 | 32 KB |
 | TOC + boot header | `cd_toc_ram`, 512 x 32 dual clock | 2 M10K |
 | Packet RAMs | 2 x 16 x 8 (MLAB) | ~0.5 LAB |
-| Feed FIFO | none: the feed reads the SRAM one word per `CDD_CE` | 0 |
+| Bridge word FIFO | 64 x 45 bit in `cd_stream` (the chip can be busy with a VDP1 burst) | 2 M10K |
+| Feed FIFO | none: the feed reads the ring one word per `CDD_CE` | 0 |
 
-SRAM, not M10K, for the ring: 4 sectors of 2352 B are 75 Kbit = 8-12 M10K depending on aspect ratio, more than the
-whole budget. The SRAM is shared with VDP1 framebuffer 0 (docs/memory.md): `cd_stream` has `sram_req`/`sram_gnt`, `sram_pocket` multiplexes the pins, the ring stays at words 0-0x3FFF. The backup RAM image lives in PSRAM0.
-The SRAM port arbiter serves bridge writes first (2 half-words, 6 clocks per 32-bit bridge word) and feed reads
-second (3 clocks); one word every 2 `CDD_CE` at 1x and every `CDD_CE` at 2x is far below that.
+PSRAM1, not M10K, for the ring: 4 sectors of 2352 B are 75 Kbit = 8-12 M10K depending on aspect ratio (it was in the
+SRAM first, which cost 32 M10K blocks of framebuffer 1, docs/memory.md section 5). `cd_stream` writes one 32 bit bridge
+word per request (`rg_wr`, held until `!rg_wbusy`) behind a 64 entry FIFO, and reads one word per request (`rg_rd`: wait
+two clocks, then for `!rg_rbusy`). The backup RAM image lives in PSRAM0. A sector is announced to the engine only after the
+FIFO has drained.
 
 ## 3. Data slots
 

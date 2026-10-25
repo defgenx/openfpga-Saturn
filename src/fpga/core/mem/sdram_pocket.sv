@@ -140,13 +140,11 @@ end
 // ------------------------------------------------------------------ VDP2 plan (latched at cycle 1)
 // per slot j (bank j): mode 0 dummy scrub read, 1 read, 2 write, 3 none
 reg  [1:0] v_mode [0:3];
-reg  [7:0] v_row  [0:3];
-reg  [9:0] v_col  [0:3];
+reg  [7:0] v_row  [0:3];     // ACT row of bank b (read row, write row or scrub row)
+reg  [9:0] v_col  [0:3];     // CAS column of bank b; a write's column is in its bank's entry (bank 2 / 3)
 reg [15:0] v_wd   [0:1];     // [0] group A, [1] group B
 reg  [1:0] v_wbe  [0:1];
 reg        v_wsel [0:1];     // write is to bank (group + 2*half) : half
-reg  [9:0] v_wcol [0:1];
-reg  [7:0] v_wrow [0:1];
 
 // scrub counters: banks 0/1 cover 64 rows, banks 2/3 cover 256
 reg  [7:0] scr [0:3];
@@ -236,7 +234,7 @@ always @(posedge clk) begin
 			v_mode[0] <= addr_a0[17] ? 2'd3 : 2'd2;
 			v_mode[2] <= addr_a0[17] ? 2'd2 : 2'd3;
 			v_wd[0] <= lane_data(din_a, wr_a); v_wbe[0] <= lane_be(wr_a);
-			v_wrow[0] <= {2'd0, w_a[15:10]}; v_wcol[0] <= w_a[9:0]; v_wsel[0] <= addr_a0[17];
+			v_row[0] <= {2'd0, w_a[15:10]}; v_row[2] <= {2'd0, w_a[15:10]}; v_col[2] <= w_a[9:0]; v_wsel[0] <= addr_a0[17];
 		end else if (rd_a) begin
 			v_mode[0] <= 2'd1; v_mode[2] <= 2'd1;
 			v_row[0] <= {2'd0, addr_a0[16:11]}; v_col[0] <= addr_a0[10:1] ;
@@ -251,7 +249,7 @@ always @(posedge clk) begin
 			v_mode[1] <= addr_b0[17] ? 2'd3 : 2'd2;
 			v_mode[3] <= addr_b0[17] ? 2'd2 : 2'd3;
 			v_wd[1] <= lane_data(din_b, wr_b); v_wbe[1] <= lane_be(wr_b);
-			v_wrow[1] <= {2'd0, w_b[15:10]}; v_wcol[1] <= w_b[9:0]; v_wsel[1] <= addr_b0[17];
+			v_row[1] <= {2'd0, w_b[15:10]}; v_row[3] <= {2'd0, w_b[15:10]}; v_col[3] <= w_b[9:0]; v_wsel[1] <= addr_b0[17];
 		end else if (rd_b) begin
 			v_mode[1] <= 2'd1; v_mode[3] <= 2'd1;
 			v_row[1] <= {2'd0, addr_b0[16:11]}; v_col[1] <= addr_b0[10:1];
@@ -269,10 +267,10 @@ always @(posedge clk) begin
 	c_tv = 1'b0; c_tk = 3'd7; c_ti = 1'b0;
 	if (init_done) begin
 		case (slot)
-		4'd2: if (v_mode[0] != 2'd3) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_mode[0] == 2'd2 ? v_wrow[0] : v_row[0]); end
-		4'd4: if (v_mode[1] != 2'd3) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_mode[1] == 2'd2 ? v_wrow[1] : v_row[1]); end
-		4'd6: if (v_mode[2] != 2'd3) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_mode[2] == 2'd2 ? v_wrow[0] : v_row[2]); end
-		4'd8: if (v_mode[3] != 2'd3) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_mode[3] == 2'd2 ? v_wrow[1] : v_row[3]); end
+		4'd2: if (v_mode[0] != 2'd3) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
+		4'd4: if (v_mode[1] != 2'd3) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
+		4'd6: if (v_mode[2] != 2'd3) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_row[2]); end
+		4'd8: if (v_mode[3] != 2'd3) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_row[3]); end
 
 		4'd5: if (v_mode[0] <= 2'd1 && v_act[0]) begin v_act[0] <= 1'b0;
 			c_cmd = CMD_RD; c_ba = 2'd0; c_a = col_a(v_col[0]); c_tv = 1'b1; c_tk = (v_mode[0] == 2'd1) ? 3'd0 : 3'd7;
@@ -285,7 +283,7 @@ always @(posedge clk) begin
 				c_cmd = CMD_RD; c_ba = 2'd2; c_a = col_a(v_col[2]); c_tv = 1'b1; c_tk = (v_mode[2] == 2'd1) ? 3'd2 : 3'd7;
 			end else if ((v_mode[0] == 2'd2 && v_act[0]) || (v_mode[2] == 2'd2 && v_act[2])) begin
 				v_act[0] <= 1'b0; v_act[2] <= 1'b0;
-				c_cmd = CMD_WR; c_ba = v_wsel[0] ? 2'd2 : 2'd0; c_a = col_a(v_wcol[0]);
+				c_cmd = CMD_WR; c_ba = v_wsel[0] ? 2'd2 : 2'd0; c_a = col_a(v_col[2]);
 				c_dq = v_wd[0]; c_oe = 1'b1; c_dqm = ~v_wbe[0];
 			end
 		end
@@ -294,7 +292,7 @@ always @(posedge clk) begin
 				c_cmd = CMD_RD; c_ba = 2'd3; c_a = col_a(v_col[3]); c_tv = 1'b1; c_tk = (v_mode[3] == 2'd1) ? 3'd3 : 3'd7;
 			end else if ((v_mode[1] == 2'd2 && v_act[1]) || (v_mode[3] == 2'd2 && v_act[3])) begin
 				v_act[1] <= 1'b0; v_act[3] <= 1'b0;
-				c_cmd = CMD_WR; c_ba = v_wsel[1] ? 2'd3 : 2'd1; c_a = col_a(v_wcol[1]);
+				c_cmd = CMD_WR; c_ba = v_wsel[1] ? 2'd3 : 2'd1; c_a = col_a(v_col[3]);
 				c_dq = v_wd[1]; c_oe = 1'b1; c_dqm = ~v_wbe[1];
 			end
 		end

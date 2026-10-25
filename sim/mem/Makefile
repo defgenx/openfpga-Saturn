@@ -57,11 +57,10 @@ elab:
 long: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000
 
-# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 30 ns SRAM; a sector burst during VBlank erase
+# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 30 ns SRAM
 negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3
-	-$(VVP) build/tb_fb +N=100 +CDBURST | tail -3
 
 .PHONY: all elab long negative sdram psram ddram fb load clean
 

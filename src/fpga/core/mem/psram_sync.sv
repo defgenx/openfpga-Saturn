@@ -35,7 +35,9 @@ module psram_sync #(
 	parameter int WRITE_ADJ = 0,       // extra chip cycles before the first write word (bring-up)
 	parameter int CLK_KHZ   = 114546,  // clk, for the power-up wait
 	parameter int INIT_US   = 150,     // power-up wait; 0: none here, the client drives init_go (saves the timer)
-	parameter int ROW_LOG2  = 7        // halfwords per segment, log2 (row = 128)
+	parameter int ROW_LOG2  = 7,       // halfwords per segment, log2 (row = 128)
+	parameter int CNT_W     = 10,      // width of the word count actually used (the client never asks for more)
+	parameter bit ALIGNED   = 1'b0     // the client's requests never cross a row: only the low ROW_LOG2 address bits count
 ) (
 	input  wire        clk,
 	input  wire        reset,
@@ -106,7 +108,7 @@ reg         last = 1'b0, smp = 1'b0, cur_we = 1'b0, cur_we_req = 1'b0;
 // the request on the pins (and the rest of a split read)
 reg         act_busy = 1'b0;
 reg  [22:0] act_adr = 23'd0;      // halfword address of the next word
-reg   [9:0] act_cnt = 10'd0;      // read words still to fetch
+reg [CNT_W-1:0] act_cnt = '0;      // read words still to fetch
 reg         w_cur = 1'b0;         // write: next word
 reg   [1:0] w_rem = 2'd0;         // write: words left
 reg         smp_last = 1'b0;      // the word being sampled ends the request
@@ -137,7 +139,7 @@ task automatic launch;
 			w = we;
 			adr = addr;
 			act_adr <= adr; act_busy <= 1'b1; cur_we_req <= we;
-			act_cnt <= cnt;
+			act_cnt <= cnt[CNT_W-1:0];
 			w_cur <= 1'b0; w_rem <= cnt[1:0];
 		end
 		cur_we <= w;
@@ -245,10 +247,11 @@ always @(posedge clk) begin
 			if (!cur_we) begin
 				if (last) begin pins_idle(); st <= ST_IDLE; end
 				else begin
-					smp <= 1'b1; smp_last <= (act_cnt == 10'd1);
-					act_adr <= act_adr + 23'd1; act_cnt <= act_cnt - 10'd1;
-					if (act_cnt == 10'd1) act_busy <= 1'b0;
-					if (act_cnt == 10'd1 || row_end || rst_pend) last <= 1'b1;
+					smp <= 1'b1; smp_last <= (act_cnt == 1);
+					act_adr <= ALIGNED ? {act_adr[22:ROW_LOG2], act_adr[ROW_LOG2-1:0] + 1'd1} : act_adr + 23'd1;
+					act_cnt <= act_cnt - 1'd1;
+					if (act_cnt == 1) act_busy <= 1'b0;
+					if (act_cnt == 1 || (!ALIGNED && row_end) || rst_pend) last <= 1'b1;
 				end
 			end else begin
 				if (w_rem == 2'd0) begin

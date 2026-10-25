@@ -555,10 +555,11 @@ pad_pocket pads (
 `endif
 
 // ---------------------------------------------------------------------------------- CD drive
-wire       sram_req, sram_gnt;
-wire [16:0] cd_sram_a;
-wire [15:0] cd_sram_dq_o, cd_sram_dq_i;
-wire        cd_sram_dq_oe, cd_sram_oe_n, cd_sram_we_n, cd_sram_ub_n, cd_sram_lb_n;
+wire        rg_wr, rg_wbusy, rg_rd, rg_rbusy;
+wire [12:0] rg_wa;
+wire [31:0] rg_wd;
+wire [13:0] rg_ra;
+wire [15:0] rg_q;
 
 `ifdef POCKET_CUT_CDB_LLE
 // HLE CD block inside Saturn: cd_stream is the only CD client (no cdd_link / cdd_ctl). The disc
@@ -569,9 +570,8 @@ cd_stream stream (
 	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
-	.sram_a(cd_sram_a), .sram_dq_o(cd_sram_dq_o), .sram_dq_oe(cd_sram_dq_oe), .sram_dq_i(cd_sram_dq_i),
-	.sram_oe_n(cd_sram_oe_n), .sram_we_n(cd_sram_we_n), .sram_ub_n(cd_sram_ub_n), .sram_lb_n(cd_sram_lb_n),
-	.sram_req(sram_req), .sram_gnt(sram_gnt),
+	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+	.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 	.disc_ok(disc_ok), .disc_new(disc_new), .boot_busy(boot_busy), .boot_wr(boot_wr),
 	.boot_addr(boot_addr), .boot_data(boot_data),
 	.ntracks(ntracks), .ntbcd(ntbcd), .toc_end(toc_end), .hack_wwf(), .hack_rr(),
@@ -581,7 +581,7 @@ cd_stream stream (
 	.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
 	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
 	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
-	.err_cnt()
+	.err_cnt(), .ovf_cnt()
 );
 `endif
 `ifndef POCKET_CUT_CDB_LLE
@@ -614,16 +614,8 @@ cdd_pocket cdd (
 	.target_dataslot_ack(target_dataslot_ack),
 	.target_dataslot_done(target_dataslot_done),
 	.target_dataslot_err(target_dataslot_err),
-	.sram_a(cd_sram_a),
-	.sram_dq_o(cd_sram_dq_o),
-	.sram_dq_oe(cd_sram_dq_oe),
-	.sram_dq_i(cd_sram_dq_i),
-	.sram_oe_n(cd_sram_oe_n),
-	.sram_we_n(cd_sram_we_n),
-	.sram_ub_n(cd_sram_ub_n),
-	.sram_lb_n(cd_sram_lb_n),
-	.sram_req(sram_req),
-	.sram_gnt(sram_gnt),
+	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+	.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 	.DISC_OK(),
 	.DBG(),
 	.STALL()
@@ -638,14 +630,11 @@ assign target_dataslot_id = 16'd0;
 assign target_dataslot_slotoffset = 32'd0;
 assign target_dataslot_bridgeaddr = 32'd0;
 assign target_dataslot_length = 32'd0;
-assign sram_req = 1'b0;
-assign cd_sram_a = 17'd0;
-assign cd_sram_dq_o = 16'd0;
-assign cd_sram_dq_oe = 1'b0;
-assign cd_sram_oe_n = 1'b1;
-assign cd_sram_we_n = 1'b1;
-assign cd_sram_ub_n = 1'b1;
-assign cd_sram_lb_n = 1'b1;
+assign rg_wr = 1'b0;
+assign rg_wa = 13'd0;
+assign rg_wd = 32'd0;
+assign rg_rd = 1'b0;
+assign rg_ra = 14'd0;
 assign CD_RAM_Q = 16'd0;
 assign CD_RAM_RDY = 1'b1;
 `endif
@@ -710,9 +699,8 @@ mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
 	.FB1_A(VDP1_FB1_A), .FB1_D(VDP1_FB1_D), .FB1_WE(VDP1_FB1_WE), .FB1_RD(VDP1_FB1_RD), .FB1_Q(VDP1_FB1_Q),
 	.FB_RDY(VDP1_FB_RDY),
 
-	.cd_sram_a(cd_sram_a), .cd_sram_dq_o(cd_sram_dq_o), .cd_sram_dq_oe(cd_sram_dq_oe), .cd_sram_oe_n(cd_sram_oe_n),
-	.cd_sram_we_n(cd_sram_we_n), .cd_sram_ub_n(cd_sram_ub_n), .cd_sram_lb_n(cd_sram_lb_n),
-	.cd_sram_req(sram_req), .cd_sram_gnt(sram_gnt), .cd_sram_dq_i(cd_sram_dq_i),
+	.ringw_addr(rg_wa), .ringw_data(rg_wd), .ringw_wr(rg_wr), .ringw_busy(rg_wbusy),
+	.ring_addr(rg_ra), .ring_dout(rg_q), .ring_rd(rg_rd), .ring_busy(rg_rbusy),
 
 	.clk_74a(clk_74a),
 	.ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),

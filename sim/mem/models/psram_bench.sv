@@ -5,6 +5,8 @@
 
 module psram_bench #(
 	parameter integer INIT_US = 20,
+	parameter integer CNT_W = 10,
+	parameter bit ALIGNED = 1'b0,
 	parameter integer TCO = 3500,
 	parameter integer TIN = 1000
 ) (
@@ -26,7 +28,7 @@ module psram_bench #(
 
 wire [21:16] a; wire [15:0] dq_out, dq_in; wire dq_oe, cclk, adv_n, cre, ce0_n, ce1_n, oe_n, we_n, ub_n, lb_n;
 
-psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US)) ctl (
+psram_sync #(.LATENCY(4), .CLK_KHZ(114546), .INIT_US(INIT_US), .CNT_W(CNT_W), .ALIGNED(ALIGNED)) ctl (
 	.clk(clk), .reset(reset), .init_go(1'b0), .busy(busy), .addr(addr), .cnt(cnt), .rd(rd), .we(we), .din(din), .be(be),
 	.rdata(rdata), .rvalid(rvalid), .rlast(rlast), .idle(idle),
 	.cram_a(a), .cram_dq_out(dq_out), .cram_dq_oe(dq_oe), .cram_dq_in(dq_in), .cram_clk(cclk),
