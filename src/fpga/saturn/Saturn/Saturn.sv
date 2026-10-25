@@ -600,7 +600,9 @@ module Saturn
 							!BCSS_N ? SCSP_DO : 16'h0000;
 
 	bit DBG_ABUS_END;
-`ifdef POCKET_SCUP
+`ifdef POCKET_SCUP2
+	SCUP2 #(RAMH_SLOW) SCU
+`elsif POCKET_SCUP
 	SCUP #(RAMH_SLOW) SCU
 `else
 	SCU #(RAMH_SLOW) SCU

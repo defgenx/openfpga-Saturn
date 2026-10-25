@@ -71,6 +71,7 @@ sizing/vdp1p/ab_*/
 sizing/vdp1p/x2f/
 sizing/vdp1p/g4/
 sim/**/build_scup/
+sim/**/build_scup2/
 sizing/scup/*/out/
 sizing/scup/*/*.log
 sizing/scup/*.out
@@ -84,3 +85,5 @@ sizing/mem/m_*.q*
 sizing/mem/*.log
 sizing/mem/*.out
 sizing/vdp1p/snap/
+sizing/scup2/*/
+!sizing/scup2/*.sh
