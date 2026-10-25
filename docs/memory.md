@@ -19,23 +19,23 @@ is the only crossing (from `clk_74a`).
 | | VDP2 B0 128 KB | bank 1 rows 0-63 |
 | | VDP2 A1 128 KB | bank 2 rows 0-63 |
 | | VDP2 B1 128 KB | bank 3 rows 0-63 |
-| | SCSP RAM 0-256 KB (word addr bit 17 = 0) | bank 2 rows 64-191 |
-| | SCSP RAM 256-512 KB | bank 3 rows 64-191 |
+| | SCSP RAM 0-256 KB (word addr bit 17 = 0) | bank 2 rows 128-255 |
+| | SCSP RAM 256-512 KB | bank 3 rows 128-255 |
 | PSRAM0 (16 MB; die 0 = 0-8 MB, die 1 = 8-16 MB) | BIOS 512 KB | 0x000000 |
 | | backup RAM image, 64 KB (`{FF,byte}` words) | 0x100000 |
 | | WRAM-L 1 MB | 0x200000 |
 | | WRAM-H 1 MB | 0x300000 |
-| | cartridge window 8 MB (ROM, RAM carts, backup cart image at its base) | 0x400000-0xBFFFFF |
+| | cartridge window 8 MB (ROM, RAM carts, backup cart image at its base), all of die 1 | 0x800000-0xFFFFFF |
 | PSRAM1 | VDP1 VRAM 512 KB | 0x000000 |
 | | CD block DRAM 512 KB | 0x080000 |
 | | CD sector buffer (`cdbuf`, 16 KB) | 0x100000 |
 | SRAM (128K x 16) | CD sector ring, 8 x 4 KB (`cd_stream`) | words 0x0000-0x3FFF |
-| | VDP1 framebuffer 0, x < 352, index x*256+y | words 0x4000-0x1A0FF |
-| | free (48 KB) | words 0x1A100-0x1FFFF |
-| M10K | VDP1 framebuffer 1, x < 352 | 141 blocks |
+| | VDP1 framebuffer 0, x < 352, index x*256+y | words 0x4000-0x19FFF |
+| | VDP1 framebuffer 1, columns 256-351 (index 0x10000-0x15FFF) | words 0x1A000-0x1FFFF |
+| M10K | VDP1 framebuffer 1, columns 0-255 (index 0x0000-0xFFFF) | 103 blocks |
 
 The PSRAM0 offsets are the MiSTer DDR3 offsets of the same regions, with the cartridge moved from 0x4000000 to
-0x400000. WRAM-L is on PSRAM0 and not the proposed split with PSRAM1: PSRAM1 keeps VDP1 VRAM and the CD memories so the
+0x800000 (die 1, so the address is a concatenation, not a sum). WRAM-L is on PSRAM0 and not the proposed split with PSRAM1: PSRAM1 keeps VDP1 VRAM and the CD memories so the
 two FSMs in `ddram_pocket` never wait on each other (section 6).
 
 ## 2. VDP1 framebuffers
@@ -57,14 +57,26 @@ Roles swap every frame, so both buffers must take display + erase and draw.
 | PSRAM, synchronous burst | single word read 13 clk_ram (113 ns) = 8.8 M/s, write 15-21 clk_ram = 5.5-7.7 M/s per chip; sequential bursts reach 57 M/s but draw, CPU and erase strobes are single words | cannot take 28.6 M/s of VBlank erase or full-rate drawing, and the chip also carries VRAM or WRAM |
 | SDRAM bank 3 in the VDP2 schedule | one random access per 8 cycles per bank = 14 M/s at best; in the final schedule every bank is activated every 8 cycles (VDP2 and SCSP), so no bank has time to spare, and 4 of 16 command cycles are left | no |
 | cropped 352x240x16 = 165 KB in M10K, both buffers | 330 KB of the 385 KB M10K; the rest of the core needs about 100-110 KB (docs/saturn-architecture.md) plus 2 M10K TOC, caches | no |
-| cropped 352x256x16 = 176 KB (MiSTer's own M10K part), one buffer | one cycle, unlimited | fits: 141 of 308 blocks |
+| cropped 352x256x16 = 176 KB (MiSTer's own M10K part), one buffer | one cycle, unlimited | fits: 141 of 308 blocks (first version); 103 blocks with the SRAM tail below |
+| both buffers cropped to 352x240 | `OUT_Y` is 8 bit and the PAL modes show 256 lines, so 256 rows are addressable and can be displayed; 240 rows would cut 6% (9 blocks) and break PAL | no |
+| 8 bit per pixel | VDP1 16 bit pixel mode needs all 16 bits, and the buffer mode is per frame | no |
+| part of a buffer in SDRAM spare slots | no bank has time to spare (above) | no |
 | SRAM, 256 KB asynchronous | read 4 clk_ram (35 ns) = 28.6 M/s, write 3 clk_ram (26 ns) = 38 M/s, dedicated pins | holds one buffer (176 KB cropped) and still takes 28.6 M/s writes |
 
-Choice: **FB0 in the Pocket SRAM, FB1 in M10K, both cropped to the first 352 columns** (index = x*256 + y, the layout of
-`vdp1_fb_352x256x16`). Writes at x >= 352 are dropped and reads return 0; MiSTer keeps those columns in DDR3, here
-they cost 179 KB of M10K that does not exist. Games that draw sprites beyond column 351 and read them back, or use the
-rotated frame buffer modes past column 351, are the cases that differ. SRAM is the only off-chip memory that
-sustains VBlank erase; M10K is the only on-chip place for the second buffer.
+Choice: **FB0 in the Pocket SRAM, FB1 split: columns 0-255 in M10K (65,536 words, 103 blocks), columns 256-351 in the
+SRAM words that the CD ring and FB0 leave free (24,576 words); both cropped to the first 352 columns** (index = x*256 + y,
+the layout of `vdp1_fb_352x256x16`). Writes at x >= 352 are dropped and reads return 0; MiSTer keeps those columns in
+DDR3, here they cost 179 KB of M10K that does not exist. Games that draw sprites beyond column 351 and read them back,
+or use the rotated frame buffer modes past column 351, are the cases that differ. SRAM is the only off-chip memory that
+sustains VBlank erase; the M10K part is the only on-chip place for the rest. 65,536 words is the floor for this memory
+plan: both buffers need 180,224 words and the SRAM has 114,688 of them besides the CD ring (moving the ring to PSRAM1,
+see section 5, would free 16,384 more words = 26 blocks).
+
+The SRAM tail makes two SRAM streams possible at once (FB0 draw with FB1 tail erase, and the reverse). They have one FIFO
+each (256 entries, one M10K each, FB0 and FB1 can write in the same clk_sys); the engine drains the fuller one first and
+FB_RDY goes low while either holds 192 entries or more, so a draw is held back and the erase (which cannot stall) keeps
+room. A draw read of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read
+tracks `FB1_A` in the tail like `FB0_A`. The cost is the second tracker and FIFO in `vdp1_fb_pocket` (+50 ALMs).
 
 Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
 
@@ -72,11 +84,13 @@ Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
 |---|---|
 | draw, both buffers, back to back with the VDP1 handshake | 34 ns per pixel (2 clk_sys, the FSM bound) |
 | display read | pixel on FB0_Q within 4 clk_sys of the address change; erase write to that pixel does not disturb it |
+| display read of FB1 across the M10K / tail boundary (column 256) | valid within 4 clk_sys, 408 pixels |
+| FB1 tail erase (20,000 writes at 1 per 2 clk_sys) with FB0 drawing, and FB0 erase with FB1 tail drawing | 0 lost, 0 wrong, draw slowed by FB_RDY |
 | VBlank erase, 30,000 writes at 1 per 2 clk_sys, CD ring active | 0 lost, 0 wrong |
 | same with a CD sector burst at the bridge's full rate (+CDBURST) | **fails**: about 1000 erase writes lost (section 5) |
 | SRAM with tAA 30 ns (-DSRAMAA_PS=30000) | fails: reads return X, as expected for the 35 ns read cycle |
 
-If M10K cannot spare 141 blocks the other buffer has to go to PSRAM1 (not implemented): drawing into it runs at about
+If M10K cannot spare 103 blocks the other buffer has to go to PSRAM1 (not implemented): drawing into it runs at about
 a third of the speed and VBlank erase on it loses writes. The SRAM part number is not known (`docs/pocket-platform.md`
 2.1); `RD_CYC` and `WR_CYC` in `sram_pocket.sv` are the two knobs (write needs WE# low 8.7 ns at WR_CYC = 3).
 
@@ -121,8 +135,8 @@ grows; at 100 MHz the schedule would still need 16 cycles per dot, which is why 
 
 ### Latency (VDP2)
 
-VDP2 samples the four words on the second `DOT_CE_R` after the request = F + 24. The words land in `doutXX` at F + 11,
-13, 15, 17 (READ + 6). Window: after F + 8 (the previous set is sampled there) and before F + 24, so 6 cycles of margin
+VDP2 samples the four words on the second `DOT_CE_R` after the request = F + 24. Word 0 of each pair lands in
+`doutXX[31:16]` at READ + 5 and word 1 in `doutXX[15:0]` at READ + 6 (F + 11, 13, 15, 17 for the complete words). Window: after F + 8 (the previous set is sampled there) and before F + 24, so 6 cycles of margin
 at the late end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 3 profiles x 300 us.
 
 ### SCSP
@@ -140,12 +154,15 @@ previous request's word before that was sampled.
 | measured in `tb_sdram`, requests every 177 ns, 65% reads | 1-25 | 8-218 |
 
 Margin at the late end is 27 ns; there is none for a second request that arrives while the first is still waiting
-(`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot and are posted.
+(`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot and are posted. The slot reads its request
+registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT and CAS instead of keeping a copy: a request is captured at most
+16 cycles before its ACT and the CAS follows 3 cycles later, and the next request is at least 20 cycles behind it.
 
 ### Refresh
 
 There is no AUTO REFRESH after init. A group with no VDP2 read in a frame, and a SCSP slot with no request, issue a dummy
-read of the next row of their bank (`scr[]` counters: 64 rows in banks 0/1, 192 in banks 2/3), which restores it. Real
+read of the next row of their bank (`scr[]` counters: 64 rows in banks 0/1, 256 in banks 2/3, which wrap without a
+compare; SCSP RAM is at rows 128-255), which restores it. Real
 VDP2 timing has two no-access windows per line (`REFRESH` and `NOACCESS2`, 9 dots), so banks 0 and 1 are scrubbed at
 least 9 times per 63.5 us line, against 64 rows per bank to cover in 64 ms. Results:
 
@@ -186,17 +203,21 @@ writes and the half-rate F/R-edge structure are those of `psx_vram_psram.sv` fro
 (MIT); it was re-targeted from 2 ganged chips at
 33.9 MHz to one chip at 57.3 MHz. The async configuration write is stretched (WE# 70 ns) for the shorter slots.
 
-Client port = the 64 bit DDRAM backend that `ddram.sv` drives (busy low = request taken, `dout_ready` beats, busy low
-in the beat cycle). Words are big endian in the beat: word 0 = bits 63:48, as `ddram.sv` stores them.
+Client port, 16 bit words (`ddram_pocket` forms the halfword address and the word count; the controller keeps no lane or
+beat logic): `addr` halfword address (bit 22 = die), `cnt` words (reads 1-1023, writes 1 or 2), `din` = {word 0, word 1}
+with `be` = {enables of word 0, of word 1}, held by the client until the controller is idle. A read returns its words on
+`rdata`/`rvalid`, `rlast` marks the final word and busy is low in that cycle. A 2 word write starts at an even address
+(it never crosses a 128 halfword row). The power-up wait is not in the controller (`INIT_US = 0`): `mem_pocket` holds both
+chips until `sdram_ready` (200 us after `rst_ram`, longer than the 150 us the chips need).
 
 `tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, tCEM 4 us, 150 us power-up;
 rules after the PSX model, written independently):
 
 | Access | clk_ram cycles | ns |
 |---|---|---|
-| first beat of a read | 20 | 174 |
-| 32 byte line (4 beats) | 44-56 | 384-488 |
-| 1-2 word write | 15-21 | 130-180 |
+| first word of a read | 14 | 122 |
+| 32 byte line (16 words) | 44-56 | 384-488 |
+| 1-2 word write | 15-17 | 130-150 |
 | longest CE# low | | 2.3 us (limit 4 us) |
 
 WRAM-H line fill seen by the CPU (`ramh_busy`), `tb_ddram`:

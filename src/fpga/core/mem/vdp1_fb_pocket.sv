@@ -86,19 +86,30 @@ reg [15:0] m1_q;
 reg        m1_sel, t1_sel;
 reg [15:0] fb1_sq;                         // SRAM tail data (clk_ram)
 `ifdef ALTERA_RESERVED_QIS
-altsyncram #(
-	.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
-	.width_a(16), .widthad_a(16), .numwords_a(65536), .width_byteena_a(2),
-	.width_b(16), .widthad_b(16), .numwords_b(65536),
-	.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
-	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
-) fb1_ram (
-	.clock0(clk_sys), .address_a(i1[15:0]), .data_a(FB1_D), .wren_a(|FB1_WE && mm1), .byteena_a(FB1_WE),
-	.address_b(i1[15:0]), .q_b(m1_q), .rden_b(1'b1),
-	.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_b(1'b1),
-	.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
-	.data_b({16{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
-);
+// Each byte lane is built from 5 + 2 + 1 bit columns: the M10K holds 10240 bits as 2K x 5 and 8192 as 4K x 2 / 8K x 1,
+// a 16 bit wide array would use 512 x 16 (8192 bits per block, 128 blocks); this one takes 112.
+genvar gl, gc;
+generate
+	for (gl = 0; gl < 2; gl = gl + 1) begin : lane
+		for (gc = 0; gc < 3; gc = gc + 1) begin : col
+			localparam int W  = (gc == 0) ? 5 : (gc == 1) ? 2 : 1;
+			localparam int LO = (gc == 0) ? 0 : (gc == 1) ? 5 : 7;
+			altsyncram #(
+				.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+				.width_a(W), .widthad_a(16), .numwords_a(65536),
+				.width_b(W), .widthad_b(16), .numwords_b(65536),
+				.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
+				.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
+			) ram (
+				.clock0(clk_sys), .address_a(i1[15:0]), .data_a(FB1_D[8*gl+LO +: W]), .wren_a(FB1_WE[gl] && mm1),
+				.address_b(i1[15:0]), .q_b(m1_q[8*gl+LO +: W]), .rden_b(1'b1),
+				.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+				.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+				.data_b({W{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
+			);
+		end
+	end
+endgenerate
 `else
 reg [15:0] m1 [0:65535];
 always @(posedge clk_sys) begin
