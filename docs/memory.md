@@ -5,7 +5,7 @@ Everything Saturn_MiSTer keeps in SDRAM1, SDRAM2 and HPS DDR3 is mapped onto the
 (plus a loader and a CD-buffer write port) and the VDP1 framebuffer ports of `VDP1.sv`. `mem_pocket.sv` wires it all
 with Pocket pin names. All of it is simulated (`make -C sim mem`); none of it has run on hardware.
 
-Sections: 1 map, 2 framebuffer decision, 3 SDRAM schedule, 4 PSRAM, 5 SRAM and the CD ring, 6 bandwidth budget,
+Sections: 1 map, 2 framebuffer decision, 3 SDRAM schedule, 4 PSRAM, 5 SRAM and the CD ring (PSRAM1), 6 bandwidth budget,
 7 load path, 8 resources, 9 simulation, 10 untested and risks.
 
 Clocks: `clk_ram` = 2 x `clk_sys` (107-114.5 MHz), phase aligned, no CDC between them (as in MiSTer). The loader FIFO
@@ -29,10 +29,10 @@ is the only crossing (from `clk_74a`).
 | PSRAM1 | VDP1 VRAM 512 KB | 0x000000 |
 | | CD block DRAM 512 KB | 0x080000 |
 | | CD sector buffer (`cdbuf`, 16 KB) | 0x100000 |
-| SRAM (128K x 16) | CD sector ring, 8 x 4 KB (`cd_stream`) | words 0x0000-0x3FFF |
-| | VDP1 framebuffer 0, x < 352, index x*256+y | words 0x4000-0x19FFF |
-| | VDP1 framebuffer 1, columns 256-351 (index 0x10000-0x15FFF) | words 0x1A000-0x1FFFF |
-| M10K | VDP1 framebuffer 1, columns 0-255 (index 0x0000-0xFFFF) | 103 blocks |
+| | CD sector ring, 8 x 4 KB (`cd_stream`) | 0x108000-0x10FFFF |
+| SRAM (128K x 16) | VDP1 framebuffer 1, columns 192-351 (index 0xC000-0x15FFF) | words 0x0000-0x9FFF |
+| | VDP1 framebuffer 0, x < 352, index x*256+y | words 0xA000-0x1FFFF |
+| M10K | VDP1 framebuffer 1, columns 0-191 (index 0x0000-0xBFFF) | 96 blocks |
 
 The PSRAM0 offsets are the MiSTer DDR3 offsets of the same regions, with the cartridge moved from 0x4000000 to
 0x800000 (die 1, so the address is a concatenation, not a sum). WRAM-L is on PSRAM0 and not the proposed split with PSRAM1: PSRAM1 keeps VDP1 VRAM and the CD memories so the
@@ -63,14 +63,13 @@ Roles swap every frame, so both buffers must take display + erase and draw.
 | part of a buffer in SDRAM spare slots | no bank has time to spare (above) | no |
 | SRAM, 256 KB asynchronous | read 4 clk_ram (35 ns) = 28.6 M/s, write 3 clk_ram (26 ns) = 38 M/s, dedicated pins | holds one buffer (176 KB cropped) and still takes 28.6 M/s writes |
 
-Choice: **FB0 in the Pocket SRAM, FB1 split: columns 0-255 in M10K (65,536 words, 103 blocks), columns 256-351 in the
-SRAM words that the CD ring and FB0 leave free (24,576 words); both cropped to the first 352 columns** (index = x*256 + y,
-the layout of `vdp1_fb_352x256x16`). Writes at x >= 352 are dropped and reads return 0; MiSTer keeps those columns in
-DDR3, here they cost 179 KB of M10K that does not exist. Games that draw sprites beyond column 351 and read them back,
-or use the rotated frame buffer modes past column 351, are the cases that differ. SRAM is the only off-chip memory that
-sustains VBlank erase; the M10K part is the only on-chip place for the rest. 65,536 words is the floor for this memory
-plan: both buffers need 180,224 words and the SRAM has 114,688 of them besides the CD ring (moving the ring to PSRAM1,
-see section 5, would free 16,384 more words = 26 blocks).
+Choice: **FB0 in the Pocket SRAM, FB1 split: columns 0-191 in M10K (49,152 words, 96 blocks), columns 192-351 in the
+rest of the SRAM (40,960 words, the whole SRAM is framebuffer pixels); both cropped to the first 352 columns** (index =
+x*256 + y, the layout of `vdp1_fb_352x256x16`). Writes at x >= 352 are dropped and reads return 0; MiSTer keeps those
+columns in DDR3, here they cost 179 KB of M10K that does not exist. Games that draw sprites beyond column 351 and read
+them back, or use the rotated frame buffer modes past column 351, are the cases that differ. SRAM is the only off-chip
+memory that sustains VBlank erase; the M10K part is the only on-chip place for the rest. 49,152 words is the floor for
+this memory plan: both buffers need 180,224 words and the SRAM has 131,072 (the CD ring lives in PSRAM1, section 5).
 
 The SRAM tail makes two SRAM streams possible at once (FB0 draw with FB1 tail erase, and the reverse). They have one FIFO
 each (256 entries, one M10K each, FB0 and FB1 can write in the same clk_sys); the engine drains the fuller one first and
@@ -84,13 +83,12 @@ Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
 |---|---|
 | draw, both buffers, back to back with the VDP1 handshake | 34 ns per pixel (2 clk_sys, the FSM bound) |
 | display read | pixel on FB0_Q within 4 clk_sys of the address change; erase write to that pixel does not disturb it |
-| display read of FB1 across the M10K / tail boundary (column 256) | valid within 4 clk_sys, 408 pixels |
+| display read of FB1 across the M10K / tail boundary (column 192) | valid within 4 clk_sys, 664 pixels |
 | FB1 tail erase (20,000 writes at 1 per 2 clk_sys) with FB0 drawing, and FB0 erase with FB1 tail drawing | 0 lost, 0 wrong, draw slowed by FB_RDY |
-| VBlank erase, 30,000 writes at 1 per 2 clk_sys, CD ring active | 0 lost, 0 wrong |
-| same with a CD sector burst at the bridge's full rate (+CDBURST) | **fails**: about 1000 erase writes lost (section 5) |
+| VBlank erase, 30,000 writes at 1 per 2 clk_sys | 0 lost, 0 wrong |
 | SRAM with tAA 30 ns (-DSRAMAA_PS=30000) | fails: reads return X, as expected for the 35 ns read cycle |
 
-If M10K cannot spare 103 blocks the other buffer has to go to PSRAM1 (not implemented): drawing into it runs at about
+If M10K cannot spare 96 blocks the other buffer has to go to PSRAM1 (not implemented): drawing into it runs at about
 a third of the speed and VBlank erase on it loses writes. The SRAM part number is not known (`docs/pocket-platform.md`
 2.1); `RD_CYC` and `WR_CYC` in `sram_pocket.sv` are the two knobs (write needs WE# low 8.7 ns at WR_CYC = 3).
 
@@ -233,20 +231,22 @@ chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait
 
 ## 5. SRAM and the CD ring
 
-`cd_stream` (docs/cd.md) keeps its pin-level SRAM FSM on `clk_sys`. `sram_pocket.sv` owns the pins: it multiplexes
-that bus with the framebuffer engine. Two ports were added to `cd_stream`/`cdd_pocket`, `sram_req` and `sram_gnt`; the FSM
-starts an access only with `sram_gnt` (tie it high when the SRAM is dedicated, as `sim/cd` does). The ring stays at
-words 0-0x3FFF; the framebuffer starts at 0x4000.
+The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). The CD sector ring (8 slots x 4 KB, docs/cd.md)
+is in PSRAM1 at byte 0x108000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
+`rg_*` instead of the SRAM pins.
 
-* Grant is held until `sram_req` drops; no framebuffer access starts while a grant is due.
-* While erase writes are queued the grant waits up to 24 clk_ram (a bridge word is held 30 clk_74a = 50 clk_ram).
-* The framebuffer write FIFO (256 x 35 bit, one M10K) absorbs the CD accesses; writes are drained back to back (3 cycles
-  each against one push per 4 cycles).
+* Write: one 32 bit write (two ring words) per bridge word, `ringw_*`, on the chip B arbiter after the reads. The request
+  is not copied in `ddram_pocket`: `rg_wa`/`rg_wd` stay unchanged until `rg_wbusy` has fallen. `cd_stream` queues the
+  bridge words in a 64 entry FIFO (one M10K pair) because the chip can be busy with a VDP1 burst (up to about 1000
+  clk_ram) while a bridge word arrives every 25 clk_sys. A sector counts as complete (`ring_add`) only when the FIFO is
+  empty and the last write has been issued; `ovf_cnt` counts words lost to a full FIFO (0 in `sim/cd`).
+* Read: `ring_*`, 16 bit words with a 32 byte line cache. A ring write drops the cached line. The feed asks for the next
+  word right after outputting the previous one, so it has one word period (648 clk_ram) for a line fill; a fill behind a
+  full VDP1 burst can be later than that, which delays that word and nothing else.
+* `ddram_pocket` +40 ALMs for the two channels, `sram_pocket` -20 (no arbitration), `vdp1_fb_pocket` gets 16,384 more
+  tail words (32 M10K blocks fewer).
 
-Known limit: a VBlank erase running at its full rate while the bridge streams a sector at full speed (588 words, about
-250 us) is 8 cycles short per bridge word and overflows the FIFO. `make -C sim/mem negative` shows it (+CDBURST). It
-needs `VBE` set and a sector arriving in the same 2.9 ms. The fix is to move the ring off the SRAM: PSRAM1's `cdbuf`
-write port (`cdbuf_waddr/wdata/wwr`) is provided for it, at the price of changing the `cd_stream` ring interface.
+The old limit (a VBlank erase at full rate plus a sector burst lost erase writes) is gone with the ring.
 
 ## 6. Bandwidth budget
 
@@ -254,8 +254,8 @@ write port (`cdbuf_waddr/wdata/wwr`) is provided for it, at the price of changin
 |---|---|---|---|
 | SDRAM | VDP2 8 DQ cycles per 16 = 114.5 MB/s, SCSP up to 5.6 M requests/s (11 MB/s useful, 2 DQ cycles each), writes in the gaps | fixed schedule, 229 MB/s raw | command bus 12/16, every bank re-activated every 8 cycles; the timing table above: tRC 9.8 ns, tRRD 5.5 ns, tRCD 8.2 ns, tRAS 1.7 ns (smallest), tRP 8 ns |
 | PSRAM0 | WRAM-H and WRAM-L line fills (32 B in 384-488 ns = 66-83 MB/s when streaming), SCU DMA bursts, posted writes at 130-180 ns | one chip, about 70 MB/s for 32 B lines, 10 M random words/s | a fill is 12 SH-2 bus cycles; no hit-rate data (no software run), see risk 9 |
-| PSRAM1 | VDP1 texture bursts 5-30 MB/s, CD RAM 1-3 MB/s, CD buffer 0.4 MB/s | same | 3-5x |
-| SRAM | display read 5.1 M/s + erase 5.1 M/s + draw up to 14 M/s typical (28.6 peak) + CD ring 0.1 M/s | read 28.6 M/s, write 38 M/s | active line: 4+3 cycles of 16 for display and erase; draw takes the rest |
+| PSRAM1 | VDP1 texture bursts 5-30 MB/s, CD RAM 1-3 MB/s, CD buffer 0.4 MB/s, CD ring 0.8 MB/s (588 words in 250 us when a sector arrives) | same | 3-5x |
+| SRAM | display read 5.1 M/s + erase 5.1 M/s + draw up to 14 M/s typical (28.6 peak), both buffers | read 28.6 M/s, write 38 M/s | active line: 4+3 cycles of 16 for display and erase; draw takes the rest |
 | M10K FB1 | any | one access per clk_sys | n/a |
 
 ## 7. Load path (`load_pocket.sv`)
@@ -328,7 +328,8 @@ Timing closure at 114.5 MHz (clk_ram) is unknown.
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
 | `tb_load` | 2048 loader writes from 4096 + 1024 + 1024 bridge bytes (backup cart at PSRAM0 0x800000) | pass |
 | `mem-long` | 66 ms retention with the 256 row scrub of banks 2/3 | pass |
-| `sim/cd` regression with the added `sram_gnt` | | pass |
+| `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
+| `tb_ddram` ring | 3 sectors of 588 bridge words written and read back while the other clients run | 0 errors |
 
 The models were written here from the datasheet values quoted in the other cores' sources; they share any
 misreading with the controllers.
@@ -344,7 +345,7 @@ misreading with the controllers.
    knobs. The controller does not park the chips back in asynchronous mode: after this core the chips stay
    synchronous until power-off, which breaks other cores that use them asynchronously (the PSX core parks them).
 6. SRAM part and speed unknown; the framebuffer needs a read of 35 ns and a write cycle of 26 ns with WE# low 8.7 ns.
-7. VBlank erase plus a full-rate sector burst loses erase writes (section 5).
+7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
    caches, SH-1 and SCSP are counted. FB0 draw with an FB1 tail erase (or the reverse) slows the draw while FB_RDY is held low.
 12. `sdram_pocket` SCSP slots depend on requests being at least 20 clk_ram apart (they are: CE spacing 177 ns).

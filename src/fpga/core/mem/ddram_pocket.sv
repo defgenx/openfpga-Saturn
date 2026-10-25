@@ -780,7 +780,7 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	output wire          EMPTY,
 	output wire          FULL
 );
-	(* ramstyle = "M10K, no_rw_check" *) reg [W-1:0] mem [0:(1<<l)-1];   // an entry is read only after the count shows it
+	reg [W-1:0] mem [0:(1<<l)-1];   // an entry is read only after the count shows it
 	reg [l-1:0] RADDR = '0, WADDR = '0;
 	reg [l:0]   AMOUNT = '0;
 	always @(posedge CLK) begin
