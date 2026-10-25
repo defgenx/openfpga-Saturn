@@ -97,7 +97,7 @@ module SH2P_decrom (
 );
 	import SH2P_PKG::*;
 	wire [7:0] AD = RESET ? 8'd%d : CLS_D;
-	(* romstyle = "M10K" *) reg [%d:0] Q;
+	(* romstyle = "logic" *) reg [%d:0] Q;
 	always @(posedge CLK) if (EN_A | RESET) begin
 		case (AD)''' % (RSTC, W+5))
 for i,w in enumerate(words):
