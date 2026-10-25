@@ -28,3 +28,5 @@ set_global_assignment -name SYSTEMVERILOG_FILE snap_c1/SCSPP_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE snap_c1/SCSPP.sv
 set_global_assignment -name SYSTEMVERILOG_FILE snap_c1/scsp_wrap.sv
 set_instance_assignment -name VIRTUAL_PIN ON -to *
+
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"

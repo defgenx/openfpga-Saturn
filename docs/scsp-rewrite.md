@@ -59,7 +59,7 @@ The fitter charges the standalone top 117 ALMs for its 233 virtual pins; the in-
 | + one accumulator pair (direct+effect), SND_EN gating per contribution | 1,899 | 2,741 | 1,473 | 5 | |
 | + sample-offset loop arithmetic (two add/sub units) | 1,878 | 2,695 | 1,473 | 5 | |
 | + DSP B operand negation through the carry | 1,865 | 2,669 | 1,473 | 5 | |
-| + level/pan, FM modulation, master volume, volume shift on DSP blocks | 1,766 | | 1,473 | 10 | per block: level/pan -42 (2 blocks), FM -24, master volume -18, volume shift -15; phase shift -16 for 2 blocks, FtoI 0, ItoF -5 (not used) |
+| + level/pan, FM modulation, master volume, volume shift on DSP blocks | 1,763 (with the phase shift on DSP too, 11 blocks) | | 1,473 | 10 | per block: level/pan -42 (2 blocks), FM -24, master volume -18, volume shift -15; phase shift -16 for 2 blocks, FtoI 0, ItoF -5 (not used) |
 | + DSP-side copies of COEF, MEMS, EFREG with RAM output registers | 1,756 | 2,523 | 1,420 | 10 | |
 | **final, `quartus_fit`** | **fit 1,782** | 2,546 | 1,413 | 10 | 30 RAM blocks (= `SCSP`), 100 ALMs of MLAB |
 
