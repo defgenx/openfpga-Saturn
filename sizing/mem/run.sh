@@ -23,8 +23,9 @@ for f in mem_pocket sdram_pocket sdram_clk_out psram_sync ddram_pocket load_pock
 done
 python3 "$D/ports.py" "$W/$S/mem_pocket.sv" >> "$D/m_$N.qsf"
 echo "PROJECT_REVISION = \"m_$N\"" > "$D/m_$N.qpf"
-CMD="quartus_map m_$N"; [ "$MODE" = map ] || CMD="$CMD && quartus_fit m_$N"
+CMD="quartus_map m_$N && quartus_cdb m_$N --vqm=out_$N/m_$N.vqm"; [ "$MODE" = map ] || CMD="$CMD && quartus_fit m_$N"
 QRUN_MAX=${QRUN_MAX:-3} /Users/adelvecchio/Documents/workspace/openfpga-Saturn/tools/qrun.sh "mem-fit-$N" "$W" /build/sizing/mem sh -c "$CMD" > "$D/m_$N.log" 2>&1 || { echo FAIL; tail -20 "$D/m_$N.log"; exit 1; }
 if [ "$MODE" = map ]; then python3 "$D/maptab.py" "$D/out_$N/m_$N.map.rpt" > "$D/$N.entities.txt"
 else python3 "$W/tools/fit_entities.py" "$D/out_$N/m_$N.fit.rpt" 0 > "$D/$N.entities.txt"; fi
+python3 "$W/sizing/scu/cones.py" "$D/out_$N/m_$N.vqm" > "$D/$N.cones.txt" || true
 cat "$D/$N.entities.txt"
