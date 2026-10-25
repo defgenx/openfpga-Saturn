@@ -1,0 +1,28 @@
+# Fit status
+
+Measured full compiles of the Pocket core (`src/fpga/ap_core.qsf`, area profile, seed 13, 5CEBA4F23C8).
+Per-entity tables are in `sizing/pocket-build/`.
+
+| Build | Config | ALMs needed | LABs needed | M10K | DSP |
+|---|---|---|---|---|---|
+| `integrate` | upstream blocks, LLE CD, no rewrites | 30,723 | | 309 / 308 | 29 |
+| `pocket-build` full | HLE CD, M68KP, VDP2P, VDP1P, SH2P, PLL_LITE; no feature cuts | 22,509 (122%) | 2,279 / 1,848 | 308 / 308 | 29 / 66 |
+
+Fitter ALMs per block, full config (`full_sh2p.entities.txt`):
+
+| Block | ALMs |
+|---|---|
+| SH7604P x2 | 2,850 + 2,792 |
+| VDP2P | 4,724 |
+| SCU (DSP 574) | 2,215 |
+| SCSP | 1,995 |
+| VDP1P | 1,932 |
+| mem_pocket | 1,708 |
+| m68kp | 887 |
+| cdb_hle | 742 |
+| SMPC (LLE) | 538 |
+| cd_stream | 379 |
+| core_bridge_cmd | 186 |
+
+Gap to the device: about 4,030 ALMs (431 LABs). M10K is exactly full; the VDP1 framebuffer 1 in
+`vdp1_fb_pocket` holds 1,417 kbit (141 blocks) of the 1,921 kbit used.

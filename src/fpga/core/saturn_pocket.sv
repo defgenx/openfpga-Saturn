@@ -103,6 +103,11 @@ pll_sys pll (
 	.reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from)
 );
 
+`ifdef POCKET_PLL_LITE
+wire PAL;
+wire SMPC_DOTSEL;
+pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(SMPC_DOTSEL), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
+`else
 wire        cfg_waitrequest;
 reg         cfg_write;
 reg   [5:0] cfg_address;
@@ -115,6 +120,8 @@ pll_sys_cfg pll_cfg (
 	.reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from)
 );
 
+`endif
+
 assign clk_audio = clk_sys;
 
 reg [1:0] lock_s;
@@ -125,6 +132,9 @@ always @(posedge clk_74a) begin
 end
 assign pll_locked_74a = lock_s[1];
 
+`ifdef POCKET_PLL_LITE
+wire rst_req_74 = ~reset_n | ~ever_locked;
+`else
 // clk_sys = 12 x VCO^-1: mode picks M (integer) and K (fraction) of the 74.25 MHz reference
 //   M reg: 0x404 = 8, 0x20504 = 9 (low count [15:8], high count [7:0], odd-division bit 17)
 //   NTSC 320: M 8.6866 53.7482 MHz   NTSC 352: M 9.2562 57.2728 MHz
@@ -169,6 +179,8 @@ always @(posedge clk_74a) begin
 		endcase
 	end
 end
+
+`endif
 
 // ---------------------------------------------------------------------------------- settings into clk_sys
 reg [1:0] region_s1, region_s2;
@@ -334,6 +346,15 @@ wire [ 6: 0] SMPC_PDR1I, SMPC_PDR1O, SMPC_DDR1, SMPC_PDR2I, SMPC_PDR2O, SMPC_DDR
 
 wire         CD_CDATA, CD_HDATA, CD_COMCLK, CD_COMREQ_N, CD_COMSYNC_N, CD_CK, CD_AUDIO;
 wire [17: 0] CD_DATA;
+`ifdef POCKET_CUT_CDB_LLE
+wire        disc_ok, disc_new;
+wire  [6:0] ntracks, lk_track, lk_idx;
+wire  [7:0] ntbcd, lk_tbcd, lk_idx1;
+wire [23:0] toc_end, lk_start, sd_hdr, lk_x, pf_fad;
+wire        lk_go, lk_byidx, lk_hold, lk_busy, eng_idle, lk_data, lk_s2048;
+wire        pf_flush, pf_en, pf_ready, sd_go, sd_spd2, sd_synth, fd_busy;
+wire  [1:0] sd_kind;
+`endif
 wire [18: 1] CD_RAM_A;
 wire [15: 0] CD_RAM_D, CD_RAM_Q;
 wire [ 1: 0] CD_RAM_WE;
@@ -431,6 +452,34 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.SMPC_PDR2O(SMPC_PDR2O),
 	.SMPC_DDR2(SMPC_DDR2),
 
+`ifdef POCKET_CUT_CDB_LLE
+	.CD_CE(CD_CE),
+	.CD_CDATA(1'b1),
+	.CD_HDATA(),
+	.CD_COMCLK(),
+	.CD_COMREQ_N(1'b1),
+	.CD_COMSYNC_N(1'b1),
+	.CD_DEMP(),
+	.CD_D(CD_DATA[15:0]),
+	.CD_CK(CD_CK),
+	.CD_AUDIO(CD_AUDIO),
+	.CD_RAM_A(CD_RAM_A),
+	.CD_RAM_D(CD_RAM_D),
+	.CD_RAM_WE(CD_RAM_WE),
+	.CD_RAM_RD(CD_RAM_RD),
+	.CD_RAM_CS(CD_RAM_CS),
+	.CD_RAM_Q(CD_RAM_Q),
+	.CD_RAM_RDY(CD_RAM_RDY),
+	.CDD_CE(CDD_2X_CE),
+	.DISC_OK(disc_ok), .DISC_NEW(disc_new), .TOC_NTRACKS(ntracks), .TOC_NTBCD(ntbcd), .TOC_END(toc_end),
+	.LK_GO(lk_go), .LK_BYIDX(lk_byidx), .LK_X(lk_x), .LK_IDX(lk_idx), .LK_HOLD(lk_hold), .LK_BUSY(lk_busy),
+	.LK_ENG_IDLE(eng_idle), .LK_TRACK(lk_track), .LK_TBCD(lk_tbcd), .LK_START(lk_start), .LK_IDX1(lk_idx1),
+	.LK_DATA(lk_data), .LK_S2048(lk_s2048),
+	.PF_FLUSH(pf_flush), .PF_FAD(pf_fad), .PF_EN(pf_en), .PF_READY(pf_ready),
+	.SD_GO(sd_go), .SD_KIND(sd_kind), .SD_SYNTH(sd_synth), .SD_SPD2(sd_spd2), .SD_HDR(sd_hdr), .FD_BUSY(fd_busy),
+	.CD_DATA18(CD_DATA),
+`endif
+`ifndef POCKET_CUT_CDB_LLE
 `ifndef POCKET_CUT_CD
 	.CD_CE(CD_CE),
 	.CD_CDATA(CD_CDATA),
@@ -449,6 +498,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.CD_RAM_CS(CD_RAM_CS),
 	.CD_RAM_Q(CD_RAM_Q),
 	.CD_RAM_RDY(CD_RAM_RDY),
+`endif
 `endif
 
 	.CART_MODE(cart_type),
@@ -510,6 +560,31 @@ wire [16:0] cd_sram_a;
 wire [15:0] cd_sram_dq_o, cd_sram_dq_i;
 wire        cd_sram_dq_oe, cd_sram_oe_n, cd_sram_we_n, cd_sram_ub_n, cd_sram_lb_n;
 
+`ifdef POCKET_CUT_CDB_LLE
+// HLE CD block inside Saturn: cd_stream is the only CD client (no cdd_link / cdd_ctl). The disc
+// header replay stays: area code, cartridge request and game id are needed before the BIOS runs.
+cd_stream stream (
+	.clk(clk_sys), .rst_n(~(reset | download | rst_ram)), .ce(CDD_2X_CE),
+	.clk_74a(clk_74a), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
+	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
+	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
+	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
+	.sram_a(cd_sram_a), .sram_dq_o(cd_sram_dq_o), .sram_dq_oe(cd_sram_dq_oe), .sram_dq_i(cd_sram_dq_i),
+	.sram_oe_n(cd_sram_oe_n), .sram_we_n(cd_sram_we_n), .sram_ub_n(cd_sram_ub_n), .sram_lb_n(cd_sram_lb_n),
+	.sram_req(sram_req), .sram_gnt(sram_gnt),
+	.disc_ok(disc_ok), .disc_new(disc_new), .boot_busy(boot_busy), .boot_wr(boot_wr),
+	.boot_addr(boot_addr), .boot_data(boot_data),
+	.ntracks(ntracks), .ntbcd(ntbcd), .toc_end(toc_end), .hack_wwf(), .hack_rr(),
+	.lk_go(lk_go), .lk_byidx(lk_byidx), .lk_x(lk_x), .lk_idx(lk_idx), .lk_hold(lk_hold),
+	.lk_busy(lk_busy), .eng_idle(eng_idle), .lk_track(lk_track), .lk_tbcd(lk_tbcd),
+	.lk_start(lk_start), .lk_idx1(lk_idx1), .lk_data(lk_data), .lk_s2048(lk_s2048),
+	.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
+	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
+	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
+	.err_cnt()
+);
+`endif
+`ifndef POCKET_CUT_CDB_LLE
 `ifndef POCKET_CUT_CD
 cdd_pocket cdd (
 	.CLK(clk_sys),
@@ -573,6 +648,7 @@ assign cd_sram_ub_n = 1'b1;
 assign cd_sram_lb_n = 1'b1;
 assign CD_RAM_Q = 16'd0;
 assign CD_RAM_RDY = 1'b1;
+`endif
 `endif
 
 // ---------------------------------------------------------------------------------- memory
