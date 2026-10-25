@@ -610,6 +610,47 @@ module SCUP2
 		SCUP2_LANE L(CLK, wrow, wd, wen, rrow, DMA_LQ[gl]);
 	end endgenerate
 	
+	bit         BBUS_A1;
+	//B-bus data/address word: one AND-OR of the forms, each selected by its state and condition
+	wire        BEN = CE_R && RES_N;
+	wire        b_idle = BEN && BBUS_ST == BBUS_IDLE;
+	wire        b_c3 = DMA_READ_B && !DMA_WRITE_B && ((!DMA_DSP && ((!CBRLS && DMA_WRITE_C) || DMA_WRITE_A)) || (DMA_DSP && !DSP_DMA_WE));
+	wire        b_c4 = DMA_WRITE_B && !DMA_READ_B && ((!DMA_DSP && ((!CBRLS && DMA_READ_C) || DMA_READ_A)) || (DMA_DSP && DSP_DMA_WE));
+	wire        b_nreq = b_idle && !CPU_BBUS_REQ && !(DMA_READ_B && DMA_IND);
+	wire        f_h  = (b_idle && CPU_BBUS_REQ && BCACHE_CA[22]) || (BEN && BBUS_ST == BBUS_ADDR16_H) || (BEN && BBUS_ST == BBUS_ADDR8_HH && !BRDYS_N);
+	wire        f_ind = b_idle && !CPU_BBUS_REQ && DMA_READ_B && DMA_IND;
+	wire        f_dr = b_nreq && b_c3;
+	wire        f_dw = b_nreq && !b_c3 && b_c4;
+	wire        f_l  = (BEN && BBUS_ST == BBUS_ADDR16_L && BBUS_RDY) || (BEN && BBUS_ST == BBUS_ADDR8_HL);
+	wire        f_d1 = (BEN && BBUS_ST == BBUS_WRITE16_H && BBUS_RDY) || (BEN && BBUS_ST == BBUS_WRITE8_HL);
+	wire        f_d0 = (BEN && BBUS_ST == BBUS_WRITE16_L && BBUS_RDY) || (BEN && BBUS_ST == BBUS_WRITE8_LL);
+	wire        f_ra = BEN && BBUS_ST == BBUS_DMA_RADDR1;
+	wire        f_wa = BEN && BBUS_ST == BBUS_DMA_WADDR0;
+	wire        f_wr = BEN && BBUS_ST == BBUS_DMA_WRITE && !ABUS_WEND && BBUS_RDY;
+	wire        f_w0 = f_wr && !BBUS_WRITE_PAGE;
+	wire        f_w3 = (f_wr && BBUS_WRITE_PAGE && (BBUS_WRITE_UNALIGNED || (DMA_WTN_LESS2 && DMA_WTN[0]))) || (BEN && BBUS_ST == BBUS_DMA_PAGE);
+	wire        f_pd = BBUS_DATA_ACK;
+	wire [15:0] bdo_n =
+		({16{f_h}}   & {1'b0, &BCACHE_CDQMN, 2'b00, BCACHE_CA[20:9]}) |
+		({16{f_ind}} & {4'b0111, DMA_IA[20:9]}) |
+		({16{f_dr}}  & {4'b0111, DMA_RA[20:9]}) |
+		({16{f_dw}}  & {2'b00, {2{BBUS_WRITE_PAGE}}, DMA_WA[20:9]}) |
+		({16{f_l}}   & (!BCACHE_CRDN ? {4'b1000, 4'b0000, BCACHE_CA[8:2], BBUS_A1} :
+		                !(&BCACHE_CDQMN[3:2]) ? {2'b10, BCACHE_CDQMN[3:2], 4'b0000, BCACHE_CA[8:1]} :
+		                                           {2'b10, BCACHE_CDQMN[1:0], 4'b0000, BCACHE_CA[8:1]})) |
+		({16{f_d1}}  & BCACHE_CDI[31:16]) |
+		({16{f_d0}}  & BCACHE_CDI[15:0]) |
+		({16{f_ra}}  & {4'b1000, 4'b0000, DMA_IND ? DMA_IA[8:1] : DMA_RA[8:1]}) |
+		({16{f_wa}}  & {2'b10, DMA_WA[0] ? 2'b10 : (DMA_WTN_LESS2 && DMA_WTN[0]) ? 2'b01 : 2'b00, 4'b0000, DMA_WA[8:1]}) |
+		({16{f_w0}}  & {4'b0000, DMA_WA[20:9]}) |
+		({16{f_w3}}  & {4'b0011, DMA_WA[20:9]}) |
+		({16{f_pd}}  & {DMA_P0, DMA_WA[0] ? DMA_P0 : DMA_P1});
+	wire        bdo_ld = f_h | f_ind | f_dr | f_dw | f_l | f_d1 | f_d0 | f_ra | f_wa | f_w0 | f_w3 | f_pd;
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) BDO <= '0;
+		else if (RES_N && bdo_ld) BDO <= bdo_n;
+	end
+	
 	//Capture of CPU writes to DR/DW/DC; they land in the clk after the CE_R cycle that processes REG_WWAIT
 	wire        CW_STB = CE_R && RES_N && REG_WWAIT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -653,7 +694,6 @@ module SCUP2
 		bit  [ 5:0] ABUS_WAIT_CNT;
 		bit  [ 9:0] ABUS_RFS_CNT;
 		bit         ABUS_RFS;
-		bit         BBUS_A1;
 		bit         BBUS_RD;
 		bit         CPU_ABUS_WAIT_CLR;
 		bit         CPU_BBUS_WAIT_CLR;
@@ -691,7 +731,6 @@ module SCUP2
 			ATIM1_N <= 1;
 			ATIM2_N <= 1;
 			
-			BDO <= '0;
 			BADDT_N <= 1;
 			BDTEN_N <= 1;
 			BCS1_N <= 1;
@@ -1146,7 +1185,7 @@ module SCUP2
 								1'b0: BCS1_N <= 0;
 								1'b1: BCS2_N <= 0;
 							endcase
-							BDO <= {1'b0,&BBUS_CDQMN_INNER,2'b00,BBUS_CA_INNER[20:9]};
+							;
 							BDTEN_N <= 1;
 							BADDT_N <= 1;
 							BBUS_ST <= BBUS_ADDR16_L;
@@ -1159,7 +1198,7 @@ module SCUP2
 							2'b10: BCS1_N <= 0;
 							2'b11: BCS2_N <= 0;
 						endcase
-						BDO <= {1'b0,1'b1,2'b11,DMA_IA[20:9]};
+						;
 						BDTEN_N <= 1;
 						BADDT_N <= 1;
 						
@@ -1174,7 +1213,7 @@ module SCUP2
 							2'b10: BCS1_N <= 0;
 							2'b11: BCS2_N <= 0;
 						endcase
-						BDO <= {1'b0,1'b1,2'b11,DMA_RA[20:9]};
+						;
 						BDTEN_N <= 1;
 						BADDT_N <= 1;
 						
@@ -1189,7 +1228,7 @@ module SCUP2
 							2'b10: BCS1_N <= 0;
 							2'b11: BCS2_N <= 0;
 						endcase
-						BDO <= {1'b0,1'b0,{2{BBUS_WRITE_PAGE}},DMA_WA[20:9]};
+						;
 						BDTEN_N <= 1;
 						BADDT_N <= 1;
 						
@@ -1206,7 +1245,7 @@ module SCUP2
 						1'b0: BCS1_N <= 0;
 						1'b1: BCS2_N <= 0;
 					endcase
-					BDO <= {1'b0,&BBUS_CDQMN_INNER,2'b00,BBUS_CA_INNER[20:9]};
+					;
 					BDTEN_N <= 1;
 					BADDT_N <= 1;
 					BBUS_ST <= BBUS_ADDR16_L;
@@ -1215,11 +1254,11 @@ module SCUP2
 				BBUS_ADDR16_L: if (CE_R) begin
 					if (BBUS_RDY) begin
 						if (!BBUS_CRDN_INNER) 
-							BDO <= {2'b10,2'b00,4'b0000,BBUS_CA_INNER[8:2],BBUS_A1};
+							;
 						else if (!(&BBUS_CDQMN_INNER[3:2])) 
-							BDO <= {2'b10,BBUS_CDQMN_INNER[3:2],4'b0000,BBUS_CA_INNER[8:1]};
+							;
 						else
-							BDO <= {2'b10,BBUS_CDQMN_INNER[1:0],4'b0000,BBUS_CA_INNER[8:1]};
+							;
 						BDTEN_N <= 1;
 						BADDT_N <= 1;
 						BBUS_ST <= BBUS_RD ? BBUS_READ16_START : BBUS_WORD[1] ? BBUS_WRITE16_H : BBUS_WRITE16_L;
@@ -1232,7 +1271,7 @@ module SCUP2
 `endif
 					BADDT_N <= 0;
 					if (BBUS_RDY) begin
-						BDO <= BBUS_CDI_INNER[31:16];
+						;
 						BDTEN_N <= 0;
 						BREQ_N <= 0;
 						BBUS_WORD[1] <= 0;
@@ -1256,7 +1295,7 @@ module SCUP2
 `endif
 					BADDT_N <= 0;
 					if (BBUS_RDY) begin
-						BDO <= BBUS_CDI_INNER[15:0];
+						;
 						BDTEN_N <= 0;
 						BREQ_N <= 0;
 						BBUS_WORD[0] <= 0;
@@ -1338,7 +1377,7 @@ module SCUP2
 				BBUS_ADDR8_HH: if (CE_R) begin
 					if (!BRDYS_N) begin
 						BCSS_N <= 0;
-						BDO <= {1'b0,&BBUS_CDQMN_INNER,2'b00,BBUS_CA_INNER[20:9]};
+						;
 						BDTEN_N <= 1;
 						BADDT_N <= 1;
 						BBUS_ST <= BBUS_ADDR8_HL;
@@ -1349,11 +1388,11 @@ module SCUP2
 				
 				BBUS_ADDR8_HL: if (CE_R) begin
 					if (!BBUS_CRDN_INNER) 
-						BDO <= {2'b10,2'b00,4'b0000,BBUS_CA_INNER[8:2],BBUS_A1};
+						;
 					else if (!(&BBUS_CDQMN_INNER[3:2])) 
-						BDO <= {2'b10,BBUS_CDQMN_INNER[3:2],4'b0000,BBUS_CA_INNER[8:1]};
+						;
 					else
-						BDO <= {2'b10,BBUS_CDQMN_INNER[1:0],4'b0000,BBUS_CA_INNER[8:1]};
+						;
 					BDTEN_N <= 1;
 					BADDT_N <= 1;
 					BBUS_ST <= BBUS_ADDR8_LH;
@@ -1377,7 +1416,7 @@ module SCUP2
 				end
 				
 				BBUS_WRITE8_HL: if (CE_R) begin
-					BDO <= BBUS_CDI_INNER[31:16];
+					;
 					BDTEN_N <= 0;
 					BADDT_N <= 0;
 					BREQ_N <= 0;
@@ -1399,7 +1438,7 @@ module SCUP2
 				end
 				
 				BBUS_WRITE8_LL: if (CE_R) begin
-					BDO <= BBUS_CDI_INNER[15:0];
+					;
 					BDTEN_N <= 0;
 					BADDT_N <= 0;
 					BREQ_N <= 0;
@@ -1481,9 +1520,9 @@ module SCUP2
 				
 				BBUS_DMA_RADDR1: if (CE_R) begin
 					if (!DMA_IND)
-						BDO <= {4'b1000,4'b0000,DMA_RA[8:1]};
+						;
 					else
-						BDO <= {4'b1000,4'b0000,DMA_IA[8:1]};
+						;
 					BBUS_ST <= BBUS_DMA_RADDR2;
 `ifdef DEBUG
 					DBG_BBUS_WAIT_CNT <= '0;
@@ -1527,11 +1566,11 @@ module SCUP2
 				
 				BBUS_DMA_WADDR0: if (CE_R) begin
 					if (DMA_WA[0])
-						BDO <= {2'b10,2'b10,4'b0000,DMA_WA[8:1]};
+						;
 					else if (DMA_WTN_LESS2 && DMA_WTN[0])
-						BDO <= {2'b10,2'b01,4'b0000,DMA_WA[8:1]};
+						;
 					else
-						BDO <= {2'b10,2'b00,4'b0000,DMA_WA[8:1]};
+						;
 					BBUS_ST <= !DMA_WA[22] ? BBUS_DMA_WADDR1 : BBUS_DMA_WADDR3;
 `ifdef DEBUG
 					DBG_BBUS_WAIT_CNT <= '0;
@@ -1555,8 +1594,8 @@ module SCUP2
 					if (BBUS_RDY) begin
 						if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2:1] || DMA_WA[0] || (DMA_WTN_LESS2 && DMA_WTN[0]))) begin
 							case (DMA_WA[0])
-								1'b0: BDO <= {DMA_P0,DMA_P1};
-								1'b1: BDO <= {DMA_P0,DMA_P0};
+								1'b0: ;
+								1'b1: ;
 							endcase
 							BDTEN_N <= 0;
 							BREQ_N <= 0;
@@ -1583,19 +1622,19 @@ module SCUP2
 						BBUS_WRITE_DONE = BBUS_WRITE_PROCESS;
 						BBUS_WRITE_PROCESS <= 0;
 						if (!BBUS_WRITE_PAGE) begin
-							BDO <= {1'b0,1'b0,2'b00,DMA_WA[20:9]};
+							;
 							BADDT_N <= 1;
 							BBUS_ST <= BBUS_DMA_WADDR0;
 						end else if (BBUS_WRITE_UNALIGNED || (DMA_WTN_LESS2 && DMA_WTN[0])) begin
-							BDO <= {1'b0,1'b0,2'b11,DMA_WA[20:9]};
+							;
 							BADDT_N <= 1;
 							BBUS_ST <= BBUS_DMA_WADDR0;
 						end else if (DMA_WA[8:1] == 8'd255) begin
 							BBUS_ST <= BBUS_DMA_PAGE;
 						end else if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2:1] || (DMA_WTN_LESS2 && DMA_WTN[0]))) begin
 							case (DMA_WA[0])
-								1'b0: BDO <= {DMA_P0,DMA_P1};
-								1'b1: BDO <= {DMA_P0,DMA_P0};
+								1'b0: ;
+								1'b1: ;
 							endcase
 							BDTEN_N <= 0;
 							BREQ_N <= 0;
@@ -1609,7 +1648,7 @@ module SCUP2
 				end
 				
 				BBUS_DMA_PAGE: if (CE_R) begin
-					BDO <= {1'b0,1'b0,2'b11,DMA_WA[20:9]};
+					;
 					BADDT_N <= 1;
 					BBUS_ST <= BBUS_DMA_WADDR0;
 				end
