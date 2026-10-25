@@ -1737,26 +1737,27 @@ module VDP2P import VDP2P_PKG::*; (
 	assign SUMX = $signed(ACCX) + $signed(MultRC(MULXA, ($signed(SUBXA) - $signed(SUBXB))));
 	assign SUMY = $signed(ACCY) + $signed(MultRC(MULYA, ($signed(SUBYA) - $signed(SUBYB))));
 	//Per-table rotation state in block RAM (word = table A/B). Xsp/Ysp accumulate one entry per DOTCLK_DIV slot.
-	wire [31:0]  XST_Q, YST_Q, XP_Q, YP_Q, DX_Q, DY_Q, SPX_Q, SPY_Q;
+	wire [31:0]  XYST_Q, XP_Q, YP_Q, DX_Q, DY_Q, SPX_Q, SPY_Q;
 	reg          XST_WE, YST_WE, DX_WE, XP_WE, SPX_WE, SPY_WE;
-	reg  [31:0]  XST_WD, YST_WD, SPX_WD, SPY_WD;
+	reg  [31:0]  XYST_WD, SPX_WD, SPY_WD;
+	wire [31:0]  XST_Q = XYST_Q, YST_Q = XYST_Q;
 	reg          SPX_WA, SPY_WA;
 	wire         ACC_X = CE_R && RBG_CALC && !DOTCLK_DIV[0];
 	wire         ACC_Y = CE_R && RBG_CALC &&  DOTCLK_DIV[0];
 	wire         RPST_W = DOT_CE_R && (VA2.RPA || VA2.RPB);
 	always_comb begin
 		XST_WE = 0; YST_WE = 0; DX_WE = 0; XP_WE = 0; SPX_WE = 0; SPY_WE = 0;
-		XST_WD = '0; YST_WD = '0; SPX_WD = '0; SPY_WD = '0;
+		XYST_WD = '0; SPX_WD = '0; SPY_WD = '0;
 		SPX_WA = RPN; SPY_WA = RPN;
 		if (RPST_W) begin
 			case (RPP)
 				5'd04: begin
 					XST_WE = 1;
-					XST_WD = IS_LAST_LINE ? ScrnStartToRC(PB_Q) : $signed(XST_Q) + $signed(ScrnIncToRC(PA_Q));
+					XYST_WD = IS_LAST_LINE ? ScrnStartToRC(PB_Q) : $signed(XYST_Q) + $signed(ScrnIncToRC(PA_Q));
 				end
 				5'd05: begin
 					YST_WE = 1;
-					YST_WD = IS_LAST_LINE ? ScrnStartToRC(PB_Q) : $signed(YST_Q) + $signed(ScrnIncToRC(PA_Q));
+					XYST_WD = IS_LAST_LINE ? ScrnStartToRC(PB_Q) : $signed(XYST_Q) + $signed(ScrnIncToRC(PA_Q));
 				end
 				5'd14: DX_WE = 1;
 				5'd17: begin SPX_WE = 1; SPX_WD = SUMX; SPY_WE = 1; SPY_WD = SUMY; end
@@ -1771,8 +1772,8 @@ module VDP2P import VDP2P_PKG::*; (
 			SPY_WE = 1; SPY_WA = DOTCLK_DIV[1]; SPY_WD = $signed(SPY_Q) + $signed(DY_Q);
 		end
 	end
-	VDP2P_SDP #(1,32,0) r_xst(CLK, XST_WE, RPN, XST_WD, RPN, XST_Q);
-	VDP2P_SDP #(1,32,0) r_yst(CLK, YST_WE, RPN, YST_WD, RPN, YST_Q);
+	//start coordinates: word {Y,table}; the microcode reads X at even steps (4, 14) and Y at odd steps (5, 15)
+	VDP2P_SDP #(2,32,0) r_xyst(CLK, XST_WE | YST_WE, {YST_WE,RPN}, XYST_WD, {RPP[0],RPN}, XYST_Q);
 	VDP2P_SDP #(1,32,0) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, DOTCLK_DIV[1], DX_Q);
 	VDP2P_SDP #(1,32,0) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, DOTCLK_DIV[1], DY_Q);
 	VDP2P_SDP #(1,32,0) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, DOTCLK_DIV[1], XP_Q);

@@ -754,6 +754,7 @@ set_global_assignment -name VERILOG_MACRO "POCKET_M68KP=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_VDP2P=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_VDP1P=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_PLL_LITE=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_SH2P=1"
 # lite: POCKET_CUT_SCU_DSP POCKET_CUT_SCSP_DSP POCKET_CUT_SH2_WDT POCKET_CUT_SH2_DIVU_SHARED
 set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
