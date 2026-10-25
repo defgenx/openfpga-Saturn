@@ -1,5 +1,5 @@
-`ifndef SH2_PKG_SV
-`define SH2_PKG_SV
+`ifndef SH2P_PKG_SV
+`define SH2P_PKG_SV
 
 package SH2P_PKG;
 
