@@ -10,6 +10,9 @@
 #include <vector>
 #include <cmath>
 #include "Vtb_top.h"
+#ifdef DBGINT
+#include "Vtb_top___024root.h"
+#endif
 #include "verilated.h"
 
 typedef Vtb_top T;
@@ -219,6 +222,14 @@ static void tick() {
 	top->R_RAM_Q = ram_r.q; top->N_RAM_Q = ram_n.q;
 	top->eval();
 	bool bad = false;
+#ifdef DBGINT
+	{ auto r = top->rootp; static std::vector<std::string> seen;
+#define RAMCHK(n,arr,N) { bool d=false; for(int k=0;k<N;k++) if(r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k]!=r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]) d=true; if(d){ bool f=false; for(auto&x:seen) if(x==#n) f=true; if(!f){ seen.push_back(#n); fprintf(stderr,"RAM %s first differs clk=%llu\n",#n,(unsigned long long)clk_count); for(int k=0;k<N;k++) if(r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k]!=r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]) fprintf(stderr,"   [%d] ref=%x new=%x\n",k,(unsigned)r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k],(unsigned)r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]); fprintf(stderr,"   OP7 ref=%llx new=%llx OP6 ref=%llx new=%llx\n",(unsigned long long)r->tb_top__DOT__ref_i__DOT__OP7,(unsigned long long)r->tb_top__DOT__new_i__DOT__OP7,(unsigned long long)r->tb_top__DOT__ref_i__DOT__OP6,(unsigned long long)r->tb_top__DOT__new_i__DOT__OP6);} } }
+	  RAMCHK(STACK0,altdpram_component__DOT__mem,32) RAMCHK(STACK1,altdpram_component__DOT__mem,32)
+	  RAMCHK(MIXSA_RAM,altsyncram_component__DOT__mem,16) RAMCHK(MIXSB_RAM,altsyncram_component__DOT__mem,16)
+	  RAMCHK(EFREG_RAM,altsyncram_component__DOT__mem,16) RAMCHK(TEMP_RAM,altsyncram_component__DOT__mem,128) RAMCHK(MEMS_RAM,altsyncram_component__DOT__mem,32)
+	  RAMCHK(SO_RAM,altsyncram_component__DOT__mem,32) RAMCHK(PHASE_FRAC_RAM,altsyncram_component__DOT__mem,32) }
+#endif
 	CMP(DO) CMP(RDY_N) CMP(INT_N) CMP(SCCE_R) CMP(SCCE_F) CMP(SCDO) CMP(SCDTACK_N)
 	CMP(SCAVEC_N) CMP(SCIPL_N) CMP(RAM_A) CMP(RAM_D) CMP(RAM_WE) CMP(RAM_RD) CMP(RAM_CS)
 	CMP(RAM_RFS)
@@ -228,6 +239,14 @@ static void tick() {
 	  pl = top->R_SOUND_L; pr = top->R_SOUND_R;
 	  if (steady >= 4) { CMP(SOUND_L) CMP(SOUND_R) } }
 	if (bad) {
+#ifdef DBGINT
+		auto r = top->rootp;
+		fprintf(stderr, "  ref: DEVL=%u A=%x D=%x DMA_EXEC=%u DMA_DIR=%u DMA_WR=%u DMA_DAT=%x DMA_MA=%x DMA_RA=%x REGQ=%x\n", r->tb_top__DOT__ref_i__DOT__MEM_DEV_LATCH, r->tb_top__DOT__ref_i__DOT__MEM_A, r->tb_top__DOT__ref_i__DOT__MEM_D, r->tb_top__DOT__ref_i__DOT__DMA_EXEC, r->tb_top__DOT__ref_i__DOT__DMA_DIR, r->tb_top__DOT__ref_i__DOT__DMA_WR, r->tb_top__DOT__ref_i__DOT__DMA_DAT, r->tb_top__DOT__ref_i__DOT__DMA_MA, r->tb_top__DOT__ref_i__DOT__DMA_RA, r->tb_top__DOT__ref_i__DOT__REG_Q);
+		fprintf(stderr, "  new: DEVL=%u A=%x D=%x DMA_EXEC=%u DMA_DIR=%u DMA_WR=%u DMA_DAT=%x DMA_MA=%x DMA_RA=%x REGQ=%x\n", r->tb_top__DOT__new_i__DOT__MEM_DEV_LATCH, r->tb_top__DOT__new_i__DOT__MEM_A, r->tb_top__DOT__new_i__DOT__MEM_D, r->tb_top__DOT__new_i__DOT__DMA_EXEC, r->tb_top__DOT__new_i__DOT__DMA_DIR, r->tb_top__DOT__new_i__DOT__DMA_WR, r->tb_top__DOT__new_i__DOT__DMA_DAT, r->tb_top__DOT__new_i__DOT__DMA_MA, r->tb_top__DOT__new_i__DOT__DMA_RA, r->tb_top__DOT__new_i__DOT__REG_Q);
+		static bool once=false; if(!once){once=true;
+#define CMPRAM(n) for(int k=0;k<32;k++){ if(r->tb_top__DOT__ref_i__DOT__SCR_##n##__DOT__altsyncram_component__DOT__mem[k]!=r->tb_top__DOT__new_i__DOT__SCR_##n##__DOT__altsyncram_component__DOT__mem[k]) fprintf(stderr,"  %s[%d] ref=%x new=%x\n",#n,k,r->tb_top__DOT__ref_i__DOT__SCR_##n##__DOT__altsyncram_component__DOT__mem[k],r->tb_top__DOT__new_i__DOT__SCR_##n##__DOT__altsyncram_component__DOT__mem[k]); }
+		CMPRAM(SCR0) CMPRAM(SA) CMPRAM(LSA) CMPRAM(LEA) CMPRAM(SCR1) CMPRAM(SCR2) CMPRAM(SCR3) CMPRAM(SCR4) CMPRAM(SCR5) CMPRAM(SCR6) CMPRAM(SCR7) CMPRAM(SCR8) }
+#endif
 		if (++mismatches > 5) { fprintf(stderr, "FAIL\n"); exit(1); }
 	}
 	if (top->R_SCIPL_N != 7) st_irq++;
