@@ -33,6 +33,12 @@ module SH2P_FERAM #(
 	always @(posedge CLK) if (WE) mem[WA] <= WD;
 	always @(negedge CLK) q <= mem[RA];
 	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
 `endif
 endmodule
 

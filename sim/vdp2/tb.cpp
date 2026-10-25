@@ -482,6 +482,11 @@ int main(int argc, char** argv) {
 #endif
 		top->CLK = 1;
 		top->eval();
+		// Falling edge before the compare, with the next clock enables already applied (they come from registers in the
+		// core): M10K reads that sample their address there settle before the next rising edge.
+		top->CE_R = (t + 1) & 1 ? 0 : 1; top->CE_F = (t + 1) & 1;
+		top->CLK = 0;
+		top->eval();
 
 		const VlWide<3>& rm = top->r_misc; const VlWide<3>& dm = top->d_misc;
 		// R,G,B are compared while VBL_N is high (visible lines); in vertical blank only the sync/IRQ/bus outputs are.

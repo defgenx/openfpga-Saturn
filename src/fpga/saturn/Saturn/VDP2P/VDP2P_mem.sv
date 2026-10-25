@@ -117,48 +117,55 @@ module VDP2P_WRITE_FIFO (
 	assign FULL = AMOUNT[3];
 	assign LAST = (AMOUNT == 4'd1);
 	
-	altdpram	altdpram_component (
-				.data (DATA),
-				.inclock (CLK),
-				.rdaddress (RADDR),
-				.wraddress (WADDR),
-				.wren (WRREQ),
-				.q (sub_wire0),
-				.aclr (1'b0),
-				.byteena (1'b1),
-				.inclocken (1'b1),
-				.rdaddressstall (1'b0),
-				.rden (1'b1),
-//				.sclr (1'b0),
-				.wraddressstall (1'b0));
-	defparam
-		altdpram_component.indata_aclr = "OFF",
-		altdpram_component.indata_reg = "INCLOCK",
-		altdpram_component.intended_device_family = "Cyclone V",
-		altdpram_component.lpm_type = "altdpram",
-		altdpram_component.outdata_aclr = "OFF",
-		altdpram_component.outdata_reg = "UNREGISTERED",
-		altdpram_component.ram_block_type = "MLAB",
-		altdpram_component.rdaddress_aclr = "OFF",
-		altdpram_component.rdaddress_reg = "UNREGISTERED",
-		altdpram_component.rdcontrol_aclr = "OFF",
-		altdpram_component.rdcontrol_reg = "UNREGISTERED",
-		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram_component.width = 36,
-		altdpram_component.widthad = 3,
-		altdpram_component.width_byteena = 1,
-		altdpram_component.wraddress_aclr = "OFF",
-		altdpram_component.wraddress_reg = "INCLOCK",
-		altdpram_component.wrcontrol_aclr = "OFF",
-		altdpram_component.wrcontrol_reg = "INCLOCK";
-		
+	VDP2P_FERAM #(3,36) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	
 	assign Q = sub_wire0;
 
 endmodule
 
 // Small RAM building blocks. ML=1 builds an MLAB with asynchronous read (cycle-identical to a register
 // array); ML=0 builds an M10K with a registered read, which the callers use only where the read address
-// is stable for at least two clocks before the value is consumed.
+// is stable for at least two clocks before the value is consumed; ML=2 builds an M10K read on the falling edge.
+
+// Simple dual port RAM in M10K whose read address is registered on the falling edge: for a register-sourced read
+// address the value is the one an asynchronous MLAB read gives before the next rising edge (ML=2 below).
+module VDP2P_FERAM #(
+	parameter AW = 4,
+	parameter DW = 32
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(AW), .widthad_b(AW), .width_a(DW), .width_b(DW), .width_byteena_a(1)
+	) ram (
+		.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(~CLK), .data_a(WD), .wren_a(WE), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({DW{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) if (WE) mem[WA] <= WD;
+	always @(negedge CLK) q <= mem[RA];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
+`endif
+endmodule
 
 // K-clock-enable delay of D (K >= 2): Q equals the output of a K-stage shift register that shifts when EN is
 // high and takes D as stage 0 input. 2**AW must exceed K. The M10K read address is the post-edge write
@@ -236,16 +243,14 @@ module VDP2P_CDPRING (
 	input  [ 1:0] RP,
 	output [17:0] Q
 );
-	(* ramstyle = "MLAB, no_rw_check" *) reg [17:0] mem [0:15];
-	always @(posedge CLK) if (WE) mem[{WB,WP}] <= WD;
-	assign Q = mem[{RB,RP}];
+	VDP2P_FERAM #(4,18) ram(CLK, WE, {WB,WP}, WD, {RB,RP}, Q);
 endmodule
 
 // 2**AW x DW simple dual port RAM, one write port, one read port.
 module VDP2P_SDP #(
 	parameter AW = 1,
 	parameter DW = 32,
-	parameter ML = 1
+	parameter ML = 2
 ) (
 	input           CLK,
 	input           WE,
@@ -254,7 +259,9 @@ module VDP2P_SDP #(
 	input  [AW-1:0] RA,
 	output [DW-1:0] Q
 );
-	generate if (ML) begin : g_ml
+	generate if (ML == 2) begin : g_fe
+		VDP2P_FERAM #(AW,DW) ram(CLK, WE, WA, WD, RA, Q);
+	end else if (ML == 1) begin : g_ml
 		(* ramstyle = "MLAB, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
 		always @(posedge CLK) if (WE) mem[WA] <= WD;
 		assign Q = mem[RA];
@@ -271,11 +278,11 @@ endmodule
 
 // Register words held in RAM: 2**AW words of DW bits written by the CPU register decode. The registers
 // clear on reset, so each word carries a valid flag (flip-flops) that masks stale RAM contents.
-// ML=0 samples the read address on the falling edge so the word appears within the clock.
+// ML=0 and ML=2 sample the read address on the falling edge so the word appears within the clock.
 module VDP2P_REGRAM #(
 	parameter AW = 1,
 	parameter DW = 16,
-	parameter ML = 1
+	parameter ML = 2
 ) (
 	input           CLK,
 	input           RST_N,
@@ -288,7 +295,9 @@ module VDP2P_REGRAM #(
 );
 	reg [(1<<AW)-1:0] vld = '0;
 	wire [DW-1:0] w;
-	generate if (ML) begin : g_ml
+	generate if (ML == 2) begin : g_fe
+		VDP2P_FERAM #(AW,DW) ram(CLK, WE, WA, WD, RA, w);
+	end else if (ML == 1) begin : g_ml
 		(* ramstyle = "MLAB, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
 		always @(posedge CLK) if (WE) mem[WA] <= WD;
 		assign w = mem[RA];
