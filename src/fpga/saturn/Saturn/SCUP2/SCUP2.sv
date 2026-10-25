@@ -651,6 +651,24 @@ module SCUP2
 		else if (RES_N && bdo_ld) BDO <= bdo_n;
 	end
 	
+	//C-bus address and write data: loaded by the same conditions as the DMA acknowledges
+	wire        cb_ind  = DMA_BUS_EN && CBUS_ST == CBUS_START && DMA_READ_C && DMA_IND;
+	wire        cb_rd   = DMA_BUS_EN && CBUS_ST == CBUS_START && DMA_READ_C && !DMA_IND;
+	wire        cb_inc  = DMA_BUS_EN && ECWAIT_N_FF && (CBUS_ST == CBUS_IND_READ ||
+	                      (CBUS_ST == CBUS_READ && !CCACHE_FULL[CBUS_A[4]] && !CBUS_RFS_PEND && !CBUS_RAS_PEND) ||
+	                      (CBUS_ST == CBUS_READ_END && CBUS_A[3:2] != 2'b11 && !RAMH_SLOW));
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin CBUS_A <= '0; CBUS_D <= '0; end
+		else if (!RES_N) begin CBUS_A <= '0; CBUS_D <= '0; end
+		else begin
+			if (cb_ind) CBUS_A <= {DMA_IA[26:4],4'b0000};
+			else if (cb_rd) CBUS_A <= {DMA_RA[26:4],4'b0000};
+			else if (CBUS_DATA_ACK) CBUS_A <= {DMA_WA[26:2],2'b00};
+			else if (cb_inc) CBUS_A <= CBUS_A + 27'd4;
+			if (CBUS_DATA_ACK) CBUS_D <= CBUS_DN;
+		end
+	end
+	
 	//Capture of CPU writes to DR/DW/DC; they land in the clk after the CE_R cycle that processes REG_WWAIT
 	wire        CW_STB = CE_R && RES_N && REG_WWAIT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -768,8 +786,6 @@ module SCUP2
 			
 			CBUS_ST <= CBUS_IDLE;
 			CBUS_DMA_START <= 0;
-			CBUS_A <= '0;
-			CBUS_D <= '0;
 			CBUS_WAIT <= 0;
 			CBUS_RFS_PEND <= 0;
 			CBUS_RFS <= '0;
@@ -823,8 +839,6 @@ module SCUP2
 			
 			CBUS_ST <= CBUS_IDLE;
 			CBUS_DMA_START <= 0;
-			CBUS_A <= '0;
-			CBUS_D <= '0;
 			CBUS_WAIT <= 0;
 			CBUS_RFS_PEND <= 0;
 			CBUS_RFS <= '0;
@@ -1693,7 +1707,7 @@ module SCUP2
 				
 				CBUS_START: if (CE_R) begin
 					if (DMA_READ_C && DMA_IND) begin
-						CBUS_A <= {DMA_IA[26:4],4'b0000};
+						;
 						CBUS_RD <= 1;
 						CBUS_CS <= 1;
 						CBUS_BURST <= 1;
@@ -1701,7 +1715,7 @@ module SCUP2
 						CBUS_ST <= CBUS_IND_READ;
 					end
 					else if (DMA_READ_C && !DMA_IND) begin
-						CBUS_A <= {DMA_RA[26:4],4'b0000};
+						;
 						CBUS_RD <= 1;
 						CBUS_CS <= 1;
 						CBUS_BURST <= DMA_DSP;
@@ -1710,12 +1724,12 @@ module SCUP2
 						CBUS_ST <= CBUS_READ;
 					end
 					else if (DMA_WRITE_C && DMA_BUF_SIZE && (DMA_BUF_SIZE[2] || DMA_WA[1:0] || (DMA_WTN_LESS4 && DMA_WTN[1:0]))) begin
-						CBUS_A <= {DMA_WA[26:2],2'b00};
+						;
 						if (DMA_DSP) begin
-							CBUS_D <= CBUS_DN;
+							;
 							CBUS_WR <= 4'b1111;
 						end else begin
-							CBUS_D <= CBUS_DN;
+							;
 							if (DMA_WTN_LESS4)
 								case (DMA_WA[1:0])
 									2'b00: case (DMA_WTN[1:0])
@@ -1758,7 +1772,7 @@ module SCUP2
 				
 				CBUS_IND_READ: if (CE_R) begin
 					if (ECWAIT_N_FF) begin
-						CBUS_A <= CBUS_A + 27'd4;
+						;
 						CBUS_RD <= 1;
 						CBUS_IND_POS <= CBUS_IND_POS + 3'd1;
 						if (CBUS_IND_POS == 3'd3) begin
@@ -1784,7 +1798,7 @@ module SCUP2
 								CBUS_RAS_PEND <= 0;
 							end
 						end else begin
-							CBUS_A <= CBUS_A + 27'd4;
+							;
 							CBUS_RD <= 1;
 							/*if (CBUS_A[10:2] == 9'h1FF && !DMA_DSP && !RAMH_SLOW) begin
 								CBUS_RFS_PEND <= 1;
@@ -1813,7 +1827,7 @@ module SCUP2
 				CBUS_READ_END: if (CE_R) begin
 					if (ECWAIT_N_FF) begin
 						if (CBUS_A[3:2] != 2'b11 && !RAMH_SLOW) begin
-							CBUS_A <= CBUS_A + 27'd4;
+							;
 							CBUS_RD <= 1;
 						end
 						else if (DSTA.DACSA || DSTA.DACSB || DSTA.DACSD) begin
@@ -1847,8 +1861,8 @@ module SCUP2
 								CBUS_RAS_PEND <= 0;
 							end
 						end else if (DMA_BUF_SIZE && (DMA_BUF_SIZE[2] || (DMA_WTN_LESS4 && DMA_WTN[1:0] && DMA_BUF_SIZE >= {1'b0,DMA_WTN[1:0]}))) begin
-							CBUS_A <= {DMA_WA[26:2],2'b00};
-							CBUS_D <= CBUS_DN;
+							;
+							;
 							if (DMA_DSP)
 								CBUS_WR <= 4'b1111;
 							else if (DMA_WTN_LESS4)
