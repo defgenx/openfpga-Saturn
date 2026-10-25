@@ -17,7 +17,7 @@ enum {
 	R_PCLR = 0x0B,  /* W: clear mask */
 	R_TS = 0x0C,    /* R: TICKS[15:0] at the last COMREG write */
 	R_SR = 0x06,    /* W: SR */
-	R_SF = 0x07,    /* W: SF = bit0 */
+	R_SF = 0x07,    /* W: SF = bit0, bit1 enables the IREG0 event (INTBACK waiting for CONTINUE/BREAK) */
 	R_RTC = 0x08,   /* R: EXT_RTC[31:0], [63:32]; W 0x08: deadline (bit 24 = arm) */
 	R_IREG = 0x10,  /* R: IREG0-6 */
 	R_OREG = 0x00   /* W: OREG0-31 through oregs[] (MMIO word 0x20..0x3F) */

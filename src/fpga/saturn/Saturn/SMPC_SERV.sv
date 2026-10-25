@@ -52,7 +52,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	reg  [ 1:0] IOSEL, EXLE;
 	reg  [23:0] DL;
 	reg  [15:0] TS;
-	reg         RESD;
+	reg         RESD, i0_en;
 	wire [23:0] dl_diff = TICKS - DL;
 	reg         dl_arm;
 	reg  [ 8:0] PINS;
@@ -129,7 +129,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		if (!RST_N) begin
 			COMREG <= 8'd0; SR <= 8'd0; IO_BUF <= 8'd0; REG_DO <= 8'd0; SF <= 1'b0;
 			PDR_O[0] <= 8'hFF; PDR_O[1] <= 8'hFF; DDR[0] <= 7'd0; DDR[1] <= 7'd0; IOSEL <= 2'd0; EXLE <= 2'd0;
-			DL <= 24'd0; dl_arm <= 1'b0; RESD <= 1'b1; TS <= 16'd0; PINS <= 9'h100; TICKS <= 24'd0;
+			DL <= 24'd0; dl_arm <= 1'b0; RESD <= 1'b1; i0_en <= 1'b0; TS <= 16'd0; PINS <= 9'h100; TICKS <= 24'd0;
 			RW_N_OLD <= 1'b1; CS_N_OLD <= 1'b1; IRQV_N_OLD <= 1'b1; RTC64_OLD <= 1'b0;
 			ev_cmd <= 1'b0; ev_vbin <= 1'b0; ev_vbout <= 1'b0; ev_rtc <= 1'b0; ev_i0 <= 1'b0; ev_tmr <= 1'b0;
 			dack <= 1'b0; drd <= 32'd0; rwait <= 1'b0;
@@ -148,7 +148,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 			end else begin
 				if (!IRQV_N && IRQV_N_OLD) ev_vbin <= 1'b1;
 				if (IRQV_N && !IRQV_N_OLD) ev_vbout <= 1'b1;
-				if (dl_arm && !dl_diff[23]) begin ev_tmr <= 1'b1;
+				if (dl_arm && !dl_diff[23]) begin ev_tmr <= 1'b1; dl_arm <= 1'b0;
 `ifdef SMPC_TRACE
 					if (!ev_tmr) $display("TRACE tmr ticks=%0d", TICKS);
 `endif
@@ -157,7 +157,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 			if (bus_wr) begin
 				IO_BUF <= DI;
 				case (ba)
-					7'h01: ev_i0 <= 1'b1;
+					7'h01: ev_i0 <= i0_en;
 					7'h1F: begin
 `ifdef SMPC_TRACE
 						$display("TRACE comreg ticks=%0d ev=%b", TICKS, {ev_tmr, ev_i0, ev_rtc, ev_vbout, ev_vbin, ev_cmd});
@@ -205,7 +205,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 					end
 					6'h0B: PINS <= PINS & ~dd[8:0];
 					6'h06: SR <= dd[7:0];
-					6'h07: SF <= dd[0];
+					6'h07: begin SF <= dd[0]; i0_en <= dd[1]; end
 					6'h08: begin
 `ifdef SMPC_TRACE
 						$display("TRACE arm ticks=%0d dl=%0d", TICKS, dd[23:0]);

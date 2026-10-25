@@ -86,13 +86,13 @@ static void ib_status(u32 t) {
 	setsr(0x4F | sres() | ((ir[1] & 8) ? 0x20 : 0));
 	wait_until(t + 962 - opt - nop);
 	mirq();
-	if (ir[1] & 8) { st = 2; i0 = MM(R_IREG); contv = (i0 >> 7) & 1; brk = (i0 >> 6) & 1; return; }          /* SF stays set */
+	if (ir[1] & 8) { st = 2; MM(R_SF) = 3; i0 = MM(R_IREG); contv = (i0 >> 7) & 1; brk = (i0 >> 6) & 1; return; }          /* SF stays set */
 	wait_until(t + 996 - opt - nop);
 	sf0();
 }
 static void do_poll(u32 t) {
 	u32 k;
-	t += 102;
+	t += 20;
 	ib_imm = oc = 0;
 	for (k = 0; k < 2; k++) poll_port(k, &t);
 	setsr(0xC0 | sres() | (ir[1] >> 4));
@@ -105,14 +105,14 @@ static void do_poll(u32 t) {
 #define PULSE (1u << 30)      /* NMIREQ: release MSHNMI again at once */
 #define CT(set, clr, d, f) ((u32)(set) | (u32)(clr) << 9 | (u32)((d) / 2) << 18 | (f))
 static const u32 ctab[32] = {
-	CT(MSHRES | MSHNMI, 0, 123, 0), CT(0, 0, 110, 0), CT(SSHRES | SSHNMI, 0, 123, 0), CT(SSHNMI, SSHRES, 123, 0),
-	CT(0, 0, 110, 0), CT(0, 0, 110, 0), CT(SNDRES, 0, 119, 0), CT(0, SNDRES, 119, 0),
-	CT(CDRES, 0, 131, 0), CT(0, CDRES, 135, 0), CT(0, 0, 130, 0), CT(0, 0, 142, 0),
-	CT(0, 0, 110, 0), CT(MSHNMI, MSHRES | SSHRES | SNDRES | CDRES | SYSRES, 2, SLOWF), CT(DOTSEL, SSHRES | SNDRES | SYSRES, 2, SLOWF), CT(0, SSHRES | SNDRES | SYSRES | DOTSEL, 2, SLOWF),
-	CT(0, 0, 0, SLOWF), CT(0, 0, 110, 0), CT(0, 0, 110, 0), CT(0, 0, 110, 0),
-	CT(0, 0, 110, 0), CT(0, 0, 110, 0), CT(0, 0, 470, SLOWF), CT(0, 0, 319, SLOWF),
-	CT(0, MSHNMI, 146, PULSE), CT(0, 0, 122, 0), CT(0, 0, 122, 0), CT(0, 0, 110, 0),
-	CT(0, 0, 110, 0), CT(0, 0, 110, 0), CT(0, 0, 170, SLOWF), CT(0, 0, 7470, SLOWF)
+	CT(MSHRES | MSHNMI, 0, 86, 0), CT(0, 0, 85, 0), CT(SSHRES | SSHNMI, 0, 86, 0), CT(SSHNMI, SSHRES, 86, 0),
+	CT(0, 0, 85, 0), CT(0, 0, 85, 0), CT(SNDRES, 0, 82, 0), CT(0, SNDRES, 82, 0),
+	CT(CDRES, 0, 94, 0), CT(0, CDRES, 98, 0), CT(0, 0, 93, 0), CT(0, 0, 105, 0),
+	CT(0, 0, 85, 0), CT(MSHNMI, MSHRES | SSHRES | SNDRES | CDRES | SYSRES, 110, SLOWF), CT(DOTSEL, SSHRES | SNDRES | SYSRES, 100, SLOWF), CT(0, SSHRES | SNDRES | SYSRES | DOTSEL, 100, SLOWF),
+	CT(0, 0, 0, SLOWF), CT(0, 0, 85, 0), CT(0, 0, 85, 0), CT(0, 0, 85, 0),
+	CT(0, 0, 85, 0), CT(0, 0, 85, 0), CT(0, 0, 470, SLOWF), CT(0, 0, 319, SLOWF),
+	CT(0, MSHNMI, 93, PULSE), CT(0, 0, 85, 0), CT(0, 0, 85, 0), CT(0, 0, 85, 0),
+	CT(0, 0, 85, 0), CT(0, 0, 85, 0), CT(0, 0, 170, SLOWF), CT(0, 0, 7470, SLOWF)
 };
 #define AGE() ((MM(R_TICKS) - MM(R_TS)) << 16)           /* ticks since the COMREG write, in the top 16 bits */
 #define DUE(e) ((e) >> 1 & 0x1FFE0000u)                  /* the table's delay in the same scale */
@@ -121,13 +121,15 @@ static inline __attribute__((always_inline)) void do_command(void) {
 	u32 c = MM(R_COM), e, t0;
 	if (c >= 32) { while (AGE() < 82u << 16) ; sf0(); MM(R_EV) = EV_CMD; return; }
 	e = ctab[c];
-	if (!(e & SLOWF)) {                  /* the path to here takes longer than any of their 110-142 ticks: no wait */
+	if (!(e & SLOWF)) {                  /* pins at the LLE time, SF clears right after */
+		while (AGE() < DUE(e)) ;
 		MM(R_PINS) = e; MM(R_PCLR) = e >> 9;
 		if (e & PULSE) MM(R_PINS) = MSHNMI;
 		MM(R_SF) = 0;
 		MM(R_EV) = EV_CMD; vbcnt = 0;
 		return;
 	}
+	if (c == 0x0D || c == 0x0E || c == 0x0F) while (AGE() < DUE(e)) ;
 	MM(R_PINS) = e; MM(R_PCLR) = e >> 9;
 	MM(R_EV) = EV_CMD;
 	clean = 0;
@@ -137,7 +139,6 @@ static inline __attribute__((always_inline)) void do_command(void) {
 	case 0x0D: case 0x0E: case 0x0F:
 		wait_until(t0 + 406509);
 		if (c == 0x0D) act(CDRES | SYSRES, 0); else act(SYSRES, MSHNMI);
-		dly(12);
 		if (c == 0x0D) act(MSHRES | MSHNMI, 0);
 		sf0();
 		return;
@@ -197,8 +198,8 @@ void main(void) {
 		if (!st && (ev & EV_CMD)) { do_command(); continue; }       /* first: the command latency counts */
 		if (ev & EV_I0) {                                            /* IREG0 written: CONTINUE/BREAK only matter in state 2 */
 			MM(R_EV) = EV_I0;
-			if (st == 2) { t = MM(R_IREG); contv = (t >> 7) & 1; brk = (t >> 6) & 1; }
-			continue;
+			if (st != 2) continue;
+			t = MM(R_IREG); contv = (t >> 7) & 1; brk = (t >> 6) & 1;
 		}
 		clean = 0;
 		if (ev & EV_RTC) { MM(R_EV) = EV_RTC; rtc_load(); }
