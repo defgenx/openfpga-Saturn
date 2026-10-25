@@ -219,3 +219,25 @@ operand muxes as it saves (rank selection, 4:1 mux per operand) unless the state
 sequence. Identified but not done: register file to MLAB with sequential readers (~970 flip-flops), rotation microcode on one
 multiplier with single parameter RAM, scroll counters in RAM with two adders, PN pipelines in RAM. Estimated total about
 -600 to -900 ALMs on top (4,100-4,400), still above 3,500; reaching 3,500 needs a clean-sheet fetch/address and dot pipeline.
+
+### Status update (steps 6-12, map ALMs; fitter figures for the last row)
+
+| step | change | ALMs (map) |
+|---|---|---|
+| 5 | previous end point | 5,016 |
+| 6 | rotation start coordinates in one RAM with one adder | 4,979 |
+| 7 | one multiplier and adder for both rotation lanes (microcode sums) | 4,982 (DSP 12 -> 9; sharing narrow arithmetic does not save ALMs) |
+| 8 | pattern name write path shared between layers 0/2 and 1/3; fetched character words loaded through one bank multiplexer | 4,811 |
+| 9 | capture chains evaluated for the visited array only | 4,775 |
+| 10 | colour ratio sum module (already in DSP blocks in the baseline: 9 unsigned + 6 mixed + 3 signed elements) | 4,775 |
+| 11 | horizontal scroll offset NX+NSX kept as one sum; coefficient address base+offset as one sum, one adder per table | 4,737 |
+| 12 | ten 19-bit scroll adders in DSP blocks (A*1 + B*1) | 4,720 (ALUT -81, ALM -17) |
+
+Fitter (registered wrapper, `sizing/vdp2p/sta.sh h13`): **4,740 ALMs**, 30 M10K, 19 DSP, 5,015 registers.
+Timing with `sizing/vdp2p/vdp2p_mc.sdc` (2-clock paths from event-updated and CPU-written registers): setup slack
+**+0.58 ns** at 17.46 ns (Fmax 59.2 MHz); without the fragment -1.5 ns. Differential sim: 300 seeds x 1.5 M clocks, 21 scenes, 0 mismatches.
+
+Ablations of the 5,221-ALM design for sizing the remaining work: priority/colour (rank selection and the layers it keeps alive) 430
+ALMs when cut to two layers; pattern name conversion 199; rotation microcode arithmetic 257; RBG0+RBG1 1,179 in total.
+Findings: flip-flop removal alone changes ALMs little (they share ALMs with logic), narrow shared adders do not pay (operand
+muxes cost as much), and moving adders to DSP blocks removes ALUTs far faster than ALMs (81 ALUT for 17 ALM).
