@@ -1562,6 +1562,19 @@ module VDP1P (
 	assign SPR_DATA_READY = !PAT_FIFO_EMPTY || PAT_CNT >= ORIG_WIDTH;
 	
 	bit  [15: 0] MEM_DO;
+	// CPU write buffer: two entries (current beat and saved beat) in an MLAB; WB_HI selects the current one. Read
+	// requests put their address into the current entry (read and write beats never overlap, RDY_N).
+	bit          WB_HI;
+	wire [35: 0] WB_Q;
+	wire         WB_RD_REQ  = (CPU_VRAM_REQ || CPU_FB_REQ) && WE_N && DTEN_N;
+	wire         WB_VBEAT   = CPU_VRAM_REQ && !WE_N && !DTEN_N;
+	wire         WB_FBEAT   = CPU_FB_REQ && !WE_N && !DTEN_N;
+	wire         WB_SAVE    = WB_VBEAT ? CPU_VRAM_WPEND : CPU_FB_WPEND;
+	wire         WB_WE      = RST_N && (WB_RD_REQ || WB_VBEAT || WB_FBEAT);
+	wire [18: 1] CPU_WA = WB_Q[35:18];
+	wire [15: 0] CPU_D  = WB_Q[17:2];
+	wire [ 1: 0] CPU_WE = WB_Q[1:0];
+	VDP1P_MLAB #(.W(36),.AW(1)) WBUF(CLK, WB_WE, WB_HI ^ ((WB_VBEAT || WB_FBEAT) && WB_SAVE), {A[18:1],DI,~{2{WE_N}} & ~DQM}, WB_HI, WB_Q);
 	bit  [ 8: 0] PAT_CNT;
 	bit          PAT_PREREAD;
 	bit  [ 3: 0] VRAM_READ_POS;
@@ -1575,12 +1588,6 @@ module VDP1P (
 		// One write buffer (current + saved beat) serves both VRAM and framebuffer writes: the bus master does not
 		// start a new transaction's data beats before READY, and READY needs both pending flags clear, so only one
 		// region can hold pending write data at a time.
-		bit [18: 1] CPU_WA;
-		bit [15: 0] CPU_D;
-		bit [ 1: 0] CPU_WE;
-		bit [18: 1] SAVE_WA;
-		bit [15: 0] SAVE_D;
-		bit [ 1: 0] SAVE_WE;
 		bit         CMD_READ_PEND;
 		bit         CLT_READ_PEND;
 		bit         GRD_READ_PEND;
@@ -1604,6 +1611,7 @@ module VDP1P (
 			
 			A <= '0;
 			WE_N <= 1;
+			WB_HI <= 0;
 			DQM <= '1;
 			BURST <= 0;
 			READY <= 1;
@@ -1660,7 +1668,6 @@ module VDP1P (
 			if (!SPR_READ) begin PAT_CNT <= {8'b00000000,HSS_EN&(FBCR.EOS^TEXT_DIRX)}; PAT_PREREAD <= 1; end
 			
 			if ((CPU_VRAM_REQ || CPU_FB_REQ) && WE_N && DTEN_N) begin 
-				CPU_WA <= A[18:1];   // read and write beats never overlap (RDY_N), so one address register serves both
 				if (CPU_VRAM_REQ) begin
 					CPU_VRAM_RPEND <= 1;
 					CPU_VRAM_RRDY <= 0;
@@ -1675,15 +1682,9 @@ module VDP1P (
 			if (CPU_VRAM_WDELAY && CE_F) CPU_VRAM_WDELAY <= CPU_VRAM_WDELAY - 2'd1;
 			if (CPU_VRAM_REQ && !WE_N && !DTEN_N) begin
 				if (!CPU_VRAM_WPEND) begin
-					CPU_WA <= A[18:1];
-					CPU_D <= DI;
-					CPU_WE <= ~{2{WE_N}} & ~DQM;
 					CPU_VRAM_WPEND <= 1;
 					VRAM_FIFO_EMPTY <= 0;
 				end else begin
-					SAVE_WA <= A[18:1];
-					SAVE_D <= DI;
-					SAVE_WE <= ~{2{WE_N}} & ~DQM;
 					CPU_VRAM_WRDY <= 0;
 					VRAM_FIFO_FULL <= 1;
 				end
@@ -1691,9 +1692,7 @@ module VDP1P (
 				A <= A + 20'd1;
 			end
 			if (!CPU_VRAM_WRDY && !CPU_VRAM_WPEND) begin
-				CPU_WA <= SAVE_WA;
-				CPU_D <= SAVE_D;
-				CPU_WE <= SAVE_WE;
+				WB_HI <= ~WB_HI;
 				CPU_VRAM_WPEND <= 1;
 				CPU_VRAM_WRDY <= 1;
 				VRAM_FIFO_EMPTY <= 0;
@@ -1705,24 +1704,16 @@ module VDP1P (
 			
 			if (CPU_FB_REQ && !WE_N && !DTEN_N) begin
 				if (CPU_FB_REQ && !CPU_FB_WPEND) begin
-					CPU_WA <= A[18:1];
-					CPU_D <= DI;
-					CPU_WE <= ~{2{WE_N}} & ~DQM;
 					CPU_FB_WPEND <= 1;
 					FB_FIFO_EMPTY <= 0;
 				end else begin
-					SAVE_WA <= A[18:1];
-					SAVE_D <= DI;
-					SAVE_WE <= ~{2{WE_N}} & ~DQM;
 					CPU_FB_WRDY <= 0;
 					FB_FIFO_FULL <= 1;
 				end
 				A <= A + 20'd1;
 			end
 			if (!CPU_FB_WRDY && !CPU_FB_WPEND) begin
-				CPU_WA <= SAVE_WA;
-				CPU_D <= SAVE_D;
-				CPU_WE <= SAVE_WE;
+				WB_HI <= ~WB_HI;
 				CPU_FB_WPEND <= 1;
 				CPU_FB_WRDY <= 1;
 				FB_FIFO_EMPTY <= 0;
