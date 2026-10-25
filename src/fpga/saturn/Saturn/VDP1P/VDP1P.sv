@@ -1198,10 +1198,14 @@ module VDP1P (
 	// Colour of the pixel being started: row start colour +/- (steps so far) * line step, one DSP block per channel
 	// (the golden core accumulates the step per drawn pixel; same value modulo 2^17).
 	bit  [11: 0] GN;
-	wire [16: 0] GM_R = GN * Q_R, GM_G = GN * Q_G, GM_B = GN * Q_B;
-	wire [16: 0] GP_R = (DIR[0] ^ NS_DIR[0]) ? {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} - GM_R : {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} + GM_R;
-	wire [16: 0] GP_G = (DIR[0] ^ NS_DIR[1]) ? {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} - GM_G : {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} + GM_G;
-	wire [16: 0] GP_B = (DIR[0] ^ NS_DIR[2]) ? {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} - GM_B : {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} + GM_B;
+	wire [35: 0] GM_R = {24'd0,GN} * {19'd0,Q_R}, GM_G = {24'd0,GN} * {19'd0,Q_G}, GM_B = {24'd0,GN} * {19'd0,Q_B};
+	wire [16: 0] GP_R = (DIR[0] ^ NS_DIR[0]) ? {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} - GM_R[16:0] : {LINE_GHCOLOR.R.INT,LINE_GHCOLOR.R.FRAC} + GM_R[16:0];
+	wire [16: 0] GP_G = (DIR[0] ^ NS_DIR[1]) ? {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} - GM_G[16:0] : {LINE_GHCOLOR.G.INT,LINE_GHCOLOR.G.FRAC} + GM_G[16:0];
+	wire [16: 0] GP_B = (DIR[0] ^ NS_DIR[2]) ? {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} - GM_B[16:0] : {LINE_GHCOLOR.B.INT,LINE_GHCOLOR.B.FRAC} + GM_B[16:0];
+	// registered copy of the colour sum (valid one clock after GN, Q or the row colour change; pixels start at least two clocks apart);
+	// the full result is registered so that the adder maps into the DSP block
+	bit  [16: 0] GPQ_R,GPQ_G,GPQ_B;
+	always @(posedge CLK) begin GPQ_R <= GP_R; GPQ_G <= GP_G; GPQ_B <= GP_B; end
 	bit  [15: 0] DRAW_BACK_C;
 	bit          FB_DRAW_PEND;
 	bit          FB_READ_PEND;
@@ -1233,7 +1237,7 @@ module VDP1P (
 							if (!(CMD_ST == CMDS_AA_DRAW || CMD_ST == CMDS_LINE_END)) begin
 								if (!(TEXT_X_READ_STEP && EC_FIND && IS_PAT_EC)) begin
 									DRAW_PAT <= PAT;
-									DRAW_GHCOLOR <= {GP_B[16:12],GP_G[16:12],GP_R[16:12]};
+									DRAW_GHCOLOR <= {GPQ_B[16:12],GPQ_G[16:12],GPQ_R[16:12]};
 								end
 								FBD_RAS <= LINE_DRAW_STEP && (CMD.CMDCTRL.COMM <= 4'h1) && &LINE_VERTA.X[3:0];
 							end
