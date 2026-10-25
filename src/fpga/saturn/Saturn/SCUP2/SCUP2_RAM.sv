@@ -333,3 +333,92 @@ module SCUP2_LANE
 	always @(posedge CLK) if (WREN) MEM[WADDR] <= DATA;
 	assign Q = MEM[RADDR];
 endmodule
+
+module SCUP2_DRAM
+#(
+	parameter addr_width = 8,
+	parameter data_width = 8,
+	parameter mem_init_file = " ",
+	parameter mem_sim_file = " "
+)
+(
+	input                   CLK,
+	
+	input  [addr_width-1:0] WADDR,
+	input  [addr_width-1:0] RADDR,
+	input  [data_width-1:0] DATA,
+	input                   WREN,
+	output [data_width-1:0] Q
+);
+
+`ifdef SIM
+	
+	reg [data_width-1:0] MEM [2**addr_width];
+
+	initial begin
+		$readmemh(mem_sim_file, MEM);
+	end
+	
+	always @(posedge CLK) begin
+		if (WREN) begin
+			MEM[WADDR] <= DATA;
+		end
+	end
+		
+	assign Q = MEM[RADDR];
+	
+`else
+
+	wire [data_width-1:0] sub_wire0;
+	
+	altsyncram	altsyncram_component (
+				.address_a (WADDR),
+				.clock0 (CLK),
+				.data_a (DATA),
+				.wren_a (WREN),
+				.address_b (RADDR),
+				.clock1 (~CLK),
+				.q_b (sub_wire0),
+				.aclr0 (1'b0),
+				.aclr1 (1'b0),
+				.addressstall_a (1'b0),
+				.addressstall_b (1'b0),
+				.byteena_a (1'b1),
+				.byteena_b (1'b1),
+				.clocken0 (1'b1),
+				.clocken1 (1'b1),
+				.clocken2 (1'b1),
+				.clocken3 (1'b1),
+				.data_b ({data_width{1'b1}}),
+				.eccstatus (),
+				.q_a (),
+				.rden_a (1'b1),
+				.rden_b (1'b1),
+				.wren_b (1'b0));
+	defparam
+		altsyncram_component.address_aclr_b = "NONE",
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_b = "BYPASS",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**addr_width,
+		altsyncram_component.numwords_b = 2**addr_width,
+		altsyncram_component.operation_mode = "DUAL_PORT",
+		altsyncram_component.outdata_aclr_b = "NONE",
+		altsyncram_component.outdata_reg_b = "UNREGISTERED",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.widthad_a = addr_width,
+		altsyncram_component.widthad_b = addr_width,
+		altsyncram_component.width_a = data_width,
+		altsyncram_component.width_b = data_width,
+		altsyncram_component.width_byteena_a = 1,
+		altsyncram_component.init_file = mem_init_file;
+		
+	assign Q = sub_wire0;
+	
+`endif
+	
+endmodule

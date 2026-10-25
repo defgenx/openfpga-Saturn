@@ -28,13 +28,7 @@ module SCUP2_DSP (
 	output            DMA_LAST,
 	input             DMA_END,
 	
-	output            IRQ,
-	output DecInst_t  DBG_DECI,
-	output     [47:0] DBG_Q,
-	output     [47:0] DBG_AC,
-	output     [47:0] DBG_P,
-	output reg        HOOK1,
-	output reg        HOOK2
+	output            IRQ
 );
 	
 	import SCUP2DSP_PKG::*;
@@ -68,10 +62,6 @@ module SCUP2_DSP (
 	bit        PAUSED;
 	DMAInst_t  DMAI;
 
-	bit  [5:0] DATA_RAM_ADDR [4];
-	bit [31:0] DATA_RAM_D [4];
-	bit        DATA_RAM_WE [4];
-	bit [31:0] DATA_RAM_Q [4];
 	
 	bit  [7:0] PRG_RAM_ADDR;
 	bit [31:0] PRG_RAM_D;
@@ -114,7 +104,6 @@ module SCUP2_DSP (
 	
 	wire COND = IC[24] ? ((IC[22]&T0) | (IC[21]&C) | (IC[20]&S) | (IC[19]&Z)) : ((~IC[22]|~T0) & (~IC[21]|~C) & (~IC[20]|~S) & (~IC[19]|~Z));
 	assign DECI = Decode(IC, COND);
-	assign DBG_DECI = DECI;
 	
 	//ALU
 	ALUReg_t   ALU_Q;
@@ -141,9 +130,6 @@ module SCUP2_DSP (
 		endcase
 	end
 	
-	assign DBG_Q = ALU_Q;
-	assign DBG_AC = AC;
-	assign DBG_P = P;
 	
 	always @(posedge CLK or negedge RST_N) begin
 		bit S31, S47, ZL, ZH;
@@ -196,15 +182,13 @@ module SCUP2_DSP (
 
 
 	wire [31: 0] D0BUSI = DMA_DI;
-	bit  [31: 0] D0BUSO;
 	bit  [31: 0] D1BUS;
 	bit  [31: 0] XBUS;
 	bit  [31: 0] YBUS;
 	//The Y bank mux also serves the control-port data read (RE and CE are never in the same cycle).
 	//The X bank mux also serves DMA_DO: DMA_DO is sampled only in CE_F cycles, X only with CE (a CE_R cycle).
-	wire [31:0] XQ = DATA_RAM_Q[CE_F ? DMAI.RAMS : DECI.XBUS.RAMS];
+	wire [31:0] XQ, YQ, DQ;
 	wire        YQ_TR = RE && A == 2'b11;
-	wire [31:0] YQ = DATA_RAM_Q[YQ_TR ? DATA_TRANS_ADDR[7:6] : DECI.YBUS.RAMS];
 	always_comb begin
 		XBUS = XQ;
 		YBUS = YQ;
@@ -217,12 +201,11 @@ module SCUP2_DSP (
 				2'b1: D1BUS = ALU_Q[31: 0];//ALU LOW
 			endcase
 		end else if (DECI.D1BUS.RAMR) begin
-			D1BUS = DATA_RAM_Q[DECI.D1BUS.RAMS];
+			D1BUS = DQ;
 		end else begin
 			D1BUS = '1;
 		end
 		
-		D0BUSO = DATA_RAM_Q[DMAI.RAMS];	//debug taps only
 	end
 	
 	always @(posedge CLK or negedge RST_N) begin
@@ -412,7 +395,7 @@ module SCUP2_DSP (
 		end
 	end
 	
-	wire [ 7: 0] TN_VAL = DECI.DMA.CNTM ? DATA_RAM_Q[DECI.DMA.CNTS][7:0] : IC[7:0];
+	wire [ 7: 0] TN_VAL = DECI.DMA.CNTM ? DQ[7:0] : IC[7:0];
 	wire [ 7: 0] TN0_NEXT = TN0 - 8'd1;
 		bit       DMA_END_PEND;
 	always @(posedge CLK or negedge RST_N) begin
@@ -426,8 +409,6 @@ module SCUP2_DSP (
 			DMA_REQ <= 0;
 			DMA_END_PEND <= 0;
 			
-			HOOK1 <= 0;
-			HOOK2 <= 0;
 		end else if (!RES_N) begin
 			TN0 <= '0;
 			T0 <= 0;
@@ -486,8 +467,6 @@ module SCUP2_DSP (
 						DMA_REQ <= 1;
 					end
 					
-					if (D0BUSO[31:16] != 16'h0000 && D0BUSO[31:16] != 16'hFFFF && DMAI.RAMR[3] && DMAI.DIR) HOOK1 <= 1;
-					if (DMA_DI[31:16] != 16'h0000 && DMA_DI[31:16] != 16'hFFFF && (DMAI.RAMW[1] || DMAI.RAMW[2]) && !DMAI.DIR) HOOK2 <= 1;
 				end
 			end
 		end
@@ -504,28 +483,40 @@ module SCUP2_DSP (
 	assign WA0W = DECI.D1BUS.WA0W & RUN & CE;
 	assign DMAW = DECI.DMA.ST & RUN & CE;
 	
-	//DATA RAM
-	wire DATA_TRANS_CS[4] = '{DATA_TRANS_ADDR[7:6] == 2'b00,DATA_TRANS_ADDR[7:6] == 2'b01,DATA_TRANS_ADDR[7:6] == 2'b10,DATA_TRANS_ADDR[7:6] == 2'b11};
+	//DATA RAM: the four banks are one 256-word RAM per reader (X, Y, D1/count), all written alike.
+	//Reads: bank from the instruction, address from that bank's counter (or the transfer address when idle).
+	//A DMA write is performed in the clk after its DMA_EN (CE_F), so the RAM has one write per clk.
+	wire [ 5:0] CTSEL [4] = '{CT0, CT1, CT2, CT3};
+	wire        ADDR_CT = RUN || T0;
+	wire [ 1:0] XB = CE_F ? DMAI.RAMS : DECI.XBUS.RAMS;
+	wire [ 1:0] YB = YQ_TR ? DATA_TRANS_ADDR[7:6] : DECI.YBUS.RAMS;
+	wire [ 1:0] DB = DECI.DMA.ST ? DECI.DMA.CNTS : DECI.D1BUS.RAMS;
+	wire [ 7:0] XA = {XB, ADDR_CT ? CTSEL[XB] : DATA_TRANS_ADDR[5:0]};
+	wire [ 7:0] YA = {YB, ADDR_CT ? CTSEL[YB] : DATA_TRANS_ADDR[5:0]};
+	wire [ 7:0] DA = {DB, ADDR_CT ? CTSEL[DB] : DATA_TRANS_ADDR[5:0]};
 	
-	assign DATA_RAM_ADDR[0] = RUN || T0 ? CT0 : DATA_TRANS_ADDR[5:0];
-	assign DATA_RAM_D[0] = T0 && DMAI.RAMW[0] ? D0BUSI : RUN ? D1BUS : DI;
-	assign DATA_RAM_WE[0] = T0 && DMAI.RAMW[0] ? DMA_EN & CE_R : RUN ? DECI.D1BUS.RAMW[0] & CE : DATA_TRANS_WE && DATA_TRANS_CS[0] & CE_R;
-	SCUP2_DATA_RAM #(6,32) DATA_RAM0(CLK, DATA_RAM_ADDR[0], DATA_RAM_D[0], DATA_RAM_WE[0], DATA_RAM_Q[0]);
-	
-	assign DATA_RAM_ADDR[1] = RUN || T0 ? CT1 : DATA_TRANS_ADDR[5:0];
-	assign DATA_RAM_D[1] = T0 && DMAI.RAMW[1] ? D0BUSI : RUN ? D1BUS : DI;
-	assign DATA_RAM_WE[1] = T0 && DMAI.RAMW[1] ? DMA_EN & CE_R : RUN ? DECI.D1BUS.RAMW[1] & CE : DATA_TRANS_WE && DATA_TRANS_CS[1] & CE_R ;
-	SCUP2_DATA_RAM #(6,32) DATA_RAM1(CLK, DATA_RAM_ADDR[1], DATA_RAM_D[1], DATA_RAM_WE[1], DATA_RAM_Q[1]);
-	
-	assign DATA_RAM_ADDR[2] = RUN || T0 ? CT2 : DATA_TRANS_ADDR[5:0];
-	assign DATA_RAM_D[2] = T0 && DMAI.RAMW[2] ? D0BUSI : RUN ? D1BUS : DI;
-	assign DATA_RAM_WE[2] = T0 && DMAI.RAMW[2] ? DMA_EN & CE_R : RUN ? DECI.D1BUS.RAMW[2] & CE : DATA_TRANS_WE && DATA_TRANS_CS[2] & CE_R ;
-	SCUP2_DATA_RAM #(6,32) DATA_RAM2(CLK, DATA_RAM_ADDR[2], DATA_RAM_D[2], DATA_RAM_WE[2], DATA_RAM_Q[2]);
-	
-	assign DATA_RAM_ADDR[3] = RUN || T0 ? CT3 : DATA_TRANS_ADDR[5:0];
-	assign DATA_RAM_D[3] = T0 && DMAI.RAMW[3] ? D0BUSI : RUN ? D1BUS : DI;
-	assign DATA_RAM_WE[3] = T0 && DMAI.RAMW[3] ? DMA_EN & CE_R : RUN ? DECI.D1BUS.RAMW[3] & CE : DATA_TRANS_WE && DATA_TRANS_CS[3] & CE_R ;
-	SCUP2_DATA_RAM #(6,32) DATA_RAM3(CLK, DATA_RAM_ADDR[3], DATA_RAM_D[3], DATA_RAM_WE[3], DATA_RAM_Q[3]);
+	bit         DWR_WE;
+	bit  [ 7:0] DWR_A;
+	wire [ 3:0] DMA_BANK1H = DMAI.RAMW;
+	wire [ 1:0] DMA_BANK = {DMA_BANK1H[3] | DMA_BANK1H[2], DMA_BANK1H[3] | DMA_BANK1H[1]};
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) DWR_WE <= 0;
+		else begin
+			DWR_WE <= T0 && (|DMAI.RAMW) && DMA_EN && CE_R;
+			DWR_A <= {DMA_BANK, CTSEL[DMA_BANK]};
+		end
+	end
+	wire [ 3:0] D1_BANK1H = DECI.D1BUS.RAMW & ~({4{T0}} & DMAI.RAMW);
+	wire [ 1:0] D1_BANK = {D1_BANK1H[3] | D1_BANK1H[2], D1_BANK1H[3] | D1_BANK1H[1]};
+	wire        D1_WE = RUN && CE && |D1_BANK1H;
+	wire        CPU_WE = !RUN && DATA_TRANS_WE && CE_R && !(T0 && DMAI.RAMW[DATA_TRANS_ADDR[7:6]]);
+	wire [ 1:0] WB = RUN ? D1_BANK : DATA_TRANS_ADDR[7:6];
+	wire [ 7:0] RWA = DWR_WE ? DWR_A : {WB, ADDR_CT ? CTSEL[WB] : DATA_TRANS_ADDR[5:0]};
+	wire [31:0] RWD = DWR_WE ? D0BUSI : RUN ? D1BUS : DI;
+	wire        RWE = DWR_WE || D1_WE || CPU_WE;
+	SCUP2_DRAM #(8,32) DATA_RAM_X(CLK, RWA, XA, RWD, RWE, XQ);
+	SCUP2_DRAM #(8,32) DATA_RAM_Y(CLK, RWA, YA, RWD, RWE, YQ);
+	SCUP2_DRAM #(8,32) DATA_RAM_D(CLK, RWA, DA, RWD, RWE, DQ);
 	
 	//Control port
 	always @(posedge CLK or negedge RST_N) begin

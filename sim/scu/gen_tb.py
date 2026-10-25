@@ -46,5 +46,7 @@ def gen(top, ref, dut, params, ins, outs, extra=""):
                                   + ",".join('"%s"' % n for n, w in outs) + "};\n")
 
 gen("tb_scu", "REF_SCU", DUT, ("#(parameter RAMH_SLOW=0)", "#(RAMH_SLOW)"), scu_ins, scu_outs)
+if DUT == "SCUP2":   # no debug taps in SCUP2_DSP
+    dsp_outs = [o for o in dsp_outs if not o[0].startswith("DBG_") and not o[0].startswith("HOOK")]
 gen("tb_dsp", "REF_SCU_DSP", DUT + "_DSP", ("", ""), dsp_ins, dsp_outs,
     "\tinitial if ($bits(SCUDSP_PKG::DecInst_t) != 78) $fatal(1, \"DecInst_t width\");\n" if DUT == "SCU" else "")
