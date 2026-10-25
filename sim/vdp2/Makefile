@@ -3,14 +3,16 @@
 #   make -C sim vdp2 SEEDS=100 CLKS=2000000
 HERE   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 CUT    ?=
-B      := $(HERE)/build$(if $(CUT),_cut_$(firstword $(CUT)),)
+DUT    ?= VDP2P
+export DUT
+B      := $(HERE)/build$(if $(filter-out VDP2P,$(DUT)),_$(DUT),)$(if $(CUT),_cut_$(firstword $(CUT)),)
 CUTDEF := $(foreach c,$(CUT),-DPOCKET_CUT_VDP2_$(c))
 PLUS   := $(if $(CUT),+cut,)
 SEEDS  ?= 60
 CLKS   ?= 1500000
 JOBS   ?= 4
 VFLAGS := $(EXTRA) --cc --exe --build -j 8 -O2 -Wno-fatal -Wno-lint -Wno-style -Wno-PROCASSWIRE -Wno-WIDTH -Wno-CASEINCOMPLETE \
-          --x-assign 0 --x-initial 0 --no-timing -DLIGHT_SATURN $(CUTDEF) --top-module tb_top \
+          --x-assign 0 --x-initial 0 --no-timing -DLIGHT_SATURN -DDUT_MOD=$(DUT) $(CUTDEF) --top-module tb_top \
           -CFLAGS "-O2" --Mdir $(B)/obj
 
 .PHONY: vdp2 vdp2-build vdp2-ppm clean
@@ -21,7 +23,7 @@ vdp2: vdp2-build
 	if [ -s $(B)/fails.txt ]; then echo "vdp2 differential test: FAILED"; exit 1; else echo "vdp2 differential test: all $(SEEDS) seeds match"; fi
 
 vdp2-build: $(B)/obj/Vtb_top
-$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/VDP2P/*.sv) $(HERE)/prep.sh
+$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/$(DUT)/*.sv) $(HERE)/prep.sh
 	@$(HERE)/prep.sh $(B) $(CUT)
 	@rm -f $(B)/run_*.log
 	cd $(HERE) && verilator $(VFLAGS) $(B)/ref/VDP2_pkg.sv $(B)/ref/VDP2.sv $(B)/ref/VDP2_mem.sv \
