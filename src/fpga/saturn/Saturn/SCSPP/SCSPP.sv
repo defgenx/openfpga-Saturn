@@ -978,8 +978,14 @@ module SCSPP #(
 	wire signed [15:0] MX_W   = DSEL ? OP7.SD : EFF_W;
 	wire        [ 2:0] MX_SDL = DSEL ? OP7_SCR8.DISDL : OP7_SCR8.EFSDL;
 	wire        [ 4:0] MX_PAN = DSEL ? OP7_SCR8.DIPAN : OP7_SCR8.EFPAN;
-	wire signed [15:0] MX_LEV = MX_SDL ? MX_W >>> (~MX_SDL) : 16'sh0000;
-	wire signed [15:0] MX_SH  = MX_LEV >>> MX_PAN[3:1];
+	//Level and pan shifts as multiplications by powers of two (DSP blocks): lev = W >> (7-SDL), sh = lev >> PAN[3:1].
+	wire        [ 3:0] MX_AB  = {1'b0,~MX_SDL} + {1'b0,MX_PAN[3:1]};
+	wire        [ 8:0] MX_OHA = MX_SDL ? 9'd1 << MX_SDL : 9'd0;
+	wire        [15:0] MX_OHB = MX_SDL ? 16'd1 << (4'd14 - MX_AB) : 16'd0;
+	wire signed [24:0] MX_PA  = MX_W * $signed({1'b0,MX_OHA});
+	wire signed [32:0] MX_PB  = MX_W * $signed({1'b0,MX_OHB});
+	wire signed [15:0] MX_LEV = MX_PA[22:7];
+	wire signed [15:0] MX_SH  = MX_PB[29:14];
 	wire signed [15:0] MX_ATT = MX_SH - (MX_PAN[0] ? MX_SH >>> 2 : 16'sh0000);
 	wire signed [15:0] PAN_L  = MX_PAN[4] ? MX_LEV : MX_ATT;
 	wire signed [15:0] PAN_R  = MX_PAN[4] ? MX_ATT : MX_LEV;
