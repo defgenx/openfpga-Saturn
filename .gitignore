@@ -87,3 +87,4 @@ sizing/mem/*.out
 sizing/vdp1p/snap/
 sizing/scup2/*/
 !sizing/scup2/*.sh
+sim/vdp2/build_*/

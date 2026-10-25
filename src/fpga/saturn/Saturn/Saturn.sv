@@ -966,7 +966,9 @@ module Saturn
 `endif
 	);
 	
-`ifdef POCKET_VDP2P
+`ifdef POCKET_VDP2P2
+	VDP2P2 VDP2
+`elsif POCKET_VDP2P
 	VDP2P VDP2
 `else
 	VDP2 VDP2

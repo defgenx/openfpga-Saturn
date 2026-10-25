@@ -241,3 +241,142 @@ Ablations of the 5,221-ALM design for sizing the remaining work: priority/colour
 ALMs when cut to two layers; pattern name conversion 199; rotation microcode arithmetic 257; RBG0+RBG1 1,179 in total.
 Findings: flip-flop removal alone changes ALMs little (they share ALMs with logic), narrow shared adders do not pay (operand
 muxes cost as much), and moving adders to DSP blocks removes ALUTs far faster than ALMs (81 ALUT for 17 ALM).
+
+## 9. Clean-sheet attempt (VDP2P2, macro `POCKET_VDP2P2`)
+
+`src/fpga/saturn/Saturn/VDP2P2/` starts as VDP2P (selected in `Saturn.sv` by `POCKET_VDP2P2`, listed in `saturn_pocket.qip`);
+`make -C sim vdp2 DUT=VDP2P2` and `vdp2-ppm` run the same differential sim (200 seeds, 4 PPM frames identical).
+
+First clean-sheet block: the NBG access decode from the cycle pattern nibble per bank (type and layer straight from the nibble,
+per-bank PN/CH/VS validity once, per-layer flags derived from it) in place of the 4 x 4 x 3 full expressions. Measured
+(`sizing/vdp2p/map.sh` with `PFX=VDP2P2`): 4,720 -> 4,712 ALMs (ALUT +4). Quartus had already factored the original expressions,
+so re-encoding combinational decode does not pay.
+
+Why the remaining plan in the brief does not reach 3,500 (measured and computed, not forecast):
+
+| idea | finding |
+|---|---|
+| one time-multiplexed dot decoder / priority engine | hi-res gives 4 clk per pixel for 6 layers: two lanes needed, and a two-lane insertion network is as large as the parallel rank selection (about 480 ALUT); layer records in RAM only remove register muxes (~100 ALUT) |
+| line buffers instead of register pipelines | 6 layers x 704 px x 16 bit x 2 buffers = 135 kbit: 14 M10K or about 1,000 ALMs of MLAB; the budget is net M10K <= 30 and 16 are already used |
+| one shared fetch/address engine | the address unit is already shared across the four banks (VDP2P step in vdp2.md); the decode in front of it measured above |
+| flip-flop removal | ALMs are LUT-bound (4,656 flip-flops in 4,712 ALMs): removing 287 flip-flops saved 40 ALMs |
+| sharing narrow arithmetic between lanes/layers | operand muxes cost as much as the adders (rotation lanes: +3 ALM) |
+| adders in DSP | 10 x 19-bit adders: -81 ALUT but -17 ALM |
+
+What remains is the feature logic itself (RBG 1,179 ALMs, priority/colour about 760, scroll about 450, cell data about 550 in the
+5,221-ALM profile). Reaching 3,500 in-system needs either feature cuts or a different memory budget (line buffers), not a
+restructuring of this datapath.
+
+## 10. Where the area is, measured (line-ahead renderer brief)
+
+The brief for this step was a line-ahead serial renderer (one fetch/address engine, one decoder, one rotation datapath, a
+priority line buffer in M10K, +15 M10K allowed). Before writing it, VDP2P2 was cut apart with `sizing/vdp2p/featabl.py` and the
+`POCKET_CUT_VDP2_*` macros (area-profile `quartus_map`, `map.sh`; one run per row; same sources, only the named logic tied off).
+
+Layers of the 4,712-ALM design (ALMs, map):
+
+| design | ALMs | what is left |
+|---|---|---|
+| all six layers off (`BGON` tied, sprite dot tied) | 1,375 | timing generator, CPU/VRAM port, registers, colour RAM, colour calculation and output, table fetches |
+| layers decoded to transparent (`N?DOT`, `R0DOT` constant) | 3,761 | all fetch/address/scroll/rotation logic; no cell data capture, dot select or priority |
+| ... and RBG0/RBG1 off | 2,823 | NBG front end only |
+| ... and NBG0-3 off (RBG on) | 2,567 | RBG front end only |
+| full | 4,712 | |
+
+The front end (fetch decode, address unit, scroll counters, pattern-name conversion, rotation coordinates) is 2,390 ALMs (NBG about
+1,450, RBG about 940); what a dot-domain renderer replaces (cell capture, cell buffer, dot select, dot decode, priority/colour
+candidates) is 951. A renderer that cost nothing would leave 3,761.
+
+Feature cut menu (`POCKET_CUT_VDP2_<NAME>`, register bits read back 0; ALMs against 4,712; the sim harness has the same cut builds):
+
+| cut | ALMs | | cut | ALMs |
+|---|---|---|---|---|
+| COEF (rotation coefficient tables) | -263 | | ZOOM (reduction bits) | -192 |
+| RPARAMB (second rotation parameter set, includes RBG1) | -209 | | RGB32 (16M colour) | -185 |
+| LINESCROLL (X/Y/zoom line tables) | -204 | | BITMAP | -123 |
+| RBG1 alone | -161 | | EXTCC | -34 |
+| LNCOL | -32 | | HIRES | -22 |
+| MOSAIC | -19 | | SPRWIN / LINEWIN | -17 / -16 |
+| BACKLINE | -1 | | all sixteen together | **3,438 (-1,274)** |
+
+Single-feature ties of the live logic (`featabl.py`, not register cuts): NBG2+NBG3 -303, window logic -168, sprite data formats -100,
+vertical cell scroll -95, special priority / colour calculation codes -69.
+
+Experiments with the dot-domain back end (`sizing/vdp2p/proto/`):
+
+* E1, serial compositor (one candidate layer per clock after the dot event, three sorted accumulators, one `MakeDotData`, per-layer
+  register bundles selected by the step counter) in place of the parallel ranking: 4,712 -> 4,600 ALMs (ALUT -231). It needs six
+  clocks per dot where hi-res has four and sampling the registers over the window; not integrated.
+* E2, line renderer: cell words queue in a FIFO as they leave the bank buffers, a walker decodes them one dot per clock (source
+  position accumulator per layer, so zoom and reduction use the same path) into a three-slot priority line buffer
+  (3 x 33 bit x 1,024, +10 M10K), RBG0/RBG1 dots insert through the same pipeline, scan-out ranks the three slots with the
+  sprite dot, windows and shadow at the dot rate. It replaces the cell capture, the cell buffer ring, the character parameter ring,
+  the scroll position counter of the dot select, the dot select, the five dot decoders and the parallel ranking.
+  Built into VDP2P2 from the real front end signals and synthesised: **4,409 ALMs** (-303), 17 DSP, +97 kbit. It is an area
+  prototype: the word arrival timing, scene generator and the mosaic hold are not done, so the figure is a lower bound of a working
+  version by those pieces only.
+
+What this says about reaching 3,500 in-system (4,724 today, so -1,224): E2 alone gives -303; the front end stays. The cuts alone reach
+it only with nearly all of them. The sensible combinations are cuts of COEF, RGB32, ZOOM, LINESCROLL, RPARAMB and BITMAP
+(-1,176 added, 3,536) plus any one of the small ones, or E2 plus about four of the large ones. Anything else needs VDP2's share of
+the budget to move.
+
+Why E2 was not carried to a working version in this step: the golden's capture writes each word into lanes in an order that
+depends on the cycle pattern, and the differential scenes use unconstrained patterns (stale-lane behaviour is part of what the
+harness checks). A decode-at-arrival design matches the golden for legal patterns only, so it needs a scene generator that builds
+consistent PN/CH slots and banks first (the PN word range and character base would have to be forced into the banks the pattern
+names), and its register writes become visible per dot window and per line.
+
+## 11. Line renderer in VDP2P2 (verified on legal scenes)
+
+VDP2P2 replaces the golden's capture/ring/dot-select/compositor with a line-ahead renderer. Data flow:
+
+1. The address unit forms one character-access record per bank slot (layer, word count, PN attributes, cell) and delays it two
+   dot events to meet the VRAM data (`VDP2P2_DTAP`).
+2. On arrival each word is decoded and pushed to a FIFO; a walker emits one pixel per clock for each display dot the word covers
+   (per-layer state RAM, initialised from the scroll position at line start; modular cell compare handles the 2048 wrap).
+3. An insertion pipeline (RBG0, RBG1 as N0, walker) applies mosaic hold and priority/colour-calc candidates and writes the top
+   three entries per dot into a three-slot line buffer (3 x 1024 x 32 bit plus valid bits, `VDP2P2_LBV`).
+4. Scan-out reads the previous line's buffer, applies windows, merges sprites and ranks into `DOT_FST/SEC/THD/FTH`; the colour
+   stage and CRAM path are the golden's.
+
+Display dot index: `XD = XP - 16` (lores), `XP - 32` (hires).
+
+### Deviations from the golden (all on inputs the real Saturn BIOS/games do not produce)
+
+- Illegal cycle patterns: the golden writes each word into lanes by pattern order, so a pattern that breaks the rules below shows
+  stale lane data. The renderer does not reproduce that. Legal means: both bank rows carry the same pattern; a character block
+  lies inside one half of the 8 slots; PN slots precede the CH block by at least 4 slots (or the reverse arrangement with the same
+  spacing); hires uses at most 2 CH words per cell (4/8 bpp) and 4 slots; 32 bpp needs separate banks.
+- Register writes take effect per line (visible at the next line start), not mid-line; the harness issues them in blanking.
+  CPU VRAM writes in the legal scenes also happen in blanking.
+- NBG1 at 16/32 bpp: the golden takes the flip bits for the high byte from the previous cell. The scenes clear flip bits in that
+  configuration; the renderer uses the correct cell.
+- Reduction: exact against the golden at the maximum ratio (2.0) for 1/2; other 1/2 ratios and 1/4 are not compared. Enlargement
+  matches in about 85 percent of random-data cases; the rest differ where the golden refetches stale groups.
+- The first two pixels of each line, row 0 of a frame, and the first frames after reset differ (the golden shows stale hidden-region
+  dots); the harness masks them.
+
+### Verification
+
+`sim/vdp2`: `make vdp2-build DUT=VDP2P2`, then `build_VDP2P2/obj/Vtb_top +seed=N +clks=3300000 +legal=BITS +nostop`.
+BITS: 0 static NBG/RBG scenes with blanking-time register writes, 1 hires, 2 reduction, 32 mosaic (bit 5), 256 enlargement.
+
+Results: legal=0 300/300 static seeds and 200/200 with blanking writes; legal=1 100/100; legal=2 100/100 (after masking row 0);
+legal=32 60/60; seeds 31-38 of legal 0/1/2/32 all pass; `+ppm` frame dumps for seeds 3, 7, 8, 13 are byte identical to the golden.
+Scene types 7 and 8 exercise RBG0 and RBG0+RBG1.
+Not covered by the legal generator: 32 bpp NBG0 (needs split banks), interlace, hires with zoom, line scroll and bitmap scenes beyond
+what the random scene types produce.
+
+### Measured fit (quartus_fit through `sizing/vdp2p/sta.sh`, registered wrapper, 17.46 ns)
+
+`PFX=VDP2P2 sh sizing/vdp2p/sta.sh <tag>`; `MACROS="POCKET_CUT_VDP2_RPARAMB ..."` for the cuts.
+
+| Build | map ALMs | fit ALMs | registers | M10K | DSP | setup slack |
+|---|---|---|---|---|---|---|
+| VDP2P2 with line renderer, all features | 4,774 | 4,745 | 5,084 | 32 | 18 | +8.66 ns |
+| plus RPARAMB, EXTCC, LNCOL, MOSAIC, SPRWIN, LINEWIN, BACKLINE cuts | 4,416 | 4,311 | 4,808 | 30 | 18 | +8.52 ns |
+
+The integrated renderer is not smaller than the golden-derived VDP2P2 (4,712 map / 4,740 fit): the line buffer valid bits as a
+true dual port RAM synthesise to 3,072 registers plus 5,000 ALUTs of muxing (8,862 ALMs); a plain simple dual port RAM with the
+scan-out clear sharing the insertion write slot gives the numbers above. The 3,500 target is not met by either build.

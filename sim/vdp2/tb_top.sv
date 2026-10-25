@@ -55,7 +55,7 @@ module tb_top (
 		.HBL_N(r_HBL_N), .VBL_N(r_VBL_N), .FIELD(r_FIELD), .INTERLACE(r_INTERLACE),
 		.HRES(r_HRES), .VRES(r_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
 
-	VDP2P u_dut (
+	`DUT_MOD u_dut (
 		.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .RES_N(RES_N),
 		.DI(DI), .DO(d_DO), .CS_N(CS_N), .AD_N(AD_N), .DTEN_N(DTEN_N), .REQ_N(REQ_N), .RDY_N(d_RDY_N),
 		.VINT_N(d_VINT_N), .HINT_N(d_HINT_N), .DCE_R(d_DCE_R), .DCE_F(d_DCE_F),
@@ -69,20 +69,13 @@ module tb_top (
 		.HRES(d_HRES), .VRES(d_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
 
 
-`ifdef DBGDOT
-	reg dd_seen = 0;
-	reg [31:0] h_ref[0:7], h_dut[0:7]; reg [3:0] h_idx[0:7]; reg [7:0] h_q[0:7]; reg [7:0] h_nc[0:7]; reg [7:0] h_cx[0:7]; reg [7:0] h_nd[0:7];
-	integer hi;
-	always @(posedge CLK) if (u_dut.DOT_CE_R || (u_dut.DOT_CE_F && u_dut.HRES[1])) begin
-		for (hi = 7; hi > 0; hi = hi - 1) begin h_ref[hi] <= h_ref[hi-1]; h_dut[hi] <= h_dut[hi-1]; h_idx[hi] <= h_idx[hi-1]; h_q[hi] <= h_q[hi-1]; h_cx[hi] <= h_cx[hi-1]; h_nd[hi] <= h_nd[hi-1]; end
-		h_ref[0] <= u_ref.N0DOTDC; h_dut[0] <= u_dut.N0DOTDC; h_nd[0] <= u_dut.NSxREG[0].CHCN; h_idx[0] <= u_dut.NDI1; h_q[0] <= u_dut.ND1; h_cx[0] <= u_dut.CELLX;
-	end
-	always @(posedge CLK) if (!dd_seen && (u_ref.N0DOT !== u_dut.N0DOT)) begin
-		dd_seen <= 1;
-		for (hi = 0; hi < 6; hi = hi + 1) $display("hist %0d ref %h dut %h idx %h q %h cellx %h chcn0 %h", hi, h_ref[hi], h_dut[hi], h_idx[hi], h_q[hi], h_cx[hi], h_nd[hi]);
-		$display("now ref %h dut %h ndc ref %p dut ND1 q %h idx %h P %0d CELLX %h HRES %h", u_ref.N0DOTDC, u_dut.N0DOTDC, u_ref.NDC1, u_dut.ND1, u_dut.NDI1, u_dut.NDC_P, u_dut.CELLX, u_dut.HRES);
-	end
-`endif
+
+
+
+
+
+
+
 
 	// coverage probes on the golden copy
 	wire hires = u_ref.HRES[1];

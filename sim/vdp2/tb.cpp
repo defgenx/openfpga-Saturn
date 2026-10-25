@@ -60,6 +60,7 @@ struct Mem {
 				case 0: break;                                          // noise
 				case 1: v = r.chance(50) ? 0 : (v & 0x0FFF); break;     // small values, many zeros
 				case 2: v = (r.chance(30) ? 0 : v) & (r.chance(50) ? 0xFFFF : 0x07FF); break;
+				case 9: { static int bi = 0; v = 0x8000 | (((size_t)(bi++ & 3) << 13) ^ i) & 0x7FFF; v |= 0x8000; break; }   // value = address
 				default: {   // smooth ramps with a little noise: recognisable tiles and gradients in the dumped frames
 					size_t k = &*b->h.begin() == nullptr ? 0 : i;
 					v = (uint32_t)(((k >> 3) * 0x0421) ^ (k & 7) * 0x1111) + (r.chance(5) ? r.next() & 0xFF : 0);
@@ -230,6 +231,99 @@ static void gen_config(Rng& rng, Cfg& c, int scene, int dens) {
 	(void)bg;
 }
 
+
+// ---------------- legal cycle patterns (decode-at-arrival renderer) ----------------
+// Both bank rows carry the same pattern with VRAMD/VRBMD clear, so a layer's access hits whichever half holds its data.
+// Per layer: one pattern name slot, then the character words of its colour depth, contiguous, at least PNSP slots later.
+static int g_legal = 0, g_feat = 0, g_pnsp = 4, g_nostop = 0, g_fill = -1, g_nowr = 0, g_noflip = 0, g_hsp = 0, g_qt[2] = {0, 0};
+static void legalize(Rng& rng, Cfg& c) {
+	bool hires = (g_feat & 1) != 0;
+	int hres = hires ? 2 + rng.below(2) : rng.below(2);
+	R_(0x00) = 0x8000 | hres;
+	R_(0x0E) = (R_(0x0E) & 0x00FF & ~0x0300) | ((uint16_t)rng.below(3) << 12);
+	R_(0x0E) &= ~0x00FF;
+	if (getenv("LEG_CRAMRAMP")) R_(0x0E) = 0;
+	R_(0x02) = 0;
+	int cap = hires ? 4 : 8;
+	int words_of[5] = {1, 2, 4, 4, 8};
+	int chcn[4], on[4] = {0, 0, 0, 0};
+	for (int l = 0; l < 4; l++) {
+		int mx = l == 0 ? ((g_feat & 128) ? 5 : 4) : l == 1 ? 4 : 2;
+		chcn[l] = rng.below(mx);
+	}
+	if (getenv("LEG_CHCN")) { const char* e = getenv("LEG_CHCN"); for (int l = 0; l < 4; l++) chcn[l] = e[l] - '0'; }
+	int zm[4] = {0, 0, 0, 0}, npn[4] = {1, 1, 1, 1};
+	if ((g_feat & 2) && !hires) for (int l = 0; l < 2; l++) if (rng.chance(60)) { zm[l] = 1 + 2 * rng.below(2); chcn[l] = zm[l] == 3 ? 1 : 0; }   // 1/2 reduction at 4 and 8 bits per dot; the golden's 1/4 mode takes the third cell's attributes from the second
+	if (getenv("LEG_ZM")) { const char* e = getenv("LEG_ZM"); for (int l = 0; l < 4; l++) { zm[l] = e[l] - '0'; if (zm[l]) chcn[l] = zm[l] == 3 ? 1 : 0; } }
+	int pn[4], ch0[4], nw[4];
+	int used[8];
+	for (int tries = 0; tries < 200; tries++) {
+		memset(used, 0, sizeof(used));
+		int cnt = 0;
+		for (int l = 0; l < 4; l++) {
+			on[l] = getenv("LEG_ON") ? ((atoi(getenv("LEG_ON")) >> l) & 1) : rng.chance(75);
+			nw[l] = zm[l] == 0 ? words_of[chcn[l]] : zm[l] == 1 ? 2 : 4;
+			npn[l] = zm[l] == 0 ? 1 : zm[l] == 2 ? 4 : 2;
+		}
+		for (int l = 0; l < 4; l++) {
+			if (!on[l]) continue;
+			bool placed = false;
+			for (int a = 0; a < 80 && !placed; a++) {
+				int p, s;
+				if (hires) {
+					if (nw[l] > 2) break;
+					p = rng.below(4); s = rng.below(4);
+					if (s + nw[l] > 4 || s < p || s > p + 2 + g_hsp) continue;
+				} else {
+					int h = rng.below(2); s = 4 * h + rng.below(5 - nw[l] > 0 ? 5 - nw[l] : 1);
+					if (nw[l] > 4 || s + nw[l] > 4 * h + 4) continue;
+					p = h ? rng.below(5 - npn[l]) : 4 + rng.below(5 - npn[l]);
+					if (h && s - p < g_pnsp) continue;
+					if (!h && s + 8 - (p + npn[l] - 1) < g_pnsp) continue;
+				}
+				bool free_ = true;
+				for (int k = 0; k < npn[l]; k++) if (used[p + k]) free_ = false;
+				for (int k = 0; k < nw[l]; k++) if (used[s + k] || (s + k >= p && s + k < p + npn[l])) free_ = false;
+				if (!free_) continue;
+				for (int k = 0; k < npn[l]; k++) used[p + k] = 1;
+				for (int k = 0; k < nw[l]; k++) used[s + k] = 1;
+				pn[l] = p; ch0[l] = s; placed = true;
+			}
+			if (!placed) on[l] = 0;
+			cnt += on[l];
+		}
+		if (cnt > 0) break;
+	}
+	if (getenv("LEG_FORCE")) { int p0, s0; sscanf(getenv("LEG_FORCE"), "%d,%d", &p0, &s0); pn[0] = p0; ch0[0] = s0; for (int l = 1; l < 4; l++) on[l] = 0; on[0] = 1; }
+	int row[8];
+	for (int& t : row) t = 0xE;
+	for (int l = 0; l < 4; l++) if (on[l]) { for (int k = 0; k < npn[l]; k++) row[pn[l] + k] = l; for (int k = 0; k < nw[l]; k++) row[ch0[l] + k] = 4 + l; }
+	for (int b : {0x10 / 2, 0x14 / 2, 0x18 / 2, 0x1C / 2}) setbank(c.r, b, row);
+	R_(0x20) = (on[0] | (on[1] << 1) | (on[2] << 2) | (on[3] << 3)) | ((uint16_t)rng.below(16) << 8);
+	R_(0x28) = (chcn[0] << 4) | (rng.below(2)) | (chcn[1] << 12) | (rng.below(2) << 8);
+	R_(0x2A) = (chcn[2] & 1) << 1 | rng.below(2) | (chcn[3] & 1) << 5 | rng.below(2) << 4;
+	g_noflip = chcn[1] >= 2 || getenv("LEG_NOFLIP");   // NBG1 at 16 bit/dot: the golden takes the high byte flip from the previous cell
+	R_(0x22) = 0; R_(0x98) = 0; R_(0x9A) = 0;
+	if (g_feat & 32) R_(0x22) = (rng.below(16) << 8) | (rng.below(16) << 12) | rng.below(32);   // mosaic
+	R_(0x78) = 1; R_(0x7A) = 0; R_(0x7C) = 1; R_(0x7E) = 0;
+	R_(0x88) = 1; R_(0x8A) = 0; R_(0x8C) = 1; R_(0x8E) = 0;
+	for (int l = 0; l < 2; l++) {
+		int zmx = 0x100;
+		if (g_feat & 2) {
+			switch (zm[l]) {
+			case 0: zmx = (g_feat & 256) ? (rng.chance(50) ? 0x100 : 0x040 + rng.below(0xC1)) : 0x100; break;   // enlargement only with feature 256: the golden shows stale cells where consecutive pattern names match
+			case 1: case 3: zmx = 0x200; break;   // the golden only follows reduction exactly at the maximum ratio
+			case 2: zmx = 0x400; break;
+			}
+		}
+		if (getenv("LEG_ZMX")) zmx = strtol(getenv("LEG_ZMX"), 0, 16);
+		int base = l ? 0x88 : 0x78;
+		R_(base) = (zmx >> 8) & 7; R_(base + 2) = (zmx & 0xFF) << 8;
+		if (zm[l] == 1 || zm[l] == 3) R_(0x98) |= 1 << (8 * l);
+		if (zm[l] == 2) { R_(0x98) |= 2 << (8 * l); R_(l ? 0x80 : 0x70) &= ~4; g_qt[l] = 1; }   // 4 cells: offset + 7 x 4 dots must stay inside the 32-dot window
+	}
+}
+
 // ---------------- main ----------------
 int main(int argc, char** argv) {
 	Verilated::commandArgs(argc, argv);
@@ -243,18 +337,26 @@ int main(int argc, char** argv) {
 		else if (!strncmp(argv[i], "+frames=", 8)) ppm_frames = atoi(argv[i] + 8);
 		else if (!strncmp(argv[i], "+scene=", 7)) scene_arg = atoi(argv[i] + 7);
 		else if (!strcmp(argv[i], "+cut")) cutmode = true;
+		else if (!strncmp(argv[i], "+legal=", 7)) { g_legal = 1; g_feat = atoi(argv[i] + 7); }
+		else if (!strcmp(argv[i], "+nostop")) g_nostop = 1;
+		else if (!strcmp(argv[i], "+nowr")) g_nowr = 1;
+		else if (!strncmp(argv[i], "+fill=", 6)) g_fill = atoi(argv[i] + 6);
+		else if (!strncmp(argv[i], "+hsp=", 5)) g_hsp = atoi(argv[i] + 5);
+		else if (!strncmp(argv[i], "+pnsp=", 6)) g_pnsp = atoi(argv[i] + 6);
 	}
 	Rng rng(seed);
 	int scene = scene_arg >= 0 ? scene_arg : (int)(seed % N_SCENES);
 	int dens = 10 + rng.below(35);
 	int pal = rng.chance(30);
 	Cfg cfg; gen_config(rng, cfg, scene, dens);
+	if (g_legal) legalize(rng, cfg);
 	bool lock_regs = (seed & 3) == 0;
 
 	if (getenv("VDP2_CFG")) { for (int i = 0; i < 0x90; i++) printf("%03x=%04x%s", 2*i, cfg.r[i], (i&7)==7?"\n":" "); printf("\n"); }
 	Mem mr, md;
 	Rng mrng(seed ^ 0xABCDEF);
-	mr.fill(mrng, (seed % 7 == 0) ? 3 : (int)(seed % 3));
+	mr.fill(mrng, g_fill >= 0 ? g_fill : (seed % 7 == 0) ? 3 : (int)(seed % 3));
+	if (g_noflip) for (Bank* b : {&mr.a0, &mr.a1, &mr.b0, &mr.b1}) for (auto& h : b->h) h &= ~0x4400;   // clear flip bits (bit 10, bit 14)
 	md = mr;
 
 	auto* top = new Vtb_top;
@@ -263,7 +365,7 @@ int main(int argc, char** argv) {
 	// initial programming: all registers, color RAM, a few VRAM words
 	auto W = [&](uint32_t a, uint16_t d, int gap = 0, int dqm = 0) { bus.q.push_back({0, a, {d}, dqm, gap}); };
 	for (int a = 0; a < 0x120; a += 2) if (a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C) W(0x180000 + a, cfg.r[a / 2], rng.below(3));
-	for (int i = 0; i < 2048; i += (rng.chance(10) ? 1 : 1)) W(0x100000 + 2 * i, (rng.chance(30) ? 0 : rng.next()), 0);
+	for (int i = 0; i < 2048; i += (rng.chance(10) ? 1 : 1)) W(0x100000 + 2 * i, getenv("LEG_CRAMRAMP") ? (i & 0x3FF) : (rng.chance(30) ? 0 : rng.next()), 0);
 	W(0x180000, cfg.r[0]);   // TVMD last
 
 	long t = 0;
@@ -272,7 +374,7 @@ int main(int argc, char** argv) {
 	std::vector<uint8_t> img[2]; int wline[2] = {0, 0}, wmax[2] = {0, 0};
 	std::vector<std::vector<uint8_t>> line[2];
 	std::vector<uint8_t> curline[2];
-	int saved = 0;
+	int saved = 0; long mism_total = 0; bool warm = false; long warm_t0 = 1100000;   // the golden shows stale first lines in its first frames
 	bool rdy_n_prev = true;
 	long covc[16] = {0};
 	std::deque<Op> pend_cfg;     // register writes that change VRAM access addressing: issued during vertical blank only
@@ -298,7 +400,7 @@ int main(int argc, char** argv) {
 		bool ce_r = !(t & 1), odd = t & 1;
 		top->CLK = 0;
 		top->RST_N = t > 6;
-		top->RES_N = !(t < 40 || (t > 700000 && t < 700030 && (seed & 7) == 5));
+		top->RES_N = !(t < 40 || (t > 700000 && t < 700030 && (seed & 7) == 5 && !g_legal));
 		top->CE_R = ce_r; top->CE_F = odd;
 		top->PAL = pal;
 		top->SCRN_EN = 0xFF; top->DBG_EXT = 0;
@@ -309,13 +411,14 @@ int main(int argc, char** argv) {
 		top->EXLAT_N = exlat;
 
 		// after a mid-run soft reset only part of the registers are programmed again
-		if (t == 700100 && (seed & 7) == 5) {
-			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && rng.chance(50)) pend_cfg.push_back({0, (uint32_t)(0x180000 + a), {cfg.r[a / 2]}, 0, (int)rng.below(3)});
+		if (t == 700100 && (seed & 7) == 5 && !g_legal) {
+			warm = false; warm_t0 = 700100 + 1100000;
+			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && (g_legal || rng.chance(50))) pend_cfg.push_back({0, (uint32_t)(0x180000 + a), {cfg.r[a / 2]}, 0, (int)rng.below(3)});
 			pend_cfg.push_back({0, 0x180000u, {cfg.r[0]}, 0, 0});
 		}
-		if (!pend_cfg.empty() && bus.idle() && vbl_age > 64 && vbl_age < 20000) { bus.q.push_back(pend_cfg.front()); pend_cfg.pop_front(); }
+		if (!pend_cfg.empty() && bus.idle() && vbl_age > 64 && vbl_age < 20000) { if (getenv("VDP2_LOGW") && pend_cfg.front().kind == 0 && pend_cfg.front().addr >= 0x180000) printf("W t=%ld reg=%03x v=%04x\n", t, pend_cfg.front().addr & 0x1FF, pend_cfg.front().data[0]); bus.q.push_back(pend_cfg.front()); pend_cfg.pop_front(); }
 		// CPU traffic once the initial programming is done
-		if (bus.idle() && t > 100000 && rng.chance(8)) {
+		if (bus.idle() && t > 100000 && rng.chance(8) && !g_nowr) {
 			int k = rng.below(100);
 			if (cutmode && !(k >= 35 && k < 55)) k = 100;
 			if (k >= 100) {}
@@ -333,25 +436,37 @@ int main(int argc, char** argv) {
 					else if (pick < 85) ra = 0x100 + 2 * rng.below(16);     // color calc / offsets
 					else if (pick < 95) ra = 0x20 + 2 * rng.below(32);      // layer control
 					else ra = 2 * rng.below(0x90);
+					if (g_legal) {   // only registers that keep the cycle pattern, formats and zoom legal
+						int k2 = rng.below(100);
+						if (k2 < 30) ra = 0x70 + 2 * rng.below(4);              // NBG0 scroll
+						else if (k2 < 45) ra = 0x80 + 2 * rng.below(4);         // NBG1 scroll
+						else if (k2 < 55) ra = 0x90 + 2 * rng.below(4);         // NBG2/3 scroll
+						else if (k2 < 70) ra = 0xC0 + 2 * rng.below(16);        // windows
+						else if (k2 < 80) ra = 0xE0 + 2 * rng.below(8);         // colour calculation
+						else if (k2 < 90) ra = 0xF0 + 2 * rng.below(8);         // priorities
+						else ra = 0x100 + 2 * rng.below(16);                    // colour offset and ratios
+					}
 					if (ra != 4 && ra != 8 && ra != 0xA && ra != 0xC && !(ra == 0 && rng.chance(70)) && ra != 0x0E) {
 						bool unsafe = ra < 0x70 || (ra >= 0x98 && ra <= 0xAE) || (ra >= 0xB0 && ra <= 0xBE) || (ra >= 0xD8 && ra <= 0xDE) || ra == 0xD6;   // WCTLD: its rotation parameter window bits pick the table for coefficient addresses   // registers that form VRAM addresses: blanking only
 						uint16_t wv = (uint16_t)(rng.next() & (rng.next() | rng.next()));
-						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);   // keep RBG1 on/off as programmed
+						if (ra == 0x20) wv = (wv & ~0x20) | (cfg.r[0x20 / 2] & 0x20);
+						if (g_legal && ((ra == 0x70 && g_qt[0]) || (ra == 0x80 && g_qt[1]))) wv &= ~4;   // keep RBG1 on/off as programmed
 						Op o{0, (uint32_t)(0x180000 + ra), {wv}, rng.chance(10) ? (int)rng.below(3) : 0, (int)rng.below(4)};
-						if (unsafe) pend_cfg.push_back(o); else bus.q.push_back(o);
+						if (unsafe || g_legal) pend_cfg.push_back(o); else bus.q.push_back(o);
 					}
 				}
 			} else if (k < 75) {     // VRAM write
-				W(2 * rng.below(0x40000), rng.next(), rng.below(4), rng.chance(20) ? rng.below(4) : 0);
+				{ uint32_t wa = 2 * rng.below(0x40000); uint16_t wd = rng.next(); if (g_noflip) wd &= ~0x4400; int gp = rng.below(4), dq = rng.chance(20) ? rng.below(4) : 0; if (g_legal) pend_cfg.push_back({0, wa, {wd}, dq, gp}); else W(wa, wd, gp, dq); }
 			} else if (k < 85) {     // VRAM burst
 				std::vector<uint16_t> d; int n = 2 + rng.below(8);
-				for (int i = 0; i < n; i++) d.push_back(rng.next());
-				bus.q.push_back({2, (uint32_t)2 * rng.below(0x3F000), d, 0, (int)rng.below(4)});
+				for (int i = 0; i < n; i++) d.push_back(g_noflip ? rng.next() & ~0x4400 : rng.next());
+				{ Op bo{2, (uint32_t)2 * rng.below(0x3F000), d, 0, (int)rng.below(4)}; if (g_legal) pend_cfg.push_back(bo); else bus.q.push_back(bo); }
 			} else {                 // CRAM write
 				W(0x100000 + 2 * rng.below(2048), rng.next(), rng.below(4), rng.chance(20) ? rng.below(4) : 0);
 			}
 		}
 		bus.step(odd, rdy_n_prev);
+		{ static int pst = 0; if (bus.st == 1 && pst != 1 && getenv("VDP2_LOGB")) printf("B t=%ld kind=%d addr=%06x\n", t, bus.cur.kind, bus.cur.addr); pst = bus.st; }
 
 		// memory read data from the previous clock's addresses
 		top->r_RA0_Q = mr.a0.q; top->r_RA1_Q = mr.a1.q; top->r_RB0_Q = mr.b0.q; top->r_RB1_Q = mr.b1.q;
@@ -373,22 +488,24 @@ int main(int argc, char** argv) {
 		// A colour-depth or reduction register changed during blanking leaves stale bytes in the dot data for the first
 		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
 		VlWide<3> rmc = rm, dmc = dm;
-		if (!bits(rm, 7, 1)) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
+		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1) || curline[1].size() < 6 || line[1].empty()))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
 		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
 			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
 			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || (top->r_RB_WE && top->r_RB_D != top->d_RB_D) ||
 			top->r_RB_WE != top->d_RB_WE || top->r_RB_RD != top->d_RB_RD);
-		if (diff) {
+		static bool first_printed = false;
+		if (diff && g_nostop && first_printed) { mism_total++; if (mism_total % 100000 == 0) printf("mismatches %ld\n", mism_total); }
+		else if (diff) {
 			static const struct { const char* n; int lo, w; } f[] = {
 				{"VRES",0,2},{"HRES",2,3},{"INTERLACE",5,1},{"FIELD",6,1},{"VBL_N",7,1},{"HBL_N",8,1},{"VS_N",9,1},{"HS_N",10,1},
 				{"DCLK",11,1},{"B",12,8},{"G",20,8},{"R",28,8},{"FBDO",36,16},{"VTIM_N",52,1},{"HTIM_N",53,1},{"DCE_F",54,1},
 				{"DCE_R",55,1},{"HINT_N",56,1},{"VINT_N",57,1},{"RDY_N",58,1},{"DO",59,16}};
-			printf("MISMATCH seed=%llu scene=%d clk=%ld\n", (unsigned long long)seed, scene, t);
+			printf("MISMATCH seed=%llu scene=%d clk=%ld y=%zu x=%zu\n", (unsigned long long)seed, scene, t, line[1].size(), curline[1].size() / 3);
 			for (auto& x : f) { uint64_t a = bits(rm, x.lo, x.w), b = bits(dm, x.lo, x.w); if (a != b) printf("  %-9s ref=%llx dut=%llx\n", x.n, (unsigned long long)a, (unsigned long long)b); }
 			#define CMP(n) if (top->r_##n != top->d_##n) printf("  %-9s ref=%llx dut=%llx\n", #n, (unsigned long long)top->r_##n, (unsigned long long)top->d_##n);
 			CMP(RA0_A) CMP(RA1_A) if (top->r_RA_WE) { CMP(RA_D) } CMP(RA_WE) CMP(RA_RD) CMP(RB0_A) CMP(RB1_A) if (top->r_RB_WE) { CMP(RB_D) } CMP(RB_WE) CMP(RB_RD)
-			failed = true;
+			if (g_nostop) { first_printed = true; mism_total++; } else failed = true;
 #ifdef DBG
 			for (int k = 9; k >= 0; k--) { Hist& h = hist[(t - k) & 15];
 			  printf("  dbg t-%d usel=%d dcr=%d dcf=%d MT=%x a0 pn=%d ch=%d vs=%d nx=%d uo=%05x ha=%04x %04x %04x | ref ch0=%05x ch1=%05x ch2=%05x pn0=%05x pn1=%05x cc1=%d pn11=%08x bm1=%d\n", k, h.usel, h.dcr, h.dcf, h.mt, h.a0pn, h.a0ch, h.a0vs, h.nx, h.uo, h.ha0, h.ha1, h.ha2, h.rch0, h.rch1, h.rch2, h.rpn0, h.rpn1, h.cc1, h.pn11, h.nbm1); }
@@ -414,6 +531,7 @@ int main(int argc, char** argv) {
 				for (int w = 0; w < 2; w++) { if (!curline[w].empty()) line[w].push_back(curline[w]); curline[w].clear(); }
 			}
 			if (vbl == 1 && lastvbl == 0) {   // active area starts
+				if (t > warm_t0) warm = true;
 				for (int w = 0; w < 2; w++) { line[w].clear(); curline[w].clear(); }
 			}
 			if (vbl == 0 && lastvbl == 1) {   // active area ends
@@ -427,7 +545,8 @@ int main(int argc, char** argv) {
 		}
 	}
 	// bus driver: run the slot logic with the golden RDY_N is handled in the loop below
-	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, failed ? "FAIL" : "PASS");
+	if (g_nostop && mism_total) failed = true;
+	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d mism=%ld %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, mism_total, failed ? "FAIL" : "PASS");
 	if (getenv("VDP2_COV")) { for (int k = 0; k < 16; k++) printf("cov%d=%ld ", k, covc[k]); printf("\n"); }
 	delete top;
 	return failed ? 1 : 0;
