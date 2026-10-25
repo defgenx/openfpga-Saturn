@@ -125,10 +125,11 @@ wire [8:0] occ0 = wptr0 - rptr0, occ1 = wptr1 - rptr1;
 wire       full0 = occ0 >= 9'd255, full1 = occ1 >= 9'd255;
 wire       stall = occ0 >= STALL || occ1 >= STALL;
 wire       ne0 = (wptr0_d != rptr0), ne1 = (wptr1_d != rptr1);
-reg [34:0] wf0_q, wf1_q;           // synchronous read, so the FIFOs map to M10K
+reg  [7:0] wra0, wra1;           // registered read address: the RAM output is the entry one clock after rptr
+wire [34:0] wf0_q = wf0[wra0], wf1_q = wf1[wra1];
 always @(posedge clk_ram) begin
 	wptr0_d <= wptr0; wptr1_d <= wptr1;
-	wf0_q <= wf0[rptr0[7:0]]; wf1_q <= wf1[rptr1[7:0]];
+	wra0 <= rptr0[7:0]; wra1 <= rptr1[7:0];
 end
 
 reg  [7:0] wf_drop = 8'd0;
