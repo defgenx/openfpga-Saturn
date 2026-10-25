@@ -2234,17 +2234,6 @@ module VDP2P import VDP2P_PKG::*; (
 					end
 				end
 				
-				for (int i=0; i<4; i++) begin
-					if (BG2.NxCH[i]) begin
-						case (BG2.NxCHS[i])
-							2'd0: NBG_CH[i] <= RA0_BUF;
-							2'd1: NBG_CH[i] <= RA1_BUF;
-							2'd2: NBG_CH[i] <= RB0_BUF;
-							2'd3: NBG_CH[i] <= RB1_BUF;
-						endcase
-					end
-				end
-				
 //				if (NBG_FETCH_START_EN) begin
 //					NBG_CDC[0] <= '{8{'0}}; NBG_CDP[0] <= CDP_NULL; NBG_CDP[4] <= CDP_NULL; NBG_CDP[6] <= CDP_NULL;
 //					NBG_CDC[1] <= '{8{'0}}; NBG_CDP[1] <= CDP_NULL; NBG_CDP[5] <= CDP_NULL; NBG_CDP[7] <= CDP_NULL;
@@ -2611,10 +2600,17 @@ C_NEN[0] = 0;
 	bit          NHF1_HOLD;
 	always @(posedge CLK) begin
 		if (DOT_CE_R) CSEQ <= 3'd1;
-		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd4) ? 3'd0 : CSEQ + 3'd1;
+		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd5) ? 3'd0 : CSEQ + 3'd1;
 		if (CSEQ == 3'd3) NHF1_HOLD <= C_HF[1];
 	end
-	wire         CVIS = CSEQ != 3'd0;
+	wire         CVIS = CSEQ != 3'd0 && CSEQ != 3'd5;
+	//Fetched character words: the golden loads NBG_CH[l] at DOT_CE_R from the bank buffers. The chains read them in the
+	//window before that event, so each word is loaded after its last reader (layer 3 after the visit of array 3, ...
+	//layer 0 after the visit of array 0) through one bank multiplexer; the bank buffers and BG2 are stable in the window.
+	wire [ 1: 0] CHL = 2'd1 - CSEQ[1:0];   //CSEQ 2,3,4,5 -> layer 3,2,1,0
+	wire [ 1: 0] CHS = BG2.NxCHS[CHL];
+	wire [31: 0] CHD = CHS == 2'd0 ? RA0_BUF : CHS == 2'd1 ? RA1_BUF : CHS == 2'd2 ? RB0_BUF : RB1_BUF;
+	always @(posedge CLK) if (CSEQ >= 3'd2 && BG2.NxCH[CHL]) NBG_CH[CHL] <= CHD;
 	wire [ 1: 0] CAI  = 2'd0 - CSEQ[1:0];   //1,2,3,4 -> 3,2,1,0
 	wire         S_E4H = CVIS & C_E4H[CAI], S_E4L = CVIS & C_E4L[CAI], S_E8 = CVIS & C_E8[CAI], S_E16 = CVIS & C_E16[CAI], S_E32 = CVIS & C_E32[CAI];
 	wire [31: 0] S_CH  = C_CH[CAI];
