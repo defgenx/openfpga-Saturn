@@ -60,8 +60,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	reg         RW_N_OLD, CS_N_OLD, IRQV_N_OLD, RTC64_OLD;
 	reg         ev_cmd, ev_vbin, ev_vbout, ev_rtc, ev_i0, ev_tmr;
 
-	reg  [ 7:0] oreg_m [32];
-	reg  [ 7:0] ireg_m [8];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] oreg_m [32];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ireg_m [8];
 	wire [ 6:0] ba     = {A, 1'b1};
 	wire        bus_wr = !RW_N && RW_N_OLD && !CS_N && MRES_N;
 	wire        bus_rd = !CS_N && CS_N_OLD && RW_N;
@@ -89,10 +89,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		iack  <= ic && !iack;
 	end
 
-	(* ramstyle = "MLAB" *) reg [7:0] ram0 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB" *) reg [7:0] ram1 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB" *) reg [7:0] ram2 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB" *) reg [7:0] ram3 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram0 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram1 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram2 [0:(1<<RAM_AW)-1];
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram3 [0:(1<<RAM_AW)-1];
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
 	reg         rwait = 1'b0;

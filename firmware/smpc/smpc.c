@@ -7,7 +7,7 @@ enum { MSHRES = 1, MSHNMI = 2, SSHRES = 4, SSHNMI = 8, SYSRES = 16, SNDRES = 32,
 #define TS0 45                       /* INTBACK status: ticks from the COMREG write to the start of the 996-tick sequence (calibrated) */
 
 static u8  rtc[7], smem[4], sbuf[7], ir[7];   /* year hi/lo, day|month, days, hour, min, sec (BCD, month binary) */
-static u8  sr, ste, pmd[2], oc, vbcnt, st, contv, brk, cont_prev;
+static u8  ste, pmd, oc, vbcnt, st, contv, brk, cont_prev;
 static u8  clean, settime_pend, ib_exec, ib_peri, ib_imm, ib_optim, vbpend, optim_t, notopt_t;
 static u32 t_rtc, t_optim, t_imm, t_vbin, t_pl, t_vbtime;
 
@@ -20,26 +20,25 @@ static void oreg(u32 i, u32 v) { oregs[i] = v; }
 static void put(u32 v) { oreg(oc++, v); }
 static void sf0(void) { MM(R_SF) = 0; }
 static void mirq(void) { act(0, MIRQ); act(MIRQ, 0); }
-static void setsr(u32 v) { sr = (u8)v; MM(R_SR) = v; }
+static void setsr(u32 v) { MM(R_SR) = v; }
 static u32 sres(void) { return (MM(R_IN) & 0x10) ? 0 : 1; }
 
 /* RTC */
 static u8 inc_bcd(u8 v) { return (v & 15) == 9 ? (u8)((v & 0xF0) + 16) : (u8)(v + 1); }
 static void apply_settime(void) { settime_pend = 0; for (int i = 0; i < 7; i++) rtc[i] = sbuf[i]; }
 static void rtc_tick(void) {
+	u32 i, m = rtc[2] & 15, last;
 	if (settime_pend) { apply_settime(); return; }
-	if ((rtc[6] = inc_bcd(rtc[6])) != 0x60) return;
-	rtc[6] = 0;
-	if ((rtc[5] = inc_bcd(rtc[5])) != 0x60) return;
-	rtc[5] = 0;
-	if ((rtc[4] = inc_bcd(rtc[4])) != 0x24) return;
-	rtc[4] = 0;
-	u8 d = rtc[3], m = rtc[2] & 15;
-	if ((d == 0x28 && m == 2) || (d == 0x30 && (m == 4 || m == 6 || m == 9 || m == 11)) || d == 0x31) {
-		rtc[3] = 1;
-		rtc[2] = (u8)((rtc[2] & 0xF0) | (m == 12 ? 1 : m + 1));
-		if (m == 12 && (rtc[1] = inc_bcd(rtc[1])) == 0x00) rtc[0] = inc_bcd(rtc[0]);
-	} else rtc[3] = inc_bcd(d);
+	for (i = 6; i > 3; i--) {                    /* seconds, minutes, hours */
+		rtc[i] = inc_bcd(rtc[i]);
+		if (rtc[i] != (i == 4 ? 0x24 : 0x60)) return;
+		rtc[i] = 0;
+	}
+	last = m == 2 ? 0x28 : (0xA50 >> m & 1) ? 0x30 : 0x31;   /* month lengths; leap years are not handled */
+	if (rtc[3] != last && rtc[3] != 0x31) { rtc[3] = inc_bcd(rtc[3]); return; }
+	rtc[3] = 1;
+	rtc[2] = (u8)((rtc[2] & 0xF0) | (m == 12 ? 1 : m + 1));
+	if (m == 12 && (rtc[1] = inc_bcd(rtc[1])) == 0) rtc[0] = inc_bcd(rtc[0]);
 }
 static void rtc_load(void) {                     /* EXT_RTC toggled */
 	u32 a = MM(R_RTC), b = MM(R_RTC + 1);
@@ -54,7 +53,7 @@ static void thtr(u32 p, u32 ddr, u32 pd) { MM(R_PDR) = p | ddr << 1 | pd << 3; }
 static u32 sample(u32 p, u32 pd, u32 *t) { thtr(p, 3, pd); *t += 44; wait_until(*t); return pdr(p); }
 static void poll_port(u32 p, u32 *t) {
 	u32 a, b, c, d;
-	if (pmd[p] == 3) return;
+	if (((pmd >> (2 * p)) & 3) == 3) return;
 	if (MM(R_IN) & (0x100 << p)) { put(0xA0); return; }
 	*t += p ? 245 : 222; wait_until(*t);
 	thtr(p, 2, 3); *t += 44; wait_until(*t); a = pdr(p);
@@ -144,7 +143,7 @@ static inline __attribute__((always_inline)) void do_command(void) {
 		return;
 	case 0x10:
 		ir[0] = (u8)MM(R_IREG); ir[1] = (u8)MM(R_IREG + 1); ir[2] = (u8)MM(R_IREG + 2);
-		vbpend = 0; pmd[0] = (ir[1] >> 4) & 3; pmd[1] = ir[1] >> 6;
+		vbpend = 0; pmd = ir[1] >> 4;
 		if ((ir[0] & 15)) {
 			ib_optim = !(ir[1] & 2) && (ir[1] & 8);
 			if (settime_pend) apply_settime();
