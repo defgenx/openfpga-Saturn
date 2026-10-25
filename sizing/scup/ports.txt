@@ -1,63 +1,62 @@
-	inpuCLK
-	inpuRST_N
-	inpuCE_R
-	inpuCE_F
-	inpuRES_N
-	inpuCA
-	inpuCDI
-	oupuCDO
-	inpuCCS1_N
-	inpuCCS2_N
-	inpuCCS3_N
-	inpuCRD_WR_N
-	inpuCDQM_N
-	inpuCRD_N
-	oupuCWAIT_N
-	inpuCIVECF_N
-	oupuregCIRL_N
-	oupuCBREQ_N
-	inpuCBACK_N
-	oupuECA
-	inpuECDI
-	oupuECDO
-	oupuECDQM_N
-	oupuECRD_WR_N
-	oupuECCS3_N
-	oupuECRD_N	
-	oupuECBURST	
-	oupuECRFS	
-	inpuECWAIT_N
-	oupuregAA
-	inpuADI
-	oupuregADO
-	oupuregAFC
-	oupuregAAS_N
-	oupuregACS0_N
-	oupuregACS1_N
-	oupuregACS2_N
-	inpuAWAIT_N
-	inpuAIRQ_N
-	oupuregARD_N
-	oupuregAWRL_N
-	oupuregAWRU_N
-	oupuregATIM0_N
-	oupuregATIM1_N
-	oupuregATIM2_N
-	inpuBDI
-	oupuregBDO
-	oupuregBADDT_N
-	oupuregBDTEN_N
-	oupuregBREQ_N	
-	oupuregBCS1_N
-	inpuBRDY1_N
-	inpuIRQ1_N
-	oupuregBCS2_N
-	inpuBRDY2_N
-	inpuIRQV_N
-	inpuIRQH_N
-	inpuIRQL_N
-	oupuregBCSS_N
-	inpuBRDYS_N
-	inpuIRQS_N
-	inpuMIREQ_N
-	inpuFAST
+RST_N
+CE_R
+CE_F
+RES_N
+CA
+CDI
+CDO
+CCS1_N
+CCS2_N
+CCS3_N
+CRD_WR_N
+CDQM_N
+CRD_N
+CWAIT_N
+CIVECF_N
+CIRL_N
+CBREQ_N
+CBACK_N
+ECA
+ECDI
+ECDO
+ECDQM_N
+ECRD_WR_N
+ECCS3_N
+ECRD_N
+ECBURST
+ECRFS
+ECWAIT_N
+AA
+ADI
+ADO
+AFC
+AAS_N
+ACS0_N
+ACS1_N
+ACS2_N
+AWAIT_N
+AIRQ_N
+ARD_N
+AWRL_N
+AWRU_N
+ATIM0_N
+ATIM1_N
+ATIM2_N
+BDI
+BDO
+BADDT_N
+BDTEN_N
+BREQ_N
+BCS1_N
+BRDY1_N
+IRQ1_N
+BCS2_N
+BRDY2_N
+IRQV_N
+IRQH_N
+IRQL_N
+BCSS_N
+BRDYS_N
+IRQS_N
+MIREQ_N
+FAST

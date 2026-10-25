@@ -301,3 +301,35 @@ module SCUP_CPU_CACHE
 	assign Q = sub_wire0;
 `endif
 endmodule
+
+
+//DMA channel register storage: 4 words, asynchronous read, one synchronous write port (MLAB)
+module SCUP_CHRAM #(parameter W = 27)
+(
+	input          CLK,
+	input  [1:0]   WADDR,
+	input  [W-1:0] DATA,
+	input          WREN,
+	input  [1:0]   RADDR,
+	output [W-1:0] Q
+);
+	(* ramstyle = "MLAB, no_rw_check" *) reg [W-1:0] MEM [4];
+	always @(posedge CLK) if (WREN) MEM[WADDR] <= DATA;
+	assign Q = MEM[RADDR];
+endmodule
+
+
+//DMA buffer lane: 2 bytes, asynchronous read, synchronous write (MLAB)
+module SCUP_LANE
+(
+	input        CLK,
+	input        WADDR,
+	input  [7:0] DATA,
+	input        WREN,
+	input        RADDR,
+	output [7:0] Q
+);
+	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] MEM [2];
+	always @(posedge CLK) if (WREN) MEM[WADDR] <= DATA;
+	assign Q = MEM[RADDR];
+endmodule
