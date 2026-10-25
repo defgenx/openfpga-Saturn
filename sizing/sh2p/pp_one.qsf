@@ -1,5 +1,5 @@
-set_global_assignment -name TOP_LEVEL_ENTITY SH7604P_BSC
-set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_blk_bsc_new
+set_global_assignment -name TOP_LEVEL_ENTITY pair_one
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_pp_one
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CEBA4F23C8
 set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
@@ -24,5 +24,7 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT HIGH
 set_global_assignment -name SEED 13
-set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/sh2p/SH7604P_pkg.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/sh2p/SH7604P_BSC.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/sh2p/SH2P_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/saturn/SH/sh2p/SH2P_alu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE pairprobe/SH2P_cone.sv
+set_global_assignment -name SYSTEMVERILOG_FILE pairprobe/pair_one.sv

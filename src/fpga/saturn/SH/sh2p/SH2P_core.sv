@@ -602,7 +602,7 @@ module SH2P_core
 				PIPE.WB.DI <= PIPE.MA.DI;
 				PIPE.WB.PC <= PIPE.MA.PC;
 				PIPE.WB.RD <= MA_RDATA;
-				WBRD_Z <= (MA_RDATA == 32'h0);
+				WBRD_Z <= (MA_RDATA[7:0] == 8'h0);
 				RD_SAVE <= MA_RDATA;
 			end
 			else if (!MA_STALL && INST_SPLIT) begin
@@ -613,7 +613,7 @@ module SH2P_core
 				PIPE.WB.DI <= PIPE.MA.DI;
 				PIPE.WB.PC <= PIPE.MA.PC;
 				PIPE.WB.RD <= RD_SAVE;
-				WBRD_Z <= (RD_SAVE == 32'h0);
+				WBRD_Z <= (RD_SAVE[7:0] == 8'h0);
 			end
 		end
 	end

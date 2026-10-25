@@ -28,3 +28,5 @@ set_global_assignment -name SEED 13
 set_global_assignment -name QIP_FILE ../../src/fpga/saturn/SH/sh2p/SH7604P.qip
 set_global_assignment -name SYSTEMVERILOG_FILE one_wrap.sv
 set_global_assignment -name SDC_FILE fmax/one.sdc
+
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"
