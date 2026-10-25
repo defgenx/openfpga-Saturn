@@ -669,6 +669,25 @@ module SCUP2
 		end
 	end
 	
+	//A-bus wait count: one load value for the four places that start an access
+	bit  [ 5:0] ABUS_WAIT_CNT;
+	bit         ABUS_RFS;
+	wire        aw_cpu_i = DMA_BUS_EN && ABUS_ST == ABUS_IDLE && CPU_ABUS_REQ;
+	wire        aw_cpu_h = DMA_BUS_EN && ABUS_ST == ABUS_ADDR_H;
+	wire        aw_cpu   = aw_cpu_i || aw_cpu_h;
+	wire        aw_dr    = DMA_BUS_EN && ABUS_ST == ABUS_DMA_READ && !DMA_BUF_SIZE[2];
+	wire        aw_dw    = ABUS_DATA_ACK;
+	wire        aw_ld    = aw_cpu || aw_dr || aw_dw;
+	wire        aw_s0    = aw_cpu ? !ACACHE_CCS1N : !(aw_dr ? DMA_RA[26] : DMA_WA[26]);
+	wire        aw_s1    = aw_cpu ? !ACACHE_CA[24] : aw_dr ? !DMA_RA[24] : !(|DMA_WA[25:24]);
+	wire        aw_s2    = aw_cpu ? !ACACHE_CA[23] : aw_dr ? !DMA_RA[23] : !DMA_WA[23];
+	wire [ 5:0] aw_k     = !aw_cpu ? 6'd2 : !ABUS_RFS ? 6'd3 : {2'b00,AREF.ARWT} + (aw_cpu_i ? 6'd5 : (aw_s0 | aw_s1) ? 6'd3 : 6'd5);
+	wire [ 5:0] aw_n     = AW_NW(aw_s0 ? 2'd0 : aw_s1 ? 2'd1 : 2'd2);
+	always @(posedge CLK) begin
+		if (aw_ld) ABUS_WAIT_CNT <= (aw_s0 | aw_s1 | aw_s2) ? aw_n + aw_k : 6'd0;
+		else if (DMA_BUS_EN && ABUS_WAIT_CNT) ABUS_WAIT_CNT <= ABUS_WAIT_CNT - 6'd1;
+	end
+	
 	//Capture of CPU writes to DR/DW/DC; they land in the clk after the CE_R cycle that processes REG_WWAIT
 	wire        CW_STB = CE_R && RES_N && REG_WWAIT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -709,9 +728,7 @@ module SCUP2
 		bit         CPU_ABUS_ACT;
 		bit         CPU_BBUS_ACT;
 		bit         ABUS_LONG;
-		bit  [ 5:0] ABUS_WAIT_CNT;
 		bit  [ 9:0] ABUS_RFS_CNT;
-		bit         ABUS_RFS;
 		bit         BBUS_RD;
 		bit         CPU_ABUS_WAIT_CLR;
 		bit         CPU_BBUS_WAIT_CLR;
@@ -964,7 +981,6 @@ module SCUP2
 					ABUS_RFS_CNT <= '0;
 					ABUS_RFS <= 1;
 				end
-				if (ABUS_WAIT_CNT) ABUS_WAIT_CNT <= ABUS_WAIT_CNT - 6'd1;
 			end
 			if (DSTA.DACSA && ABUS_DMA_START && CE_R) ABUS_DMA_START <= 0;
 			ABUS_READ_DONE <= 0;
@@ -996,8 +1012,7 @@ module SCUP2
 							AWRU_N <= ABUS_CDQMN_INNER[1];
 							ABUS_LONG <= 0;
 						end
-						ABUS_WAIT_CNT <= (!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24] | !ABUS_CA_INNER[23]) ?
-						                 AW_NW(!ABUS_CCS1N_INNER ? 2'd0 : !ABUS_CA_INNER[24] ? 2'd1 : 2'd2) + (ABUS_RFS ? {2'b00,AREF.ARWT} + 6'd5 : 6'd3) : '0;
+						;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_WAIT;
 					end
@@ -1034,8 +1049,7 @@ module SCUP2
 					AWRL_N <= ABUS_CDQMN_INNER[0];
 					AWRU_N <= ABUS_CDQMN_INNER[1];
 					ABUS_LONG <= 0;
-					ABUS_WAIT_CNT <= (!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24] | !ABUS_CA_INNER[23]) ?
-					                 AW_NW(!ABUS_CCS1N_INNER ? 2'd0 : !ABUS_CA_INNER[24] ? 2'd1 : 2'd2) + (ABUS_RFS ? {2'b00,AREF.ARWT} + ((!ABUS_CCS1N_INNER | !ABUS_CA_INNER[24]) ? 6'd3 : 6'd5) : 6'd3) : '0;
+					;
 					ABUS_RFS <= 0;
 					ABUS_ST <= ABUS_WAIT;
 				end
@@ -1084,7 +1098,7 @@ module SCUP2
 						AA <= {DMA_RA[25:2],ABUS_A1,1'b0};
 						AAS_N <= 0;
 						ARD_N <= 0;
-						ABUS_WAIT_CNT <= (!DMA_RA[26] | !DMA_RA[24] | !DMA_RA[23]) ? AW_NW(!DMA_RA[26] ? 2'd0 : !DMA_RA[24] ? 2'd1 : 2'd2) + 6'd2 : '0;
+						;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_DMA_READ_WAIT;
 					end
@@ -1139,7 +1153,7 @@ module SCUP2
 						AWRL_N <= 0;
 						AWRU_N <= 0;
 						ABUS_WRITE_PROCESS <= 1;
-						ABUS_WAIT_CNT <= (!DMA_WA[26] | !DMA_WA[25:24] | !DMA_WA[23]) ? AW_NW(!DMA_WA[26] ? 2'd0 : !DMA_WA[25:24] ? 2'd1 : 2'd2) + 6'd2 : '0;
+						;
 						ABUS_RFS <= 0;
 						ABUS_ST <= ABUS_DMA_WRITE_WAIT;
 					end
