@@ -6,9 +6,9 @@
 enum { MSHRES = 1, MSHNMI = 2, SSHRES = 4, SSHNMI = 8, SYSRES = 16, SNDRES = 32, CDRES = 64, DOTSEL = 128, MIRQ = 256 };
 #define TS0 45                       /* INTBACK status: ticks from the COMREG write to the start of the 996-tick sequence (calibrated) */
 
-static u8  rtc[7], smem[4], sbuf[7], ir[7];   /* year hi/lo, day|month, days, hour, min, sec (BCD, month binary) */
+static u8  rtc[7], smem[4], ir[3];   /* year hi/lo, day|month, days, hour, min, sec (BCD, month binary) */
 static u8  ste, pmd, oc, vbcnt, st, contv, brk, cont_prev;
-static u8  clean, settime_pend, ib_exec, ib_peri, ib_imm, ib_optim, vbpend, optim_t, notopt_t;
+static u8  clean, ib_exec, ib_peri, ib_imm, ib_optim, vbpend, optim_t, notopt_t;
 static u32 t_rtc, t_optim, t_imm, t_vbin, t_pl, t_vbtime;
 
 static inline u32 now(void) { return MM(R_TICKS); }
@@ -25,10 +25,8 @@ static u32 sres(void) { return (MM(R_IN) & 0x10) ? 0 : 1; }
 
 /* RTC */
 static u8 inc_bcd(u8 v) { return (v & 15) == 9 ? (u8)((v & 0xF0) + 16) : (u8)(v + 1); }
-static void apply_settime(void) { settime_pend = 0; for (int i = 0; i < 7; i++) rtc[i] = sbuf[i]; }
 static void rtc_tick(void) {
 	u32 i, m = rtc[2] & 15, last;
-	if (settime_pend) { apply_settime(); return; }
 	for (i = 6; i > 3; i--) {                    /* seconds, minutes, hours */
 		rtc[i] = inc_bcd(rtc[i]);
 		if (rtc[i] != (i == 4 ? 0x24 : 0x60)) return;
@@ -146,7 +144,6 @@ static inline __attribute__((always_inline)) void do_command(void) {
 		vbpend = 0; pmd = ir[1] >> 4;
 		if ((ir[0] & 15)) {
 			ib_optim = !(ir[1] & 2) && (ir[1] & 8);
-			if (settime_pend) apply_settime();
 			ib_status(t0 + TS0);
 			return;
 		}
@@ -159,12 +156,11 @@ static inline __attribute__((always_inline)) void do_command(void) {
 		sf0();
 		return;
 	case 0x16:
-		sbuf[0] = (u8)MM(R_IREG); sbuf[1] = (u8)MM(R_IREG + 1); sbuf[2] = (u8)MM(R_IREG + 2); sbuf[3] = (u8)MM(R_IREG + 3);
-		sbuf[4] = (u8)MM(R_IREG + 4); sbuf[5] = (u8)MM(R_IREG + 5); sbuf[6] = (u8)MM(R_IREG + 6);
-		ste = 1; settime_pend = 1; t_rtc = now() + 4000000;
+		for (t0 = 0; t0 < 7; t0++) rtc[t0] = (u8)MM(R_IREG + t0);
+		ste = 1; t_rtc = now() + 4000000;
 		break;
 	case 0x17:
-		smem[0] = (u8)MM(R_IREG); smem[1] = (u8)MM(R_IREG + 1); smem[2] = (u8)MM(R_IREG + 2); smem[3] = (u8)MM(R_IREG + 3);
+		for (t0 = 0; t0 < 4; t0++) smem[t0] = (u8)MM(R_IREG + t0);
 		break;
 	}
 	while (AGE() < DUE(e)) ;

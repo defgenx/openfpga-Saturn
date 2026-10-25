@@ -71,7 +71,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	wire [31:0] ia, da, dd;
 	wire        ic, dc, dwe;
 	wire [ 3:0] dsel;
-	reg  [31:0] drd = 32'd0, ird_r = 32'd0, rom_d = 32'd0;
+	wire [31:0] drd;
+	reg  [31:0] ird_r = 32'd0, rom_d = 32'd0;
 	reg         iack = 1'b0, dack = 1'b0;
 
 `ifdef SMPC_RF_M10K
@@ -97,9 +98,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] ramw [0:(1<<RAM_AW)-1];
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
-	reg         rwait = 1'b0;
 	wire        sel_rom = da[31:30] == 2'b00;
-	wire        dgo     = dc && !dack && !rwait;
+	wire        dgo     = dc && !dack;
 	wire [RAM_AW-1:0] ra = da[RAM_AW+1:2];
 	wire [ 7:0] mi      = da[9:2];        // MMIO word index
 	always @(posedge CLK) if (dgo && dwe && sel_ram) begin
@@ -126,6 +126,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 		endcase
 	end
 
+	assign drd = sel_ram ? ramw[ra] : sel_mm ? mm_q : rom_d;
+
 	// ---------------------------------------------------------------- state
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
@@ -134,12 +136,9 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 9, para
 			DL <= 24'd0; dl_arm <= 1'b0; RESD <= 1'b1; i0_en <= 1'b0; TS <= 16'd0; PINS <= 9'h100; TICKS <= 24'd0;
 			RW_N_OLD <= 1'b1; CS_N_OLD <= 1'b1; IRQV_N_OLD <= 1'b1; RTC64_OLD <= 1'b0;
 			ev_cmd <= 1'b0; ev_vbin <= 1'b0; ev_vbout <= 1'b0; ev_rtc <= 1'b0; ev_i0 <= 1'b0; ev_tmr <= 1'b0;
-			dack <= 1'b0; drd <= 32'd0; rwait <= 1'b0;
+			dack <= 1'b0;
 		end else begin
-			dack <= (dgo && !sel_rom) || rwait;
-			rwait <= dgo && sel_rom;
-			if (rwait) drd <= rom_d;
-			else if (dgo) drd <= sel_ram ? ramw[ra] : mm_q;
+			dack <= dgo;
 			if (CE) TICKS <= TICKS + 24'd1;
 			RW_N_OLD <= RW_N; CS_N_OLD <= CS_N;
 			IRQV_N_OLD <= IRQV_N; RTC64_OLD <= EXT_RTC[64];
