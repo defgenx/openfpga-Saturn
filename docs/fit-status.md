@@ -71,3 +71,32 @@ lite-mlab entity table:
 `sim/cdb` needs `make -C sim cdb` with the ring model of `tb_cdb` (it still addressed the SRAM pins after the ring moved to PSRAM1).
 `check_hle.py` accepts a CD-DA pair whose R word is the previous pair's: the script samples at an arbitrary clock, and the RV32I
 firmware moved that clock onto the L/R update.
+
+## Timing round 1 (branch `timing`)
+
+Setup slack (slow 1100mV 85C), lite build on main d6082c1:
+
+| | main d6082c1 | timing c9dfce9 |
+|---|---|---|
+| ALMs / LABs / M10K | 18,155 / 1,846 / 292 | 18,096 / 1,846 / 292 |
+| counter[0] | -11.267 | -3.938 (TNS -804) |
+| counter[1] | -4.880 | -4.325 (TNS -157) |
+| cram0 / cram1 | -3.04 / -3.14 | -0.402 / -0.193 |
+| hold, all clocks | | >= 0 |
+
+Root causes and fixes:
+- Falling-edge M10K reads: a path from a `*_FERAM` read register to a CE_R register has 1.5 clk_sys, but STA gave it 0.5 and the old
+  `MSH|core` multicycle did not match (RAM outside `core`). SDC now: `-fall_from clk_sys` to MSH/SSH registers, setup 2 / hold 1;
+  INT_ACCEPTED (CE_R only) to the core, setup 2. Paths into a FERAM address register keep their half period (not covered by the
+  core multicycle). Checked in the RTL: SH7604P_INTC.INT_ACCEPTED changes on CE_R only; the core captures on CE_R.
+- cram pins: the generated clock sat on the port with zero insertion delay while the data registers have ~3 ns; it is now defined on
+  `psram*|p_clk`. FAST_OUTPUT_(ENABLE_)REGISTER packs the pin registers into the I/O cells.
+- vdp1_fb_pocket: the clk_ram engine took VDP1's combinational FB address (11 logic levels in one clk_ram); it now uses a clk_ram
+  register (one clk_ram later). `make -C sim mem` fb: PASS (tb_fb_slow fails with and without the change).
+
+Remaining (not closed), all real paths:
+- SH CACHE/BSC regs updated on CE_F (IBADDR, VEC_BUF) to core regs: one clk_sys, ~22 ns through the cache array read or the vector ALU path.
+- VDP1 falling-edge RAM (PAT_FIFO, GSTEP, CLT, WBUF) to draw registers, VDP2 `cdpa` address from `cd_area_symbol` (half period): need
+  per-block proof that the consumers are CE_R before a multicycle is allowed.
+- clk_sys to clk_ram crossings (SSH bsc, VDP1 VRAM_A to ddram; one clk_ram) and clk_ram internal paths in sdram/fb/psram.
+- SRAM pins: output delay is relative to an ideal clk_ram, the launch has ~3 ns insertion delay.
