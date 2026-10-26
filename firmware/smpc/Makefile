@@ -1,4 +1,4 @@
-# Firmware of SMPC_SERV (RV32IC, SERV). Output: ../../src/fpga/saturn/Saturn/SMPC_SERV/smpc_fw.hex (one 32-bit word per line).
+# Firmware of SMPC_SERV (RV32IC, SERV). Output: ../../src/fpga/saturn/Saturn/smpc_fw.hex (one 32-bit word per line).
 CC      := riscv64-elf-gcc
 OBJCOPY := riscv64-elf-objcopy
 OBJDUMP := riscv64-elf-objdump
@@ -6,8 +6,8 @@ SIZE    := riscv64-elf-size
 CFLAGS  := -march=rv32ic -mabi=ilp32 -Os -ffreestanding -fno-builtin -nostdlib -fno-pic -ffunction-sections -fdata-sections \
            -fno-asynchronous-unwind-tables -fomit-frame-pointer -fno-jump-tables -ffixed-s0 -ffixed-s1 -Wall -Wextra $(EXTRA)
 LDFLAGS := -nostdlib -Wl,--gc-sections -T link.ld
-OUT     := ../../src/fpga/saturn/Saturn/SMPC_SERV
-ROMW    ?= 512
+OUT     := ../../src/fpga/saturn/Saturn
+ROMW    ?= 1024
 
 all: build/smpc.elf $(OUT)/smpc_fw.hex
 	$(SIZE) build/smpc.elf

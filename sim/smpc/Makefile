@@ -7,10 +7,11 @@ B    ?= build
 # HLE=SMPC_SERV runs the SERV firmware implementation (firmware/smpc, built by make -C firmware/smpc) instead of SMPC_HLE
 HLE ?= SMPC_HLE
 ROMAW ?= 10
+RAMAW ?= 5
 ifeq ($(HLE),SMPC_SERV)
-HLE_DEFS := "-DHLE_PARAMS=\#(.ROM_AW($(ROMAW)),.RAM_AW(6))"
+HLE_DEFS := "-DHLE_PARAMS=\#(.ROM_AW($(ROMAW)),.RAM_AW($(RAMAW)))"
 endif
-FWHEX := $(SRC)/SMPC_SERV/smpc_fw.hex
+FWHEX := $(SRC)/smpc_fw.hex
 SERVV := $(wildcard $(SRC)/CD/hle/serv/*.v) $(wildcard $(SRC)/SMPC_SERV/*.v)
 FILES := $(SRC)/SMPC/HMCS400_pkg.sv $(SRC)/SMPC/HMCS400_core.sv $(SRC)/SMPC/HMCS400_mem.sv $(SRC)/SMPC/SMPC_pkg.sv \
          $(SRC)/SMPC/SMPC.sv $(SRC)/SMPC_HLE.sv $(SRC)/SMPC_SERV.sv $(SERVV)

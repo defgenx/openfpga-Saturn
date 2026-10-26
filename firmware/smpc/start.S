@@ -9,7 +9,7 @@ _start:
 	li s0, 0x40000000
 	li s1, 0x40000080
 	li t0, 0x80000000
-	addi t1, t0, 256
+	addi t1, t0, 128
 1:	sw zero, 0(t0)
 	addi t0, t0, 4
 	bltu t0, t1, 1b
