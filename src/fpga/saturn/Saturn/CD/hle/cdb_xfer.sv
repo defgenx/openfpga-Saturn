@@ -18,7 +18,7 @@ module cdb_xfer (
 	output wire        seg1_free,
 	output wire        idle,
 	output reg  [2:0]  mode = 3'd0,
-	output wire [31:0] hostcnt,           // 20 bits are counted: a transfer is at most 200 sectors of 1176 words
+	output wire [31:0] hostcnt,           // 18 bits are counted: a transfer is at most 200 sectors of 1176 words (235,200 < 2^18)
 
 	// host side FIFO
 	output wire [15:0] f_q,
@@ -37,15 +37,15 @@ module cdb_xfer (
 	input  wire [15:0] dq
 );
 
-reg [15:0] fifo [0:7];
+(* ramstyle = "MLAB, no_rw_check" *) reg [15:0] fifo [0:7];   // an entry is read only after n counts it
 reg [2:0]  wp = 3'd0, rp = 3'd0;
 reg [3:0]  n = 4'd0;
 assign f_q     = fifo[rp];
 assign f_empty = (n == 4'd0);
 assign f_full  = (n == 4'd8);
 
-reg [19:0] hc = 20'd0;
-assign hostcnt = {12'd0, hc};
+reg [17:0] hc = 18'd0;
+assign hostcnt = {14'd0, hc};
 // b is only used by copy segments, which the firmware starts on an idle engine (xf_wait_idle): it is written straight
 // into sb, there is no staging or queue copy
 reg [17:0] sa = 18'd0, sb = 18'd0, a1 = 18'd0;
@@ -66,7 +66,7 @@ wire do_pop   = pop_eng || f_pop;
 
 always @(posedge clk) begin
 	if (!rst_n || (mode_we)) begin
-		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 20'd0;
+		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0;
 		if (mode_we) mode <= mode_d; else mode <= 3'd0;
 	end else begin
 		if (a_we) a_t <= wd;
@@ -77,7 +77,7 @@ always @(posedge clk) begin
 		end
 		if (c0 == 12'd0 && v1) begin sa <= a1; c0 <= c1; v1 <= 1'b0; end
 
-		if (f_push || f_pop) hc <= hc + 20'd1;
+		if (f_push || f_pop) hc <= hc + 18'd1;
 
 		if (do_push) begin fifo[wp] <= push_eng ? dq : f_wd; wp <= wp + 3'd1; end
 		if (do_pop)  rp <= rp + 3'd1;
