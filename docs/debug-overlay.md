@@ -45,7 +45,7 @@ four rows of 8 hex digits. Digits live in a 32 x 4 M10K buffer that `saturn_pock
 row 0 (y 16):   P P P P P P P P     MSH PC, 32 bit
 row 1 (y 32):   C C S L T T T T     COMREG (2) | SF (1) | IRL level (1) | VDP2 TVMD (4)
 row 2 (y 48):   I I I I M M M M     SCU IST[15:0] (4) | SCU IMS[15:0] (4)
-row 3 (y 64):   F F F F 0 0 0 Q     frame counter (4) | 0 | SMPC interrupt request (1)
+row 3 (y 64):   F F 0 0 0 0 0 Q     frame counter (2) | 0 | SMPC interrupt request (1)
 ```
 
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
@@ -55,8 +55,10 @@ row 3 (y 64):   F F F F 0 0 0 Q     frame counter (4) | 0 | SMPC interrupt reque
 - **TVMD**: VDP2 TVMD register; bit 15 (top digit 8..F) is DISP.
 - **IST / IMS**: SCU interrupt status and mask (low 16 bits); IMS resets to `BFFF`, a bit set in IST and clear in IMS
   and a non-zero IRL means the interrupt is delivered.
-- **F**: VBL_N falling edges since power-up, 16 bit; stays 0 while the Saturn has no vertical blanking.
+- **F**: VBL_N falling edges since power-up, 8 bit (wraps at FF); stays 0 while the Saturn has no vertical blanking.
 - **Q**: 1 = the SMPC interrupt request line is asserted.
+
+Squares 8 (SSH) and 15 (SCSP) have no activity detector in the debug build (always red) to make room for the text.
 
 Each row is written by the scanner in `saturn_pocket` from `DBG_TXT` of `Saturn.sv`, tapped in `SH2P_core`,
 `SMPC_SERV`, `SCUP2` and `VDP2P` (all behind `POCKET_DEBUG_OVERLAY`). The text only exists with the SH7604P,

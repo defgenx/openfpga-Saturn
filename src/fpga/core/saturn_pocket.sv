@@ -750,13 +750,11 @@ always @(posedge clk_sys) begin
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
-wire a_msh, a_ssh, a_vbl, a_irl, a_cd, a_scsp, a_vs, a_de;
+wire a_msh, a_vbl, a_irl, a_cd, a_vs, a_de;
 dbg_act d_msh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[1]), .y(a_msh));
-dbg_act d_ssh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[2]), .y(a_ssh));
 dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(VBL_N), .y(a_vbl));
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
-dbg_act d_scsp (.clk(clk_sys), .tick(dbg_tick), .s(SCSP_RAM_CS), .y(a_scsp));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -781,21 +779,21 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {1'b0, a_scsp, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_ssh, a_msh, 6'b000000};
+wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // squares 8 (SSH) and 15 (SCSP) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
 // hex text rows (docs/debug-overlay.md): MSH PC sampled every window, frame counter = VBL_N falling edges
 reg [31:0] dbg_pc_s = 32'd0;
-reg [15:0] dbg_frm  = 16'd0;
+reg  [7:0] dbg_frm  = 8'd0;
 reg        dbg_vbl_q = 1'b1;
 reg  [4:0] dbg_wa = 5'd0;
 always @(posedge clk_sys) begin
 	if (dbg_tick) dbg_pc_s <= dbg_txt[99:68];
 	dbg_vbl_q <= VBL_N;
-	if (dbg_vbl_q & ~VBL_N) dbg_frm <= dbg_frm + 16'd1;
+	if (dbg_vbl_q & ~VBL_N) dbg_frm <= dbg_frm + 8'd1;
 	dbg_wa <= dbg_wa + 5'd1;
 end
-wire [127:0] dbg_vec = {dbg_pc_s, dbg_txt[67:36], dbg_txt[35:4], dbg_frm, 12'h000, dbg_txt[3:0]};
+wire [127:0] dbg_vec = {dbg_pc_s, dbg_txt[67:36], dbg_txt[35:4], dbg_frm, 20'h00000, dbg_txt[3:0]};
 wire [3:0]   dbg_wd  = dbg_vec[(5'd31 - dbg_wa) * 4 +: 4];
 `endif
 
