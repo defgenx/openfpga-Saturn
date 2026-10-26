@@ -11,10 +11,10 @@ CORE=defgenx.Saturn
 
 compile() {
 	if command -v quartus_sh >/dev/null; then
-		(cd src/fpga && quartus_sh --flow compile ap_core)
+		(cd src/fpga && sh ../../tools/qflow.sh)
 	else
 		docker run --rm --platform linux/amd64 --name saturn-build -v "$PWD":/build -w /build/src/fpga \
-			"$QUARTUS_IMAGE" quartus_sh --flow compile ap_core
+			"$QUARTUS_IMAGE" sh ../../tools/qflow.sh
 	fi
 }
 
