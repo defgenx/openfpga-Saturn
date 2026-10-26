@@ -174,42 +174,28 @@ wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the h
 wire [15:0] w_b = {addr_b0[16:3], lane_idx(wr_b)};
 
 // ------------------------------------------------------------------ self-check (debug overlay only)
-// After init: write A55A / 5AA5 to one word in each SCSP bank (via ch2, other ch2 requests are ignored meanwhile),
-// read both back, chk_ok = both match. Words 0x100 of bank 2 and 3, clear of the BIOS's word 0.
+// After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step (done 242 clk_ram after init_done).
 `ifdef POCKET_DEBUG_OVERLAY
-reg  [2:0] ck_st;
-reg  [6:0] ck_t;
-reg        ck_rd;
-reg  [1:0] ck_wr;
-reg [18:1] ck_a;
-reg [15:0] ck_d;
-wire       ck_busy = !chk_done;
+reg  [8:0] ck_c;
+wire [2:0] ck_st  = ck_c[8:6];
+wire       ck_run = init_done && !chk_done;
+wire       ck_p0  = ck_run && ck_c[5:0] == 6'd0;
+wire [15:0] ck_d  = ck_st[0] ? 16'h5AA5 : 16'hA55A;
 always @(posedge clk) begin
-	ck_rd <= 1'b0; ck_wr <= 2'b00;
 	if (init) begin
-		ck_st <= 3'd0; ck_t <= '0; chk_done <= 1'b0; chk_ok <= 1'b1;
-	end else if (init_done && !chk_done) begin
-		ck_t <= ck_t + 1'd1;
-		if (ck_t == 7'd0) case (ck_st)
-			3'd0: begin ck_wr <= 2'b11; ck_a <= 18'h00100; ck_d <= 16'hA55A; end
-			3'd1: begin ck_wr <= 2'b11; ck_a <= 18'h20100; ck_d <= 16'h5AA5; end
-			3'd2: begin ck_rd <= 1'b1;  ck_a <= 18'h00100; end
-			3'd3: begin ck_rd <= 1'b1;  ck_a <= 18'h20100; end
-			default: ;
-		endcase
-		if (ck_t == 7'd100) begin
-			if (ck_st == 3'd3 && ch2dout != 16'h5AA5) chk_ok <= 1'b0;
-			if (ck_st == 3'd4) chk_done <= 1'b1;
-			ck_st <= ck_st + 1'd1;
+		ck_c <= '0; chk_done <= 1'b0; chk_ok <= 1'b1;
+	end else if (ck_run) begin
+		ck_c <= ck_c + 1'd1;
+		if (ck_c[5:0] == 6'd50) begin
+			if (ck_st[2:1] == 2'b01 && ch2dout != ck_d) chk_ok <= 1'b0;
+			if (ck_st == 3'd3) chk_done <= 1'b1;
 		end
-		if (ck_t == 7'd99 && ck_st == 3'd2 && ch2dout != 16'hA55A) chk_ok <= 1'b0;
-		if (ck_t == 7'd100) ck_t <= '0;
 	end
 end
-wire [19:1] rq_addr = ck_busy ? {1'b0, ck_a} : ch2addr;
-wire [15:0] rq_din  = ck_busy ? ck_d : ch2din;
-wire  [1:0] rq_wr   = ck_busy ? ck_wr : ch2wr;
-wire        rq_rd   = ck_busy ? ck_rd : ch2rd;
+wire [19:1] rq_addr = ck_run ? {1'b0, ck_st[0], 8'd0, 1'b1, 8'd0} : ch2addr;
+wire [15:0] rq_din  = ck_run ? ck_d : ch2din;
+wire  [1:0] rq_wr   = ck_run ? {2{ck_p0 & ~ck_st[1]}} : ch2wr;
+wire        rq_rd   = ck_run ? (ck_p0 & ck_st[1]) : ch2rd;
 `else
 wire [19:1] rq_addr = ch2addr;
 wire [15:0] rq_din  = ch2din;
