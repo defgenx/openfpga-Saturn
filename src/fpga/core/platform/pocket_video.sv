@@ -80,7 +80,7 @@ wire [3:0] sq = x[8:5];
 wire [23:0] sq_c = dbg_g[sq] ? 24'h00FF00 : dbg_y[sq] ? 24'hFFFF00 : 24'hFF0000;
 
 
-// ---- hex text block: 4 rows x 8 digits at x 32..159, y 16..79, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
+// ---- hex text block: 2 rows x 8 digits at x 32..159, y 16..47, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
 // Digits come from a 32 x 4 M10K buffer written in clk_sys; the font is a 128 x 3 M10K ROM.
 (* ramstyle = "M10K" *) reg [3:0] tbuf [0:31];
 (* ramstyle = "M10K", romstyle = "M10K" *) reg [2:0] font [0:127];
@@ -169,7 +169,7 @@ end
 always @(posedge clk_sys) if (dbg_we) tbuf[dbg_wa] <= dbg_wd;
 
 localparam TXT_LAT = 4;                    // clk_vid cycles from x to the pixel decision
-wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd4 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
+wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd2 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
 wire [1:0] t_row = y[5:4] - 2'd1;
 wire [2:0] t_col = x[6:4] - 3'd2;
 reg  [4:0] t_ra;

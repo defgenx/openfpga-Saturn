@@ -782,19 +782,15 @@ wire [15:0] dbg_g = {
 wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // squares 8 (SSH) and 15 (SCSP) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text rows (docs/debug-overlay.md): MSH PC sampled every window, frame counter = VBL_N falling edges
+// hex text rows (docs/debug-overlay.md): MSH PC sampled every window; 16 digits scanned into the M10K text buffer
 reg [31:0] dbg_pc_s = 32'd0;
-reg  [7:0] dbg_frm  = 8'd0;
-reg        dbg_vbl_q = 1'b1;
-reg  [4:0] dbg_wa = 5'd0;
+reg  [3:0] dbg_wa = 4'd0;
 always @(posedge clk_sys) begin
 	if (dbg_tick) dbg_pc_s <= dbg_txt[99:68];
-	dbg_vbl_q <= VBL_N;
-	if (dbg_vbl_q & ~VBL_N) dbg_frm <= dbg_frm + 8'd1;
-	dbg_wa <= dbg_wa + 5'd1;
+	dbg_wa <= dbg_wa + 4'd1;
 end
-wire [127:0] dbg_vec = {dbg_pc_s, dbg_txt[67:36], dbg_txt[35:4], dbg_frm, 20'h00000, dbg_txt[3:0]};
-wire [3:0]   dbg_wd  = dbg_vec[(5'd31 - dbg_wa) * 4 +: 4];
+wire [63:0] dbg_vec = {dbg_pc_s, dbg_txt[67:52], dbg_txt[35:20]};
+wire [3:0]  dbg_wd  = dbg_vec[(4'd15 - dbg_wa) * 4 +: 4];
 `endif
 
 pocket_video video (
@@ -803,7 +799,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wa(dbg_wa), .dbg_wd(dbg_wd), .dbg_we(1'b1)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wa({1'b0, dbg_wa}), .dbg_wd(dbg_wd), .dbg_we(1'b1)
 `endif
 );
 
