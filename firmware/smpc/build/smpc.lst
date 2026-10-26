@@ -6,14 +6,14 @@ Disassembly of section .text:
 
 00000000 <_start>:
    0:	80000117          	auipc	sp,0x80000
-   4:	10010113          	addi	sp,sp,256 # 80000100 <_stack_top>
+   4:	08010113          	addi	sp,sp,128 # 80000080 <_stack_top>
    8:	80000197          	auipc	gp,0x80000
    c:	7f818193          	addi	gp,gp,2040 # 80000800 <__global_pointer$>
   10:	40000437          	lui	s0,0x40000
   14:	400004b7          	lui	s1,0x40000
   18:	08048493          	addi	s1,s1,128 # 40000080 <ctab+0x3ffff76c>
   1c:	800002b7          	lui	t0,0x80000
-  20:	10028313          	addi	t1,t0,256 # 80000100 <_stack_top>
+  20:	08028313          	addi	t1,t0,128 # 80000080 <_stack_top>
   24:	0002a023          	sw	zero,0(t0)
   28:	0291                	addi	t0,t0,4
   2a:	fe62ede3          	bltu	t0,t1,24 <_start+0x24>

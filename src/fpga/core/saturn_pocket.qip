@@ -12,6 +12,7 @@ set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) ../saturn/
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) ../saturn/mlab.vhd]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/Saturn.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SMPC_HLE.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SMPC_SERV.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SMPC/HMCS400_pkg.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SMPC/HMCS400_core.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SMPC/HMCS400_mem.sv]

@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 n=$1; mac=${2:--}
 SRC=../../src/fpga/saturn/Saturn
-mkdir -p $n/src; cp $SRC/SMPC_SERV.sv $SRC/SMPC_SERV/smpc_fw.hex $SRC/CD/hle/serv/*.v $n/src/ 2>/dev/null; [ -f $SRC/SMPC_SERV/smpc_rf_top.v ] && cp $SRC/SMPC_SERV/*.v $n/src/ || true
+mkdir -p $n/src; cp $SRC/SMPC_SERV.sv $SRC/smpc_fw.hex $SRC/CD/hle/serv/*.v $n/src/ 2>/dev/null; [ -f $SRC/SMPC_SERV/smpc_rf_top.v ] && cp $SRC/SMPC_SERV/*.v $n/src/ || true
 cd $n
 echo 'QUARTUS_VERSION = "21.1"' > $n.qpf; echo "PROJECT_REVISION = \"$n\"" >> $n.qpf
 {

@@ -1,7 +1,7 @@
-/* ROM at 0 (2 KB), RAM at 0x80000000 (128 B) */
+/* ROM at 0 (4 KB), RAM at 0x80000000 (128 B) */
 MEMORY {
 	ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 4K
-	RAM (rw)  : ORIGIN = 0x80000000, LENGTH = 256
+	RAM (rw)  : ORIGIN = 0x80000000, LENGTH = 128
 }
 ENTRY(_start)
 SECTIONS {
