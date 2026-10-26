@@ -18,7 +18,7 @@ module cdb_xfer (
 	output wire        seg1_free,
 	output wire        idle,
 	output reg  [2:0]  mode = 3'd0,
-	output reg  [31:0] hostcnt = 32'd0,
+	output wire [31:0] hostcnt,           // 20 bits are counted: a transfer is at most 200 sectors of 1176 words
 
 	// host side FIFO
 	output wire [15:0] f_q,
@@ -44,9 +44,13 @@ assign f_q     = fifo[rp];
 assign f_empty = (n == 4'd0);
 assign f_full  = (n == 4'd8);
 
-reg [17:0] sa = 18'd0, sb = 18'd0, a1 = 18'd0, b1 = 18'd0;
+reg [19:0] hc = 20'd0;
+assign hostcnt = {12'd0, hc};
+// b is only used by copy segments, which the firmware starts on an idle engine (xf_wait_idle): it is written straight
+// into sb, there is no staging or queue copy
+reg [17:0] sa = 18'd0, sb = 18'd0, a1 = 18'd0;
 reg [11:0] c0 = 12'd0, c1 = 12'd0;
-reg [17:0] a_t = 18'd0, b_t = 18'd0;
+reg [17:0] a_t = 18'd0;
 reg        v1 = 1'b0;
 reg [15:0] hold = 16'd0;
 reg [1:0]  ph = 2'd0;
@@ -62,19 +66,18 @@ wire do_pop   = pop_eng || f_pop;
 
 always @(posedge clk) begin
 	if (!rst_n || (mode_we)) begin
-		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hostcnt <= 32'd0;
+		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 20'd0;
 		if (mode_we) mode <= mode_d; else mode <= 3'd0;
 	end else begin
 		if (a_we) a_t <= wd;
-		if (b_we) b_t <= wd;
+		if (b_we) sb <= wd[17:0];
 		if (cnt_we) begin
-			if (c0 == 12'd0 && !v1) begin sa <= a_t; sb <= b_t; c0 <= cnt_d; end
-			else begin a1 <= a_t; b1 <= b_t; c1 <= cnt_d; v1 <= 1'b1; end
+			if (c0 == 12'd0 && !v1) begin sa <= a_t; c0 <= cnt_d; end
+			else begin a1 <= a_t; c1 <= cnt_d; v1 <= 1'b1; end
 		end
-		if (c0 == 12'd0 && v1) begin sa <= a1; sb <= b1; c0 <= c1; v1 <= 1'b0; end
+		if (c0 == 12'd0 && v1) begin sa <= a1; c0 <= c1; v1 <= 1'b0; end
 
-		if (f_push) hostcnt <= hostcnt + 32'd1;
-		if (f_pop)  hostcnt <= hostcnt + 32'd1;
+		if (f_push || f_pop) hc <= hc + 20'd1;
 
 		if (do_push) begin fifo[wp] <= push_eng ? dq : f_wd; wp <= wp + 3'd1; end
 		if (do_pop)  rp <= rp + 3'd1;

@@ -240,18 +240,18 @@ wire [2:0]  dram_done;
 reg  [17:0] dr_a = 18'd0;
 reg         dr_we = 1'b0;
 reg  [15:0] dr_d = 16'd0;
-reg  [17:0] sk_base = 18'd0;
 reg         armed = 1'b0;
 reg  [1:0]  a_kind = 2'd0;
 reg         a_synth = 1'b0, a_spd2 = 1'b0;
 reg  [23:0] a_hdr = 24'd0;
 reg  [17:0] a_base = 18'd0;
-reg         sk_start = 1'b0;
+reg         sk_start = 1'b0;   // one clock after the fire: sd_go and the sd_* values are valid then
+wire        sk_fire = armed && !fd_busy && !sd_go && !sk_start && pf_ready;
 reg         xf_mode_we = 1'b0, xf_a_we = 1'b0, xf_b_we = 1'b0, xf_cnt_we = 1'b0;
 reg  [11:0] xf_cnt = 12'd0;
 
 cdb_sink sink (
-	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_start), .kind_audio(sd_kind == 2'd1), .base_d(sk_base),
+	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_fire), .kind_audio(a_kind == 2'd1), .base_d(a_base),
 	.cd_data(cd_data), .cd_ck(cd_ck), .done(sk_done), .overrun(sk_overrun), .hdr_a(hdr_a), .hdr_b(hdr_b),
 	.rq(sk_rq), .rq_a(sk_a), .rq_d(sk_d), .dn(dram_done[0]), .cd_sl(CD_SL), .cd_sr(CD_SR));
 
@@ -310,9 +310,9 @@ always @(posedge CLK) begin
 	xf_mode_we <= 1'b0; xf_a_we <= 1'b0; xf_b_we <= 1'b0; xf_cnt_we <= 1'b0;
 	if (CDD_CE) ticks <= ticks + 32'd1;
 	// fire the armed sector as soon as the feed is idle and the ring has one
-	if (armed && !fd_busy && !sd_go && !sk_start && pf_ready) begin
+	if (sk_fire) begin
 		armed <= 1'b0; sd_go <= 1'b1; sk_start <= 1'b1;
-		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr; sk_base <= a_base;
+		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr;
 	end
 	if (sk_overrun) sk_overrun_r <= 1'b1;
 	if (!RST_N || !RES_N) begin

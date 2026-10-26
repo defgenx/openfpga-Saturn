@@ -12,8 +12,8 @@ module cdb_dram (
 	output reg  [2:0]  done = 3'd0,
 	output reg  [15:0] q = 16'd0,
 
-	output reg  [18:1] RAM_A = 18'd0,
-	output reg  [15:0] RAM_D = 16'd0,
+	output wire [18:1] RAM_A,          // the granted client's request (it holds it until done)
+	output wire [15:0] RAM_D,
 	output reg  [1:0]  RAM_WE = 2'd0,
 	output reg         RAM_RD = 1'b0,
 	output reg         RAM_CS = 1'b0,
@@ -24,6 +24,8 @@ module cdb_dram (
 reg [2:0] st = 3'd0;
 reg [1:0] who = 2'd0;
 reg       we_r = 1'b0;
+assign RAM_A = who[1] ? rq_a2 : who[0] ? rq_a1 : rq_a0;
+assign RAM_D = who[1] ? rq_d2 : who[0] ? rq_d1 : rq_d0;
 
 always @(posedge clk) begin
 	done <= 3'd0;
@@ -31,9 +33,9 @@ always @(posedge clk) begin
 		st <= 3'd0; RAM_CS <= 1'b0; RAM_RD <= 1'b0; RAM_WE <= 2'd0;
 	end else case (st)
 	3'd0: begin
-		if (rq[0]) begin who <= 2'd0; RAM_A <= rq_a0; RAM_D <= rq_d0; we_r <= rq_we[0]; RAM_WE <= {2{rq_we[0]}}; RAM_RD <= ~rq_we[0]; RAM_CS <= 1'b1; st <= 3'd1; end
-		else if (rq[1]) begin who <= 2'd1; RAM_A <= rq_a1; RAM_D <= rq_d1; we_r <= rq_we[1]; RAM_WE <= {2{rq_we[1]}}; RAM_RD <= ~rq_we[1]; RAM_CS <= 1'b1; st <= 3'd1; end
-		else if (rq[2]) begin who <= 2'd2; RAM_A <= rq_a2; RAM_D <= rq_d2; we_r <= rq_we[2]; RAM_WE <= {2{rq_we[2]}}; RAM_RD <= ~rq_we[2]; RAM_CS <= 1'b1; st <= 3'd1; end
+		if (rq[0]) begin who <= 2'd0; we_r <= rq_we[0]; RAM_WE <= {2{rq_we[0]}}; RAM_RD <= ~rq_we[0]; RAM_CS <= 1'b1; st <= 3'd1; end
+		else if (rq[1]) begin who <= 2'd1; we_r <= rq_we[1]; RAM_WE <= {2{rq_we[1]}}; RAM_RD <= ~rq_we[1]; RAM_CS <= 1'b1; st <= 3'd1; end
+		else if (rq[2]) begin who <= 2'd2; we_r <= rq_we[2]; RAM_WE <= {2{rq_we[2]}}; RAM_RD <= ~rq_we[2]; RAM_CS <= 1'b1; st <= 3'd1; end
 	end
 	3'd1: st <= 3'd2;            // busy rises two clocks after the edge
 	3'd2: st <= 3'd3;

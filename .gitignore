@@ -88,3 +88,8 @@ sizing/vdp1p/snap/
 sizing/scup2/*/
 !sizing/scup2/*.sh
 sim/vdp2/build_*/
+sizing/cd/cdb_fw.hex
+sizing/cd/c_*.q*
+sizing/cd/out_*/
+sizing/cd/db/
+sizing/cd/*.log
