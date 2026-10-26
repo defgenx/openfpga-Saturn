@@ -35,9 +35,9 @@ foreach cpu {MSH SSH} {
 	set_multicycle_path -setup -from [get_registers "*|$cpu|core|*"] -to $core_q 2
 	set_multicycle_path -hold  -from [get_registers "*|$cpu|core|*"] -to $core_q 1
 	# INTC registers other than VBREQ/VBA (CE_F), INT_ACTIVE (free running), BUS_DO (CE_F) and the RAM ports change on CE_R
-	# only (SH7604P_INTC); so does DMAC VCRDMA*. The core reads them on CE_R.
+	# only (SH7604P_INTC); so do DMAC VCRDMA* and DIVU VEC8. The core reads them on CE_R.
 	set ce_r_src [remove_from_collection [get_registers "*|$cpu|intc|*"] [get_registers "*|$cpu|intc|VBREQ* *|$cpu|intc|VBA* *|$cpu|intc|INT_ACTIVE* *|$cpu|intc|BUS_DO* *|$cpu|intc|*|ram_block*"]]
-	set ce_r_src [add_to_collection $ce_r_src [get_registers "*|$cpu|dmac|VCRDMA*"]]
+	set ce_r_src [add_to_collection $ce_r_src [get_registers "*|$cpu|dmac|VCRDMA* *|$cpu|divu|VEC8*"]]
 	set_multicycle_path -setup -from $ce_r_src -to $core_q 2
 	set_multicycle_path -hold  -from $ce_r_src -to $core_q 1
 	set_multicycle_path -setup -fall_from [get_clocks $clk_sys] -to $cpu_all 2
@@ -89,6 +89,8 @@ set_output_delay -clock sram_ref -max 2.0  -add_delay $sram_out
 set_output_delay -clock sram_ref -min -1.0 -add_delay $sram_out
 set_input_delay  -clock sram_ref -max 12.0 -add_delay [get_ports {sram_dq[*]}]
 set_input_delay  -clock sram_ref -min 0.0 -add_delay [get_ports {sram_dq[*]}]
+# sram_ref is the e_oe_n register itself: that pin is the reference, its own skew check is empty
+set_false_path -to [get_ports sram_oe_n]
 set_multicycle_path -setup -end -from [get_clocks sram_ref] -to [get_clocks $clk_ram] 3
 set_multicycle_path -hold  -end -from [get_clocks sram_ref] -to [get_clocks $clk_ram] 2
 # the CD ring FSM (cd_stream) runs on clk_sys and drives the same pins through sram_pocket: clk_sys and clk_ram are

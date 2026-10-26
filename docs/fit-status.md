@@ -100,3 +100,22 @@ Remaining (not closed), all real paths:
   per-block proof that the consumers are CE_R before a multicycle is allowed.
 - clk_sys to clk_ram crossings (SSH bsc, VDP1 VRAM_A to ddram; one clk_ram) and clk_ram internal paths in sdram/fb/psram.
 - SRAM pins: output delay is relative to an ideal clk_ram, the launch has ~3 ns insertion delay.
+
+## Timing round 2 (branch `timing2`)
+
+Lite, full compile: 18,188 ALMs, 1,848 / 1,848 LABs, 287 / 308 M10K. Setup slack: counter[0] -0.543 (TNS -15), counter[1] -1.253 (TNS -32),
+cram0 -0.473, cram1 -0.442; dram_clk_pin +1.64; hold >= 0 on all clocks. (Round 1: -3.938 / -4.325 / -0.40 / -0.19.)
+An intermediate compile with the same RTL and an SDC without the DIVU/oe_n lines: 18,137 ALMs, 1,847 LABs, c0 -1.730, c1 -0.990. The
+placement moves the worst slack by about 1 ns between seeds-equivalent runs.
+
+Changes:
+- SDC: `-add_delay` on the `-max` and `-min` output delays (the old calls replaced each other on shared pins; 332054 warnings gone).
+  SRAM pins get a reference clock on `sram_pocket.e_oe_n` (`sram_ref`), so outputs and the read data are timed against the clock the
+  pin registers see; `sram_oe_n` itself is excluded (it is the reference). SRAM worst slack +1.8 ns (was -3.8).
+- SDC: CE_R-only INTC registers, DMAC VCRDMA* and DIVU VEC8 to the core get setup 2 (all written inside CE_R branches).
+- RTL: `sram_pocket` registers the byte strobes (was a comb of `e_we`/`e_be`).
+- RTL: VDP1P GSTEP, CLT, PAT_FIFO and ACCS are MLAB again (`VDP1P_MLAB` parameter FE = 0): VDP1P's FSM steps every clk_sys, so a
+  falling-edge read is a real half-cycle path there. 5 M10K freed, LABs unchanged. vdp1 sim: PASS.
+- Not changed, real paths: `bsc.VEC_BUF` (CE_F) to the core (external vector mode only; one clk_sys), VDP2P `cdpa` read address
+  (CPN steps every clk), clk_sys to clk_ram requests (SSH bsc, SCU, VDP1 VRAM_A into ddram) and sdram `dram_a` logic, PSRAM `p_oe`
+  turn-on (output buffer 3.4 ns).
