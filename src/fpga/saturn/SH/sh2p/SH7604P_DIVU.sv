@@ -32,7 +32,6 @@ module SH7604P_DIVU (
 	wire START64 = WR && IBUS_A[4:0] == 5'h14;
 	
 	reg [31:0] H, L;                     // DVDNTH, DVDNTL
-	(* ramstyle = "MLAB, no_rw_check" *) reg [31:0] mem [0:3];                // 0 DVSR, 1 VCRDIV, 2 DVDNTH2, 3 DVDNTL2 (2 and 3 are scratch while operating)
 	reg        vD, vV, vH2, vL2, PW;     // word holds its value (else reads 0); pending DVSR/VCRDIV write
 	reg        OVFIE, OVFF;              // DVCR
 	reg  [7:0] VEC8;                     // VCRDIV[7:0] (output); the full register is RAM word 1
@@ -83,7 +82,8 @@ module SH7604P_DIVU (
 	wire YL2 = OPERATE ? (opCL || opFL) : (RA == 3'd7);
 	wire [1:0] RAD = OPERATE ? (YDV ? 2'd0 : YL2 ? 2'd3 : 2'd2) : {RA[2], RA[0]};
 	wire GV = OPERATE ? (RAD != 2'd0 || vD) : RAD[1] ? (RAD[0] ? vL2 : vH2) : (RAD[0] ? vV : vD);
-	wire [31:0] YW = mem[RAD];
+	wire [31:0] YW;                                                    // RAM words: 0 DVSR, 1 VCRDIV, 2 DVDNTH2, 3 DVDNTL2 (2 and 3 are scratch while operating)
+	SH2P_FERAM #(2,32) mem(CLK, WE_RAM, WA, WD, RAD, YW);
 	wire [31:0] YSRC = {YW[31:16] & {16{GV && RAD != 2'd1}}, YW[15:0] & {16{GV}}};
 	wire YINV = opZD || (isSide && TF) || (isRest && !SD) || ((opCL || opCH || opFH) && SX) || (opFL && SXD);
 	wire CIN  = opZD || (isSide && TF) || (isRest && !SD) || (opCL && SX) || (opCH && CC) || (opFH && SX) || (opFL && SXD);
@@ -212,9 +212,6 @@ module SH7604P_DIVU (
 		end
 	end
 	
-	always @(posedge CLK) begin
-		if (WE_RAM) mem[WA] <= WD;
-	end
 	assign IRQ = OVFF & OVFIE;
 	assign VEC = VEC8;
 	

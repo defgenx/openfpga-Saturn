@@ -2841,6 +2841,47 @@ module SCSPP_EVOL_RAM (
 
 endmodule
 
+// Simple dual port RAM in M10K, read address registered on the falling edge: for a register-sourced RA the value is
+// what an asynchronous MLAB read gives before the next rising edge. RA must not come from another such RAM.
+module SCSPP_FERAM #(
+	parameter AW = 5,
+	parameter DW = 8
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(AW), .widthad_b(AW), .width_a(DW), .width_b(DW), .width_byteena_a(1)
+	) ram (
+		.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(~CLK), .data_a(WD), .wren_a(WE), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({DW{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) if (WE) mem[WA] <= WD;
+	always @(negedge CLK) q <= mem[RA];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
+`endif
+endmodule
+
+// 32 x 16 with a write enable per byte, two M10K byte lanes.
 module SCSPP_STACK_RAM
 (
 	input         CLK,
@@ -2851,104 +2892,8 @@ module SCSPP_STACK_RAM
 	input   [4:0] RDADDR,
 	output [15:0] Q
 );
-	
-//`ifdef DEBUG
-
-	wire [15:0] sub_wire0;
-	
-	altdpram	altdpram_component (
-				.data (DATA),
-				.inclock (CLK),
-				.rdaddress (RDADDR),
-				.wraddress (WRADDR),
-				.wren (|WREN),
-				.byteena (WREN),
-				.q (sub_wire0),
-				.aclr (1'b0),
-				.inclocken (1'b1),
-				.rdaddressstall (1'b0),
-				.rden (1'b1),
-//				.sclr (1'b0),
-				.wraddressstall (1'b0));
-	defparam
-		altdpram_component.byte_size = 8,
-		altdpram_component.indata_aclr = "OFF",
-		altdpram_component.indata_reg = "INCLOCK",
-		altdpram_component.intended_device_family = "Cyclone V",
-		altdpram_component.lpm_type = "altdpram",
-		altdpram_component.outdata_aclr = "OFF",
-		altdpram_component.outdata_reg = "UNREGISTERED",
-		altdpram_component.ram_block_type = "MLAB",
-		altdpram_component.rdaddress_aclr = "OFF",
-		altdpram_component.rdaddress_reg = "UNREGISTERED",
-		altdpram_component.rdcontrol_aclr = "OFF",
-		altdpram_component.rdcontrol_reg = "UNREGISTERED",
-		altdpram_component.read_during_write_mode_mixed_ports = "CONSTRAINED_DONT_CARE",
-		altdpram_component.width = 16,
-		altdpram_component.widthad = 5,
-		altdpram_component.width_byteena = 2,
-		altdpram_component.wraddress_aclr = "OFF",
-		altdpram_component.wraddress_reg = "INCLOCK",
-		altdpram_component.wrcontrol_aclr = "OFF",
-		altdpram_component.wrcontrol_reg = "INCLOCK";
-		
-	assign Q = sub_wire0;
-	
-//`else
-//
-//	wire [15:0] sub_wire0;
-//	
-//	altsyncram	altsyncram_component (
-//				.address_a (WRADDR),
-//				.byteena_a (WREN),
-//				.clock0 (CLK),
-//				.data_a (DATA),
-//				.wren_a (|WREN),
-//				.address_b (RDADDR),
-//				.q_b (sub_wire0),
-//				.aclr0 (1'b0),
-//				.aclr1 (1'b0),
-//				.addressstall_a (1'b0),
-//				.addressstall_b (1'b0),
-//				.byteena_b (1'b1),
-//				.clock1 (1'b1),
-//				.clocken0 (1'b1),
-//				.clocken1 (1'b1),
-//				.clocken2 (1'b1),
-//				.clocken3 (1'b1),
-//				.data_b ({16{1'b1}}),
-//				.eccstatus (),
-//				.q_a (),
-//				.rden_a (1'b1),
-//				.rden_b (1'b1),
-//				.wren_b (1'b0));
-//	defparam
-//		altsyncram_component.address_aclr_b = "NONE",
-//		altsyncram_component.address_reg_b = "CLOCK0",
-//		altsyncram_component.byte_size = 8,
-//		altsyncram_component.clock_enable_input_a = "BYPASS",
-//		altsyncram_component.clock_enable_input_b = "BYPASS",
-//		altsyncram_component.clock_enable_output_b = "BYPASS",
-//		altsyncram_component.intended_device_family = "Cyclone V",
-//		altsyncram_component.lpm_type = "altsyncram",
-//		altsyncram_component.numwords_a = 32,
-//		altsyncram_component.numwords_b = 32,
-//		altsyncram_component.operation_mode = "DUAL_PORT",
-//		altsyncram_component.outdata_aclr_b = "NONE",
-//		altsyncram_component.outdata_reg_b = "UNREGISTERED",
-//		altsyncram_component.power_up_uninitialized = "FALSE",
-//		altsyncram_component.ram_block_type = "M10K",
-//		altsyncram_component.read_during_write_mode_mixed_ports = "DONT_CARE",
-//		altsyncram_component.widthad_a = 5,
-//		altsyncram_component.widthad_b = 5,
-//		altsyncram_component.width_a = 16,
-//		altsyncram_component.width_b = 16,
-//		altsyncram_component.width_byteena_a = 2;
-//	
-//	assign Q = sub_wire0;
-//	
-//`endif
-	
+	SCSPP_FERAM #(5,8) L(CLK, WREN[0], WRADDR, DATA[7:0],  RDADDR, Q[7:0]);
+	SCSPP_FERAM #(5,8) H(CLK, WREN[1], WRADDR, DATA[15:8], RDADDR, Q[15:8]);
 endmodule
 
 module SCSPP_RAM_8X2

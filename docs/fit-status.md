@@ -14,6 +14,7 @@ Per-entity tables are in `sizing/pocket-build/`.
 | lite a2992a4+ | main + SCU DSP, SCSP DSP and low-impact VDP2 cuts (RPARAMB, EXTCC, LNCOL, MOSAIC, SPRWIN, LINEWIN, BACKLINE) | 19,691 (107%) | 1,993 / 1,848 | not placed | 37 / 66 |
 | lite a1dc102 | same + SCUP2 | 19,477 (105%) | 1,968 / 1,848 | not placed | 37 / 66 |
 | lite 270a3e2 | same, OPTIMIZATION_MODE "AGGRESSIVE AREA" | 19,477 (105%) | 1,968 / 1,848 (97 memory LABs) | not placed | 37 / 66 |
+| lite `mlab-m10k` | same, 61 MLAB RAMs moved to M10K (falling-edge read) | 18,572 (100%) | 1,878 / 1,848 | not placed; 289 blocks implied (+61) | 37 / 66 |
 
 Fitter ALMs per block, full config (`full_sh2p.entities.txt`):
 
@@ -33,3 +34,19 @@ Fitter ALMs per block, full config (`full_sh2p.entities.txt`):
 
 Gap to the device: about 4,030 ALMs (431 LABs). M10K is exactly full; the VDP1 framebuffer 1 in
 `vdp1_fb_pocket` holds 1,417 kbit (141 blocks) of the 1,921 kbit used.
+
+## MLAB to M10K (branch `mlab-m10k`)
+
+Lite a1dc102 needed 97 Memory LABs for 631 memory ALMs (65 small RAMs). Those RAMs are now M10K blocks whose read address is
+registered on the falling edge (the `*_FERAM` modules, pattern of `SCUP2_CBUS_CACHE`): the value is what the asynchronous MLAB read
+gave before the next rising edge, so every sim stays cycle-exact. Rules: the read address must come from registers (not from another
+falling-edge RAM's output, not from a late input), writes stay on the rising edge. `-DPOCKET_FE_CHECK` in a Verilator build prints
+`FE_ADDR_LATE` when an address changes after the falling edge (only reset pulses did, in sh2, vdp1, vdp2, scsp, m68k).
+
+Measured (`tools/pocket_lite.sh`, quartus_sh --flow compile, fit still fails): ALMs 19,477 -> 18,572, LABs required 1,968 -> 1,878
+(30 over 1,848), Memory LABs 97 -> 14, RAM implementation bits 2,334,720 -> 2,959,360 (228 -> 289 blocks of 308; blocks not
+reported because placement failed). Converted: SH7604P x2 (regfile A/B, cache LV a/b, DMAC RDBUF/SAR-DAR, DIVU, INTC), VDP2P (9 rotation
+parameter RAMs, CDPRING x4, CY registers x4, character parameter pair, write FIFO), VDP1P (WBUF, GSTEP, ACCS x2, pattern FIFO, colour
+table), SCSPP stacks, m68kp register file, SCUP2 DMA lanes. Left in MLAB (34 ALMs, 14 LABs): VDP2P `nmp`/`rmp` (address derives
+from the `cy_*` falling-edge RAMs; a chained read fails vdp2 sim), SMPC (LLE sim is only a tolerance compare against the HLE),
+SCSPP key/bit RAMs (1 ALM). Timing: the read becomes a half-cycle path (not run through STA).

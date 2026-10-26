@@ -319,7 +319,8 @@ module SCUP2_CHRAM #(parameter W = 27)
 endmodule
 
 
-//DMA buffer lane: 2 bytes, asynchronous read, synchronous write (MLAB)
+//DMA buffer lane: 2 bytes, synchronous write, read address registered on the falling edge (M10K); same value as an
+//asynchronous read for register-sourced addresses
 module SCUP2_LANE
 (
 	input        CLK,
@@ -329,9 +330,31 @@ module SCUP2_LANE
 	input        RADDR,
 	output [7:0] Q
 );
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] MEM [2];
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2), .numwords_b(2), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(1), .widthad_b(1), .width_a(8), .width_b(8), .width_byteena_a(1)
+	) ram (
+		.address_a(WADDR), .address_b(RADDR), .clock0(CLK), .clock1(~CLK), .data_a(DATA), .wren_a(WREN), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b(8'hFF), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [7:0] MEM [2];
+	reg [7:0] q = '0;
 	always @(posedge CLK) if (WREN) MEM[WADDR] <= DATA;
-	assign Q = MEM[RADDR];
+	always @(negedge CLK) q <= MEM[RADDR];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg ra_neg;
+	reg ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RADDR; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RADDR) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RADDR);
+`endif
+`endif
 endmodule
 
 module SCUP2_DRAM

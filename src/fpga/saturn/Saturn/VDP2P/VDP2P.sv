@@ -976,7 +976,7 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [10: 0] N_Y = VA_PIPE[0].NxY[UL];
 	wire [ 1: 0] N_MPI = NxPNMapIdx(N_PCNT, N_X, N_Y, NSxREG[UL].PLSZ, NSxREG[UL].ZMHF, NSxREG[UL].ZMQT);
 	wire [15: 0] N_MPW;
-	VDP2P_REGRAM #(3,16) nmp(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100, A[3:1], DI & 16'h3F3F, {UL, N_MPI[1]}, N_MPW);
+	VDP2P_REGRAM #(3,16,1) nmp(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100, A[3:1], DI & 16'h3F3F, {UL, N_MPI[1]}, N_MPW);
 	wire [ 5: 0] N_MPE = N_MPI[0] ? N_MPW[13:8] : N_MPW[5:0];
 	wire [19: 1] N_PNA = NxPNAddr2(N_PCNT, N_X, N_Y, NSxREG[UL].MP, N_MPE, NSxREG[UL].PLSZ, NSxREG[UL].CHSZ, NSxREG[UL].PNC.NxPNB, NSxREG[UL].ZMHF, NSxREG[UL].ZMQT);
 	wire         R_PSET = UR1 ? 1'b1 : VA_PIPE[0].R0RP;
@@ -984,7 +984,7 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [11: 0] R_PY = VA_PIPE[0].RxY[R_PSET][11:0];
 	wire [ 3: 0] R_MPI = RxPNMapIdx(R_PX, R_PY, RPxREG[R_PSET].PLSZ);
 	wire [15: 0] R_MPW;
-	VDP2P_REGRAM #(4,16) rmp(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R_PSET,R_MPI[3:1]}, R_MPW);
+	VDP2P_REGRAM #(4,16,1) rmp(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R_PSET,R_MPI[3:1]}, R_MPW);
 	wire [ 5: 0] R_MPE = R_MPI[0] ? R_MPW[13:8] : R_MPW[5:0];
 	wire [19: 1] R_PNA = RxPNAddr2(R_PX, R_PY, RPxREG[R_PSET].MP, R_MPE, RPxREG[R_PSET].PLSZ, RSxREG[UR1].CHSZ, RSxREG[UR1].PNC.NxPNB);
 	//character addresses
@@ -2133,7 +2133,7 @@ module VDP2P import VDP2P_PKG::*; (
 	bit  [1:0] WHIT34;
 	wire       WHIT_EN = DOT_CE_R | DOT_CE_F;
 	VDP2P_DTAP #(.W(2),.K(8), .AW(6)) whit8 (CLK, WHIT_EN, {W1_HIT,W0_HIT}, WHIT8_Q);
-	VDP2P_DTAP #(.W(2),.K(33),.AW(6)) whit33(CLK, WHIT_EN, {W1_HIT,W0_HIT}, WHIT33_Q);
+	VDP2P_DTAP #(.W(2),.K(33),.AW(6),.ML(0)) whit33(CLK, WHIT_EN, {W1_HIT,W0_HIT}, WHIT33_Q);
 	always @(posedge CLK) if (WHIT_EN) WHIT34 <= WHIT33_Q;
 	
 	//Back & line screen  
