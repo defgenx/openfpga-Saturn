@@ -13,13 +13,14 @@
 #   make -C sim scu        SCU and DSP golden vs shrunk (Verilator)
 #   make -C sim smpc      SMPC LLE (firmware from ../ref) vs SMPC_HLE: data and command timing (Verilator)
 #   make -C sim irq        SH7604P + DCC + SMPC_SERV + SCUP2 as in Saturn.sv: SNDON handshake, VBLANK interrupt and vector fetch; duplicate-port check (seconds)
+#   make -C sim sndram     SH-2 write/read-back of sound RAM through SCUP2, SCSPP, sdram_pocket and the SDRAM model (EXTRA=-DUSE_SCSP etc. swap in the MiSTer blocks)
 #   make -C sim vdp2       VDP2 golden vs shrunk (Verilator; CUT=<name> for a cut, vdp2-ppm dumps frames)
 #   make -C sim cd-real    300 ms bridge stall at the real CDD_CE spacing (324 clk per CE; slow)
 
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: pll cdb cdb-compare cd cd-real mem mem-long platform sh1 scsp vdp1 vdp1-ppm sh2 scu smpc irq vdp2 vdp2-ppm clean
+.PHONY: pll cdb cdb-compare cd cd-real mem mem-long platform sh1 scsp vdp1 vdp1-ppm sh2 scu smpc irq sndram vdp2 vdp2-ppm clean
 
 mem:
 	$(MAKE) -C mem all
@@ -62,6 +63,9 @@ smpc:
 
 irq:
 	$(MAKE) -C irq run neg
+
+sndram:
+	$(MAKE) -C sndram run
 
 vdp2 vdp2-ppm:
 	$(MAKE) -C vdp2 $@
