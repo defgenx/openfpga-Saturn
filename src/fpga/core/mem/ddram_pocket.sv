@@ -769,7 +769,8 @@ module ddp_ram #(parameter wa = 10) (
 	assign q = mem[ra];
 endmodule
 
-// posted write FIFO, 2**l entries of W bits
+// posted write FIFO, 2**l entries of W bits, in an M10K (registered read address: no MLAB, no bypass registers).
+// Q is the head one clock after RADDR moves, so an entry that becomes the head at the edge it is written is offered one clock later.
 module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	input  wire          CLK,
 	input  wire          RST,
@@ -780,22 +781,57 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	output wire          EMPTY,
 	output wire          FULL
 );
-	reg [W-1:0] mem [0:(1<<l)-1];   // an entry is read only after the count shows it
 	reg [l-1:0] RADDR = '0, WADDR = '0;
 	reg [l:0]   AMOUNT = '0;
+	reg         stale = 1'b0;                             // the entry being read was written at the same edge
+	wire        pop = RDREQ && |AMOUNT;
+	wire [l-1:0] rnext = RADDR + {{(l-1){1'b0}}, pop};
 	always @(posedge CLK) begin
+		stale <= WRREQ && !AMOUNT[l] && (WADDR == rnext);
 		if (RST) begin
 			AMOUNT <= '0; RADDR <= '0; WADDR <= '0;
 		end else begin
-			if (WRREQ && !AMOUNT[l]) begin WADDR <= WADDR + 1'd1; mem[WADDR] <= DATA; end
-			if (RDREQ && AMOUNT) RADDR <= RADDR + 1'd1;
+			if (WRREQ && !AMOUNT[l]) WADDR <= WADDR + 1'd1;
+			if (pop) RADDR <= RADDR + 1'd1;
 			if (WRREQ && !RDREQ && !AMOUNT[l]) AMOUNT <= AMOUNT + 1'd1;
 			else if (!WRREQ && RDREQ && AMOUNT) AMOUNT <= AMOUNT - 1'd1;
 		end
 	end
-	assign EMPTY = ~|AMOUNT;
+	ddp_fifo_ram #(.W(W), .AW(l)) ram (.clk(CLK), .we(WRREQ && !AMOUNT[l] && !RST), .wa(WADDR), .wd(DATA), .ra(rnext), .q(Q));
+	assign EMPTY = ~(|AMOUNT && !stale);
 	assign FULL = AMOUNT[l];
-	assign Q = mem[RADDR];
+endmodule
+
+// simple dual port M10K, registered read address, no read-during-write behaviour
+module ddp_fifo_ram #(parameter W = 54, parameter AW = 3) (
+	input  wire          clk,
+	input  wire          we,
+	input  wire [AW-1:0] wa,
+	input  wire [W-1:0]  wd,
+	input  wire [AW-1:0] ra,
+	output wire [W-1:0]  q
+);
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+		.width_a(W), .widthad_a(AW), .numwords_a(1 << AW), .width_b(W), .widthad_b(AW), .numwords_b(1 << AW),
+		.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
+		.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
+	) ram (
+		.clock0(clk), .address_a(wa), .data_a(wd), .wren_a(we), .address_b(ra), .q_b(q), .rden_b(1'b1),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+		.data_b({W{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
+	);
+`else
+	reg [W-1:0] mem [0:(1<<AW)-1];
+	reg [AW-1:0] ra_q;
+	always @(posedge clk) begin
+		if (we) mem[wa] <= wd;
+		ra_q <= ra;
+	end
+	assign q = mem[ra_q];
+`endif
 endmodule
 
 `default_nettype wire
