@@ -375,6 +375,7 @@ wire [ 1: 0] HRES, VRES;
 `ifdef POCKET_DEBUG_OVERLAY
 wire [ 6: 0] dbg_tap;
 wire [99: 0] dbg_txt;
+wire [28: 0] dbg_da;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -546,7 +547,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da)
 `endif
 );
 
@@ -782,14 +783,23 @@ wire [15:0] dbg_g = {
 wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // squares 8 (SSH) and 15 (SCSP) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text rows (docs/debug-overlay.md): MSH PC sampled every window; 8 digits scanned into the M10K text buffer
-reg [31:0] dbg_pc_s = 32'd0;
+// hex text row (docs/debug-overlay.md): every window alternates between the MSH PC (marker 1) and the next
+// peripheral data read address (marker D); 8 digits are scanned into the M10K text buffer
+reg [31:0] dbg_s = 32'd0;
+reg        dbg_mode = 1'b0, dbg_arm = 1'b0;
 reg  [2:0] dbg_wa = 3'd0;
 always @(posedge clk_sys) begin
-	if (dbg_tick) dbg_pc_s <= dbg_txt[99:68];
+	if (dbg_tick) begin
+		dbg_mode <= ~dbg_mode;
+		if (dbg_mode) dbg_arm <= 1'b1;
+		else          dbg_s <= {4'h1, dbg_txt[95:68]};
+	end else if (dbg_arm && dbg_da[28]) begin
+		dbg_arm <= 1'b0;
+		dbg_s   <= {4'hD, dbg_da[27:0]};
+	end
 	dbg_wa <= dbg_wa + 3'd1;
 end
-wire [3:0]  dbg_wd  = dbg_pc_s[(3'd7 - dbg_wa) * 4 +: 4];
+wire [3:0]  dbg_wd  = dbg_s[(3'd7 - dbg_wa) * 4 +: 4];
 `endif
 
 pocket_video video (

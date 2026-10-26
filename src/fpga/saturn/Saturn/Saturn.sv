@@ -209,6 +209,7 @@ module Saturn
 `ifdef POCKET_DEBUG_OVERLAY
 	,
 	output     [ 6: 0] DBG_TAP,    // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
+	output     [28: 0] DBG_DA,
 	output     [99: 0] DBG_TXT     // {MSH PC, COMREG, SF, IRL, TVMD, IST, IMS, SMPC irq}, docs/debug-overlay.md
 `endif
 );
@@ -248,6 +249,7 @@ module Saturn
 	wire        DBG_DISP;
 	wire [15:0] DBG_TVMD;
 	wire [31:0] DBG_PC, DBG_SCU;
+	wire [28:0] DBG_DA_W;
 	wire [ 8:0] DBG_SMPC;
 `endif
 	bit         MSHBS_N;
@@ -456,7 +458,7 @@ module Saturn
 		
 		.FAST(FAST)
 `ifdef POCKET_DEBUG_OVERLAY
-		,.DBG_PC(DBG_PC)
+		,.DBG_PC(DBG_PC), .DBG_DA(DBG_DA_W)
 `endif
 `ifdef POCKET_CUT_SH2_DIVU_SHARED
 		,.DVS_I(DVS0_I), .DVS_O(DVS0_O)
@@ -1419,6 +1421,7 @@ module Saturn
 	assign DBG_DISP = 1'b0;
 	assign DBG_TVMD = 16'h0;
 `endif
+	assign DBG_DA = DBG_DA_W;
 	assign DBG_TXT = {DBG_PC, DBG_SMPC[7:0], 3'b000, DBG_SMPC[8], ~CIRL_N, DBG_TVMD, DBG_SCU[31:16], DBG_SCU[15:0], 3'b000, ~MIRQ_N};
 	assign DBG_TAP = {DBG_DISP, MSHRES_N, ACS2_N, &MSHIRL_N, SSHBS_N, MSHBS_N, 1'b0};
 `endif

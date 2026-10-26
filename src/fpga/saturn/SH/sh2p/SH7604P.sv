@@ -69,6 +69,7 @@ module SH7604P
 	input             FAST
 `ifdef POCKET_DEBUG_OVERLAY
 	,output     [31:0] DBG_PC
+	,output     [28:0] DBG_DA      // {valid, CPU data read address[27:0]}: peripheral reads only
 `endif
 );
 
@@ -770,4 +771,10 @@ module SH7604P
 		.SBY(MSBY_SBY)
 	);
 	
+`ifdef POCKET_DEBUG_OVERLAY
+	// data read request on the CPU bus (before the cache), skipping BIOS ROM, WRAM-L and WRAM-H
+	assign DBG_DA = {CBUS_REQ & ~CBUS_ID & ~CBUS_WR & ~(CBUS_A[27:24] == 4'h6) & ~(CBUS_A[27:20] == 8'h00) & ~(CBUS_A[27:20] == 8'h02),
+	                 CBUS_A[27:0]};
+`endif
+
 endmodule
