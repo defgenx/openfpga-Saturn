@@ -76,6 +76,8 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/sram_pocket.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/vdp1_fb_pocket.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/load_pocket.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/ram_reset.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) platform/dbg_act.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/ddram_pocket.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mem/mem_pocket.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) cd/cd_toc_ram.sv]

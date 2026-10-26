@@ -89,7 +89,8 @@ module saturn_pocket #(
 	output wire signed [15:0] audio_l,
 	output wire signed [15:0] audio_r,
 
-	output wire        pll_locked_74a              // clk_74a
+	output wire        pll_locked_74a,             // clk_74a
+	output wire        setup_ready_74a             // clk_74a: PLL locked and the RAM controllers initialised (APF setup done)
 );
 
 // ---------------------------------------------------------------------------------- clocks
@@ -131,6 +132,19 @@ always @(posedge clk_74a) begin
 	if (lock_s[1]) ever_locked <= 1'b1;
 end
 assign pll_locked_74a = lock_s[1];
+
+// The host pushes the BIOS right after setup is reported and the bridge has no back-pressure, so setup is
+// reported only once the PSRAM accepts writes (the load FIFO holds 256 words); the timeout keeps a dead
+// RAM from hanging the host.
+reg [1:0]  rdy_s;
+reg        ever_ready = 1'b0;
+reg [17:0] rdy_to = 18'd0;
+always @(posedge clk_74a) begin
+	rdy_s <= {rdy_s[0], mem_ready};
+	if (lock_s[1] && !rdy_to[17]) rdy_to <= rdy_to + 1'b1;
+	if (rdy_s[1] || rdy_to[17]) ever_ready <= 1'b1;
+end
+assign setup_ready_74a = lock_s[1] & ever_ready;
 
 `ifdef POCKET_PLL_LITE
 wire rst_req_74 = ~reset_n | ~ever_locked;
@@ -196,21 +210,10 @@ end
 wire reset = rst_s[2];
 
 // ---------------------------------------------------------------------------------- reset
-reg rst_ram = 1'b0;
-reg download;
-wire loading;
-always @(posedge clk_sys) begin
-	reg [7:0] delay_cnt;
-
-	download <= loading;
-	if (delay_cnt) delay_cnt <= delay_cnt - 8'd1;
-	else rst_ram <= 1'b0;
-
-	if ((!loading && download) || reset) begin
-		rst_ram   <= 1'b1;
-		delay_cnt <= '1;
-	end
-end
+wire rst_ram, download;
+wire loading, mem_ready;
+wire dbg_sdram_ready, dbg_psram_ready, dbg_ld_ovf;
+ram_reset ramrst (.clk(clk_sys), .reset(reset), .loading(loading), .rst_ram(rst_ram), .download(download));
 
 wire boot_busy;
 wire rst_sys = reset | download | rst_ram | boot_busy;
@@ -369,6 +372,9 @@ wire         CART_MEM_RD, CART_MEM_RDY;
 wire [ 7: 0] R, G, B;
 wire         HS_N, VS_N, DCLK, HBL_N, VBL_N, FIELD, INTERLACE, DCE_R, DCE_F;
 wire [ 1: 0] HRES, VRES;
+`ifdef POCKET_DEBUG_OVERLAY
+wire [ 6: 0] dbg_tap;
+`endif
 wire [15: 0] SOUND_L, SOUND_R;
 
 Saturn #(.RAMH_SLOW(1)) saturn (
@@ -538,6 +544,9 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_BREAK(1'b0),
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
+`ifdef POCKET_DEBUG_OVERLAY
+	, .DBG_TAP(dbg_tap)
+`endif
 );
 
 // ---------------------------------------------------------------------------------- pads
@@ -707,7 +716,8 @@ mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
 	.clk_74a(clk_74a),
 	.ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
 	.loading(loading),
-	.sdram_ready()
+	.mem_ready(mem_ready),
+	.dbg_sdram_ready(dbg_sdram_ready), .dbg_psram_ready(dbg_psram_ready), .dbg_ld_ovf(dbg_ld_ovf)
 );
 
 assign VDP1_VRAM_Q   = vdp1vram_do;
@@ -722,11 +732,66 @@ assign MEM_DI        = !RAMH_CS_N ? ramh_do : {16'h0000, raml_do};
 assign MEM_WAIT_N    = !RAMH_CS_N ? ~ramh_busy : ~raml_busy;
 
 // ---------------------------------------------------------------------------------- video and audio
+// ---------------------------------------------------------------------------------- debug overlay
+// 16 status squares over the picture, legend in docs/debug-overlay.md
+`ifdef POCKET_DEBUG_OVERLAY
+reg [1:0]  dbg_pll_s, dbg_rn_s;
+reg        dbg_bios_seen = 1'b0;            // clk_74a: a BIOS word arrived
+reg  [1:0] dbg_bios_s;
+always @(posedge clk_74a) if (ld_wr && ld_sel[0]) dbg_bios_seen <= 1'b1;
+reg        dbg_wramh = 1'b0;
+reg [24:0] dbg_win = 25'd0;
+always @(posedge clk_sys) begin
+	dbg_pll_s  <= {dbg_pll_s[0], lock_s[1]};
+	dbg_rn_s   <= {dbg_rn_s[0], reset_n};
+	dbg_bios_s <= {dbg_bios_s[0], dbg_bios_seen};
+	dbg_win    <= dbg_win + 25'd1;
+	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
+end
+wire dbg_tick = &dbg_win;
+wire a_msh, a_ssh, a_vbl, a_irl, a_cd, a_scsp, a_vs, a_de;
+dbg_act d_msh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[1]), .y(a_msh));
+dbg_act d_ssh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[2]), .y(a_ssh));
+dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(VBL_N), .y(a_vbl));
+dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
+dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
+dbg_act d_scsp (.clk(clk_sys), .tick(dbg_tick), .s(SCSP_RAM_CS), .y(a_scsp));
+dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
+dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
+`ifdef POCKET_CUT_CDB_LLE
+wire dbg_toc = disc_ok;
+`else
+wire dbg_toc = 1'b0;
+`endif
+wire [15:0] dbg_g = {
+	dbg_toc,                                           // 16 TOC loaded
+	1'b0,                                              // 15 SCSP/68K (activity)
+	dbg_tap[5],                                        // 14 SMPC released MSH
+	1'b0,                                              // 13 CD block (activity)
+	1'b0,                                              // 12 SCU irq (activity)
+	1'b0,                                              // 11 vblank (activity)
+	dbg_tap[6],                                        // 10 VDP2 DISP
+	dbg_wramh,                                         //  9 WRAM-H reached
+	2'b00,                                             //  8, 7 SSH, MSH (activity)
+	dbg_psram_ready,                                   //  6 PSRAM init
+	dbg_sdram_ready,                                   //  5 SDRAM init
+	dbg_rn_s[1],                                       //  4 host release + all slots complete
+	dbg_bios_s[1] & ~loading & ~dbg_ld_ovf,            //  3 BIOS loaded intact
+	~rst_sys,                                          //  2 core reset released
+	dbg_pll_s[1]                                       //  1 PLL locked
+};
+wire [15:0] dbg_y = {1'b0, a_scsp, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_ssh, a_msh, 6'b000000};
+wire dbg_alive = a_vs & a_de;
+`endif
+
 pocket_video video (
 	.clk_sys(clk_sys), .clk_vid(clk_vid),
 	.R(R), .G(G), .B(B), .DCLK(DCLK), .HS_N(HS_N), .VS_N(VS_N), .HBL_N(HBL_N), .VBL_N(VBL_N),
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
+`ifdef POCKET_DEBUG_OVERLAY
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive)
+`endif
 );
 
 pocket_audio audio (

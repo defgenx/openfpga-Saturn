@@ -75,7 +75,7 @@ wire  [7:0] b1 = LD_LITTLE ? c_d[15:8]  : c_d[23:16];
 wire  [7:0] b2 = LD_LITTLE ? c_d[23:16] : c_d[15:8];
 wire  [7:0] b3 = LD_LITTLE ? c_d[31:24] : c_d[7:0];
 reg   [1:0] busy_q = 2'd0;
-assign loading = !empty || st != 2'd0;
+assign loading = !empty || st != 2'd0 || o_wr || o_busy;   // until the last write has left ddram_pocket
 
 always @(posedge clk) begin
 	o_wr <= 1'b0;

@@ -84,11 +84,18 @@ module mem_pocket #(
 	input  wire        ld_wr, input wire [2:0] ld_sel, input wire [23:0] ld_addr, input wire [31:0] ld_data,
 	output wire        loading,
 
-	output wire        sdram_ready
+	output wire        mem_ready,           // SDRAM initialised and both PSRAM controllers idle (clk_ram)
+	output wire        dbg_sdram_ready,
+	output wire        dbg_psram_ready,
+	output wire        dbg_ld_ovf           // a loader word was dropped (FIFO full)
 );
 
 // ---------------------------------------------------------------- SDRAM
 wire [7:0] sd_scrub, sd_drop;
+wire       sdram_ready, p0_idle, p1_idle;
+assign dbg_sdram_ready = sdram_ready;
+assign dbg_psram_ready = p0_idle & p1_idle;
+assign mem_ready = sdram_ready & p0_idle & p1_idle & ~rst_ram;
 sdram_pocket sdram (
 	.clk(clk_ram), .init(rst_ram), .sync(sync),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i), .dram_dqm(dram_dqm),
@@ -106,19 +113,20 @@ wire [15:0] p0_rdata, p1_rdata;  wire p0_rvalid, p1_rvalid, p0_rlast, p1_rlast;
 
 psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0), .CNT_W(5), .ALIGNED(1'b1)) psram0 (
 	.clk(clk_ram), .reset(rst_ram), .init_go(sdram_ready), .busy(p0_busy), .addr(p0_addr), .cnt(p0_cnt), .rd(p0_rd), .we(p0_we), .din(p0_din), .be(p0_be),
-	.rdata(p0_rdata), .rvalid(p0_rvalid), .rlast(p0_rlast), .idle(),
+	.rdata(p0_rdata), .rvalid(p0_rvalid), .rlast(p0_rlast), .idle(p0_idle),
 	.cram_a(cram0_a), .cram_dq_out(cram0_dq_o), .cram_dq_oe(cram0_dq_oe), .cram_dq_in(cram0_dq_i), .cram_clk(cram0_clk),
 	.cram_adv_n(cram0_adv_n), .cram_cre(cram0_cre), .cram_ce0_n(cram0_ce0_n), .cram_ce1_n(cram0_ce1_n),
 	.cram_oe_n(cram0_oe_n), .cram_we_n(cram0_we_n), .cram_ub_n(cram0_ub_n), .cram_lb_n(cram0_lb_n));
 psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0)) psram1 (
 	.clk(clk_ram), .reset(rst_ram), .init_go(sdram_ready), .busy(p1_busy), .addr(p1_addr), .cnt(p1_cnt), .rd(p1_rd), .we(p1_we), .din(p1_din), .be(p1_be),
-	.rdata(p1_rdata), .rvalid(p1_rvalid), .rlast(p1_rlast), .idle(),
+	.rdata(p1_rdata), .rvalid(p1_rvalid), .rlast(p1_rlast), .idle(p1_idle),
 	.cram_a(cram1_a), .cram_dq_out(cram1_dq_o), .cram_dq_oe(cram1_dq_oe), .cram_dq_in(cram1_dq_i), .cram_clk(cram1_clk),
 	.cram_adv_n(cram1_adv_n), .cram_cre(cram1_cre), .cram_ce0_n(cram1_ce0_n), .cram_ce1_n(cram1_ce1_n),
 	.cram_oe_n(cram1_oe_n), .cram_we_n(cram1_we_n), .cram_ub_n(cram1_ub_n), .cram_lb_n(cram1_lb_n));
 
 // ---------------------------------------------------------------- loader and client side
 wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy; wire [7:0] l_ovf;
+assign dbg_ld_ovf = |l_ovf;
 load_pocket #(.LD_LITTLE(LD_LITTLE)) loader (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
 	.clk(clk_ram), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(l_ovf));

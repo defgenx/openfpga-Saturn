@@ -206,6 +206,10 @@ module Saturn
 	input              DBG_BREAK,
 	input              DBG_RUN,
 	input      [ 7: 0] DBG_EXT
+`ifdef POCKET_DEBUG_OVERLAY
+	,
+	output     [ 6: 0] DBG_TAP     // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
+`endif
 );
 
 	bit BREAK;
@@ -239,6 +243,9 @@ module Saturn
 	bit  [26:0] MSHA;
 	bit  [31:0] MSHDO;
 	bit  [31:0] MSHDI;
+`ifdef POCKET_DEBUG_OVERLAY
+	wire        DBG_DISP;
+`endif
 	bit         MSHBS_N;
 	bit         MSHCS0_N;
 	bit         MSHCS1_N;
@@ -1035,6 +1042,11 @@ module Saturn
 		
 		.SCRN_EN(SCRN_EN),
 		
+`ifdef POCKET_DEBUG_OVERLAY
+`ifdef POCKET_VDP2P
+		.DBG_DISP(DBG_DISP),
+`endif
+`endif
 		.DBG_EXT(DBG_EXT)
 	);
 
@@ -1390,4 +1402,11 @@ module Saturn
 `endif
 	);
 	
+`ifdef POCKET_DEBUG_OVERLAY
+`ifndef POCKET_VDP2P
+	assign DBG_DISP = 1'b0;
+`endif
+	assign DBG_TAP = {DBG_DISP, MSHRES_N, ACS2_N, &MSHIRL_N, SSHBS_N, MSHBS_N, 1'b0};
+`endif
+
 endmodule

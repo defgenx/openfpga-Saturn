@@ -340,8 +340,9 @@ wire    [31:0]  cmd_bridge_rd_data;
 
 // bridge host commands
 // synchronous to clk_74a
+wire            setup_ready_74a;
 wire            status_boot_done = pll_locked_74a;
-wire            status_setup_done = pll_locked_74a;    // rising edge triggers a target command
+wire            status_setup_done = pll_locked_74a & setup_ready_74a;    // rising edge triggers a target command
 wire            status_running = reset_n;              // we are running as soon as reset_n goes high
 
 wire            dataslot_requestread;
@@ -711,7 +712,8 @@ saturn_pocket saturn (
     .audio_l    ( audio_l ),
     .audio_r    ( audio_r ),
 
-    .pll_locked_74a ( pll_locked_74a )
+    .pll_locked_74a ( pll_locked_74a ),
+    .setup_ready_74a ( setup_ready_74a )
 );
 
 
