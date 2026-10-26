@@ -175,7 +175,8 @@ reg  [2:0] es = 3'd0;
 reg        e_b, trk;
 wire       need0 = sr_ready && (!have0 || i0r != last0);
 wire       need1 = sr_ready && t1r && (!have1 || i1r != last1);
-wire       pick1 = ne1 && (!ne0 || occ1 > occ0);
+wire [8:0] occ0e = wptr0_d - rptr0, occ1e = wptr1_d - rptr1;   // the engine's own view (wptr is a clk_sys register)
+wire       pick1 = ne1 && (!ne0 || occ1e > occ0e);
 wire [34:0] wq = pick1 ? wf1_q : wf0_q;
 
 always @(posedge clk_ram) begin
