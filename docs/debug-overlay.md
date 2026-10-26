@@ -55,7 +55,7 @@ one row of 8 hex digits: the master SH-2 program counter.
 
 ## debug3: data read address
 
-The PC row is replaced by the address of the first master SH-2 data read outside BIOS ROM, WRAM-L and WRAM-H after
+The PC row is replaced by the address of the first master SH-2 data read outside WRAM-H after
 each overlay window (about 0.3 s). Digit 0 is the marker `D`, digits 1..7 are address bits 27..0:
 
 ```
