@@ -171,3 +171,8 @@ Sum of the positive items: 230 to 330 ALMs, giving about 1,800 to 1,900 standalo
 `sizing/vdp1p/`: `mk.sh`, `run.sh` (Docker `raetro/quartus:21.1`, unique container names, `NUM_PARALLEL_PROCESSORS 1`,
 `area_profile.qsf`), standalone top `VDP1P`, virtual pins on all ports except `CLK`, 17.46 ns clock constraint. Runs: `base` (VDP1),
 `g1` (gouraud), `g2` (edge), `g3` (final); `x1`, `x2` one-hot experiments. Logs and databases are not committed.
+
+## 9. MLAB to M10K
+
+`VDP1P_MLAB` (edge accumulators, gouraud step table, CPU write buffer), the pattern FIFO and the colour table read their M10K on the falling
+edge (no cycle change). `make -C sim vdp1`: PASS (40 scenarios, divider 0 mismatches).

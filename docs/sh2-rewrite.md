@@ -294,3 +294,10 @@ close to the cost imposed by exact register read/write timing at their interface
 left in the core (component ablations: B-operand special sources ~110 ALUT, RD_SAVE forwarding ~60, SR ~34, PC ~30,
 MA formatting ~68). A further 1,200+ ALMs would need either dropping exactness somewhere or sharing logic between the
 two CPUs, which the per-CPU port list of `SH7604P` rules out.
+
+### 8.4 MLAB to M10K (falling-edge read)
+
+Register file A/B, cache `LV` a/b, DMAC `RDBUF`/`SARDAR_A/B`, DIVU RAM and INTC `RA`/`RB` are `SH2P_FERAM` (M10K, address registered on
+the falling edge): 10 blocks per CPU instead of about 150 ALMs of MLAB, no cycle change. `make -C sim/sh2 DUT=sh2p ptest` 76 PASS, soak
+1000-1039 160 PASS, unit divu/dmac/intc PASS. In the lite fit the Memory LABs fall from 97 to 14 together with the other blocks
+([fit-status.md](fit-status.md)).

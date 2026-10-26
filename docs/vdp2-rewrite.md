@@ -380,3 +380,9 @@ what the random scene types produce.
 The integrated renderer is not smaller than the golden-derived VDP2P2 (4,712 map / 4,740 fit): the line buffer valid bits as a
 true dual port RAM synthesise to 3,072 registers plus 5,000 ALUTs of muxing (8,862 ALMs); a plain simple dual port RAM with the
 scan-out clear sharing the insertion write slot gives the numbers above. The 3,500 target is not met by either build.
+
+### MLAB to M10K (`VDP2P_FERAM`, ML=2)
+
+`VDP2P_SDP`/`VDP2P_REGRAM` default to ML=2 (M10K, falling-edge read); `VDP2P_CDPRING`, the write FIFO and `whit33` (ML=0) too. `nmp`/`rmp`
+stay MLAB: their address depends on the `cy_*` output, and two chained falling-edge reads fail the sim. `sim/vdp2/tb.cpp` applies the next
+clock enables and evaluates the falling edge before comparing. `make -C sim vdp2` 60 seeds match.

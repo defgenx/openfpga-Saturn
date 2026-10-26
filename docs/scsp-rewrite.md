@@ -88,3 +88,8 @@ M10K: 30 blocks, the same as `SCSP`; DSP blocks: 10 (5 more than `SCSP`).
 (MIDI 0 and 1) plus the single-build runs used during development. Stimulus as in [scsp.md](scsp.md) section 5 (random 68K/SCU traffic,
 key on/off, DSP programs, DMA, timers, ESL/ESR, SND_EN, RES_N pulses and hard resets with sound playing). `DBGINT` builds expose
 internals and report the first differing RAM (`sim/scsp/tb.cpp`); `sim/scsp/run_rev.sh <rev>` runs the bench on a past commit.
+
+## 5. MLAB to M10K
+
+The two stack RAMs (`SCSPP_STACK_RAM`) are M10K byte lanes read on the falling edge (`SCSPP_FERAM`); key/bit RAMs stay MLAB (1 ALM).
+`make -C sim scsp` (6 seeds, both builds) PASS; `sim/scsp/tb.cpp` applies the next clock enables before the falling edge.
