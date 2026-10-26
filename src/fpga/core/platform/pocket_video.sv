@@ -81,7 +81,10 @@ wire [23:0] sq_c = dbg_g[sq] ? 24'h00FF00 : dbg_y[sq] ? 24'hFFFF00 : 24'hFF0000;
 
 // ---- hex text block: 2 rows x 8 digits at x 32..159, y 16..47, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
 // Digits come from a 32 x 4 M10K buffer written in clk_sys; the font is a 128 x 3 M10K ROM.
-(* ramstyle = "M10K" *) reg [31:0] tbuf [0:1];
+(* ramstyle = "M10K" *) reg [7:0] tb3 [0:1];
+(* ramstyle = "M10K" *) reg [7:0] tb2 [0:1];
+(* ramstyle = "M10K" *) reg [7:0] tb1 [0:1];
+(* ramstyle = "M10K" *) reg [7:0] tb0 [0:1];
 (* ramstyle = "M10K", romstyle = "M10K" *) reg [2:0] font [0:127];
 initial begin
 	font[0] = 3'b111;
@@ -166,10 +169,10 @@ initial begin
 	font[124] = 3'b100;
 end
 always @(posedge clk_sys) begin
-	if (dbg_we[3]) tbuf[0][31:24] <= dbg_wd[31:24];
-	if (dbg_we[2]) tbuf[0][23:16] <= dbg_wd[23:16];
-	if (dbg_we[1]) tbuf[0][15: 8] <= dbg_wd[15: 8];
-	if (dbg_we[0]) tbuf[0][ 7: 0] <= dbg_wd[ 7: 0];
+	if (dbg_we[3]) tb3[1'b0] <= dbg_wd[31:24];
+	if (dbg_we[2]) tb2[1'b0] <= dbg_wd[23:16];
+	if (dbg_we[1]) tb1[1'b0] <= dbg_wd[15: 8];
+	if (dbg_we[0]) tb0[1'b0] <= dbg_wd[ 7: 0];
 end
 
 localparam TXT_LAT = 4;                    // clk_vid cycles from x to the pixel decision
@@ -184,7 +187,7 @@ reg  [6:0] t_p0, t_p1, t_p2;               // {in, gy < 5, gx[1:0], gy[2:0]}
 reg        t_on = 1'b0, t_bg = 1'b0;
 always @(posedge clk_vid) begin
 	t_c0   <= t_col;
-	t_word <= tbuf[1'b0];
+	t_word <= {tb3[1'b0], tb2[1'b0], tb1[1'b0], tb0[1'b0]};
 	t_p0   <= {t_in, y[3:1] < 3'd5, x[3:2], y[3:1]};
 	t_nib  <= t_word[(3'd7 - t_c0) * 4 +: 4];
 	t_p1   <= t_p0;
