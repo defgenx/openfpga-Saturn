@@ -377,6 +377,7 @@ wire [ 6: 0] dbg_tap;
 wire [99: 0] dbg_txt;
 wire [28: 0] dbg_da;
 wire [26: 0] dbg_68k;
+wire [29: 0] dbg_serv;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -548,7 +549,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k), .DBG_SERV(dbg_serv)
 `endif
 );
 
@@ -752,10 +753,9 @@ always @(posedge clk_sys) begin
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
-wire a_irl, a_cd, a_vs, a_de, a_as;
+wire a_irl, a_cd, a_vs, a_de;
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
-dbg_act d_as  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_68k[23]), .y(a_as));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -780,13 +780,17 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {1'b0, a_as, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH) and 11 (VBL) have no detector in the debug build
+wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH), 11 (VBL) and 15 have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text row (docs/debug-overlay.md): marker 6, 68K address bus (last cycle with AS asserted), flags digit
-wire        dbg_we = ~dbg_68k[23];
-wire [31:0] dbg_wd = {4'h6, dbg_68k[22:0], 1'b0, 4'h0};
-wire  [3:0] dbg_lo = {dbg_68k[26], dbg_68k[25], dbg_68k[24], a_as};   // SNDRES_N, M68K_RESO_N, CE (raw), AS activity
+// hex text row (docs/debug-overlay.md): marker 5, SMPC_SERV PC (sampled each window), COMREG, flags digits
+reg  [9:0] dbg_ia = 10'd0;
+always @(posedge clk_sys) if (dbg_tick) dbg_ia <= dbg_serv[27:18];
+wire        dbg_we = 1'b1;
+wire [31:0] dbg_wd = {4'h5, 2'b00, dbg_ia, dbg_serv[16:9],
+                      dbg_serv[17], dbg_serv[5], dbg_serv[0], dbg_serv[2],   // SF, SNDRES_N, MSHRES_N, SSHRES_N
+                      4'h0};
+wire  [3:0] dbg_lo = {dbg_serv[29], dbg_serv[28], dbg_serv[4], dbg_serv[6]};   // MRES_N, SERV i_rst, SYSRES_N, CDRES_N
 `endif
 
 pocket_video video (

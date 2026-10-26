@@ -53,17 +53,13 @@ one row of 8 hex digits: the master SH-2 program counter.
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
 - `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
 
-## debug4: 68K address bus
-
-The text row shows the sound CPU's address bus instead of the SH-2 data address; square 15 becomes "68K bus active"
-(yellow when AS# toggled in the last window).
+## debug5: SMPC_SERV state
 
 ```
- 6 A A A A A A F        A = 68K address (24 bit) of the last cycle with AS# asserted, F = flags
+ 5 P P P C C S L        marker 5 | SERV PC (ia[11:2], 3 digits, sampled each window) | last COMREG (2) | S | L
 ```
 
-Flags digit F, bit 3 to 0: SNDRES_N (68K reset released by the SMPC), M68K_RESO_N (68K RESET instruction not active),
-the raw 68K clock enable (SCCE_R, a sampled 0/1), AS# toggling (activity over the last window). Squares 7, 8 and 11 have no detector in this build (always red). The address is not updated
-while AS# stays high, so an all-zero row means the 68K never ran a bus cycle. A running 68K waiting for the SH-2
-handshake in sound RAM shows a small repeating range of addresses in the sound RAM (0x000000 to 0x0FFFFF, SCSP
-registers 0x100000..).
+- S bit 3..0: SF, SNDRES_N, MSHRES_N, SSHRES_N (1 = released / set).
+- L bit 3..0: MRES_N, SERV i_rst (1 = reset), SYSRES_N, CDRES_N.
+- PC is the word address of the instruction fetched by the SERV core (`ia[11:2]`), COMREG the last command the SH-2 wrote.
+Squares 7, 8, 11 and 15 have no detector in this build (always red).

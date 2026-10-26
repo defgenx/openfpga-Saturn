@@ -43,7 +43,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	output     [ 6: 0] PDR2O,
 	output     [ 6: 0] DDR2
 `ifdef POCKET_DEBUG_OVERLAY
-	,output     [ 8: 0] DBG_SMPC   // {SF, COMREG}
+	,output     [28: 0] DBG_SMPC   // {i_rst, ia[11:2], SF, COMREG, PINS}
 `endif
 );
 
@@ -52,7 +52,6 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	reg  [ 7:0] COMREG, SR, IO_BUF, REG_DO;
 	reg         SF;
 `ifdef POCKET_DEBUG_OVERLAY
-	assign DBG_SMPC = {SF, COMREG};
 `endif
 	reg  [ 7:0] PDR_O [2];
 	reg  [ 6:0] DDR [2];
@@ -241,4 +240,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	assign DDR1 = DDR[0];
 	assign DDR2 = DDR[1];
 	assign EXL_N = (~EXLE[0] | PDR1I[6]) & (~EXLE[1] | PDR2I[6]);
+`ifdef POCKET_DEBUG_OVERLAY
+	assign DBG_SMPC = {!RST_N || !MRES_N, ia[11:2], SF, COMREG, PINS};
+`endif
+
 endmodule

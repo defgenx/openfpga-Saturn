@@ -210,6 +210,7 @@ module Saturn
 	,
 	output     [ 6: 0] DBG_TAP,    // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
 	output     [28: 0] DBG_DA,
+	output     [29: 0] DBG_SERV,   // {MRES_N, DBG_SMPC}
 	output     [26: 0] DBG_68K,    // {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA[23:1]}
 	output     [99: 0] DBG_TXT     // {MSH PC, COMREG, SF, IRL, TVMD, IST, IMS, SMPC irq}, docs/debug-overlay.md
 `endif
@@ -251,7 +252,7 @@ module Saturn
 	wire [15:0] DBG_TVMD;
 	wire [31:0] DBG_PC, DBG_SCU;
 	wire [28:0] DBG_DA_W;
-	wire [ 8:0] DBG_SMPC;
+	wire [28:0] DBG_SMPC;
 `endif
 	bit         MSHBS_N;
 	bit         MSHCS0_N;
@@ -1423,8 +1424,9 @@ module Saturn
 	assign DBG_TVMD = 16'h0;
 `endif
 	assign DBG_DA = DBG_DA_W;
+	assign DBG_SERV = {MRES_N, DBG_SMPC};
 	assign DBG_68K = {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA};
-	assign DBG_TXT = {DBG_PC, DBG_SMPC[7:0], 3'b000, DBG_SMPC[8], ~CIRL_N, DBG_TVMD, DBG_SCU[31:16], DBG_SCU[15:0], 3'b000, ~MIRQ_N};
+	assign DBG_TXT = {DBG_PC, DBG_SMPC[16:9], 3'b000, DBG_SMPC[17], ~CIRL_N, DBG_TVMD, DBG_SCU[31:16], DBG_SCU[15:0], 3'b000, ~MIRQ_N};
 	assign DBG_TAP = {DBG_DISP, MSHRES_N, ACS2_N, &MSHIRL_N, SSHBS_N, MSHBS_N, 1'b0};
 `endif
 
