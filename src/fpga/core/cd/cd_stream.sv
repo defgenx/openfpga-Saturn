@@ -189,7 +189,7 @@ assign rg_ra = fd_sr_a;
 
 // rw_a / rw_d hold still for at least 30 clk_74a cycles after rw_t toggles (one bridge word)
 localparam FW = 6;
-(* ramstyle = "M10K" *) reg [44:0] wq [0:(1<<FW)-1];
+(* ramstyle = "M10K, no_rw_check" *) reg [44:0] wq [0:(1<<FW)-1];
 reg [FW:0]   wq_w = 0, wq_r = 0;
 reg [FW-1:0] wq_ra;                        // registered read address: the RAM output is the head one clock after wq_r
 wire [44:0]  wq_q = wq[wq_ra];
@@ -288,7 +288,7 @@ assign boot_busy = commit_pend || ld_run;
 wire [23:0] wx = owner_fetch ? fetch_fad : lk_x;
 wire [23:0] fl_pos = (fetch_fad < 24'd150) ? 24'd150 : fetch_fad;
 wire [24:0] fsec_d = {1'b0, fl_pos} - {1'b0, c_forg};
-wire [23:0] fsec = fsec_d[24] ? 24'd0 : fsec_d[23:0];
+wire [23:0] fsec = fsec_d[24] ? 24'd0 : fsec_d[23:0];   // a disc has far fewer than 2^19 sectors: the multiplier takes 19 bits
 wire [11:0] fx_mul = c_s2048 ? 12'd2048 : 12'd2352;
 wire can_fetch = fetch_en && !infl && disc_ok && !lk_hold &&
                  ({1'b0, n_ready} + {3'd0, fd_held} < {1'b0, PREFETCH_MAX}) &&
@@ -364,7 +364,7 @@ always @(posedge clk) begin
 	E_B3: begin
 		boot_wr <= 1'b1; boot_addr <= {bi, 2'b10}; boot_data <= {toc_q[7:0], toc_q[15:8]};
 		bi <= bi + 7'd1;
-		ra <= 9'd5 + {2'd0, bi};
+		ra <= ra + 9'd1;                                       // ra = 4 + bi here
 		es <= (bi == 7'd64) ? E_B4 : E_B1;
 	end
 	E_B4: begin disc_ok <= 1'b1; disc_new <= 1'b1; ld_run <= 1'b0; es <= E_IDLE; end
@@ -383,9 +383,9 @@ always @(posedge clk) begin
 
 	// record load (rb)
 	E_LD0: begin ra <= rb; es <= E_LD1; end
-	E_LD1: begin ra <= rb + 9'd1; es <= E_LD2; end
+	E_LD1: begin ra <= ra + 9'd1; es <= E_LD2; end            // ra = rb here
 	E_LD2: begin
-		ra <= rb + 9'd2;
+		ra <= ra + 9'd1;
 		c_file <= toc_q[30:26];
 		c_s2048 <= toc_q[25];
 		if (!owner_fetch) begin lk_data <= toc_q[24]; lk_s2048 <= toc_q[25]; lk_track <= wi; lk_tbcd <= wtb; end
@@ -401,7 +401,7 @@ always @(posedge clk) begin
 	end
 
 	// fetch: byte offset = file sector * 2352 (or 2048), issue
-	E_F1: begin fx_off <= fsec * fx_mul; es <= E_F4; end        // one DSP multiplier instead of three adds
+	E_F1: begin fx_off <= fsec[18:0] * fx_mul; es <= E_F4; end        // one DSP multiplier instead of three adds
 	E_F4: begin
 		fx_file  <= c_file;
 		fx_slot  <= wr_ptr;
