@@ -410,7 +410,7 @@ module VDP1P (
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
 	bit  [16: 0] GS_WD;
-	VDP1P_MLAB #(.W(17),.AW(3)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
+	VDP1P_MLAB #(.W(17),.AW(3),.FE(0)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
 	wire [ 1: 0] GL_CH = GSEQ - 4'd7;
 	wire         GL_WE = GSEQ >= 4'd7;
 	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
@@ -2473,7 +2473,7 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 	assign EMPTY = ~|AMOUNT;
 	assign FULL = AMOUNT[l];
 	
-	VDP1P_MLAB #(.W(16),.AW(l)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(l),.FE(0)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
 	
 	assign Q = NULL ? '0 : sub_wire0;
 
@@ -2490,7 +2490,7 @@ module VDP1P_COL_TBL (
 
 	wire [15:0] sub_wire0;
 
-	VDP1P_MLAB #(.W(16),.AW(4)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(4),.FE(0)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
 
 	assign Q =  sub_wire0;
 
@@ -2535,7 +2535,8 @@ endmodule
 
 // Simple dual port RAM in M10K with the read address registered on the falling edge: for a register-sourced RA the
 // value is what an asynchronous MLAB read gives before the next rising edge. RA must not come from another such RAM.
-module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
+// FE = 0: asynchronous MLAB read (the half-cycle falling-edge read of FE = 1 is too slow for the consumer)
+module VDP1P_MLAB #(parameter W = 16, parameter AW = 4, parameter FE = 1) (
 	input          CLK,
 	input          WE,
 	input [AW-1:0] WA,
@@ -2544,6 +2545,11 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
 	output [W-1:0] Q
 );
 `ifdef ALTERA_RESERVED_QIS
+	generate if (!FE) begin : g_async
+		(* ramstyle = "MLAB, no_rw_check" *) reg [W-1:0] mem [0:(1<<AW)-1];
+		always @(posedge CLK) if (WE) mem[WA] <= D;
+		assign Q = mem[RA];
+	end else begin : g_fe
 	altsyncram #(
 		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
 		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
@@ -2555,12 +2561,13 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4) (
 		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
 		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({W{1'b1}}), .eccstatus(),
 		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+	end endgenerate
 `else
 	reg [W-1:0] mem [0:(1<<AW)-1];
 	reg [W-1:0] q = '0;
 	always @(posedge CLK) if (WE) mem[WA] <= D;
 	always @(negedge CLK) q <= mem[RA];
-	assign Q = q;
+	assign Q = FE ? q : mem[RA];
 `ifdef POCKET_FE_CHECK
 	reg [AW-1:0] ra_neg;
 	reg          ra_ok = 0;
@@ -2638,7 +2645,7 @@ module VDP1P_EDGE_LANE (
 	wire         WE = ACT && (MODE_INIT || K == 2'd0 || DHIT);
 	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
 	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
-	VDP1P_MLAB #(.W(14),.AW(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
+	VDP1P_MLAB #(.W(14),.AW(2),.FE(0)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
 endmodule
 
 

@@ -42,6 +42,7 @@ reg [16:0]    e_a;
 reg [15:0]    e_d;
 reg  [1:0]    e_be;
 reg           e_oe_n = 1'b1, e_we_n = 1'b1, e_dq_oe = 1'b0;
+reg           e_ub_n = 1'b1, e_lb_n = 1'b1;   // byte strobes, registered (1 for a read)
 
 wire [CW-1:0] n_last = e_we ? WR_CYC - 1 : RD_CYC - 1;
 wire finishing = busy && cnt == n_last;
@@ -64,6 +65,7 @@ always @(posedge clk) begin
 	end
 	if (fb_req && (!busy || finishing)) begin
 		busy <= 1'b1; cnt <= '0; e_we <= fb_we; e_a <= fb_a; e_d <= fb_d; e_be <= fb_be;
+		e_ub_n <= fb_we ? ~fb_be[1] : 1'b1; e_lb_n <= fb_we ? ~fb_be[0] : 1'b1;
 		e_oe_n <= fb_we; e_we_n <= 1'b1; e_dq_oe <= fb_we;
 	end
 end
@@ -74,8 +76,8 @@ assign sram_dq_o  = e_d;
 assign sram_dq_oe = e_dq_oe;
 assign sram_oe_n  = e_oe_n;
 assign sram_we_n  = e_we_n;
-assign sram_ub_n  = ~(e_we ? e_be[1] : 1'b1);
-assign sram_lb_n  = ~(e_we ? e_be[0] : 1'b1);
+assign sram_ub_n  = e_ub_n;
+assign sram_lb_n  = e_lb_n;
 
 endmodule
 
