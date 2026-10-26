@@ -36,8 +36,7 @@ module pocket_video (
 	input  wire [15:0] dbg_g,       // square green
 	input  wire [15:0] dbg_y,       // square yellow (when not green), else red
 	input  wire        dbg_alive,   // the Saturn produces sync and DE; else a 640x224 test timing is generated
-	input  wire  [4:0] dbg_wa,      // text buffer write (clk_sys): 32 hex digits, 4 rows of 8
-	input  wire  [3:0] dbg_wd,
+	input  wire [31:0] dbg_wd,      // text row (clk_sys): 8 hex digits, digit 0 in the top nibble
 	input  wire        dbg_we
 `endif
 );
@@ -82,7 +81,7 @@ wire [23:0] sq_c = dbg_g[sq] ? 24'h00FF00 : dbg_y[sq] ? 24'hFFFF00 : 24'hFF0000;
 
 // ---- hex text block: 2 rows x 8 digits at x 32..159, y 16..47, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
 // Digits come from a 32 x 4 M10K buffer written in clk_sys; the font is a 128 x 3 M10K ROM.
-(* ramstyle = "M10K" *) reg [3:0] tbuf [0:31];
+(* ramstyle = "M10K" *) reg [31:0] tbuf [0:1];
 (* ramstyle = "M10K", romstyle = "M10K" *) reg [2:0] font [0:127];
 initial begin
 	font[0] = 3'b111;
@@ -166,21 +165,23 @@ initial begin
 	font[123] = 3'b100;
 	font[124] = 3'b100;
 end
-always @(posedge clk_sys) if (dbg_we) tbuf[dbg_wa] <= dbg_wd;
+always @(posedge clk_sys) if (dbg_we) tbuf[0] <= dbg_wd;
 
 localparam TXT_LAT = 4;                    // clk_vid cycles from x to the pixel decision
 wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd1 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
 wire [1:0] t_row = y[5:4] - 2'd1;
 wire [2:0] t_col = x[6:4] - 3'd2;
-reg  [4:0] t_ra;
+reg  [2:0] t_c0;
+reg [31:0] t_word;
 reg  [3:0] t_nib;
 reg  [2:0] t_bits;
 reg  [6:0] t_p0, t_p1, t_p2;               // {in, gy < 5, gx[1:0], gy[2:0]}
 reg        t_on = 1'b0, t_bg = 1'b0;
 always @(posedge clk_vid) begin
-	t_ra   <= {t_row, t_col};
+	t_c0   <= t_col;
+	t_word <= tbuf[1'b0];
 	t_p0   <= {t_in, y[3:1] < 3'd5, x[3:2], y[3:1]};
-	t_nib  <= tbuf[t_ra];
+	t_nib  <= t_word[(3'd7 - t_c0) * 4 +: 4];
 	t_p1   <= t_p0;
 	t_bits <= font[{t_nib, t_p1[2:0]}];
 	t_p2   <= t_p1;

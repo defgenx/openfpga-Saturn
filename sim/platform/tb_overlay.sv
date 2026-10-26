@@ -7,11 +7,11 @@ always #5 clk_sys = ~clk_sys;
 always @(posedge clk_sys) begin c <= c + 1; if (c == 3) clk_vid <= 1; if (c == 1) clk_vid <= 0; end
 wire [23:0] rgb; wire de, hs, vs, skip;
 reg [15:0] g = 16'b1010_0000_0000_0011, y = 16'b0000_0000_1100_0000;
-reg [4:0] wa = 0; reg [3:0] wd = 0; reg we = 0;
+reg [31:0] wd = 0; reg we = 0;
 pocket_video dut (.clk_sys(clk_sys), .clk_vid(clk_vid), .R(8'h0), .G(8'h0), .B(8'h0), .DCLK(1'b0), .HS_N(1'b1), .VS_N(1'b1),
 	.HBL_N(1'b0), .VBL_N(1'b0), .HRES(2'b0), .VRES(2'b0), .video_rgb(rgb), .video_de(de), .video_hs(hs), .video_vs(vs), .video_skip(skip),
 	.dbg_g(g), .dbg_y(y), .dbg_alive(1'b0),
-	.dbg_wa(wa), .dbg_wd(wd), .dbg_we(we));
+	.dbg_wd(wd), .dbg_we(we));
 // text buffer: digit n = (n*5+3) & 15, written once at start
 function [14:0] glyph(input [3:0] v);   // 5 rows x 3 bits, independent of the DUT's ROM
 	case (v)
@@ -25,9 +25,8 @@ function [14:0] glyph(input [3:0] v);   // 5 rows x 3 bits, independent of the D
 endfunction
 integer ti, tbad = 0, tcell = 0, tlit = 0;
 initial begin
-	we = 1;
-	for (ti = 0; ti < 32; ti = ti + 1) begin wa = ti; wd = (ti*5+3) & 15; @(negedge clk_sys); end
-	we = 0;
+	for (ti = 0; ti < 8; ti = ti + 1) wd[31 - 4*ti -: 4] = (ti*5+3) & 15;
+	@(negedge clk_sys); we = 1; @(negedge clk_sys); we = 0;
 end
 integer x = 0, line = 0, bad = 0, nde = 0, nvs = 0, nhs = 0, slots = 0;
 reg de_q = 0;

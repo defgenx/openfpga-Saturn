@@ -784,18 +784,13 @@ wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000
 wire dbg_alive = a_vs & a_de;
 
 // hex text row (docs/debug-overlay.md): address of the first peripheral data read after each window (marker D)
-reg [31:0] dbg_s = 32'd0;
 reg        dbg_arm = 1'b0;
-reg  [2:0] dbg_wa = 3'd0;
+wire       dbg_we = dbg_arm & dbg_da[28];
 always @(posedge clk_sys) begin
 	if (dbg_tick) dbg_arm <= 1'b1;
-	else if (dbg_arm && dbg_da[28]) begin
-		dbg_arm <= 1'b0;
-		dbg_s   <= {4'hD, dbg_da[27:0]};
-	end
-	dbg_wa <= dbg_wa + 3'd1;
+	else if (dbg_we) dbg_arm <= 1'b0;
 end
-wire [3:0]  dbg_wd  = dbg_s[(3'd7 - dbg_wa) * 4 +: 4];
+wire [31:0] dbg_wd = {4'hD, dbg_da[27:0]};
 `endif
 
 pocket_video video (
@@ -804,7 +799,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wa({2'b00, dbg_wa}), .dbg_wd(dbg_wd), .dbg_we(1'b1)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_we(dbg_we)
 `endif
 );
 
