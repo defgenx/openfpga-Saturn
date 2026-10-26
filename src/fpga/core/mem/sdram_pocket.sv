@@ -202,6 +202,13 @@ reg        c_oe;
 reg        c_tv;
 reg  [2:0] c_tk;
 reg        c_ti;
+// command pipeline register: the pins and the tag pipeline run one clk_ram behind the slot logic
+reg  [2:0] q_cmd = 3'd7;
+reg [12:0] q_a;
+reg  [1:0] q_ba, q_dqm;
+reg [15:0] q_dq;
+reg        q_oe, q_tv, q_ti;
+reg  [2:0] q_tk;
 
 integer k;
 reg [7:0] scr_q [0:3];
@@ -361,12 +368,13 @@ always @(posedge clk) begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= i_cmd;
 		dram_a <= i_a; dram_ba <= 2'b00; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
 	end else begin
-		{dram_ras_n, dram_cas_n, dram_we_n} <= c_cmd;
-		dram_a <= c_a; dram_ba <= c_ba; dram_dqm <= c_dqm; dram_dq_o <= c_dq; dram_dq_oe <= c_oe;
+		{dram_ras_n, dram_cas_n, dram_we_n} <= q_cmd;
+		dram_a <= q_a; dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
 	end
 
 	// ---- tag pipeline
-	t_v[0] <= c_tv; t_k[0] <= c_tk; t_i[0] <= c_ti;
+	q_cmd <= c_cmd; q_a <= c_a; q_ba <= c_ba; q_dqm <= c_dqm; q_dq <= c_dq; q_oe <= c_oe; q_tv <= c_tv; q_tk <= c_tk; q_ti <= c_ti;
+	t_v[0] <= q_tv; t_k[0] <= q_tk; t_i[0] <= q_ti;
 	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
