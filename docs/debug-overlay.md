@@ -53,14 +53,15 @@ one row of 8 hex digits: the master SH-2 program counter.
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
 - `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
 
-## debug3: alternating PC / data read address
+## debug3: data read address
 
-The row alternates every overlay window (about 0.3 s). Digit 0 is the marker, digits 1..7 are address bits 27..0:
+The PC row is replaced by the address of the first master SH-2 data read outside BIOS ROM, WRAM-L and WRAM-H after
+each overlay window (about 0.3 s). Digit 0 is the marker `D`, digits 1..7 are address bits 27..0:
 
 ```
- 1 A A A A A A A      master SH-2 PC (marker 1)
- D A A A A A A A      address of the next master data read outside BIOS ROM, WRAM-L and WRAM-H (marker D)
+ D A A A A A A A
 ```
 
-The read is taken on the CPU bus before the cache (`CBUS_*` in `SH7604P`), so a polled SMPC/VDP2/SCU register shows
-even in a loop: SMPC SF `D0100063`, VDP2 TVSTAT `D5F80004`. If no such read happens, the previous value stays.
+The read is taken on the CPU bus before the cache (`CBUS_*` in `SH7604P`), so a polled register shows even in a
+tight loop: SMPC SF `D0100063`, VDP2 TVSTAT `D5F80004`. If no such read happens, the previous value stays. Alternating
+this with the PC needed 1,855 LABs (1,848 available), so it does not fit.

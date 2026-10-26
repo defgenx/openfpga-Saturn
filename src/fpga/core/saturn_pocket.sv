@@ -783,17 +783,13 @@ wire [15:0] dbg_g = {
 wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // squares 8 (SSH) and 15 (SCSP) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text row (docs/debug-overlay.md): every window alternates between the MSH PC (marker 1) and the next
-// peripheral data read address (marker D); 8 digits are scanned into the M10K text buffer
+// hex text row (docs/debug-overlay.md): address of the first peripheral data read after each window (marker D)
 reg [31:0] dbg_s = 32'd0;
-reg        dbg_mode = 1'b0, dbg_arm = 1'b0;
+reg        dbg_arm = 1'b0;
 reg  [2:0] dbg_wa = 3'd0;
 always @(posedge clk_sys) begin
-	if (dbg_tick) begin
-		dbg_mode <= ~dbg_mode;
-		if (dbg_mode) dbg_arm <= 1'b1;
-		else          dbg_s <= {4'h1, dbg_txt[95:68]};
-	end else if (dbg_arm && dbg_da[28]) begin
+	if (dbg_tick) dbg_arm <= 1'b1;
+	else if (dbg_arm && dbg_da[28]) begin
 		dbg_arm <= 1'b0;
 		dbg_s   <= {4'hD, dbg_da[27:0]};
 	end
