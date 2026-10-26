@@ -9,13 +9,16 @@ module cd_toc_ram (
 	input  wire [31:0] wd,
 	input  wire        rclk,
 	input  wire [8:0]  ra,
-	output reg  [31:0] rq = 32'd0
+	output wire [31:0] rq
 );
 
 (* ramstyle = "M10K" *) reg [31:0] mem [0:511];
 
 always @(posedge wclk) if (we) mem[wa] <= wd;
-always @(posedge rclk) rq <= mem[ra];
+// registered read address: the data is the word at ra one clock after ra, as a registered read
+reg [8:0] ra_q;
+always @(posedge rclk) ra_q <= ra;
+assign rq = mem[ra_q];
 
 endmodule
 

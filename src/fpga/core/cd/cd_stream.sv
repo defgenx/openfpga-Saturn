@@ -287,6 +287,7 @@ wire [23:0] wx = owner_fetch ? fetch_fad : lk_x;
 wire [23:0] fl_pos = (fetch_fad < 24'd150) ? 24'd150 : fetch_fad;
 wire [24:0] fsec_d = {1'b0, fl_pos} - {1'b0, c_forg};
 wire [23:0] fsec = fsec_d[24] ? 24'd0 : fsec_d[23:0];
+wire [11:0] fx_mul = c_s2048 ? 12'd2048 : 12'd2352;
 wire can_fetch = fetch_en && !infl && disc_ok && !lk_hold &&
                  ({1'b0, n_ready} + {3'd0, fd_held} < {1'b0, PREFETCH_MAX}) &&
                  (fetch_fad < toc_end);
@@ -398,10 +399,7 @@ always @(posedge clk) begin
 	end
 
 	// fetch: byte offset = file sector * 2352 (or 2048), issue
-	E_F1: begin fx_off <= {8'd0, fsec} << 11; es <= c_s2048 ? E_F4 : E_F2; end
-	E_F2: begin fx_off <= fx_off + ({8'd0, fsec} << 8); es <= E_F3; end
-	E_F3: begin fx_off <= fx_off + ({8'd0, fsec} << 5); es <= E_F5; end
-	E_F5: begin fx_off <= fx_off + ({8'd0, fsec} << 4); es <= E_F4; end
+	E_F1: begin fx_off <= fsec * fx_mul; es <= E_F4; end        // one DSP multiplier instead of three adds
 	E_F4: begin
 		fx_file  <= c_file;
 		fx_slot  <= wr_ptr;

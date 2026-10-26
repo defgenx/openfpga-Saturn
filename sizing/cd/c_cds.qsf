@@ -1,0 +1,13 @@
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY cd_stream
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY out_cds
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name AUTO_ROM_RECOGNITION ON
+source ../area_profile.qsf
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/core/cd/cd_stream.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/core/cd/cd_feed.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../src/fpga/core/cd/cd_toc_ram.sv
+set_instance_assignment -name VIRTUAL_PIN ON -to *
