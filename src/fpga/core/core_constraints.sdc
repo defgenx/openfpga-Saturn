@@ -26,9 +26,19 @@ set_clock_groups -asynchronous \
 
 # SH_core advances on CE_R only (every second clk_sys), so a register-to-register path inside the core has two
 # clk_sys periods. The unconstrained core is a 19 ns path (docs/sh2.md); clk_sys is 17.5 ns.
+# Falling-edge M10K reads (*_FERAM, docs/fit-status.md): the read address is captured on the falling edge, so a path
+# into a FERAM address register keeps its half period; a path out of one starts half a period late and ends at a CE_R
+# register, so it has 1.5 periods (setup multiplier 2 from a falling launch).
 foreach cpu {MSH SSH} {
-	set_multicycle_path -setup -from [get_registers "*|$cpu|core|*"] -to [get_registers "*|$cpu|core|*"] 2
-	set_multicycle_path -hold  -from [get_registers "*|$cpu|core|*"] -to [get_registers "*|$cpu|core|*"] 1
+	set cpu_all [get_registers "*|$cpu|*"]
+	set core_q [remove_from_collection [get_registers "*|$cpu|core|*"] [get_registers "*|$cpu|*|ram_block*~PORT_B_*"]]
+	set_multicycle_path -setup -from [get_registers "*|$cpu|core|*"] -to $core_q 2
+	set_multicycle_path -hold  -from [get_registers "*|$cpu|core|*"] -to $core_q 1
+	# the accepted interrupt only changes on CE_R (SH7604P_INTC) and is read by the core on CE_R
+	set_multicycle_path -setup -from [get_registers "*|$cpu|intc|INT_ACCEPTED*"] -to $core_q 2
+	set_multicycle_path -hold  -from [get_registers "*|$cpu|intc|INT_ACCEPTED*"] -to $core_q 1
+	set_multicycle_path -setup -fall_from [get_clocks $clk_sys] -to $cpu_all 2
+	set_multicycle_path -hold  -fall_from [get_clocks $clk_sys] -to $cpu_all 1
 }
 
 # VDP2P advances on CE_R (every second clk_sys) like the golden VDP2: register-to-register paths inside it have two
@@ -53,7 +63,8 @@ set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks 
 # The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,
 # hold 2 ns at the chip, tACLK 9 ns, tKOH 2 ns.
 foreach n {0 1} {
-	create_generated_clock -name cram${n}_clk_pin -source [get_pins $clk_ram] -divide_by 2 [get_ports cram${n}_clk]
+	# on the toggling register, so the pin clock carries the same insertion delay as the pin data registers
+	create_generated_clock -name cram${n}_clk_pin -source [get_pins $clk_ram] -divide_by 2 [get_registers "*|psram${n}|p_clk"]
 	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_ce0_n cram${n}_ce1_n cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
 	set_output_delay -clock cram${n}_clk_pin -max 3.0 $cram_out
 	set_output_delay -clock cram${n}_clk_pin -min -2.0 $cram_out

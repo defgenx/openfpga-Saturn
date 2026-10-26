@@ -80,6 +80,14 @@ wire        t1  = !mm1 && in1;             // FB1 in the SRAM tail
 wire [16:0] sa0 = sram_a0(i0);
 wire [16:0] sa1 = sram_a1(i1);
 
+// The engine (clk_ram) sees the buffer indexes one clk_ram late: VDP1's address logic is too deep for one clk_ram.
+reg  [16:0] i0r, i1r;
+always @(posedge clk_ram) begin i0r <= i0; i1r <= i1; end
+wire        in0r = i0r < WORDS;
+wire        t1r  = !(i1r < M1_WORDS) && (i1r < WORDS);
+wire [16:0] sa0r = sram_a0(i0r);
+wire [16:0] sa1r = sram_a1(i1r);
+
 // ---------------------------------------------------------------- FB1 M10K part
 // 49152 x 16 simple dual port, byte enables, address registered (read data one clock after the address)
 reg [15:0] m1_q;
@@ -165,8 +173,8 @@ reg        have0 = 1'b0, have1 = 1'b0;
 reg [16:0] last0, last1;
 reg  [2:0] es = 3'd0;
 reg        e_b, trk;
-wire       need0 = sr_ready && (!have0 || i0 != last0);
-wire       need1 = sr_ready && t1 && (!have1 || i1 != last1);
+wire       need0 = sr_ready && (!have0 || i0r != last0);
+wire       need1 = sr_ready && t1r && (!have1 || i1r != last1);
 wire       pick1 = ne1 && (!ne0 || occ1 > occ0);
 wire [34:0] wq = pick1 ? wf1_q : wf0_q;
 
@@ -189,18 +197,18 @@ always @(posedge clk_ram) begin
 			end
 		end else if (need1 && (!need0 || trk)) begin
 			trk <= 1'b0;
-			if (i1 == sup1) begin last1 <= i1; have1 <= 1'b1; end
+			if (i1r == sup1) begin last1 <= i1r; have1 <= 1'b1; end
 			else begin
-				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1; sr_be <= 2'b11;
-				last1 <= i1; have1 <= 1'b1; e_b <= 1'b1; es <= 3'd3;
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1r; sr_be <= 2'b11;
+				last1 <= i1r; have1 <= 1'b1; e_b <= 1'b1; es <= 3'd3;
 			end
 		end else if (need0) begin
 			trk <= 1'b1;
-			if (i0 == sup0) begin last0 <= i0; have0 <= 1'b1; end
-			else if (!in0) begin FB0_Q <= 16'h0000; last0 <= i0; have0 <= 1'b1; end
+			if (i0r == sup0) begin last0 <= i0r; have0 <= 1'b1; end
+			else if (!in0r) begin FB0_Q <= 16'h0000; last0 <= i0r; have0 <= 1'b1; end
 			else begin
-				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0; sr_be <= 2'b11;
-				last0 <= i0; have0 <= 1'b1; e_b <= 1'b0; es <= 3'd3;
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0r; sr_be <= 2'b11;
+				last0 <= i0r; have0 <= 1'b1; e_b <= 1'b0; es <= 3'd3;
 			end
 		end
 	end
