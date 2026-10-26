@@ -10,7 +10,7 @@
 // (GPL-3.0, Saturn_MiSTer by srg320).
 module cdb_hle #(
 	parameter FW_FILE = "cdb_fw.hex",
-	parameter ROM_WORDS = 3072,         // 12 KB of firmware
+	parameter ROM_WORDS = 4096,         // 16 KB of firmware (RV32I)
 	parameter ROM_AW  = 12,             // ROM address bits
 	parameter RAM_AW  = 10              // RAM words (2^10 = 4 KB)
 ) (
@@ -89,7 +89,7 @@ wire [3:0]  dsel;
 reg  [31:0] drd;
 reg         iack = 1'b0, dack = 1'b0;
 
-serv_rf_top #(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
+serv_rf_top #(.COMPRESSED(0), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 	.clk(CLK), .i_rst(!RST_N || !RES_N), .i_timer_irq(1'b0),
 	.o_ibus_adr(ia), .o_ibus_cyc(ic), .i_ibus_rdt(ird), .i_ibus_ack(iack),
 	.o_dbus_adr(da), .o_dbus_dat(dd), .o_dbus_sel(dsel), .o_dbus_we(dwe), .o_dbus_cyc(dc),
@@ -240,18 +240,18 @@ wire [2:0]  dram_done;
 reg  [17:0] dr_a = 18'd0;
 reg         dr_we = 1'b0;
 reg  [15:0] dr_d = 16'd0;
+reg  [17:0] sk_base = 18'd0;
 reg         armed = 1'b0;
 reg  [1:0]  a_kind = 2'd0;
 reg         a_synth = 1'b0, a_spd2 = 1'b0;
 reg  [23:0] a_hdr = 24'd0;
 reg  [17:0] a_base = 18'd0;
-reg         sk_start = 1'b0;   // one clock after the fire: sd_go and the sd_* values are valid then
-wire        sk_fire = armed && !fd_busy && !sd_go && !sk_start && pf_ready;
+reg         sk_start = 1'b0;
 reg         xf_mode_we = 1'b0, xf_a_we = 1'b0, xf_b_we = 1'b0, xf_cnt_we = 1'b0;
 reg  [11:0] xf_cnt = 12'd0;
 
 cdb_sink sink (
-	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_fire), .kind_audio(a_kind == 2'd1), .base_d(a_base),
+	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_start), .kind_audio(sd_kind == 2'd1), .base_d(sk_base),
 	.cd_data(cd_data), .cd_ck(cd_ck), .done(sk_done), .overrun(sk_overrun), .hdr_a(hdr_a), .hdr_b(hdr_b),
 	.rq(sk_rq), .rq_a(sk_a), .rq_d(sk_d), .dn(dram_done[0]), .cd_sl(CD_SL), .cd_sr(CD_SR));
 
@@ -310,9 +310,9 @@ always @(posedge CLK) begin
 	xf_mode_we <= 1'b0; xf_a_we <= 1'b0; xf_b_we <= 1'b0; xf_cnt_we <= 1'b0;
 	if (CDD_CE) ticks <= ticks + 32'd1;
 	// fire the armed sector as soon as the feed is idle and the ring has one
-	if (sk_fire) begin
+	if (armed && !fd_busy && !sd_go && !sk_start && pf_ready) begin
 		armed <= 1'b0; sd_go <= 1'b1; sk_start <= 1'b1;
-		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr;
+		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr; sk_base <= a_base;
 	end
 	if (sk_overrun) sk_overrun_r <= 1'b1;
 	if (!RST_N || !RES_N) begin

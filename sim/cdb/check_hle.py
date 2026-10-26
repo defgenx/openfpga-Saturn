@@ -121,8 +121,11 @@ ok("read file ABC.TXT", rd == words(fbytes(0x11, 3000, 4096)), "len %d" % len(rd
 m = [l for l in cmds("audio") if l.startswith("AUDIO")]
 if m:
     L, R = [int(x.split("=")[1], 16) for x in m[0].split()[1:3]]
+    # the script samples at an arbitrary clock: between the left word and the right word of a pair R still holds the
+    # previous pair's right word, which is also an accepted sample
+    def rs(n, i): return (0xFFFF - (n * 17 + i * 5)) & 0xFFFF
     hit = [(n, i) for n in range(150, 172) for i in range(0, 2352, 4)
-           if (n * 131 + i) & 0xFFFF == L and (0xFFFF - (n * 17 + i * 5)) & 0xFFFF == R]
+           if (n * 131 + i) & 0xFFFF == L and (rs(n, i) == R or (rs(n, i - 4) == R if i else rs(n - 1, 2348) == R))]
     ok("CD-DA sample", bool(hit), "L=%04x R=%04x" % (L, R))
 r = find_cmd("audio", "0000", 0)
 ok("audio play status", r is not None and (r[0] >> 8) == 3 and (r[1] >> 8) == 1 and (r[1] & 0xFF) == 2, r)

@@ -53,8 +53,8 @@ module cd_stream #(
 	// pulse taken when !rg_wbusy; a read keeps rg_rd high, waits two clocks, then for !rg_rbusy, and rg_q is valid
 	// in that clock)
 	output reg         rg_wr = 1'b0,
-	output reg  [12:0] rg_wa = 13'd0,        // word pair
-	output reg  [31:0] rg_wd = 32'd0,        // {first word, second word}
+	output wire [12:0] rg_wa,                // word pair (the FIFO head: stays until rg_wbusy has fallen)
+	output wire [31:0] rg_wd,                // {first word, second word}
 	input  wire        rg_wbusy,
 	output reg         rg_rd = 1'b0,
 	output wire [13:0] rg_ra,
@@ -189,9 +189,10 @@ assign rg_ra = fd_sr_a;
 
 // rw_a / rw_d hold still for at least 30 clk_74a cycles after rw_t toggles (one bridge word)
 localparam FW = 6;
-reg [44:0]   wq [0:(1<<FW)-1];
+(* ramstyle = "M10K" *) reg [44:0] wq [0:(1<<FW)-1];
 reg [FW:0]   wq_w = 0, wq_r = 0;
-reg [44:0]   wq_q;
+reg [FW-1:0] wq_ra;                        // registered read address: the RAM output is the head one clock after wq_r
+wire [44:0]  wq_q = wq[wq_ra];
 wire         wq_empty = (wq_w == wq_r);
 wire         wq_full  = (wq_w - wq_r) == (1 << FW);
 always @(posedge clk) begin
@@ -199,10 +200,13 @@ always @(posedge clk) begin
 		if (!wq_full) begin wq[wq_w[FW-1:0]] <= {rw_a, rw_d}; wq_w <= wq_w + 1'd1; end
 		else if (ovf_cnt != 8'hFF) ovf_cnt <= ovf_cnt + 8'd1;
 	end
-	wq_q <= wq[wq_r[FW-1:0]];
+	wq_ra <= wq_r[FW-1:0];
 end
 wire [15:0] w_half0 = BRIDGE_LITTLE ? wq_q[15:0]  : {wq_q[23:16], wq_q[31:24]};
 wire [15:0] w_half1 = BRIDGE_LITTLE ? wq_q[31:16] : {wq_q[7:0],   wq_q[15:8]};
+
+assign rg_wa = wq_q[44:32];
+assign rg_wd = {w_half0, w_half1};
 
 always @(posedge clk) begin
 	sr_rv <= 1'b0;
@@ -216,8 +220,6 @@ always @(posedge clk) begin
 	end
 	4'd1: ss <= 4'd2;                       // wq_q settles
 	4'd2: begin
-		rg_wa <= wq_q[44:32];
-		rg_wd <= {w_half0, w_half1};
 		rg_wr <= 1'b1; ss <= 4'd3;
 	end
 	4'd3: ss <= 4'd4;

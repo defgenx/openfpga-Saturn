@@ -44,10 +44,22 @@ reg         t_ack = 0, t_done = 0;
 reg  [2:0]  t_err = 0;
 reg         bridge_wr = 0;
 reg  [31:0] bridge_addr = 0, bridge_wr_data = 0;
-wire [16:0] sram_a; wire [15:0] sram_dq_o; wire sram_dq_oe, sram_oe_n, sram_we_n;
-reg  [15:0] smem [0:131071];
-wire [15:0] sram_dq_i = (!sram_oe_n && sram_we_n) ? smem[sram_a] : 16'hFFFF;
-always @(posedge sram_we_n) smem[sram_a] <= sram_dq_o;
+// sector ring memory, ddram_pocket handshake (writes busy 4 clocks, reads 2..10)
+wire        rg_wr, rg_rd;
+wire [12:0] rg_wa;
+wire [31:0] rg_wd;
+wire [13:0] rg_ra;
+reg  [15:0] rmem [0:16383];
+reg         rg_wbusy = 1'b0, rg_rbusy = 1'b0, rg_rd_d = 1'b0;
+integer     rg_wc = 0, rg_rc = 0;
+wire [15:0] rg_q = rmem[rg_ra];
+always @(posedge clk) begin
+	rg_rd_d <= rg_rd;
+	if (rg_wr) begin rmem[{rg_wa, 1'b0}] <= rg_wd[31:16]; rmem[{rg_wa, 1'b1}] <= rg_wd[15:0]; rg_wbusy <= 1'b1; rg_wc <= 4; end
+	else if (rg_wbusy) begin if (rg_wc == 0) begin if (!rg_rbusy) rg_wbusy <= 1'b0; end else rg_wc <= rg_wc - 1; end
+	if (rg_rd && !rg_rd_d) begin rg_rbusy <= 1'b1; rg_rc <= 2 + ($urandom % 9); end
+	else if (rg_rbusy) begin if (rg_rc == 0) rg_rbusy <= 1'b0; else rg_rc <= rg_rc - 1; end
+end
 
 wire        disc_ok;
 
@@ -108,8 +120,8 @@ generate if (LLE) begin : g
 		.target_dataslot_read(t_read), .target_dataslot_id(t_id), .target_dataslot_slotoffset(t_off),
 		.target_dataslot_bridgeaddr(t_baddr), .target_dataslot_length(t_len),
 		.target_dataslot_ack(t_ack), .target_dataslot_done(t_done), .target_dataslot_err(t_err),
-		.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
-		.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(), .sram_lb_n(), .sram_req(), .sram_gnt(1'b1),
+		.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+		.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 		.DISC_OK(disc_ok), .DBG(), .STALL());
 	// CDD link monitor (+CDDMON): packet RAM contents at each status send and each received command
 	reg mon = 0; integer mi2;
@@ -145,8 +157,8 @@ end else begin : g
 		.clk(clk), .rst_n(rst_n), .ce(CDD_CE),
 		.clk_74a(clk74), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
 		.t_read(t_read), .t_id(t_id), .t_off(t_off), .t_baddr(t_baddr), .t_len(t_len), .t_ack(t_ack), .t_done(t_done), .t_err(t_err),
-		.sram_a(sram_a), .sram_dq_o(sram_dq_o), .sram_dq_oe(sram_dq_oe), .sram_dq_i(sram_dq_i),
-		.sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n), .sram_ub_n(), .sram_lb_n(), .sram_req(), .sram_gnt(1'b1),
+		.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
+		.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 		.disc_ok(disc_ok), .disc_new(disc_new), .boot_busy(), .boot_wr(), .boot_addr(), .boot_data(),
 		.ntracks(ntracks), .ntbcd(ntbcd), .toc_end(toc_end), .hack_wwf(), .hack_rr(),
 		.lk_go(lk_go), .lk_byidx(lk_byidx), .lk_x(lk_x), .lk_idx(lk_idx), .lk_hold(lk_hold), .lk_busy(lk_busy), .eng_idle(eng_idle),
