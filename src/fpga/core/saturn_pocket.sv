@@ -376,6 +376,7 @@ wire [ 1: 0] HRES, VRES;
 wire [ 6: 0] dbg_tap;
 wire [99: 0] dbg_txt;
 wire [28: 0] dbg_da;
+wire [26: 0] dbg_68k;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -547,7 +548,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k)
 `endif
 );
 
@@ -751,11 +752,13 @@ always @(posedge clk_sys) begin
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
-wire a_msh, a_vbl, a_irl, a_cd, a_vs, a_de;
+wire a_msh, a_vbl, a_irl, a_cd, a_vs, a_de, a_as, a_ce;
 dbg_act d_msh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[1]), .y(a_msh));
 dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(VBL_N), .y(a_vbl));
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
+dbg_act d_as  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_68k[23]), .y(a_as));
+dbg_act d_ce  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_68k[24]), .y(a_ce));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -780,17 +783,13 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // squares 8 (SSH) and 15 (SCSP) have no detector in the debug build
+wire [15:0] dbg_y = {1'b0, a_as, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // square 8 (SSH) has no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text row (docs/debug-overlay.md): address of the first peripheral data read after each window (marker D)
-reg        dbg_arm = 1'b0;
-wire       dbg_we = dbg_arm & dbg_da[28];
-always @(posedge clk_sys) begin
-	if (dbg_tick) dbg_arm <= 1'b1;
-	else if (dbg_we) dbg_arm <= 1'b0;
-end
-wire [31:0] dbg_wd = {4'hD, dbg_da[27:0]};
+// hex text row (docs/debug-overlay.md): marker 6, 68K address bus (last cycle with AS asserted), flags digit
+wire        dbg_we = ~dbg_68k[23];
+wire [31:0] dbg_wd = {4'h6, dbg_68k[22:0], 1'b0, 4'h0};
+wire  [3:0] dbg_lo = {dbg_68k[26], dbg_68k[25], a_ce, a_as};   // SNDRES_N, M68K_RESO_N, CE activity, AS activity
 `endif
 
 pocket_video video (
@@ -799,7 +798,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_we(dbg_we)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_lo(dbg_lo), .dbg_we(dbg_we)
 `endif
 );
 

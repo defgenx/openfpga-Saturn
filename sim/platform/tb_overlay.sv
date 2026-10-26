@@ -11,7 +11,7 @@ reg [31:0] wd = 0; reg we = 0;
 pocket_video dut (.clk_sys(clk_sys), .clk_vid(clk_vid), .R(8'h0), .G(8'h0), .B(8'h0), .DCLK(1'b0), .HS_N(1'b1), .VS_N(1'b1),
 	.HBL_N(1'b0), .VBL_N(1'b0), .HRES(2'b0), .VRES(2'b0), .video_rgb(rgb), .video_de(de), .video_hs(hs), .video_vs(vs), .video_skip(skip),
 	.dbg_g(g), .dbg_y(y), .dbg_alive(1'b0),
-	.dbg_wd(wd), .dbg_we(we));
+	.dbg_wd(wd), .dbg_lo(4'd6), .dbg_we(we));
 // text buffer: digit n = (n*5+3) & 15, written once at start
 function [14:0] glyph(input [3:0] v);   // 5 rows x 3 bits, independent of the DUT's ROM
 	case (v)

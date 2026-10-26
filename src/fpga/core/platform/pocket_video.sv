@@ -37,6 +37,7 @@ module pocket_video (
 	input  wire [15:0] dbg_y,       // square yellow (when not green), else red
 	input  wire        dbg_alive,   // the Saturn produces sync and DE; else a 640x224 test timing is generated
 	input  wire [31:0] dbg_wd,      // text row (clk_sys): 8 hex digits, digit 0 in the top nibble
+	input  wire  [3:0] dbg_lo,      // digit 7, live
 	input  wire        dbg_we
 `endif
 );
@@ -181,7 +182,7 @@ always @(posedge clk_vid) begin
 	t_c0   <= t_col;
 	t_word <= tbuf[1'b0];
 	t_p0   <= {t_in, y[3:1] < 3'd5, x[3:2], y[3:1]};
-	t_nib  <= t_word[(3'd7 - t_c0) * 4 +: 4];
+	t_nib  <= (t_c0 == 3'd7) ? dbg_lo : t_word[(3'd7 - t_c0) * 4 +: 4];
 	t_p1   <= t_p0;
 	t_bits <= font[{t_nib, t_p1[2:0]}];
 	t_p2   <= t_p1;

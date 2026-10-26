@@ -53,15 +53,17 @@ one row of 8 hex digits: the master SH-2 program counter.
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
 - `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
 
-## debug3: data read address
+## debug4: 68K address bus
 
-The PC row is replaced by the address of the first master SH-2 data read outside WRAM-H after
-each overlay window (about 0.3 s). Digit 0 is the marker `D`, digits 1..7 are address bits 27..0:
+The text row shows the sound CPU's address bus instead of the SH-2 data address; square 15 becomes "68K bus active"
+(yellow when AS# toggled in the last window).
 
 ```
- D A A A A A A A
+ 6 A A A A A A F        A = 68K address (24 bit) of the last cycle with AS# asserted, F = flags
 ```
 
-The read is taken on the CPU bus before the cache (`CBUS_*` in `SH7604P`), so a polled register shows even in a
-tight loop: SMPC SF `D0100063`, VDP2 TVSTAT `D5F80004`. If no such read happens, the previous value stays. Alternating
-this with the PC needed 1,855 LABs (1,848 available), so it does not fit.
+Flags digit F, bit 3 to 0: SNDRES_N (68K reset released by the SMPC), M68K_RESO_N (68K RESET instruction not active),
+68K clock enable toggling, AS# toggling (the last two are activity over the last window). The address is not updated
+while AS# stays high, so an all-zero row means the 68K never ran a bus cycle. A running 68K waiting for the SH-2
+handshake in sound RAM shows a small repeating range of addresses in the sound RAM (0x000000 to 0x0FFFFF, SCSP
+registers 0x100000..).
