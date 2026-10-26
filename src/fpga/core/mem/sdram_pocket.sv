@@ -249,8 +249,17 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
-wire [2:0] w0 = {1'b0, cs[1:0]} + 3'd3;
-wire [2:0] w1 = w0 + 3'd1;
+// tag stage of word 0 (cs[1:0] + 3) and of word 1 (+ 4), written as 4:1 selects
+reg        w0_v, w1_v, w0_i;
+reg  [2:0] w0_k, w1_k;
+always @* begin
+	case (cs[1:0])
+	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
+	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
+	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
+	default: begin w0_v = t_v[6]; w0_k = t_k[6]; w0_i = t_i[6]; w1_v = t_v[7]; w1_k = t_k[7]; end
+	endcase
+end
 reg [7:0] scr_q [0:3];
 
 function automatic [12:0] row_a(input [7:0] r);
@@ -420,18 +429,18 @@ always @(posedge clk) begin
 	// ---- read data landing
 	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
 	// after the previous set was sampled (F + 8) for every stage
-	if (t_v[w0]) begin
-		case (t_k[w0])
+	if (w0_v) begin
+		case (w0_k)
 			3'd0: dout_a0[31:16] <= dq_cap;
 			3'd1: dout_b0[31:16] <= dq_cap;
 			3'd2: dout_a1[31:16] <= dq_cap;
 			3'd3: dout_b1[31:16] <= dq_cap;
-			3'd4: begin dl_d[t_i[w0]] <= dq_cap; dl_ld[t_i[w0]] <= 1'b1; end
+			3'd4: begin dl_d[w0_i] <= dq_cap; dl_ld[w0_i] <= 1'b1; end
 			default: ;
 		endcase
 	end
-	if (t_v[w1]) begin
-		case (t_k[w1])
+	if (w1_v) begin
+		case (w1_k)
 			3'd0: dout_a0[15:0] <= dq_cap;
 			3'd1: dout_b0[15:0] <= dq_cap;
 			3'd2: dout_a1[15:0] <= dq_cap;
