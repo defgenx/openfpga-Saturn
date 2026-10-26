@@ -5,6 +5,7 @@
 
 module sdram_clk_out (
 	input  wire clk,
+	input  wire norm,       // 0: dram_clk = ~clk (default), 1: dram_clk = clk (half a cycle earlier at the SDRAM)
 	output wire dram_clk
 );
 `ifdef ALTERA_RESERVED_QIS
@@ -13,11 +14,11 @@ module sdram_clk_out (
 		.lpm_hint("UNUSED"), .lpm_type("altddio_out"), .oe_reg("UNREGISTERED"),
 		.power_up_high("OFF"), .width(1)
 	) ddio (
-		.datain_h(1'b0), .datain_l(1'b1), .outclock(clk), .dataout(dram_clk),
+		.datain_h(norm), .datain_l(~norm), .outclock(clk), .dataout(dram_clk),
 		.aclr(1'b0), .aset(1'b0), .oe(1'b1), .outclocken(1'b1), .sclr(1'b0), .sset(1'b0)
 	);
 `else
-	assign dram_clk = ~clk;
+	assign dram_clk = norm ? clk : ~clk;
 `endif
 endmodule
 

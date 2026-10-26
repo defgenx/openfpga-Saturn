@@ -771,6 +771,16 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_1wire
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_spiclk
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_spimiso
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_spimosi
+# SDRAM pins: command, address and data output registers in the I/O cells, as in the SDRAM controllers of openfpga-C64 and
+# openfpga-SNES (docs/memory.md section 3)
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_a[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_ba[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_dqm[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_ras_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_cas_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_we_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_dq[*]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[*]
 # PSRAM pins: output registers packed into the I/O cells (docs/fit-status.md)
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram0_dq[*]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to cram0_dq[*]

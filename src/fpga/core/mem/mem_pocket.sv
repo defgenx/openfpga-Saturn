@@ -20,6 +20,8 @@ module mem_pocket #(
 	input  wire        clk_ram,
 	input  wire        clk_sys,
 	input  wire        rst_ram,             // pulse after load / reset, as the Saturn rst_ram
+	input  wire  [2:0] cap_sel,             // sdram_pocket read capture, latched while rst_ram (docs/memory.md section 3)
+	input  wire        clk_norm,            // sdram_pocket dram_clk phase, latched likewise
 
 	// ---- SDRAM pins
 	output wire [12:0] dram_a,
@@ -87,7 +89,9 @@ module mem_pocket #(
 	output wire        mem_ready,           // SDRAM initialised and both PSRAM controllers idle (clk_ram)
 	output wire        dbg_sdram_ready,
 	output wire        dbg_psram_ready,
-	output wire        dbg_ld_ovf           // a loader word was dropped (FIFO full)
+	output wire        dbg_ld_ovf,          // a loader word was dropped (FIFO full)
+	output wire        dbg_chk_done,        // SDRAM self-check (POCKET_DEBUG_OVERLAY)
+	output wire        dbg_chk_ok
 );
 
 // ---------------------------------------------------------------- SDRAM
@@ -97,13 +101,13 @@ assign dbg_sdram_ready = sdram_ready;
 assign dbg_psram_ready = p0_idle & p1_idle;
 assign mem_ready = sdram_ready & p0_idle & p1_idle & ~rst_ram;
 sdram_pocket sdram (
-	.clk(clk_ram), .init(rst_ram), .sync(sync),
+	.clk(clk_ram), .init(rst_ram), .sync(sync), .cap_sel(cap_sel), .clk_norm(clk_norm),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i), .dram_dqm(dram_dqm),
 	.dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n), .dram_clk(dram_clk),
 	.addr_a0(addr_a0), .addr_a1(addr_a1), .din_a(din_a), .wr_a(wr_a), .rd_a(rd_a), .dout_a0(dout_a0), .dout_a1(dout_a1),
 	.addr_b0(addr_b0), .addr_b1(addr_b1), .din_b(din_b), .wr_b(wr_b), .rd_b(rd_b), .dout_b0(dout_b0), .dout_b1(dout_b1),
 	.ch2addr(ch2addr), .ch2din(ch2din), .ch2wr(ch2wr), .ch2rd(ch2rd), .ch2dout(ch2dout), .ch2rdy(ch2rdy),
-	.init_done(sdram_ready), .dbg_scrub_wrap(sd_scrub), .dbg_scsp_drop(sd_drop)
+	.init_done(sdram_ready), .chk_done(dbg_chk_done), .chk_ok(dbg_chk_ok), .dbg_scrub_wrap(sd_scrub), .dbg_scsp_drop(sd_drop)
 );
 
 // ---------------------------------------------------------------- PSRAM chips

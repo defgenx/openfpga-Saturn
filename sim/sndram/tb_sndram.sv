@@ -5,7 +5,14 @@
 module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   // NEXP: lines of exp.hex (Makefile)
 	integer T_RAM = 8730;                   // clk_ram period (ps); +T_RAM=9303 +IN_CLK=53748200 is the 320 pixel mode (DOTSEL = 0)
 	integer TCO = 3500, TIN = 1000;   // pad delays (ps); +TCO=n +TIN=n sweep them
-	initial begin void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN)); end
+	integer CAPV = 1;
+	initial begin void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN)); void'($value$plusargs("CAP=%d", CAPV)); end   // +CAP=n: sdram_pocket cap_sel
+	wire chk_done, chk_ok;
+`ifdef NOCHK_DEF
+	localparam bit NOCHK = 1;
+`else
+	localparam bit NOCHK = 0;
+`endif
 	reg clk_ram = 0, CLK = 0, RST_N = 0;
 	wire init_done;
 	reg clk_run = 0;
@@ -106,30 +113,32 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	initial begin #1; #(T_RAM*10); init = 0; end
 	wire [31:0] dout_a0, dout_a1, dout_b0, dout_b1;
 	sdram_pocket #(.INIT_CLKS(2000)) sdram (
-		.clk(clk_ram), .init(init), .sync(dot_ce_r),
+		.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(CAPV[2:0]), .clk_norm(1'b0),
 		.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 		.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n), .dram_clk(dram_clk),
 		.addr_a0(17'd0), .addr_a1(16'd0), .din_a(64'd0), .wr_a(8'd0), .rd_a(1'b0), .dout_a0(dout_a0), .dout_a1(dout_a1),
 		.addr_b0(17'd0), .addr_b1(16'd0), .din_b(64'd0), .wr_b(8'd0), .rd_b(1'b0), .dout_b0(dout_b0), .dout_b1(dout_b1),
 		.ch2addr({1'b0, SCSP_RAM_A}), .ch2din(SCSP_RAM_D), .ch2wr(SCSP_RAM_WE & {2{SCSP_RAM_CS}}), .ch2rd(SCSP_RAM_RD & SCSP_RAM_CS),
 		.ch2dout(SCSP_RAM_Q), .ch2rdy(SCSP_RAM_RDY),
-		.init_done(init_done), .dbg_scrub_wrap(dbg_scrub_wrap), .dbg_scsp_drop(dbg_scsp_drop));
+		.init_done(init_done), .chk_done(chk_done), .chk_ok(chk_ok), .dbg_scrub_wrap(dbg_scrub_wrap), .dbg_scsp_drop(dbg_scsp_drop));
 
-	reg  [12:0] a_d;  reg [1:0] ba_d, dqm_d;  reg ras_d, cas_d, we_d, sdr_clk, oe_d;  reg [15:0] o_d;
-	wire [15:0] dq; reg [15:0] dq_in_r;
-	always @(dram_a)      a_d     <= #(TCO) dram_a;
-	always @(dram_ba)     ba_d    <= #(TCO) dram_ba;
-	always @(dram_dqm)    dqm_d   <= #(TCO) dram_dqm;
-	always @(dram_ras_n)  ras_d   <= #(TCO) dram_ras_n;
-	always @(dram_cas_n)  cas_d   <= #(TCO) dram_cas_n;
-	always @(dram_we_n)   we_d    <= #(TCO) dram_we_n;
-	always @(dram_dq_oe)  oe_d    <= #(TCO) dram_dq_oe;
-	always @(dram_dq_o)   o_d     <= #(TCO) dram_dq_o;
-	always @(dram_clk)    sdr_clk <= #(TCO) dram_clk;
+	wire [12:0] a_d;  wire [1:0] ba_d, dqm_d;  wire ras_d, cas_d, we_d, sdr_clk, oe_d;  wire [15:0] o_d;
+	wire [15:0] dq; wire [15:0] dq_in_r;
+	// transport delays (module tdel below)
+	reg pre = 1;   // pins are undefined until the first registered NOP
+	initial #100000 pre = 0;
+	tdel #(13) d_a   (.d(TCO), .i(dram_a),     .o(a_d));
+	tdel #(2)  d_ba  (.d(TCO), .i(dram_ba),    .o(ba_d));
+	tdel #(2)  d_dqm (.d(TCO), .i(dram_dqm),   .o(dqm_d));
+	tdel #(1, 1'b1) d_ras (.d(TCO), .i(dram_ras_n | pre), .o(ras_d));
+	tdel #(1, 1'b1) d_cas (.d(TCO), .i(dram_cas_n | pre), .o(cas_d));
+	tdel #(1, 1'b1) d_we  (.d(TCO), .i(dram_we_n | pre),  .o(we_d));
+	tdel #(1)  d_oe  (.d(TCO), .i(dram_dq_oe), .o(oe_d));
+	tdel #(16) d_o   (.d(TCO), .i(dram_dq_o),  .o(o_d));
+	tdel #(1, 1'b1) d_clk (.d(TCO), .i(dram_clk),   .o(sdr_clk));
 	assign dq = oe_d ? o_d : 16'hzzzz;
-	always @(dq)          dq_in_r <= #(TIN) dq;
+	tdel #(16, 16'hzzzz) d_in (.d(TIN), .i(dq), .o(dq_in_r));
 	assign dram_dq_i = dq_in_r;
-	initial begin a_d = 0; ba_d = 0; dqm_d = 0; ras_d = 1; cas_d = 1; we_d = 1; sdr_clk = 1; oe_d = 0; o_d = 0; dq_in_r = 16'hzzzz; end
 	wire [31:0] m_err, m_act, m_rd, m_wr; wire m_drive;
 	sdram_model model (.t_ref(64'd64000000000), .clk(sdr_clk), .cke(dram_cke), .ras_n(ras_d), .cas_n(cas_d), .we_n(we_d),
 		.ba(ba_d), .a(a_d), .dqm(dqm_d), .dq(dq), .errors(m_err), .dq_drive(m_drive), .n_act(m_act), .n_rd(m_rd), .n_wr(m_wr));
@@ -191,7 +200,20 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 			if (wramh[64 + i] !== expv[i]) begin errs++; $display("MISMATCH #%0d: got %08h exp %08h", i, wramh[64 + i], expv[i]); end
 		end
 		$display("done_flag=%04h results=%0d mismatches=%0d sdram_errors=%0d scsp_drop=%0d", wramh[3], NEXP, errs, m_err, dbg_scsp_drop);
-		if (wramh[3] == 32'h0D0E && errs == 0 && m_err == 0) $display("PASS"); else $display("FAIL");
+		if (wramh[3] == 32'h0D0E && errs == 0 && m_err == 0 && (chk_done && chk_ok || NOCHK)) $display("PASS"); else $display("FAIL");
 		$finish;
+	end
+endmodule
+
+module tdel #(parameter W = 1, parameter [W-1:0] INIT = '0) (input integer d, input [W-1:0] i, output reg [W-1:0] o);
+	initial o = INIT;
+	// FIFO with a due time per change (constant d keeps the order); Verilator evaluates the RHS of `<= #d` at the end of the delay
+	logic [W-1:0] vq [$];
+	longint tq [$];
+	always @(i) begin vq.push_back(i); tq.push_back($time + d); end
+	always begin
+		wait (tq.size() > 0);
+		#(tq[0] - $time);
+		o = vq.pop_front(); void'(tq.pop_front());
 	end
 endmodule

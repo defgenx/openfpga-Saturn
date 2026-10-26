@@ -14,20 +14,24 @@
 //   +TREF_US=n  retention limit used by the model (default 64000)
 //   +NOSCSP     disable the SCSP traffic
 //   +CAPPS=n    extra delay (ps) on the SDRAM clock path, to probe the data eye
-//   -DCAPNEG    capture on falling edges (CAP_NEG=1)
+//   +CAP=n      read capture setting (cap_sel, default 1 = READ+5 rising; 4..7 falling edge, see docs/memory.md)
+//   +TCO=n +TIN=n  pad delays in ps (default 3500 / 1000)   +NORM  dram_clk = clk instead of ~clk
 
 `timescale 1ps/1ps
 
 module tb_sdram;
 
 localparam integer T_RAM = 8730;               // 114.55 MHz
-localparam integer TCO   = 3500;               // FPGA clock/pin output delay
-localparam integer TIN   = 1000;               // pin to register input delay
-`ifdef CAPNEG
-localparam bit CAP_NEG = 1'b1;
-`else
-localparam bit CAP_NEG = 1'b0;
-`endif
+integer TCO = 3500;                       // FPGA clock/pin output delay (ps)
+integer TIN = 1000;                       // pin to register input delay (ps)
+reg [2:0] cap_sel = 3'd1;
+reg       clk_norm = 1'b0;
+integer capv = 1;
+initial begin
+	void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN));
+	if ($value$plusargs("CAP=%d", capv)) cap_sel = capv[2:0];
+	clk_norm = $test$plusargs("NORM");
+end
 
 reg clk_ram = 0, clk_sys = 0;
 always #(T_RAM/2) clk_ram = ~clk_ram;
@@ -66,15 +70,15 @@ wire ce_r = ce_ph;
 wire dot_ce_r = (dot_div == 2'd3) & ce_r;
 wire dot_ce_f = (dot_div == 2'd1) & ce_r;
 
-sdram_pocket #(.INIT_CLKS(2000), .CAP_NEG(CAP_NEG)) dut (
-	.clk(clk_ram), .init(init), .sync(dot_ce_r),
+sdram_pocket #(.INIT_CLKS(2000)) dut (
+	.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(cap_sel), .clk_norm(clk_norm),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n),
 	.dram_clk(dram_clk),
 	.addr_a0(addr_a0), .addr_a1(addr_a1), .din_a(din_a), .wr_a(wr_a), .rd_a(rd_a), .dout_a0(dout_a0), .dout_a1(dout_a1),
 	.addr_b0(addr_b0), .addr_b1(addr_b1), .din_b(din_b), .wr_b(wr_b), .rd_b(rd_b), .dout_b0(dout_b0), .dout_b1(dout_b1),
 	.ch2addr(ch2addr), .ch2din(ch2din), .ch2wr(ch2wr), .ch2rd(ch2rd), .ch2dout(ch2dout), .ch2rdy(ch2rdy),
-	.init_done(init_done), .dbg_scrub_wrap(dbg_scrub_wrap), .dbg_scsp_drop(dbg_scsp_drop)
+	.init_done(init_done), .chk_done(), .chk_ok(), .dbg_scrub_wrap(dbg_scrub_wrap), .dbg_scsp_drop(dbg_scsp_drop)
 );
 
 // ---------------------------------------------------------------- pins and model

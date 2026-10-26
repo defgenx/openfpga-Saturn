@@ -23,11 +23,10 @@
 // restores that row. VDP2 stops fetching for several dots per line (REFRESH/NOACCESS windows).
 //
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
-// cycle after it is registered. With CL3 the first word reaches the FPGA register about
-// 4.65 cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC +
-// input delay), so the default samples DQ on rising edges at READ+5 and +6 and the 32 bit result
-// lands in doutXX at READ+6. CAP_NEG=1 samples on the falling edges at +4.5/+5.5 instead. The
-// split depends on the pad delays of the device; tune on hardware (docs/memory.md).
+// cycle after it is registered. With CL3 the first word reaches the FPGA register about 4.7 to 5.7
+// cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC + input
+// delay). The capture edge and offset (cap_sel) and the dram_clk phase (clk_norm) are runtime
+// settings latched at init, from the Core Settings menu; see docs/memory.md section 3.
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -37,12 +36,13 @@
 
 module sdram_pocket #(
 	parameter int INIT_CLKS    = 24000, // power-up wait, 200 us at 114.5 MHz
-	parameter bit CAP_NEG      = 1'b0,  // 1: sample DQ on the falling edge (+4.5/+5.5), 0: rising edge (+5/+6)
 	parameter int SCSP_MIN_AGE = 14     // earliest SCSP read delivery, clk_ram cycles after the request
 ) (
 	input  wire        clk,             // clk_ram (2x clk_sys, phase aligned)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
+	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: [1:0] +4..+7 rising edge, +3.5..+6.5 falling edge if [2]
+	input  wire        clk_norm,        // latched with cap_sel: dram_clk = clk instead of ~clk
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -83,6 +83,8 @@ module sdram_pocket #(
 	output wire        ch2rdy,
 
 	output reg         init_done,
+	output reg         chk_done,        // POCKET_DEBUG_OVERLAY: write/read-back self-check of two sound RAM words finished
+	output reg         chk_ok,
 	output reg   [7:0] dbg_scrub_wrap,  // wraps of the row-scrub counters, saturating
 	output reg   [7:0] dbg_scsp_drop    // SCSP requests that arrived while one was still pending
 );
@@ -94,12 +96,17 @@ localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
 
 assign dram_cke = 1'b1;
 
-sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
+// capture settings take effect at the next init (core Reset)
+reg [2:0] cs = 3'd1;
+reg       cn = 1'b0;
+always @(posedge clk) if (init) begin cs <= cap_sel; cn <= clk_norm; end
+
+sdram_clk_out u_clk (.clk(clk), .norm(cn), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
 reg [15:0] cap_n;
 always @(negedge clk) cap_n <= dram_dq_i;
-wire [15:0] dq_cap = CAP_NEG ? cap_n : dram_dq_i;
+wire [15:0] dq_cap = cs[2] ? cap_n : dram_dq_i;
 
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
@@ -166,6 +173,51 @@ endfunction
 wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the half, write
 wire [15:0] w_b = {addr_b0[16:3], lane_idx(wr_b)};
 
+// ------------------------------------------------------------------ self-check (debug overlay only)
+// After init: write A55A / 5AA5 to one word in each SCSP bank (via ch2, other ch2 requests are ignored meanwhile),
+// read both back, chk_ok = both match. Words 0x100 of bank 2 and 3, clear of the BIOS's word 0.
+`ifdef POCKET_DEBUG_OVERLAY
+reg  [2:0] ck_st;
+reg  [6:0] ck_t;
+reg        ck_rd;
+reg  [1:0] ck_wr;
+reg [18:1] ck_a;
+reg [15:0] ck_d;
+wire       ck_busy = !chk_done;
+always @(posedge clk) begin
+	ck_rd <= 1'b0; ck_wr <= 2'b00;
+	if (init) begin
+		ck_st <= 3'd0; ck_t <= '0; chk_done <= 1'b0; chk_ok <= 1'b1;
+	end else if (init_done && !chk_done) begin
+		ck_t <= ck_t + 1'd1;
+		if (ck_t == 7'd0) case (ck_st)
+			3'd0: begin ck_wr <= 2'b11; ck_a <= 18'h00100; ck_d <= 16'hA55A; end
+			3'd1: begin ck_wr <= 2'b11; ck_a <= 18'h20100; ck_d <= 16'h5AA5; end
+			3'd2: begin ck_rd <= 1'b1;  ck_a <= 18'h00100; end
+			3'd3: begin ck_rd <= 1'b1;  ck_a <= 18'h20100; end
+			default: ;
+		endcase
+		if (ck_t == 7'd100) begin
+			if (ck_st == 3'd3 && ch2dout != 16'h5AA5) chk_ok <= 1'b0;
+			if (ck_st == 3'd4) chk_done <= 1'b1;
+			ck_st <= ck_st + 1'd1;
+		end
+		if (ck_t == 7'd99 && ck_st == 3'd2 && ch2dout != 16'hA55A) chk_ok <= 1'b0;
+		if (ck_t == 7'd100) ck_t <= '0;
+	end
+end
+wire [19:1] rq_addr = ck_busy ? {1'b0, ck_a} : ch2addr;
+wire [15:0] rq_din  = ck_busy ? ck_d : ch2din;
+wire  [1:0] rq_wr   = ck_busy ? ck_wr : ch2wr;
+wire        rq_rd   = ck_busy ? ck_rd : ch2rd;
+`else
+wire [19:1] rq_addr = ch2addr;
+wire [15:0] rq_din  = ch2din;
+wire  [1:0] rq_wr   = ch2wr;
+wire        rq_rd   = ch2rd;
+initial begin chk_done = 1'b0; chk_ok = 1'b0; end
+`endif
+
 // ------------------------------------------------------------------ SCSP state
 reg [17:0] sc_addr;          // word address {bank, 17 bit offset}
 reg [15:0] sc_din;
@@ -190,9 +242,9 @@ reg        dl_ld[0:1];
 reg        dl_wi;            // next entry to allocate
 
 // ------------------------------------------------------------------ read tag pipeline
-reg        t_v [0:6];
-reg  [2:0] t_k [0:6];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
-reg        t_i [0:6];        // SCSP delivery entry
+reg        t_v [0:7];
+reg  [2:0] t_k [0:7];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
+reg        t_i [0:7];        // SCSP delivery entry
 
 reg  [2:0] c_cmd;
 reg [12:0] c_a;
@@ -211,6 +263,8 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
+wire [2:0] w0 = {1'b0, cs[1:0]} + 3'd3;
+wire [2:0] w1 = w0 + 3'd1;
 reg [7:0] scr_q [0:3];
 
 function automatic [12:0] row_a(input [7:0] r);
@@ -222,15 +276,15 @@ endfunction
 
 always @(posedge clk) begin
 	// ---- SCSP request capture
-	old_rd <= ch2rd;
-	old_wr <= |ch2wr;
-	if (ch2rd && !old_rd) begin
+	old_rd <= rq_rd;
+	old_wr <= |rq_wr;
+	if (rq_rd && !old_rd) begin
 		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= ch2addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
+		sc_addr <= rq_addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
 	end
-	if ((|ch2wr) && !old_wr) begin
+	if ((|rq_wr) && !old_wr) begin
 		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= ch2addr[18:1]; sc_din <= ch2din; sc_be <= ch2wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
+		sc_addr <= rq_addr[18:1]; sc_din <= rq_din; sc_be <= rq_wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
 	end
 	cyc <= cyc + 1'd1;
 
@@ -375,22 +429,23 @@ always @(posedge clk) begin
 	// ---- tag pipeline
 	q_cmd <= c_cmd; q_a <= c_a; q_ba <= c_ba; q_dqm <= c_dqm; q_dq <= c_dq; q_oe <= c_oe; q_tv <= c_tv; q_tk <= c_tk; q_ti <= c_ti;
 	t_v[0] <= q_tv; t_k[0] <= q_tk; t_i[0] <= q_ti;
-	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
+	for (k = 1; k <= 7; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
-	// word 0 and word 1 land one cycle apart, both after the previous set was sampled (F + 8)
-	if (t_v[4]) begin
-		case (t_k[4])
+	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
+	// after the previous set was sampled (F + 8) for every stage
+	if (t_v[w0]) begin
+		case (t_k[w0])
 			3'd0: dout_a0[31:16] <= dq_cap;
 			3'd1: dout_b0[31:16] <= dq_cap;
 			3'd2: dout_a1[31:16] <= dq_cap;
 			3'd3: dout_b1[31:16] <= dq_cap;
-			3'd4: begin dl_d[t_i[4]] <= dq_cap; dl_ld[t_i[4]] <= 1'b1; end
+			3'd4: begin dl_d[t_i[w0]] <= dq_cap; dl_ld[t_i[w0]] <= 1'b1; end
 			default: ;
 		endcase
 	end
-	if (t_v[5]) begin
-		case (t_k[5])
+	if (t_v[w1]) begin
+		case (t_k[w1])
 			3'd0: dout_a0[15:0] <= dq_cap;
 			3'd1: dout_b0[15:0] <= dq_cap;
 			3'd2: dout_a1[15:0] <= dq_cap;
@@ -419,7 +474,7 @@ always @(posedge clk) begin
 		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;
-		for (k = 0; k <= 6; k = k + 1) t_v[k] <= 1'b0;
+		for (k = 0; k <= 7; k = k + 1) t_v[k] <= 1'b0;
 	end
 end
 

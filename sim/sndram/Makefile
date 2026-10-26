@@ -18,7 +18,7 @@ else
 SCSPF := $(SRC)/Saturn/SCSPP/SCSPP_pkg.sv $(SRC)/Saturn/SCSPP/SCSPP.sv
 endif
 FILES := ../scsp/altsyncram.v $(ROOT)/src/fpga/core/ce_gen.sv $(SRC)/Saturn/DCC.sv $(foreach f,$(SHF),$(SH)/$(f).sv) $(SCUF) $(SCSPF) $(MEM)/sdram_pocket.sv $(MEM)/sdram_clk_out.sv ../mem/models/sdram_model.sv tb_sndram.sv
-DEFS := -DPOCKET_SH2P -DPOCKET_CUT_SCU_DSP -DPOCKET_CUT_SCSP_DSP $(if $(USE_SCU),,-DPOCKET_SCUP2) $(if $(USE_SCSP),,-DPOCKET_SCSPP) $(if $(USE_SCU),-DUSE_SCU) $(if $(USE_SCSP),-DUSE_SCSP) $(EXTRA)
+DEFS := $(if $(NOCHK),,-DPOCKET_DEBUG_OVERLAY) $(if $(NOCHK),-DNOCHK_DEF) -DPOCKET_SH2P -DPOCKET_CUT_SCU_DSP -DPOCKET_CUT_SCSP_DSP $(if $(USE_SCU),,-DPOCKET_SCUP2) $(if $(USE_SCSP),,-DPOCKET_SCSPP) $(if $(USE_SCU),-DUSE_SCU) $(if $(USE_SCSP),-DUSE_SCSP) $(EXTRA)
 .PHONY: run clean
 run:
 	@mkdir -p $(B) && python3 gen_prog.py $(B)/prog.hex $(B)/exp.hex && verilator --binary --timing -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style -Wno-TIMESCALEMOD --x-assign 0 --x-initial 0 $(DEFS) -GNEXP=$$(wc -l < $(B)/exp.hex | tr -d " ") --top-module tb_sndram --Mdir $(B)/obj -o ../Vtb -j 4 $(FILES) >$(B)/vlog.txt 2>&1 || { tail -30 $(B)/vlog.txt; exit 1; }
