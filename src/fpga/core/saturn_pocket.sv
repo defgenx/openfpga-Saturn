@@ -785,8 +785,9 @@ wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b00000
 wire dbg_alive = a_vs & a_de;
 
 // hex text row (docs/debug-overlay.md): data of the last SH-2 write and read of sound RAM word 0
-wire [31:0] dbg_wd = {dbg_snd[32:17], dbg_snd[15:0]};
-wire  [3:0] dbg_we = {dbg_snd[33], dbg_snd[33], dbg_snd[16], dbg_snd[16]};
+wire        dbg_wa = dbg_snd[16];                                  // word 1 = read data
+wire [15:0] dbg_wd = dbg_snd[16] ? dbg_snd[15:0] : dbg_snd[32:17];
+wire        dbg_we = dbg_snd[33] | dbg_snd[16];
 `endif
 
 pocket_video video (
@@ -795,7 +796,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_we(dbg_we)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_wa(dbg_wa), .dbg_we(dbg_we)
 `endif
 );
 
