@@ -374,6 +374,7 @@ wire         HS_N, VS_N, DCLK, HBL_N, VBL_N, FIELD, INTERLACE, DCE_R, DCE_F;
 wire [ 1: 0] HRES, VRES;
 `ifdef POCKET_DEBUG_OVERLAY
 wire [ 6: 0] dbg_tap;
+wire [99: 0] dbg_txt;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -545,7 +546,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt)
 `endif
 );
 
@@ -782,6 +783,20 @@ wire [15:0] dbg_g = {
 };
 wire [15:0] dbg_y = {1'b0, a_scsp, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_ssh, a_msh, 6'b000000};
 wire dbg_alive = a_vs & a_de;
+
+// hex text rows (docs/debug-overlay.md): MSH PC sampled every window, frame counter = VBL_N falling edges
+reg [31:0] dbg_pc_s = 32'd0;
+reg [15:0] dbg_frm  = 16'd0;
+reg        dbg_vbl_q = 1'b1;
+reg  [4:0] dbg_wa = 5'd0;
+always @(posedge clk_sys) begin
+	if (dbg_tick) dbg_pc_s <= dbg_txt[99:68];
+	dbg_vbl_q <= VBL_N;
+	if (dbg_vbl_q & ~VBL_N) dbg_frm <= dbg_frm + 16'd1;
+	dbg_wa <= dbg_wa + 5'd1;
+end
+wire [127:0] dbg_vec = {dbg_pc_s, dbg_txt[67:36], dbg_txt[35:4], dbg_frm, 12'h000, dbg_txt[3:0]};
+wire [3:0]   dbg_wd  = dbg_vec[(5'd31 - dbg_wa) * 4 +: 4];
 `endif
 
 pocket_video video (
@@ -790,7 +805,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wa(dbg_wa), .dbg_wd(dbg_wd), .dbg_we(1'b1)
 `endif
 );
 

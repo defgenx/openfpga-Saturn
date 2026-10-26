@@ -67,7 +67,9 @@ module SH7604P
 	input       [5:0] MD,
 	
 	input             FAST
-	
+`ifdef POCKET_DEBUG_OVERLAY
+	,output     [31:0] DBG_PC
+`endif
 );
 
 	import SH7604P_PKG::*;
@@ -248,6 +250,9 @@ module SH7604P
 		.VECT_WAIT(VECT_WAIT),
 		
 		.SLEEP(SLEEP)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_PC(DBG_PC)
+`endif
 	);
 	
 	assign CBUS_DI = |MAC_SEL && MAC_OP == 4'b1100 && !MAC_WE ? MULT_DO : CACHE_DO;

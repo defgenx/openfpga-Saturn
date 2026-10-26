@@ -66,6 +66,7 @@ module VDP2P import VDP2P_PKG::*; (
 	input       [7:0] DBG_EXT
 `ifdef POCKET_DEBUG_OVERLAY
 	, output          DBG_DISP
+	, output   [15:0] DBG_TVMD
 `endif
 `ifdef DEBUG
                      ,
@@ -158,6 +159,7 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2Regs_t REGS;
 `ifdef POCKET_DEBUG_OVERLAY
 	assign DBG_DISP = REGS.TVMD.DISP;
+	assign DBG_TVMD = REGS.TVMD;
 `endif
 	
 	

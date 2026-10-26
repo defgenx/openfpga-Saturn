@@ -36,7 +36,13 @@ module SH2P_core
 	input             VECT_WAIT,
 	
 	output            SLEEP
+`ifdef POCKET_DEBUG_OVERLAY
+	,output     [31:0] DBG_PC
+`endif
 );
+`ifdef POCKET_DEBUG_OVERLAY
+	assign DBG_PC = PIPE.EX.PC;
+`endif
 	
 	import SH2P_PKG::*;
 

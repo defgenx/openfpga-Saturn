@@ -33,3 +33,32 @@ the SH-2 is held by the SMPC. 9 green means the BIOS reached its copy of WRAM-H;
 turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
+
+## Hex text block
+
+Under the squares, at x 32..159 and y 16..79 (black background, white digits, cell 16 x 16, glyph 3 x 5 scaled 4 x 2),
+four rows of 8 hex digits. Digits live in a 32 x 4 M10K buffer that `saturn_pocket` rewrites continuously (one nibble per
+`clk_sys`); the 3 x 5 font is a 128 x 3 M10K ROM in `pocket_video`. No labels are drawn, the layout is fixed:
+
+```
+         digit: 0 1 2 3 4 5 6 7
+row 0 (y 16):   P P P P P P P P     MSH PC, 32 bit
+row 1 (y 32):   C C S L T T T T     COMREG (2) | SF (1) | IRL level (1) | VDP2 TVMD (4)
+row 2 (y 48):   I I I I M M M M     SCU IST[15:0] (4) | SCU IMS[15:0] (4)
+row 3 (y 64):   F F F F 0 0 0 Q     frame counter (4) | 0 | SMPC interrupt request (1)
+```
+
+- **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
+  shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
+- **COMREG / SF**: SMPC_SERV command register (last command written by the SH-2) and the SF flag (1 = command pending).
+- **IRL**: SCU level on the master's IRL pins, 0 = none (`~CIRL_N`).
+- **TVMD**: VDP2 TVMD register; bit 15 (top digit 8..F) is DISP.
+- **IST / IMS**: SCU interrupt status and mask (low 16 bits); IMS resets to `BFFF`, a bit set in IST and clear in IMS
+  and a non-zero IRL means the interrupt is delivered.
+- **F**: VBL_N falling edges since power-up, 16 bit; stays 0 while the Saturn has no vertical blanking.
+- **Q**: 1 = the SMPC interrupt request line is asserted.
+
+Each row is written by the scanner in `saturn_pocket` from `DBG_TXT` of `Saturn.sv`, tapped in `SH2P_core`,
+`SMPC_SERV`, `SCUP2` and `VDP2P` (all behind `POCKET_DEBUG_OVERLAY`). The text only exists with the SH7604P,
+SCUP2, SMPC_SERV and VDP2P macros of the normal build. `sim/platform/tb_overlay.sv` checks the rendered digits against
+an independent copy of the font for a known buffer.

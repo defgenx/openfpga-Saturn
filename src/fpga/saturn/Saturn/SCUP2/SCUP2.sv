@@ -71,6 +71,9 @@ module SCUP2
 	input             MIREQ_N,
 	
 	input             FAST
+`ifdef POCKET_DEBUG_OVERLAY
+	,output     [31:0] DBG_SCU     // {IST[15:0], IMS[15:0]}
+`endif
 	
 `ifdef DEBUG
 	                  ,
@@ -87,6 +90,7 @@ module SCUP2
 `endif
 );
 	import SCUP2_PKG::*;
+
 	
 	//Optional feature cuts (area): without the macros the module is unchanged.
 	//POCKET_CUT_SCU_INDIRECT: DMA mode bit MOD reads as 0, indirect (table) DMA is never started.
@@ -114,6 +118,9 @@ module SCUP2
 	T1MD_t      T1MD;
 	IMS_t       IMS;
 	IST_t       IST;
+`ifdef POCKET_DEBUG_OVERLAY
+	assign DBG_SCU = {IST[15:0], IMS[15:0]};
+`endif
 	ASR0_t      ASR0;
 	ASR1_t      ASR1;
 	AREF_t      AREF;
