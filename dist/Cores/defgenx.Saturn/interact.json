@@ -90,10 +90,6 @@
             "name": "+6 (rising edge)"
           },
           {
-            "value": 3,
-            "name": "+7 (rising edge)"
-          },
-          {
             "value": 4,
             "name": "+3.5 (falling edge)"
           },
@@ -104,10 +100,6 @@
           {
             "value": 6,
             "name": "+5.5 (falling edge)"
-          },
-          {
-            "value": 7,
-            "name": "+6.5 (falling edge)"
           }
         ]
       }

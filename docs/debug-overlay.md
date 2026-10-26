@@ -67,11 +67,11 @@ completes). A half that never changes stays 0000. Squares 7, 8 and 11 have no de
 ## debug7: runtime SDRAM timing and the self-check
 
 Same hex row as debug6 plus square 15 = SDRAM self-check (the SCSP activity detector is gone). The Core Settings menu has
-a new list, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +7 clk_ram after READ
-on the rising edge, +3.5 to +6.5 on the falling edge; default +5 rising). Options and the delay ranges they cover:
+a new list, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +6 clk_ram after READ
+on the rising edge, +3.5 to +5.5 on the falling edge; default +5 rising). Options and the delay ranges they cover:
 docs/memory.md section 3.
 
 Bring-up procedure: with the default the self-check square tells whether the SDRAM works at all. If square 15 is red,
-step "SDRAM read capture" through +4.5 (falling), +5.5 (falling), +6, +4, Reset each time, until square 15 turns green;
+step "SDRAM read capture" through +4.5 (falling), +5.5 (falling), +6, +4 (and +3.5), Reset each time, until square 15 turns green;
 then the BIOS read of word 0 (hex row, R half) should return the written value. The settings are not part of the normal
 build's constraints; note the first setting that turns square 15 green.

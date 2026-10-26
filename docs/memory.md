@@ -180,12 +180,12 @@ while `init` is high, so they apply at the next menu Reset without reloading the
 
 | Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
 |---|---|---|---|
-| SDRAM read capture | +4 / +5 (default) / +6 / +7 (rising edge) | 0 / **1** / 2 / 3 | 4,5 / 5,6 / 6,7 / 7,8 |
-| | +3.5 / +4.5 / +5.5 / +6.5 (falling edge) | 4 / 5 / 6 / 7 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 / 6.5,7.5 |
+| SDRAM read capture | +4 / +5 (default) / +6 (rising edge) | 0 / **1** / 2 (3 = 2) | 4,5 / 5,6 / 6,7 |
+| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 (7 = 6) | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
 
 The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
 (`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
-edge. Later capture (+6, +7) delays the VDP2 results by one or two clk_ram (VDP2 still samples 24 clk_ram after the request).
+edge. Later capture (+6) delays the VDP2 results by one clk_ram (VDP2 still samples 24 clk_ram after the request).
 Rule of thumb from the model, with T = clock-out delay + input delay (the data valid window is about 4.2 ns):
 
 | T (ns), clock out + pin to register | best setting |
@@ -197,7 +197,7 @@ Rule of thumb from the model, with T = clock-out delay + input delay (the data v
 
 Sweep: `make -C sim sndram` then `sh sim/sndram/sweep.sh [TIN_ps]` (SH-2 through SCSP to the SDRAM model), or
 `sh sim/mem/sweep.sh [TIN_ps]` (`tb_sdram`: VDP2 and SCSP traffic, every model timing check). Both give the same
-table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7, `#` = pass.
+table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7 (3 and 7 repeat 2 and 6), `#` = pass.
 Command and clock share the TCO, as on the device. (An earlier `sim/sndram` sweep looked irregular for TCO above
 4.4 ns: Verilator evaluates the right-hand side of `<= #d` at the end of the delay, which flipped the clock phase;
 the bench now uses explicit delay FIFOs.)

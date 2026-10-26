@@ -41,7 +41,7 @@ module sdram_pocket #(
 	input  wire        clk,             // clk_ram (2x clk_sys, phase aligned)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
-	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: [1:0] +4..+7 rising edge, +3.5..+6.5 falling edge if [2]
+	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: [1:0] +4..+6 rising edge (3 = +6), +3.5..+5.5 falling edge if [2]
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -225,9 +225,9 @@ reg        dl_ld[0:1];
 reg        dl_wi;            // next entry to allocate
 
 // ------------------------------------------------------------------ read tag pipeline
-reg        t_v [0:7];
-reg  [2:0] t_k [0:7];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
-reg        t_i [0:7];        // SCSP delivery entry
+reg        t_v [0:6];
+reg  [2:0] t_k [0:6];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
+reg        t_i [0:6];        // SCSP delivery entry
 
 reg  [2:0] c_cmd;
 reg [12:0] c_a;
@@ -246,7 +246,7 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
-// tag stage of word 0 (cs[1:0] + 3) and of word 1 (+ 4), written as 4:1 selects
+// tag stage of word 0 (cs[1:0] + 3, at most 5) and of word 1 (+ 1), written as 4:1 selects
 reg        w0_v, w1_v, w0_i;
 reg  [2:0] w0_k, w1_k;
 always @* begin
@@ -254,7 +254,7 @@ always @* begin
 	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
 	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
 	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
-	default: begin w0_v = t_v[6]; w0_k = t_k[6]; w0_i = t_i[6]; w1_v = t_v[7]; w1_k = t_k[7]; end
+	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // 3 is +6 as well
 	endcase
 end
 reg [7:0] scr_q [0:3];
@@ -421,7 +421,7 @@ always @(posedge clk) begin
 	// ---- tag pipeline
 	q_cmd <= c_cmd; q_a <= c_a; q_ba <= c_ba; q_dqm <= c_dqm; q_dq <= c_dq; q_oe <= c_oe; q_tv <= c_tv; q_tk <= c_tk; q_ti <= c_ti;
 	t_v[0] <= q_tv; t_k[0] <= q_tk; t_i[0] <= q_ti;
-	for (k = 1; k <= 7; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
+	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
 	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
@@ -466,7 +466,7 @@ always @(posedge clk) begin
 		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;
-		for (k = 0; k <= 7; k = k + 1) t_v[k] <= 1'b0;
+		for (k = 0; k <= 6; k = k + 1) t_v[k] <= 1'b0;
 	end
 end
 
