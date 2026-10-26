@@ -83,6 +83,7 @@ Setup slack (slow 1100mV 85C), lite build on main d6082c1:
 | counter[1] | -4.880 | -4.325 (TNS -157) |
 | cram0 / cram1 | -3.04 / -3.14 | -0.402 / -0.193 |
 | hold, all clocks | | >= 0 |
+| **final 9ff7e8a (lite default, seed 13)** | all merged rewrites + timing rounds 1-3 | **18,201 (98%)** | **1,844 / 1,848** | 285 / 308 | 38 / 66 |
 
 Root causes and fixes:
 - Falling-edge M10K reads: a path from a `*_FERAM` read register to a CE_R register has 1.5 clk_sys, but STA gave it 0.5 and the old
@@ -119,3 +120,6 @@ Changes:
 - Not changed, real paths: `bsc.VEC_BUF` (CE_F) to the core (external vector mode only; one clk_sys), VDP2P `cdpa` read address
   (CPN steps every clk), clk_sys to clk_ram requests (SSH bsc, SCU, VDP1 VRAM_A into ddram) and sdram `dram_a` logic, PSRAM `p_oe`
   turn-on (output buffer 3.4 ns).
+
+
+Final 9ff7e8a timing (slow 1100mV 85C setup): counter[0] -0.846 (TNS -41), counter[1] -1.166 (TNS -79), cram0 -0.514, cram1 -0.315, dram_clk_pin +1.654; hold >= 0. Compile 22 min with map --parallel=1, fit/sta --parallel=11.
