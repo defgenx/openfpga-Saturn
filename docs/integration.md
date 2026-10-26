@@ -151,8 +151,15 @@ multiplier, shared by both channels.
 |---|---|
 | `make -C sim platform` | audio (1 kHz, -65 dB residual) and four video modes pass |
 | `make -C sim mem` | passes with the two `vdp1_fb_pocket` changes of this branch (section 7) |
+| `make -C sim irq` | `sh2p`+`DCC`+`SMPC_SERV`+`SCUP2` wired as in `Saturn.sv`, build macros: SNDON through SF/COMREG on the real bus, then VBLANK-IN/OUT interrupts (IMS, ICR.VECMD, vector fetch) delivered; negative control with IVECF# stuck low fails; `Saturn.sv` has no port connected twice |
 | `quartus_sh --flow compile ap_core` (21.1, 5CEBA4F23C8) | analysis and synthesis succeed, 159 warnings, no error; the fitter fails on capacity |
 | `quartus_sta` post-map with the SDC | PLL clocks, generated clocks and groups resolve |
+
+`Saturn.sv` connected `.IVECF_N` of the master SH-2 twice (`.IVECF_N(MSHIVECF_N)` and a later `.IVECF_N()`, inherited from
+the MiSTer source). Verilator and Quartus 17 take the first; a tool that takes the last leaves `MSHIVECF_N` undriven (0):
+the SCU then sees a vector fetch on every read and resets IMS to its masked value after each one, so no interrupt is ever
+raised (`make -C sim irq neg`), as with the black screen where the BIOS never unmasks an interrupt. The empty connection
+is removed; `sim/irq/dup_ports.py` fails on any such duplicate.
 
 The Verilator lint of the glue modules (`verilator --lint-only -Wall`) is clean apart from unused-bit notes. The full
 tree is checked by Quartus, not Verilator (it needs the Altera RAM/PLL primitives).

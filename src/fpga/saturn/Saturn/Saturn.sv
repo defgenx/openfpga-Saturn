@@ -438,7 +438,6 @@ module Saturn
 		.EIVECF_N(1'b1),
 		
 		.WAIT_N(MSHWAIT_N),
-		.IVECF_N(),
 		.BRLS_N(MSHBRLS_N),
 		.BGR_N(MSHBGR_N),
 		
