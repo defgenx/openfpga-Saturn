@@ -28,7 +28,7 @@ the **root** of the card, merging with the folders already there:
 SD card root
 ├── Assets/
 │   └── saturn/
-│       ├── common/              <- your .cue and .bin disc files go here
+│       ├── common/              <- disc files: .bin tracks plus the .json and .toc from mktoc.py
 │       └── defgenx.Saturn/      <- the BIOS goes here
 ├── Cores/
 │   └── defgenx.Saturn/
@@ -48,9 +48,17 @@ renamed to it) in `Assets/saturn/defgenx.Saturn/`. The core does not start witho
 
 ## 3. Add discs
 
-Copy each game as a `.cue` sheet with its `.bin` track files, all in one folder under
-`Assets/saturn/common/`, then pick the `.cue` in *Core Settings -> CD image*. The `.bin` files named in the
-sheet are read from the same folder as needed, not loaded up front.
+The core does not read `.cue` sheets itself. For each game, run `tools/mktoc.py` from this repository
+(Python 3) on the `.cue`:
+
+```
+python3 tools/mktoc.py "Game (USA).cue" -o out/
+```
+
+It writes `Game (USA).toc` and `Game (USA).json`, and a merged `.img` if the tracks need merging. Copy
+these files, together with the game's `.bin` track files, into `Assets/saturn/common/`. On the Pocket, pick
+`Game (USA).json` as the disc. If the tracks sit in a subfolder of `Assets/saturn/`, pass
+`--data-path <subfolder>`. CHD is not supported.
 
 Backup RAM is saved to the card (`saturn_bram.sav`, 32 KB; `saturn_cart.sav`, 512 KB for the backup
 cartridge).
