@@ -43,7 +43,7 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
   |  HIRQ, mask, CR1-4, RR1-4, data port          lk_*  TOC lookup      pf_*  prefetch at FAD
   v                                               sd_*  sector issue    cd_data/ck/audio  1176-word stream
 +--------------------------- cdb_hle -----------------------------------------------------------+
-| host regs  <-- MMIO -->  SERV (RV32IC) + ROM 12 KB + RAM 4 KB   (firmware/cdb/cdb.c)           |
+| host regs  <-- MMIO -->  SERV (RV32I) + ROM 16 KB + RAM 4 KB    (firmware/cdb/cdb.c)           |
 | data port FIFO <--> cdb_xfer (read / write / copy / zero-fill segments, 2 queued)              |
 | cdb_sink: stream words -> DRAM buffer slot, header latch, CD-DA to CD_SL/CD_SR                 |
 | cdb_dram: three clients (sink, xfer, CPU window) -> CD_RAM_* (ddram_pocket cdram port)          |
@@ -109,7 +109,7 @@ the 16.6 ms periodic report and one sector per 6.7 ms (2x data) or 13.3 ms (audi
 including the testbench's 20 us poll granularity: median 129 us, worst 917 us (Copy of a 1,176-word sector with
 the DRAM copy engine). A status request is about 100 us of firmware time. The sector path is estimated at about 1,000
 instructions per sector (filter evaluation, buffer lists), under 1 ms of 6.7 ms (estimate). RVC (`-march=rv32ic`) is used:
-12,136 bytes of code, 1,580 bytes of RAM, ROM 12 KB. A faster CPU was not needed.
+12,136 bytes of code as RV32IC (15,240 as RV32I, which is what is built: the compressed decoder and the aligner of SERV are 72 ALMs, the 3 KB of code are 4 M10K blocks), 1,580 bytes of RAM, ROM 16 KB. A faster CPU was not needed.
 
 ## 5. Command coverage
 

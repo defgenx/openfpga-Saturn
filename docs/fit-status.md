@@ -54,3 +54,19 @@ parameter RAMs, CDPRING x4, CY registers x4, character parameter pair, write FIF
 table), SCSPP stacks, m68kp register file, SCUP2 DMA lanes. Left in MLAB (34 ALMs, 14 LABs): VDP2P `nmp`/`rmp` (address derives
 from the `cy_*` falling-edge RAMs; a chained read fails vdp2 sim), SMPC (LLE sim is only a tolerance compare against the HLE),
 SCSPP key/bit RAMs (1 ALM). Timing: the read becomes a half-cycle path (not run through STA).
+
+## CD path and clock enables (branch `cd-trim`)
+
+Measured in-system (`tools/pocket_lite.sh` to `lite-cd`, quartus_sh --flow compile, fit still fails at placement), against the
+lite-mlab entity table:
+
+| Block | before | after | How |
+|---|---|---|---|
+| CEGen x4 (CDD, CD, SCSP, SMPC) | 38 + 30 + 28 + 32 | SCSP 24, CD 14, CDD 5, SMPC 3 | `ce_gen` only as wide as the ratio needs; CD is 3125/3528 of the SCSP 2x enable, SMPC (4 MHz) is every 10th CD enable, CDD (176.4 kHz) every 256th SCSP 2x enable (exact: `sim/platform/tb_ce`, 3M clocks against the accumulators) |
+| cd_stream | 370 | see below | sector offset (file sector * 2352) in one multiplier (it was 3 adds of 28 bits, 142 LUTs), TOC address by increment, TOC RAM read through the address register, ring write FIFO as an M10K instance (the inferred one carried 58 bypass registers), `rg_wa/rg_wd` straight from the FIFO output |
+| cdb_hle | 739 | see below | RV32I firmware and SERV without the compressed decoder (ROM 16 KB = +4 M10K), DRAM port address/data as muxes of the granted client, no b staging in the transfer engine (b only matters for copy segments, which the firmware starts on an idle engine), 18 bit host counter (<= 200 sectors x 1,176 words), FIFO without bypass registers |
+| ddram_pocket | | | the two posted write FIFOs in M10K with a registered read address (3 blocks), no MLAB and no bypass registers; an entry is offered one clock after it was written |
+
+`sim/cdb` needs `make -C sim cdb` with the ring model of `tb_cdb` (it still addressed the SRAM pins after the ring moved to PSRAM1).
+`check_hle.py` accepts a CD-DA pair whose R word is the previous pair's: the script samples at an arbitrary clock, and the RV32I
+firmware moved that clock onto the L/R update.
