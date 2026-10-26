@@ -21,6 +21,9 @@ module SCSPP #(
 	input              AD_N,
 	input              DTEN_N,
 	input              REQ_N,
+`ifdef POCKET_DEBUG_OVERLAY
+	output       [1:0] DBG_EV,       // {SH-2 write to sound RAM word 0, completed SH-2 read of word 0}
+`endif
 	output             RDY_N,
 	output             INT_N,
 	
@@ -2192,6 +2195,16 @@ module SCSPP #(
 	assign ADP_DBG = ADP;
 `endif
 	
+`ifdef POCKET_DEBUG_OVERLAY
+	bit rd0, rdc1, rdc2;
+	always @(posedge CLK) begin
+		if (SCU_REQ && WE_N) rd0 <= (A == 20'd0);
+		rdc1 <= rd0 && ((MEM_DEV_LATCH == 3'd4 && CYCLE0_CE) || (REG_ST == MS_SCU_WAIT && REG_RD && CYCLE1_CE));
+		rdc2 <= rdc1;
+	end
+	assign DBG_EV = {SCU_REQ & ~WE_N & ~DTEN_N & (A == 20'd0), rdc2};
+`endif
+
 endmodule
 
 module SCSPP_KEY_RAM

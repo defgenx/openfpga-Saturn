@@ -53,13 +53,13 @@ one row of 8 hex digits: the master SH-2 program counter.
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
 - `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
 
-## debug5: SMPC_SERV state
+## debug6: sound RAM word 0 handshake
 
 ```
- 5 P P P C C S L        marker 5 | SERV PC (ia[11:2], 3 digits, sampled each window) | last COMREG (2) | S | L
+ W W W W R R R R        W = data of the last SH-2 write to 0x25A00000 (B-bus, as seen at SCSPP)
+                        R = data returned for the last completed SH-2 read of that word
 ```
 
-- S bit 3..0: SF, SNDRES_N, MSHRES_N, SSHRES_N (1 = released / set).
-- L bit 3..0: MRES_N, SERV i_rst (1 = reset), SYSRES_N, CDRES_N.
-- PC is the word address of the instruction fetched by the SERV core (`ia[11:2]`), COMREG the last command the SH-2 wrote.
-Squares 7, 8, 11 and 15 have no detector in this build (always red).
+Each half is written into the M10K text word by its own byte enables when the event happens (a write is the data on
+the B-bus when SCSPP accepts it with word address 0; a read is the data on the B-bus output two cycles after the read
+completes). A half that never changes stays 0000. Squares 7, 8, 11 and 15 have no detector.

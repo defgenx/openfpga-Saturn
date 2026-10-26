@@ -378,6 +378,7 @@ wire [99: 0] dbg_txt;
 wire [28: 0] dbg_da;
 wire [26: 0] dbg_68k;
 wire [29: 0] dbg_serv;
+wire [33: 0] dbg_snd;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -549,7 +550,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k), .DBG_SERV(dbg_serv)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k), .DBG_SERV(dbg_serv), .DBG_SND(dbg_snd)
 `endif
 );
 
@@ -783,14 +784,9 @@ wire [15:0] dbg_g = {
 wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH), 11 (VBL) and 15 have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text row (docs/debug-overlay.md): marker 5, SMPC_SERV PC (sampled each window), COMREG, flags digits
-reg  [9:0] dbg_ia = 10'd0;
-always @(posedge clk_sys) if (dbg_tick) dbg_ia <= dbg_serv[27:18];
-wire        dbg_we = 1'b1;
-wire [31:0] dbg_wd = {4'h5, 2'b00, dbg_ia, dbg_serv[16:9],
-                      dbg_serv[17], dbg_serv[5], dbg_serv[0], dbg_serv[2],   // SF, SNDRES_N, MSHRES_N, SSHRES_N
-                      4'h0};
-wire  [3:0] dbg_lo = {dbg_serv[29], dbg_serv[28], dbg_serv[4], dbg_serv[6]};   // MRES_N, SERV i_rst, SYSRES_N, CDRES_N
+// hex text row (docs/debug-overlay.md): data of the last SH-2 write and read of sound RAM word 0
+wire [31:0] dbg_wd = {dbg_snd[32:17], dbg_snd[15:0]};
+wire  [3:0] dbg_we = {dbg_snd[33], dbg_snd[33], dbg_snd[16], dbg_snd[16]};
 `endif
 
 pocket_video video (
@@ -799,7 +795,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_lo(dbg_lo), .dbg_we(dbg_we)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_we(dbg_we)
 `endif
 );
 
