@@ -189,18 +189,16 @@ assign rg_ra = fd_sr_a;
 
 // rw_a / rw_d hold still for at least 30 clk_74a cycles after rw_t toggles (one bridge word)
 localparam FW = 6;
-(* ramstyle = "M10K, no_rw_check" *) reg [44:0] wq [0:(1<<FW)-1];
 reg [FW:0]   wq_w = 0, wq_r = 0;
-reg [FW-1:0] wq_ra;                        // registered read address: the RAM output is the head one clock after wq_r
-wire [44:0]  wq_q = wq[wq_ra];
 wire         wq_empty = (wq_w == wq_r);
 wire         wq_full  = (wq_w - wq_r) == (1 << FW);
+wire [44:0]  wq_q;
+cd_fifo_ram #(.W(45), .AW(FW)) wq_ram (.clk(clk), .we(rw_ev && !wq_full), .wa(wq_w[FW-1:0]), .wd({rw_a, rw_d}), .ra(wq_r[FW-1:0]), .q(wq_q));   // the output is the head one clock after wq_r
 always @(posedge clk) begin
 	if (rw_ev) begin
-		if (!wq_full) begin wq[wq_w[FW-1:0]] <= {rw_a, rw_d}; wq_w <= wq_w + 1'd1; end
+		if (!wq_full) wq_w <= wq_w + 1'd1;
 		else if (ovf_cnt != 8'hFF) ovf_cnt <= ovf_cnt + 8'd1;
 	end
-	wq_ra <= wq_r[FW-1:0];
 end
 wire [15:0] w_half0 = BRIDGE_LITTLE ? wq_q[15:0]  : {wq_q[23:16], wq_q[31:24]};
 wire [15:0] w_half1 = BRIDGE_LITTLE ? wq_q[31:16] : {wq_q[7:0],   wq_q[15:8]};
@@ -425,6 +423,41 @@ cd_feed feed (
 	.cd_data(cd_data), .cd_ck(cd_ck), .cd_audio(cd_audio)
 );
 
+endmodule
+
+
+
+// simple dual port RAM, one clock, M10K, registered read address (the output follows ra one clock later), no
+// read-during-write bypass: an entry is read only after the count shows it
+module cd_fifo_ram #(parameter W = 45, parameter AW = 6) (
+	input  wire          clk,
+	input  wire          we,
+	input  wire [AW-1:0] wa,
+	input  wire [W-1:0]  wd,
+	input  wire [AW-1:0] ra,
+	output wire [W-1:0]  q
+);
+`ifdef ALTERA_RESERVED_QIS
+altsyncram #(
+	.operation_mode("DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+	.width_a(W), .widthad_a(AW), .numwords_a(1 << AW), .width_b(W), .widthad_b(AW), .numwords_b(1 << AW),
+	.address_reg_b("CLOCK0"), .outdata_reg_b("UNREGISTERED"), .rdcontrol_reg_b("CLOCK0"),
+	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("TRUE"), .lpm_type("altsyncram")
+) ram (
+	.clock0(clk), .address_a(wa), .data_a(wd), .wren_a(we), .address_b(ra), .q_b(q), .rden_b(1'b1),
+	.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+	.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+	.data_b({W{1'b1}}), .eccstatus(), .q_a(), .rden_a(1'b1), .wren_b(1'b0)
+);
+`else
+reg [W-1:0] mem [0:(1<<AW)-1];
+reg [AW-1:0] ra_q;
+always @(posedge clk) begin
+	if (we) mem[wa] <= wd;
+	ra_q <= ra;
+end
+assign q = mem[ra_q];
+`endif
 endmodule
 
 `default_nettype wire
