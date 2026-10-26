@@ -21,7 +21,6 @@ module saturn_pocket #(
 	// interact.json settings (clk_74a)
 	input  wire  [1:0] cfg_region,                 // 0 auto, 1 Japan, 2 USA, 3 Europe
 	input  wire  [2:0] cfg_sdcap,                  // sdram_pocket read capture, latched while rst_ram
-	input  wire        cfg_sdclk,                  // sdram_pocket dram_clk phase
 	input  wire  [2:0] cfg_cart,                   // MiSTer cart_sel: 0 auto, 2 RAM 1M, 3 RAM 4M, 5 backup, 6 none
 
 	input  wire [27:0] pad,                        // {pad2, pad1}, MiSTer joystick_0 bit order, clk_74a
@@ -202,14 +201,12 @@ end
 reg [1:0] region_s1, region_s2;
 reg [2:0] cart_s1, cart_s2;
 reg [2:0] sdcap_s1, sdcap_s2;
-reg       sdclk_s1, sdclk_s2;
 reg [27:0] pad_s1, pad_s2;
 reg [2:0] rst_s;
 always @(posedge clk_sys) begin
 	region_s1 <= cfg_region;  region_s2 <= region_s1;
 	cart_s1   <= cfg_cart;    cart_s2   <= cart_s1;
 	sdcap_s1  <= cfg_sdcap;   sdcap_s2  <= sdcap_s1;
-	sdclk_s1  <= cfg_sdclk;   sdclk_s2  <= sdclk_s1;
 	pad_s1    <= pad;         pad_s2    <= pad_s1;
 	rst_s     <= {rst_s[1:0], rst_req_74};
 end
@@ -677,7 +674,7 @@ wire [31:0] ramh_do;
 wire        cdram_busy, raml_busy, ramh_busy, vdp1vram_busy, cart_busy;
 
 mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
-	.clk_ram(clk_ram), .clk_sys(clk_sys), .rst_ram(rst_ram), .cap_sel(sdcap_s2), .clk_norm(sdclk_s2),
+	.clk_ram(clk_ram), .clk_sys(clk_sys), .rst_ram(rst_ram), .cap_sel(sdcap_s2),
 
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_clk(dram_clk), .dram_cke(dram_cke),

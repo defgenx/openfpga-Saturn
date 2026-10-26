@@ -25,8 +25,8 @@
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
 // cycle after it is registered. With CL3 the first word reaches the FPGA register about 4.7 to 5.7
 // cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC + input
-// delay). The capture edge and offset (cap_sel) and the dram_clk phase (clk_norm) are runtime
-// settings latched at init, from the Core Settings menu; see docs/memory.md section 3.
+// delay). The capture edge and offset (cap_sel) is a runtime setting latched at init, from the
+// Core Settings menu; see docs/memory.md section 3.
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -42,7 +42,6 @@ module sdram_pocket #(
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
 	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: [1:0] +4..+7 rising edge, +3.5..+6.5 falling edge if [2]
-	input  wire        clk_norm,        // latched with cap_sel: dram_clk = clk instead of ~clk
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -96,12 +95,11 @@ localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
 
 assign dram_cke = 1'b1;
 
-// capture settings take effect at the next init (core Reset)
+// capture setting takes effect at the next init (core Reset)
 reg [2:0] cs = 3'd1;
-reg       cn = 1'b0;
-always @(posedge clk) if (init) begin cs <= cap_sel; cn <= clk_norm; end
+always @(posedge clk) if (init) cs <= cap_sel;
 
-sdram_clk_out u_clk (.clk(clk), .norm(cn), .dram_clk(dram_clk));
+sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
 reg [15:0] cap_n;
@@ -173,37 +171,6 @@ endfunction
 wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the half, write
 wire [15:0] w_b = {addr_b0[16:3], lane_idx(wr_b)};
 
-// ------------------------------------------------------------------ self-check (debug overlay only)
-// After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step (done 242 clk_ram after init_done).
-`ifdef POCKET_DEBUG_OVERLAY
-reg  [8:0] ck_c;
-wire [2:0] ck_st  = ck_c[8:6];
-wire       ck_run = init_done && !chk_done;
-wire       ck_p0  = ck_run && ck_c[5:0] == 6'd0;
-wire [15:0] ck_d  = ck_st[0] ? 16'h5AA5 : 16'hA55A;
-always @(posedge clk) begin
-	if (init) begin
-		ck_c <= '0; chk_done <= 1'b0; chk_ok <= 1'b1;
-	end else if (ck_run) begin
-		ck_c <= ck_c + 1'd1;
-		if (ck_c[5:0] == 6'd50) begin
-			if (ck_st[2:1] == 2'b01 && ch2dout != ck_d) chk_ok <= 1'b0;
-			if (ck_st == 3'd3) chk_done <= 1'b1;
-		end
-	end
-end
-wire [19:1] rq_addr = ck_run ? {1'b0, ck_st[0], 8'd0, 1'b1, 8'd0} : ch2addr;
-wire [15:0] rq_din  = ck_run ? ck_d : ch2din;
-wire  [1:0] rq_wr   = ck_run ? {2{ck_p0 & ~ck_st[1]}} : ch2wr;
-wire        rq_rd   = ck_run ? (ck_p0 & ck_st[1]) : ch2rd;
-`else
-wire [19:1] rq_addr = ch2addr;
-wire [15:0] rq_din  = ch2din;
-wire  [1:0] rq_wr   = ch2wr;
-wire        rq_rd   = ch2rd;
-initial begin chk_done = 1'b0; chk_ok = 1'b0; end
-`endif
-
 // ------------------------------------------------------------------ SCSP state
 reg [17:0] sc_addr;          // word address {bank, 17 bit offset}
 reg [15:0] sc_din;
@@ -219,6 +186,36 @@ assign ch2rdy = ~(sc_wr_p | sc_rd_p);
 reg        s_act  [2:3];     // ACT issued, CAS due
 reg        s_wr   [2:3];
 reg        s_dum  [2:3];
+
+// ------------------------------------------------------------------ self-check (debug overlay only)
+// After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
+`ifdef POCKET_DEBUG_OVERLAY
+reg  [2:0] ck_st;
+wire       ck_run = init_done && !chk_done;
+wire       ck_p0  = ck_run && cyc[5:0] == 6'd0;
+wire [15:0] ck_d  = ck_st[0] ? 16'h5AA5 : 16'hA55A;
+always @(posedge clk) begin
+	if (init) begin
+		ck_st <= 3'd7; chk_done <= 1'b0; chk_ok <= 1'b1;
+	end else if (ck_run) begin
+		if (cyc[5:0] == 6'd50) begin
+			if (ck_st[2:1] == 2'b01 && ch2dout != ck_d) chk_ok <= 1'b0;
+			if (ck_st == 3'd3) chk_done <= 1'b1;
+		end
+		if (cyc[5:0] == 6'd63) ck_st <= ck_st + 1'd1;
+	end
+end
+wire [19:1] rq_addr = ck_run ? {1'b0, ck_st[0], 8'd0, 1'b1, 8'd0} : ch2addr;
+wire [15:0] rq_din  = ck_run ? ck_d : ch2din;
+wire  [1:0] rq_wr   = ck_run ? {2{ck_p0 & ck_st[2:1] == 2'b00}} : ch2wr;
+wire        rq_rd   = ck_run ? (ck_p0 & ck_st[2:1] == 2'b01) : ch2rd;
+`else
+wire [19:1] rq_addr = ch2addr;
+wire [15:0] rq_din  = ch2din;
+wire  [1:0] rq_wr   = ch2wr;
+wire        rq_rd   = ch2rd;
+initial begin chk_done = 1'b0; chk_ok = 1'b0; end
+`endif
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];

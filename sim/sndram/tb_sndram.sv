@@ -23,7 +23,7 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	wire CE_R = MCLK_DIV, CE_F = ~MCLK_DIV;
 	reg [31:0] cyc = 0;
 	always @(posedge CLK) cyc <= cyc + 1;
-	always @(posedge CLK) if (cyc > 300 && init_done) RST_N <= 1;   // the BIOS starts long after the SDRAM init
+	always @(posedge CLK) if (cyc > 420 && init_done) RST_N <= 1;   // the BIOS starts long after the SDRAM init
 	wire SYSRES_N = RST_N;
 
 	// SCSP_CE = 22.5792 MHz as saturn_pocket.sv makes it
@@ -113,7 +113,7 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	initial begin #1; #(T_RAM*10); init = 0; end
 	wire [31:0] dout_a0, dout_a1, dout_b0, dout_b1;
 	sdram_pocket #(.INIT_CLKS(2000)) sdram (
-		.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(CAPV[2:0]), .clk_norm(1'b0),
+		.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(CAPV[2:0]),
 		.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 		.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n), .dram_clk(dram_clk),
 		.addr_a0(17'd0), .addr_a1(16'd0), .din_a(64'd0), .wr_a(8'd0), .rd_a(1'b0), .dout_a0(dout_a0), .dout_a1(dout_a1),

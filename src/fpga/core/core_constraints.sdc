@@ -59,7 +59,7 @@ set_output_delay -clock dram_clk_pin -min -1.0 -add_delay $sdram_out
 set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
 set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
 # read data is captured at READ+5 / READ+6 clk_ram edges (sdram_pocket cap_sel = 1, the default), not at the next edge;
-# the other cap_sel values and clk_norm = 1 are runtime experiments (docs/memory.md section 3) and are not constrained
+# the other cap_sel values are runtime experiments (docs/memory.md section 3) and are not constrained
 set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 5
 set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 4
 

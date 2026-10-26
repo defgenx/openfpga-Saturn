@@ -175,18 +175,17 @@ The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the 
 read reaches the FPGA register 4.7 to 5.7 cycles after the command register edge (half cycle + clock-out delay + 3 cycles
 CL3 + tAC + input delay), so the default samples DQ on rising edges at READ + 5 (word 0) and + 6 (word 1).
 
-**Runtime settings** (Core Settings menu, `interact.json`; core_top registers 0x0C and 0x10, latched by `sdram_pocket`
+**Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
 while `init` is high, so they apply at the next menu Reset without reloading the core):
 
 | Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
 |---|---|---|---|
 | SDRAM read capture | +4 / +5 (default) / +6 / +7 (rising edge) | 0 / **1** / 2 / 3 | 4,5 / 5,6 / 6,7 / 7,8 |
 | | +3.5 / +4.5 / +5.5 / +6.5 (falling edge) | 4 / 5 / 6 / 7 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 / 6.5,7.5 |
-| SDRAM clock | Inverted (default) / Normal | `clk_norm` 0 / 1 | `dram_clk` = ~clk / clk (the SDRAM sees every command half a cycle earlier) |
 
-Settings are an experiment aid, not extra features: the SDC constrains only the default (rising edge, READ + 5).
-"Normal" gives the SDRAM a clock edge at the moment the command pins change, so command hold is marginal by design.
-Later capture (+6, +7) delays the VDP2 results by one or two clk_ram (VDP2 still samples 24 clk_ram after the request).
+The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
+(`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
+edge. Later capture (+6, +7) delays the VDP2 results by one or two clk_ram (VDP2 still samples 24 clk_ram after the request).
 Rule of thumb from the model, with T = clock-out delay + input delay (the data valid window is about 4.2 ns):
 
 | T (ns), clock out + pin to register | best setting |

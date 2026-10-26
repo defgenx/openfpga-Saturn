@@ -24,7 +24,7 @@ never green). Legend, left to right:
 | 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
-| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to word 0x100 of SCSP bank 2 / 3, reads both back (about 600 clk_ram, before the SH-2 runs) and both match; red if any mismatch or not finished |
+| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to word 0x100 of SCSP bank 2 / 3, reads both back (within 320 clk_ram of init done, before the SH-2 runs; the check owns the sound RAM port meanwhile) and both match; red if any mismatch or not finished |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`) |
 
 Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and
@@ -67,9 +67,9 @@ completes). A half that never changes stays 0000. Squares 7, 8 and 11 have no de
 ## debug7: runtime SDRAM timing and the self-check
 
 Same hex row as debug6 plus square 15 = SDRAM self-check (the SCSP activity detector is gone). The Core Settings menu has
-two new lists, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +7 clk_ram after READ
-on the rising edge, +3.5 to +6.5 on the falling edge; default +5 rising) and **SDRAM clock** (Inverted, default, or
-Normal). Options and the delay ranges they cover: docs/memory.md section 3.
+a new list, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +7 clk_ram after READ
+on the rising edge, +3.5 to +6.5 on the falling edge; default +5 rising). Options and the delay ranges they cover:
+docs/memory.md section 3.
 
 Bring-up procedure: with the default the self-check square tells whether the SDRAM works at all. If square 15 is red,
 step "SDRAM read capture" through +4.5 (falling), +5.5 (falling), +6, +4, Reset each time, until square 15 turns green;
