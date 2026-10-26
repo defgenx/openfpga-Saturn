@@ -64,6 +64,9 @@ module VDP2P import VDP2P_PKG::*; (
 	input       [7:0] SCRN_EN,
 	
 	input       [7:0] DBG_EXT
+`ifdef POCKET_DEBUG_OVERLAY
+	, output          DBG_DISP
+`endif
 `ifdef DEBUG
                      ,
 	output VRAMAccessState_t VA_PIPE0,
@@ -153,6 +156,9 @@ module VDP2P import VDP2P_PKG::*; (
 	parameter VBL_START_256     = 10'h100;
 	
 	VDP2Regs_t REGS;
+`ifdef POCKET_DEBUG_OVERLAY
+	assign DBG_DISP = REGS.TVMD.DISP;
+`endif
 	
 	
 	bit [18:1] VRAM_WA;
