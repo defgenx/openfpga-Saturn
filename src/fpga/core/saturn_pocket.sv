@@ -646,7 +646,8 @@ assign CD_RAM_RDY = 1'b1;
 reg [31:0] ramh_din;
 reg  [3:0] ramh_wr;
 always @(posedge clk_ram) begin
-	ramh_din <= dezaemon2_hack && MEM_A[19:0] == 20'h1746C && MEM_DO == 32'h5A015E01 ? 32'h5A115E01 : MEM_DO;
+	// the patch only sets bit 20 (5A01 5E01 -> 5A11 5E01)
+	ramh_din <= {MEM_DO[31:21], MEM_DO[20] | (dezaemon2_hack && MEM_A[19:0] == 20'h1746C && MEM_DO == 32'h5A015E01), MEM_DO[19:0]};
 	ramh_wr  <= {4{~RAMH_CS_N}} & ~MEM_DQM_N;
 end
 wire [21:1] raml_addr = {~RAML_CS_N, ~SRAM_CS_N, ROM_CS_N & SRAM_CS_N & MEM_A[19], MEM_A[18:1]};

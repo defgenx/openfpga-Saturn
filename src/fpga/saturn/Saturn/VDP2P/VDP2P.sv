@@ -2543,8 +2543,8 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [ 8: 0] CDP_HI_D = {S_PRH, S_CCH, S_PH};
 	wire [ 1: 0] CPP;
 	wire [ 8: 0] CDPA_LO_Q, CDPA_HI_Q;
-	VDP2P_SDP #(2,9) cdpa_lo(CLK, S_DPL, CAI, CDP_LO_D, CPP, CDPA_LO_Q);
-	VDP2P_SDP #(2,9) cdpa_hi(CLK, S_DPH, CAI, CDP_HI_D, CPP, CDPA_HI_Q);
+	VDP2P_SDP #(2,9,1) cdpa_lo(CLK, S_DPL, CAI, CDP_LO_D, CPP, CDPA_LO_Q);
+	VDP2P_SDP #(2,9,1) cdpa_hi(CLK, S_DPH, CAI, CDP_HI_D, CPP, CDPA_HI_Q);
 
 	//Pipeline taps: stage 2, 3 and 4 of the access pipelines are read back from block RAM (see VDP2P_DTAP)
 	always_comb begin
