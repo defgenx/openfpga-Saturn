@@ -17,6 +17,7 @@ Per-entity tables are in `sizing/pocket-build/`.
 | lite `mlab-m10k` | same, 61 MLAB RAMs moved to M10K (falling-edge read) | 18,572 (100%) | 1,878 / 1,848 | not placed; 289 blocks implied (+61) | 37 / 66 |
 | lite d1402c7, seeds 1 / 2 / 3 | same as `mlab-m10k`, SEED changed | 18,566 / 18,551 / 18,521 | 1,874 / 1,875 / 1,868 (of 1,848) | not placed | 37 / 66 |
 | **lite smpc-serv2 (seed 13)** | same + SMPC on SERV | **18,295 (99%)** | **1,848 / 1,848: fits** | 293 / 308 | 37 / 66 |
+| **lite cd-trim (on 1a3c356)** | + CD path and CE trims | **18,155 (98%)** | **1,846 / 1,848: fits** | 292 / 308 | 38 / 66 |
 
 Lite smpc-serv2 timing (slow 85C): main clock (counter[0]) setup slack -11.641 ns, TNS -7,728, Fmax 24.5 MHz; counter[1] -4.367; cram0/1 clock pins -3.2/-3.3. Not closed.
 
