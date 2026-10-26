@@ -11,5 +11,5 @@ rsync -a --delete --exclude .git --exclude 'src/fpga/db' --exclude 'src/fpga/inc
 # low game impact only (docs/game-impact.md); COEF, LINESCROLL, ZOOM, RGB32, BITMAP, HIRES, SHADOW, SPECIAL stay
 for m in POCKET_CUT_SCU_DSP POCKET_CUT_SCSP_DSP POCKET_CUT_VDP2_RPARAMB POCKET_CUT_VDP2_EXTCC POCKET_CUT_VDP2_LNCOL \
          POCKET_CUT_VDP2_MOSAIC POCKET_CUT_VDP2_SPRWIN POCKET_CUT_VDP2_LINEWIN POCKET_CUT_VDP2_BACKLINE; do
-	echo "set_global_assignment -name VERILOG_MACRO \"$m=1\"" >> "$DEST/src/fpga/ap_core.qsf"
+	grep -q "\"$m=1\"" "$DEST/src/fpga/ap_core.qsf" || echo "set_global_assignment -name VERILOG_MACRO \"$m=1\"" >> "$DEST/src/fpga/ap_core.qsf"
 done

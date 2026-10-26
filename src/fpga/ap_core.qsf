@@ -798,3 +798,12 @@ set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 # parallel synthesis helper processes hang under x86 emulation; fitter threads are fine
 set_global_assignment -name PARALLEL_SYNTHESIS OFF
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCU_DSP=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCSP_DSP=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_RPARAMB=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_EXTCC=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LNCOL=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_MOSAIC=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPRWIN=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LINEWIN=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_BACKLINE=1"
