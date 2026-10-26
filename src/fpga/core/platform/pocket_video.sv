@@ -169,7 +169,7 @@ end
 always @(posedge clk_sys) if (dbg_we) tbuf[dbg_wa] <= dbg_wd;
 
 localparam TXT_LAT = 4;                    // clk_vid cycles from x to the pixel decision
-wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd2 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
+wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd1 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
 wire [1:0] t_row = y[5:4] - 2'd1;
 wire [2:0] t_col = x[6:4] - 3'd2;
 reg  [4:0] t_ra;

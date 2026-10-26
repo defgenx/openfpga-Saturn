@@ -41,7 +41,7 @@ always @(posedge clk_vid) begin
 			e = (x % 32 >= 24 || idx > 15) ? 24'h202020 : g[idx] ? 24'h00FF00 : y[idx] ? 24'hFFFF00 : 24'hFF0000;
 			if (rgb !== e) begin bad = bad + 1; if (bad < 5) $display("x=%0d got %h exp %h", x, rgb, e); end
 		end
-		if (line >= 16 && line < 48 && x >= 32 + `TXT_LAT && x < 160 + `TXT_LAT) begin : tx
+		if (line >= 16 && line < 32 && x >= 32 + `TXT_LAT && x < 160 + `TXT_LAT) begin : tx
 			integer rxx, cl, gx, gy, lcn; reg [14:0] glv; reg expb, isw;
 			rxx = x - 32 - `TXT_LAT; cl = (line - 16) / 16 * 8 + rxx / 16; gx = (rxx % 16) / 4; lcn = (line - 16) % 16; gy = lcn / 2;
 			glv = glyph((cl*5+3) & 15);
