@@ -33,3 +33,22 @@ the SH-2 is held by the SMPC. 9 green means the BIOS reached its copy of WRAM-H;
 turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
+
+## Hex text row
+
+Under the squares, at x 32..159 and y 16..31 (black background, white digits, cell 16 x 16, glyph 3 x 5 scaled 4 x 2),
+one row of 8 hex digits: the master SH-2 program counter.
+
+```
+ [square row]
+ P P P P P P P P      MSH PC, 32 bit
+```
+
+- **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
+  shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
+- Digits live in an 8 x 4 M10K buffer rewritten continuously by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
+  in `pocket_video`. Squares 8 (SSH) and 15 (SCSP) have no activity detector in this build (always red).
+- The normal build leaves no room for more: with the PC row alone the fit is 1,847 / 1,848 LABs. A version with
+  COMREG/SF, IRL, IST (and IMS, TVMD, frame counter) needed 1,851 to 1,852 LABs. The taps for those exist
+  (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
+- `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.

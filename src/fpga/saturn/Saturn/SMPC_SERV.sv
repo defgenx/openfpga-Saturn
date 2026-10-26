@@ -42,11 +42,18 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	input      [ 6: 0] PDR2I,
 	output     [ 6: 0] PDR2O,
 	output     [ 6: 0] DDR2
+`ifdef POCKET_DEBUG_OVERLAY
+	,output     [ 8: 0] DBG_SMPC   // {SF, COMREG}
+`endif
 );
+
 
 	// ---------------------------------------------------------------- SH-2 side registers
 	reg  [ 7:0] COMREG, SR, IO_BUF, REG_DO;
 	reg         SF;
+`ifdef POCKET_DEBUG_OVERLAY
+	assign DBG_SMPC = {SF, COMREG};
+`endif
 	reg  [ 7:0] PDR_O [2];
 	reg  [ 6:0] DDR [2];
 	reg  [ 1:0] IOSEL, EXLE;

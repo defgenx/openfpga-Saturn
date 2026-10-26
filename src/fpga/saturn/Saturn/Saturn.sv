@@ -208,7 +208,8 @@ module Saturn
 	input      [ 7: 0] DBG_EXT
 `ifdef POCKET_DEBUG_OVERLAY
 	,
-	output     [ 6: 0] DBG_TAP     // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
+	output     [ 6: 0] DBG_TAP,    // {DISP, MSHRES_N, ACS2_N, IRL idle, SSHBS_N, MSHBS_N, 1'b0}
+	output     [99: 0] DBG_TXT     // {MSH PC, COMREG, SF, IRL, TVMD, IST, IMS, SMPC irq}, docs/debug-overlay.md
 `endif
 );
 
@@ -245,6 +246,9 @@ module Saturn
 	bit  [31:0] MSHDI;
 `ifdef POCKET_DEBUG_OVERLAY
 	wire        DBG_DISP;
+	wire [15:0] DBG_TVMD;
+	wire [31:0] DBG_PC, DBG_SCU;
+	wire [ 8:0] DBG_SMPC;
 `endif
 	bit         MSHBS_N;
 	bit         MSHCS0_N;
@@ -451,6 +455,9 @@ module Saturn
 		.MD(6'b001000),
 		
 		.FAST(FAST)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_PC(DBG_PC)
+`endif
 `ifdef POCKET_CUT_SH2_DIVU_SHARED
 		,.DVS_I(DVS0_I), .DVS_O(DVS0_O)
 `endif
@@ -684,6 +691,9 @@ module Saturn
 		.MIREQ_N(MIRQ_N),
 		
 		.FAST(FAST)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_SCU(DBG_SCU)
+`endif
 	);
 	
 	
@@ -904,6 +914,9 @@ module Saturn
 		.PDR2I(SMPC_PDR2I),
 		.PDR2O(SMPC_PDR2O),
 		.DDR2(SMPC_DDR2)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_SMPC(DBG_SMPC)
+`endif
 	);
 `endif
 	
@@ -1043,7 +1056,7 @@ module Saturn
 		
 `ifdef POCKET_DEBUG_OVERLAY
 `ifdef POCKET_VDP2P
-		.DBG_DISP(DBG_DISP),
+		.DBG_DISP(DBG_DISP), .DBG_TVMD(DBG_TVMD),
 `endif
 `endif
 		.DBG_EXT(DBG_EXT)
@@ -1404,7 +1417,9 @@ module Saturn
 `ifdef POCKET_DEBUG_OVERLAY
 `ifndef POCKET_VDP2P
 	assign DBG_DISP = 1'b0;
+	assign DBG_TVMD = 16'h0;
 `endif
+	assign DBG_TXT = {DBG_PC, DBG_SMPC[7:0], 3'b000, DBG_SMPC[8], ~CIRL_N, DBG_TVMD, DBG_SCU[31:16], DBG_SCU[15:0], 3'b000, ~MIRQ_N};
 	assign DBG_TAP = {DBG_DISP, MSHRES_N, ACS2_N, &MSHIRL_N, SSHBS_N, MSHBS_N, 1'b0};
 `endif
 
