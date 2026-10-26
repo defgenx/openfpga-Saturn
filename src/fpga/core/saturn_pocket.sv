@@ -284,7 +284,7 @@ always @(posedge clk_sys) tog_s <= {tog_s[0], rtc_tog};
 wire [64:0] RTC = {tog_s[1], 16'h0000, rtc_pl};
 
 // ---------------------------------------------------------------------------------- clock enables
-reg [31:0] in_clk;
+reg [25:0] in_clk;
 always @(posedge clk_sys)
 	in_clk <= !PAL ? (!SMPC_DOTSEL ? 53748200 : 57272800) :
 	                 (!SMPC_DOTSEL ? 53375000 : 56875000);
@@ -295,20 +295,21 @@ wire SYS_CE_R =  MCLK_DIV;
 wire SYS_CE_F = ~MCLK_DIV;
 
 wire SCSP_2X_CE;
-CEGen SCSP_CEGen (.CLK(clk_sys), .RST_N(1'b1), .IN_CLK(in_clk), .IN_CE(1'b1), .OUT_CLK(22579200*2), .CE(SCSP_2X_CE));
+ce_gen #(26) SCSP_CEGen (.clk(clk_sys), .in_clk(in_clk), .out_clk(26'd45158400), .in_ce(1'b1), .ce(SCSP_2X_CE), .ev());
 
 bit SCSP_DIV;
 always @(posedge clk_sys) if (SCSP_2X_CE) SCSP_DIV <= ~SCSP_DIV;
 wire SCSP_CE = SCSP_2X_CE & SCSP_DIV;
 
 wire SMPC_CE;
-CEGen SMPC_CEGen (.CLK(clk_sys), .RST_N(1'b1), .IN_CLK(22579200*2), .IN_CE(SCSP_2X_CE), .OUT_CLK(4000000), .CE(SMPC_CE));
+wire CD_EV;   // SMPC (4 MHz) and CD (40 MHz) are 1/10 and 1 of the same ratio: every 10th CD enable
+ce_div #(10) SMPC_CEGen (.clk(clk_sys), .ev(CD_EV), .ce(SMPC_CE));
 
 wire CD_CE;
-CEGen CD_CEGen (.CLK(clk_sys), .RST_N(1'b1), .IN_CLK(22579200*2), .IN_CE(SCSP_2X_CE), .OUT_CLK(20000000*2), .CE(CD_CE));
+ce_gen #(12) CD_CEGen (.clk(clk_sys), .in_clk(12'd3528), .out_clk(12'd3125), .in_ce(SCSP_2X_CE), .ce(CD_CE), .ev(CD_EV));   // 40 MHz / 45.1584 MHz = 3125 / 3528
 
 wire CDD_2X_CE;
-CEGen CDD_CEGen (.CLK(clk_sys), .RST_N(1'b1), .IN_CLK(22579200*2), .IN_CE(SCSP_2X_CE), .OUT_CLK(44100*2*2), .CE(CDD_2X_CE));
+ce_div #(256) CDD_CEGen (.clk(clk_sys), .ev(SCSP_2X_CE), .ce(CDD_2X_CE));   // 176.4 kHz = 45.1584 MHz / 256
 
 // ---------------------------------------------------------------------------------- Saturn
 wire [24: 0] MEM_A;

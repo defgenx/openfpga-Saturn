@@ -87,6 +87,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) c
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) platform/pad_pocket.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) platform/pocket_video.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) platform/pocket_audio.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ce_gen.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) saturn_pocket.sv]
 set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) pll_sys/pll_sys.qip]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) pll_sys/pll_lite.sv]
