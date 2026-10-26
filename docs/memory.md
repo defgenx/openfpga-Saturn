@@ -193,8 +193,8 @@ Rule of thumb from the model, with T = clock-out delay + input delay (the data v
 |---|---|
 | 2.0 to 3.0 | +4.5 falling (`cap_sel` 5) |
 | 3.5 to 7.5 | +5 rising (1, default) |
-| 8.0 to 11.0 | +5.5 falling (6) |
-| 12.5 | +6 rising (2) |
+| 8.0 to 11.5 | +5.5 falling (6) |
+| 12.5 | +6 rising (2); 12.0 and above 12.5 fail with every setting in the sweep |
 
 Sweep: `make -C sim sndram` then `sh sim/sndram/sweep.sh [TIN_ps]` (SH-2 through SCSP to the SDRAM model), or
 `sh sim/mem/sweep.sh [TIN_ps]` (`tb_sdram`: VDP2 and SCSP traffic, every model timing check). Both give the same
