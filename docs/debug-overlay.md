@@ -63,7 +63,7 @@ The text row shows the sound CPU's address bus instead of the SH-2 data address;
 ```
 
 Flags digit F, bit 3 to 0: SNDRES_N (68K reset released by the SMPC), M68K_RESO_N (68K RESET instruction not active),
-68K clock enable toggling, AS# toggling (the last two are activity over the last window). The address is not updated
+the raw 68K clock enable (SCCE_R, a sampled 0/1), AS# toggling (activity over the last window). Squares 7, 8 and 11 have no detector in this build (always red). The address is not updated
 while AS# stays high, so an all-zero row means the 68K never ran a bus cycle. A running 68K waiting for the SH-2
 handshake in sound RAM shows a small repeating range of addresses in the sound RAM (0x000000 to 0x0FFFFF, SCSP
 registers 0x100000..).

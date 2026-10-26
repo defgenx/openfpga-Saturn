@@ -752,13 +752,10 @@ always @(posedge clk_sys) begin
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
-wire a_msh, a_vbl, a_irl, a_cd, a_vs, a_de, a_as, a_ce;
-dbg_act d_msh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[1]), .y(a_msh));
-dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(VBL_N), .y(a_vbl));
+wire a_irl, a_cd, a_vs, a_de, a_as;
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
 dbg_act d_as  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_68k[23]), .y(a_as));
-dbg_act d_ce  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_68k[24]), .y(a_ce));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -783,13 +780,13 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {1'b0, a_as, 1'b0, a_cd, a_irl, a_vbl, 2'b00, 1'b0, a_msh, 6'b000000};   // square 8 (SSH) has no detector in the debug build
+wire [15:0] dbg_y = {1'b0, a_as, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH) and 11 (VBL) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
 // hex text row (docs/debug-overlay.md): marker 6, 68K address bus (last cycle with AS asserted), flags digit
 wire        dbg_we = ~dbg_68k[23];
 wire [31:0] dbg_wd = {4'h6, dbg_68k[22:0], 1'b0, 4'h0};
-wire  [3:0] dbg_lo = {dbg_68k[26], dbg_68k[25], a_ce, a_as};   // SNDRES_N, M68K_RESO_N, CE activity, AS activity
+wire  [3:0] dbg_lo = {dbg_68k[26], dbg_68k[25], dbg_68k[24], a_as};   // SNDRES_N, M68K_RESO_N, CE (raw), AS activity
 `endif
 
 pocket_video video (
