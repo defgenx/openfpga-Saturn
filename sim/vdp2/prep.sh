@@ -37,3 +37,8 @@ PY
 		esac
 	done
 fi
+# Third copy, renamed GOLD_: the golden exactly as upstream (merged burst groups). Only its VRAM contents are used
+# (tb.cpp compares them with the rewritten design's after the writes have drained). REF_ gets the lane drain of VDP2P.
+rm -rf $OUT/gold; mkdir -p $OUT/gold
+for f in VDP2.sv VDP2_pkg.sv VDP2_mem.sv; do sed 's/REF_/GOLD_/g' $OUT/ref/$f > $OUT/gold/$f; done
+[ "$LANEPATCH" = 0 ] || python3 lane_patch.py $OUT/ref/VDP2.sv

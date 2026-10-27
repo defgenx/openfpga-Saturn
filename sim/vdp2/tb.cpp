@@ -1,5 +1,6 @@
 // Differential testbench: REF_VDP2 (golden) vs VDP2 (rewritten), identical stimulus,
 // every output compared on every clock.
+#include <functional>
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
@@ -46,7 +47,7 @@ struct Mem {
 	static void wr(Bank& b, uint32_t a, uint64_t d, uint32_t we) {
 		if (!we) return;
 		for (int i = 0; i < 4; i++) {
-			uint16_t& w = b.h[(a + i) & (b.h.size() - 1)];
+			uint16_t& w = b.h[((a & ~3u) + i) & (b.h.size() - 1)];   // a 64 bit group is 4 aligned halfwords (the port address keeps bit 1 clear only)
 			uint16_t v = (d >> (48 - 16 * i)) & 0xFFFF;
 			if (we & (0x80 >> (2 * i))) w = (w & 0x00FF) | (v & 0xFF00);
 			if (we & (0x40 >> (2 * i))) w = (w & 0xFF00) | (v & 0x00FF);
@@ -84,6 +85,7 @@ struct BusDrv {
 	BusIn out;
 	Rng* rng;
 	int timeouts = 0, done = 0;
+	std::function<void(const Op&, size_t)> on_wr;   // a CPU VRAM write beat is presented
 
 	// called once per clock; `odd` = CE_F clock, the clock after a CE_R edge. Outputs change only there.
 	void step(bool odd, bool rdy_n) {
@@ -107,6 +109,7 @@ struct BusDrv {
 			out.ad_n = 0; out.req_n = 0;
 			out.dten_n = cur.kind == 1 ? 1 : 0;
 			if (cur.kind != 1) out.di = cur.data[beat];
+			if (cur.kind != 1 && on_wr) on_wr(cur, beat);
 			st = 3; wait = 0; break;
 		case 3:   // after the request: reads wait for ready, bursts continue, else release
 			if (cur.kind == 1) { if (rdy_n && wait++ < 4000) break; st = 4; break; }
@@ -353,11 +356,11 @@ int main(int argc, char** argv) {
 	bool lock_regs = (seed & 3) == 0;
 
 	if (getenv("VDP2_CFG")) { for (int i = 0; i < 0x90; i++) printf("%03x=%04x%s", 2*i, cfg.r[i], (i&7)==7?"\n":" "); printf("\n"); }
-	Mem mr, md;
+	Mem mr, md, mg;
 	Rng mrng(seed ^ 0xABCDEF);
 	mr.fill(mrng, g_fill >= 0 ? g_fill : (seed % 7 == 0) ? 3 : (int)(seed % 3));
 	if (g_noflip) for (Bank* b : {&mr.a0, &mr.a1, &mr.b0, &mr.b1}) for (auto& h : b->h) h &= ~0x4400;   // clear flip bits (bit 10, bit 14)
-	md = mr;
+	md = mr; mg = mr;
 
 	auto* top = new Vtb_top;
 	BusDrv bus; bus.rng = &rng;
@@ -370,6 +373,14 @@ int main(int argc, char** argv) {
 
 	long t = 0;
 	bool failed = false;
+	// VRAM contents check: the upstream golden (merged burst groups, model mg) against the rewritten design (one lane per
+	// slot, model md). Cells touched by a CPU write in the last 6000 clocks are skipped (the drain may still be running).
+	std::vector<long> wr_t[2] = {std::vector<long>(md.a0.h.size(), -1), std::vector<long>(md.b0.h.size(), -1)};
+	bus.on_wr = [&](const Op& o, size_t beat) {
+		uint32_t ad = o.addr + 2 * (uint32_t)beat;
+		if (ad >= 0x80000) return;
+		wr_t[(ad >> 18) & 1][(ad >> 1) & (wr_t[0].size() - 1)] = t;
+	};
 	int frame = 0, lastvbl = 1, lasthbl = 1;
 	std::vector<uint8_t> img[2]; int wline[2] = {0, 0}, wmax[2] = {0, 0};
 	std::vector<std::vector<uint8_t>> line[2];
@@ -470,6 +481,7 @@ int main(int argc, char** argv) {
 
 		// memory read data from the previous clock's addresses
 		top->r_RA0_Q = mr.a0.q; top->r_RA1_Q = mr.a1.q; top->r_RB0_Q = mr.b0.q; top->r_RB1_Q = mr.b1.q;
+		top->g_RA0_Q = mg.a0.q; top->g_RA1_Q = mg.a1.q; top->g_RB0_Q = mg.b0.q; top->g_RB1_Q = mg.b1.q;
 		top->d_RA0_Q = md.a0.q; top->d_RA1_Q = md.a1.q; top->d_RB0_Q = md.b0.q; top->d_RB1_Q = md.b1.q;
 		top->CS_N = bus.out.cs_n; top->AD_N = bus.out.ad_n; top->DTEN_N = bus.out.dten_n; top->REQ_N = bus.out.req_n; top->DI = bus.out.di;
 		top->eval();
@@ -494,7 +506,8 @@ int main(int argc, char** argv) {
 		// dots of the next line in the rewritten design; those dots are refreshed before the display window opens.
 		VlWide<3> rmc = rm, dmc = dm;
 		if (!bits(rm, 7, 1) || (g_legal && (!warm || !bits(rm, 8, 1) || !bits(rm, 11, 1) || curline[1].size() < 6 || line[1].empty()))) for (int b = 12; b < 36; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }
-		bool diff = cutmode ? (bits(rm, 0, 52) != bits(dm, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
+		if (cutmode && !bits(rm, 7, 1)) for (int b = 36; b < 52; b++) { rmc[b >> 5] &= ~(1u << (b & 31)); dmc[b >> 5] &= ~(1u << (b & 31)); }   // FBDO (VDP1 framebuffer read data) is not meaningful in vertical blank
+		bool diff = cutmode ? (bits(rmc, 0, 52) != bits(dmc, 0, 52)) : (memcmp(&rmc, &dmc, sizeof(rmc)) != 0 ||
 			top->r_RA0_A != top->d_RA0_A || top->r_RA1_A != top->d_RA1_A || (top->r_RA_WE && top->r_RA_D != top->d_RA_D) ||
 			top->r_RA_WE != top->d_RA_WE || top->r_RA_RD != top->d_RA_RD ||
 			top->r_RB0_A != top->d_RB0_A || top->r_RB1_A != top->d_RB1_A || (top->r_RB_WE && top->r_RB_D != top->d_RB_D) ||
@@ -520,6 +533,12 @@ int main(int argc, char** argv) {
 		vbl_age = bits(rm, 7, 1) ? 0 : vbl_age + 1;
 		for (int k = 0; k < 16; k++) covc[k] += (top->cov >> k) & 1;
 		mr.tick(top->r_RA0_A, top->r_RA1_A, top->r_RA_D, top->r_RA_WE, top->r_RB0_A, top->r_RB1_A, top->r_RB_D, top->r_RB_WE);
+		if (getenv("VDP2_WATCH")) { uint32_t wa = strtoul(getenv("VDP2_WATCH"), 0, 16);
+			if (top->g_RA_WE && (top->g_RA0_A & ~3u) == wa) printf("t=%ld GOLD A we=%02x d=%016llx\n", t, top->g_RA_WE, (unsigned long long)top->g_RA_D);
+			if (top->d_RA_WE && (top->d_RA0_A & ~3u) == wa) printf("t=%ld DUT  A we=%02x d=%016llx\n", t, top->d_RA_WE, (unsigned long long)top->d_RA_D);
+			if (t > 132950 && t < 133100 && top->d_RA_WE) printf("t=%ld DUTANY A0=%05x we=%02x\n", t, (unsigned)top->d_RA0_A, top->d_RA_WE);
+			if (top->r_RA_WE && (top->r_RA0_A & ~3u) == wa) printf("t=%ld REF  A we=%02x d=%016llx\n", t, top->r_RA_WE, (unsigned long long)top->r_RA_D); }
+		mg.tick(top->g_RA0_A, top->g_RA1_A, top->g_RA_D, top->g_RA_WE, top->g_RB0_A, top->g_RB1_A, top->g_RB_D, top->g_RB_WE);
 		md.tick(top->d_RA0_A, top->d_RA1_A, top->d_RA_D, top->d_RA_WE, top->d_RB0_A, top->d_RB1_A, top->d_RB_D, top->d_RB_WE);
 
 		// video capture for both
@@ -551,6 +570,15 @@ int main(int argc, char** argv) {
 	}
 	// bus driver: run the slot logic with the golden RDY_N is handled in the loop below
 	if (g_nostop && mism_total) failed = true;
+	if (!cutmode && !g_nowr) {
+		long bad = 0, chk = 0;
+		const Bank* bm[2] = {&md.a0, &md.b0}; const Bank* bg[2] = {&mg.a0, &mg.b0};
+		for (int b = 0; b < 2; b++) for (size_t i = 0; i < bm[b]->h.size(); i++) if (wr_t[b][i] < t - 6000) {
+			chk++;
+			if (bm[b]->h[i] != bg[b]->h[i]) { if (bad++ < 5) printf("VRAM CONTENT MISMATCH bank=%c halfword=%05zx dut=%04x golden=%04x\n", 'A' + b, i, bm[b]->h[i], bg[b]->h[i]); }
+		}
+		if (bad) { printf("VRAM contents: %ld of %ld halfwords differ from the upstream golden\n", bad, chk); failed = true; }
+	}
 	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d mism=%ld %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, mism_total, failed ? "FAIL" : "PASS");
 	if (getenv("VDP2_COV")) { for (int k = 0; k < 16; k++) printf("cov%d=%ld ", k, covc[k]); printf("\n"); }
 	delete top;

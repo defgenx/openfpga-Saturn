@@ -1468,7 +1468,7 @@ module VDP2P import VDP2P_PKG::*; (
 			
 			CS_N_OLD <= CS_N;
 			if (CS_N && !CS_N_OLD) begin
-				VRAM_WLOCK <= ~FIFO_EMPTY;
+				VRAM_WLOCK <= ~FIFO_EMPTY | VRAM_WRITE_PEND;   // lanes of a burst group may still be draining
 			end
 			if (FIFO_EMPTY && VRAM_WRITE_PEND_CLR && VRAM_WLOCK) begin
 				VRAM_WLOCK <= 0;

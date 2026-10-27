@@ -23,10 +23,11 @@ vdp2: vdp2-build
 	if [ -s $(B)/fails.txt ]; then echo "vdp2 differential test: FAILED"; exit 1; else echo "vdp2 differential test: all $(SEEDS) seeds match"; fi
 
 vdp2-build: $(B)/obj/Vtb_top
-$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/$(DUT)/*.sv) $(HERE)/prep.sh
+$(B)/obj/Vtb_top: $(HERE)/tb.cpp $(HERE)/tb_top.sv $(HERE)/models.sv $(wildcard $(HERE)/../../src/fpga/saturn/Saturn/$(DUT)/*.sv) $(HERE)/prep.sh $(HERE)/lane_patch.py
 	@$(HERE)/prep.sh $(B) $(CUT)
 	@rm -f $(B)/run_*.log
 	cd $(HERE) && verilator $(VFLAGS) $(B)/ref/VDP2_pkg.sv $(B)/ref/VDP2.sv $(B)/ref/VDP2_mem.sv \
+		$(B)/gold/VDP2_pkg.sv $(B)/gold/VDP2.sv $(B)/gold/VDP2_mem.sv \
 		$(B)/cur/VDP2_pkg.sv $(B)/cur/VDP2.sv $(B)/cur/VDP2_mem.sv models.sv tb_top.sv tb.cpp
 
 # cut builds: make -C sim vdp2 CUT=ZOOM  (video-only comparison against the golden copy with the same register bits cut)

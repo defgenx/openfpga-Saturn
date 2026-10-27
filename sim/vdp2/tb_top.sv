@@ -18,6 +18,7 @@ module tb_top (
 
 	input  [31:0] r_RA0_Q, r_RA1_Q, r_RB0_Q, r_RB1_Q,
 	input  [31:0] d_RA0_Q, d_RA1_Q, d_RB0_Q, d_RB1_Q,
+	input  [31:0] g_RA0_Q, g_RA1_Q, g_RB0_Q, g_RB1_Q,
 
 	// packed output buses: {DO,RDY_N,VINT_N,HINT_N,DCE_R,DCE_F,HTIM_N,VTIM_N,FBDO,R,G,B,DCLK,HS_N,VS_N,HBL_N,VBL_N,FIELD,INTERLACE,HRES,VRES}
 	output [16+1+1+1+1+1+1+1+16+8+8+8+1+1+1+1+1+1+1+3+2-1:0] r_misc, d_misc,
@@ -31,6 +32,8 @@ module tb_top (
 	output [63:0] r_RB_D, d_RB_D,
 	output [ 7:0] r_RB_WE, d_RB_WE,
 	output        r_RB_RD, d_RB_RD,
+	output [17:1] g_RA0_A, output [16:1] g_RA1_A, output [63:0] g_RA_D, output [7:0] g_RA_WE,
+	output [17:1] g_RB0_A, output [16:1] g_RB1_A, output [63:0] g_RB_D, output [7:0] g_RB_WE,
 	output [15:0] cov
 );
 	wire [15:0] r_DO, d_DO, r_FBDO, d_FBDO;
@@ -54,6 +57,22 @@ module tb_top (
 		.R(r_R), .G(r_G), .B(r_B), .DCLK(r_DCLK), .HS_N(r_HS_N), .VS_N(r_VS_N),
 		.HBL_N(r_HBL_N), .VBL_N(r_VBL_N), .FIELD(r_FIELD), .INTERLACE(r_INTERLACE),
 		.HRES(r_HRES), .VRES(r_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
+
+	// upstream golden, unpatched: VRAM contents reference only
+	wire [15:0] g_DO, g_FBDO; wire g_RDY_N, g_VINT_N, g_HINT_N, g_DCE_R, g_DCE_F, g_HTIM_N, g_VTIM_N, g_RA_RD, g_RB_RD;
+	wire [7:0] g_R, g_G, g_B; wire g_DCLK, g_HS_N, g_VS_N, g_HBL_N, g_VBL_N, g_FIELD, g_INTERLACE; wire [2:0] g_HRES; wire [1:0] g_VRES;
+	GOLD_VDP2 u_gold (
+		.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .RES_N(RES_N),
+		.DI(DI), .DO(g_DO), .CS_N(CS_N), .AD_N(AD_N), .DTEN_N(DTEN_N), .REQ_N(REQ_N), .RDY_N(g_RDY_N),
+		.VINT_N(g_VINT_N), .HINT_N(g_HINT_N), .DCE_R(g_DCE_R), .DCE_F(g_DCE_F),
+		.HTIM_N(g_HTIM_N), .VTIM_N(g_VTIM_N), .FBDI(FBDI), .FBDO(g_FBDO), .PAL(PAL), .EXLAT_N(EXLAT_N),
+		.RA0_A(g_RA0_A), .RA1_A(g_RA1_A), .RA_D(g_RA_D), .RA_WE(g_RA_WE), .RA_RD(g_RA_RD),
+		.RA0_Q(g_RA0_Q), .RA1_Q(g_RA1_Q),
+		.RB0_A(g_RB0_A), .RB1_A(g_RB1_A), .RB_D(g_RB_D), .RB_WE(g_RB_WE), .RB_RD(g_RB_RD),
+		.RB0_Q(g_RB0_Q), .RB1_Q(g_RB1_Q),
+		.R(g_R), .G(g_G), .B(g_B), .DCLK(g_DCLK), .HS_N(g_HS_N), .VS_N(g_VS_N),
+		.HBL_N(g_HBL_N), .VBL_N(g_VBL_N), .FIELD(g_FIELD), .INTERLACE(g_INTERLACE),
+		.HRES(g_HRES), .VRES(g_VRES), .SCRN_EN(SCRN_EN), .DBG_EXT(DBG_EXT));
 
 	`DUT_MOD u_dut (
 		.CLK(CLK), .RST_N(RST_N), .CE_R(CE_R), .CE_F(CE_F), .RES_N(RES_N),
