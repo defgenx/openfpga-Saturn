@@ -49,8 +49,11 @@ configurations and lists exact matches and the first mismatching clock of the ot
 
 Removes: the effect DSP datapath (shifter, multiplier, FtoI/ItoF, step state), the DSP's dedicated RAM copies
 (`MPRO_DRAM`, `TEMP_DRAM`, `MADRS_DRAM`, MPRO valid RAM), the MIXS accumulate path (`MIXSA/B_RAM`, null flags, adder)
-and the EFREG return level/pan stage. Implementation: three one-line `ifdef`s in `SCSP.sv` (`MPRO0_Q = 0`,
-`DSP_MIXS_Q = 0`, EFREG term = 0); the rest folds away in synthesis.
+and the EFREG return level/pan stage. Implementation: three one-line `ifdef`s in `SCSP.sv` and `SCSPP.sv` (`MPRO0_Q = 0`,
+`DSP_MIXS_Q = 0`, EFREG term of `EFF_W` = 0); the rest folds away in synthesis. (`SCSPP.sv` lacked the third one until the
+compact DSP work; the return of 68K-written EFREG words reached the output and the lock-step cut test only passed
+because its random traffic rarely wrote EFREG with an effect send level set.)
+`POCKET_SCSP_DSP_COMPACT` keeps the DSP at about half the cost of the full one instead of cutting it: docs/scsp-rewrite.md section 6.
 
 Behaviour: an all-zero DSP program issues no write to TEMP/MEMS/EFREG and no sound-RAM access. The CPU-visible RAMs
 (COEF, MADRS, MPRO, TEMP, MEMS, EFREG) are kept and return what the 68K/SCU wrote, because a driver may read them

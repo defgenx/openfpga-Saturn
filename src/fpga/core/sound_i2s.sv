@@ -33,6 +33,7 @@ module sound_i2s #(
     // Left and right audio channels. Can be in an arbitrary clock domain
     input wire [CHANNEL_WIDTH - 1:0] audio_l,
     input wire [CHANNEL_WIDTH - 1:0] audio_r,
+    input wire audio_stb,     // one clk_audio cycle when audio_l/audio_r hold a new sample
 
     output reg audio_mclk,
     output reg audio_lrck,
@@ -99,6 +100,9 @@ module sound_i2s #(
     end
   endgenerate
 
+  wire        write_en = audio_stb;
+  wire [31:0] audgen_sampdata_s;
+
   sync_fifo #(
       .WIDTH(32)
   ) sync_fifo (
@@ -109,24 +113,6 @@ module sound_i2s #(
       .data(audgen_sampdata),
       .data_s(audgen_sampdata_s)
   );
-
-  reg write_en = 0;
-  reg [CHANNEL_WIDTH - 1:0] prev_left;
-  reg [CHANNEL_WIDTH - 1:0] prev_right;
-
-  // Mark write when necessary
-  always @(posedge clk_audio) begin
-    prev_left  <= audio_l;
-    prev_right <= audio_r;
-
-    write_en   <= 0;
-
-    if (audio_l != prev_left || audio_r != prev_right) begin
-      write_en <= 1;
-    end
-  end
-
-  wire [31:0] audgen_sampdata_s;
 
   reg [31:0] audgen_sampshift;
   reg [4:0] audio_lrck_cnt;

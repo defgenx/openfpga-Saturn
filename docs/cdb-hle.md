@@ -221,3 +221,12 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 SERV sources with its LICENSE, `cdb_fw.hex/.mif`), `firmware/cdb/` (C source, linker script, Makefile), `sim/cdb/`,
 `sizing/cdb/` (`cpu/` CPU candidates, `cdb_hle.qsf`, `saturn/` whole-Saturn A/B projects), `Saturn.qip` lists the new
 files, `Saturn.sv` selects with the define.
+
+## Area round (branch `area-hunt`)
+
+- `CR` (command registers, written from the SH-2 side, read by the firmware) and `RR` (response registers, the other way) are 4 x 16
+  M10K blocks read through the falling-edge address register (`CDB_FERAM` in `cdb_xfer.sv`: the firmware's data address and the SCU A-bus
+  address are registers); they are not cleared by reset (the firmware reads CR only after a command and writes RR first). The transfer
+  FIFO uses the same RAM. 128 flip-flops and three MLABs less. `sim/cdb` with `-DPOCKET_FE_CHECK`: 26 + 6 checks, 0 failed, no `FE_ADDR_LATE`.
+- The sink takes `a_base` directly (no `sk_base` copy): the firmware writes `R_SK_BASE` only while the engine is disarmed.
+

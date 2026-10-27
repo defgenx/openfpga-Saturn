@@ -1,7 +1,8 @@
 # SCSPP: area-first SCSP for the Pocket
 
 Scope: `src/fpga/saturn/Saturn/SCSPP/` (`SCSPP.sv`, `SCSPP_pkg.sv`), module `SCSPP` with the port list of `SCSP`, selected in
-`Saturn.sv` by `ifdef POCKET_SCSPP`; `sim/scsp/` (lock-step bench), `sizing/scspp/` (fit flow and profile tools).
+`Saturn.sv` by `ifdef POCKET_SCSPP`; `sim/scsp/` (lock-step bench), `sizing/scspp/` (fit flow and profile tools). Section 6 is the
+compact DSP (`POCKET_SCSP_DSP_COMPACT`), the alternative to cutting the DSP.
 Reference behaviour: `ref/Saturn_MiSTer/rtl/Saturn/SCSP` (the golden the shrunk `SCSP` was already verified against; see
 [scsp.md](scsp.md)). Budget: 1,400 fitter ALMs in the system (1,955 in the first full build, 1,995 in the measured Pocket compile).
 
@@ -93,3 +94,97 @@ internals and report the first differing RAM (`sim/scsp/tb.cpp`); `sim/scsp/run_
 
 The two stack RAMs (`SCSPP_STACK_RAM`) are M10K byte lanes read on the falling edge (`SCSPP_FERAM`); key/bit RAMs stay MLAB (1 ALM).
 `make -C sim scsp` (6 seeds, both builds) PASS; `sim/scsp/tb.cpp` applies the next clock enables before the falling edge.
+
+## 6. Compact SCSP DSP (`POCKET_SCSP_DSP_COMPACT`)
+
+Purpose: keep reverb and effects in the lite build, which cuts the DSP (`POCKET_CUT_SCSP_DSP`, [cuts.md](cuts.md)), at about half the
+cost of the full DSP. `POCKET_CUT_SCSP_DSP` wins when both are defined; without either macro the full DSP of sections 1-5 is
+unchanged. In the lite flow: `SCSP_DSP=compact tools/pocket_lite.sh <dest>` defines the compact macro instead of the cut.
+Equivalence target: section 1 (every output on every clock, MPRO/TEMP/MEMS/MIXS/EFREG/COEF/MADRS semantics, the sound-RAM requests
+at the same clocks, SOUND_L/R identical). The memory-side request interface is untouched, so the SDRAM deadline is unchanged.
+
+### 6.1 Measured
+
+`quartus_map` / `quartus_fit` of `scsp_wrap` (standalone top, 233 virtual pins, area profile of section 3, `sizing/scspp/mkproj.sh`
+revisions `dsp_cut`, `dsp_compact`, `dsp_full`; Quartus 21.1, 5CEBA4F23C8, NUM_PARALLEL_PROCESSORS 1):
+
+| Build | map ALM | map ALUT | regs | fit ALM | RAM blocks | DSP blocks | Fmax (standalone, 57.27 MHz target) |
+|---|---|---|---|---|---|---|---|
+| cut (`POCKET_CUT_SCSP_DSP`) | 1,337 | 1,831 | 1,171 | 1,307 | 25 | 9 | 61.4 MHz |
+| full DSP (no macro) | 1,747 | 2,522 | 1,420 | 1,762 | 34 | 10 | 58.4 MHz |
+| **compact** | **1,556** | 2,231 | 1,379 | **1,526** | **31** | **13** | 57.25 MHz (slack -0.007 ns) |
+| full minus cut | +410 | +691 | +249 | +455 | +9 | +1 | |
+| **compact minus cut** | **+219** | +400 | +208 | **+219** | **+6** | **+4** | |
+
+Restoring the DSP costs 1.87x less than the full one by the map estimate and 2.08x less by the fitter (the fitter charges the two MLAB
+RAMs of the full DSP, `MPRO_SET_RAM` and `MIXS_NULL_RAM`, about 50 ALMs of memory LABs; the compact DSP has none). The full-minus-cut
+figure is 439 ALMs in [cuts.md](cuts.md) (older sources, cut without the EFREG term); against that the compact DSP is 2.0x smaller by
+the map estimate. DSP blocks: 4 more than the cut (MAC, FtoI, ItoF, MIXS level; the full DSP uses 1), the lite build uses 37-38 of 66;
+RAM blocks: 6 more than the cut (the full DSP: 9) against 15 free in the lite build (`fit-status.md`). The six worst paths of the compact build are
+output-stage paths (`OP7.SLOT` to `ACC_L`, as in the cut), none is in the DSP; the clock is not closed at the system level anyway
+([fit-status.md](fit-status.md)).
+
+### 6.2 What is different
+
+Where the full DSP's 410 map ALMs were (each piece removed from it in turn): MIXS accumulate path 107, sound-RAM address/data path
+including ItoF 102 (ItoF 45), FtoI 36, multiplier path 56. Registers are nearly free in the map estimate (removing 56 moved it by 2
+ALMs); the estimate follows LUTs, so the work went into LUTs. Steps, in the order taken (map ALM of `scsp_wrap`):
+
+| Step | map ALM |
+|---|---|
+| full DSP | 1,747 |
+| TEMP, MEMS, EFREG, MIXS as one true dual-port RAM each (port A 68K and sweep, port B the DSP) instead of a 68K copy plus a DSP copy on one muxed write bus; a DSP write still replaces a 68K write in the same clock. MIXS: one 32-entry RAM for both generations, accumulation on port A, DSP and 68K on port B | 1,664 |
+| `INPUTS` loaded at CYCLE0_CE straight from MEMS/MIXS/EXTS of the fetched instruction (no `MIXS_Q`, `EXTS_Q`, `MPRO1_IRA`: -56 registers) | 1,662 |
+| FtoI, ItoF and the MIXS level as multiplications by a one-hot power of two; one address adder for the TEMP read and write | 1,589 |
+| `NXADR` as the carry of the address sum; COEF and MASA addresses unmasked | 1,571 |
+| more MPRO fields unmasked (write addresses, SHFT, TABLE, ADREB, NXADR) | 1,565 |
+| `MIXS_OLD` kept (the variant without it is not exact, below) | 1,567 |
+| COEF/MADRS true dual port; the MPRO valid flag and the MIXS 'not written yet' flag as extra byte lanes instead of MLAB RAMs (fit 1,592 -> 1,533) | 1,568 |
+| sweep data of the DSP RAMs from the slot RAMs' `SW_D` | 1,557 |
+| the MPRO valid flag in two unused entry bits instead of a ninth byte lane (3 -> 2 M10K for `MPRO_DRAM`) | **1,556** |
+
+The fitter charges an MLAB RAM by whole memory LABs: `MPRO_SET_RAM` (128 x 1) alone is 42 ALMs, and the compact DSP has no MLAB RAM.
+A byte lane or a spare bit of an M10K entry costs nothing.
+
+ItoF as in the reference needs the run of bits equal to the sign and three normalising shift stages; here the run (`IT_E`) gives a
+one-hot `2^shift` and a DSP block gives bits 21:11 of `value * 2^shift` (the mantissa needs no sign handling because the shift never
+exceeds 11). `NOFL` passes bits 23:8, which is the same product with shift 3. FtoI is `sext(value) * 2^(11-EXP)`, and its NOFL case is
+the raw word times 2^8.
+
+Rejected, with the reason:
+- Serialising the datapath. The map estimate follows LUTs; the shifters, the MAC network (X/Y/B select, 26-bit adder) and the address
+  adders each need operand muxes when shared, which cost what the shared operator saves. Even a free ItoF and FtoI would have saved at
+  most their measured 81; the DSP-block versions of ItoF, FtoI and the MIXS level together saved 73.
+- Dropping `MIXS_OLD` for a read of the entry in the next step: not exact. A reset pulse that skips the first capture leaves the old
+  value in the reference, but the entry has changed by then (bench seed 28).
+- Late commit of the DSP state one clock after CYCLE1_CE to drop the MEMA/OUT registers: saves registers only.
+- One RAM for TEMP, MEMS and EFREG, or for MEMS and MIXS: the DSP writes TEMP, MEMS and EFREG in the same clock, and MIXS has three users.
+
+### 6.3 Deviations and caveats
+
+- Exact against the full DSP in `make -C sim scsp-compact`, and the default and cut builds still pass. Two cases need a note:
+  - In the clock the MIXS generations swap, the reference reads the former accumulation RAM at its accumulation address; the last read
+    data of a register access (visible only through SCDO of a later write) depends on it. `MIXS_TOG` reproduces it (-1 ALM if dropped).
+  - `SW_D` zeroes the data of 68K writes to the DSP RAMs while any earlier stage's reset window is open, not only the last stage's.
+    The last stage's sweep clears every entry afterwards, so the contents are identical; writes in that window are untested (section 3a).
+- `POCKET_CUT_SCSP_DSP` now drops the EFREG term of the effect return (`SCSPP.sv` only had two of the three `ifdef`s `SCSP.sv` has,
+  as [cuts.md](cuts.md) describes). `make -C sim scsp cut-dsp` could not tell before: its random traffic rarely wrote EFREG with an effect send
+  level set. This also removes the DSP-side EFREG read RAM from the cut (-8 map ALMs).
+- The RAMs are true dual port with 'don't care' read-during-write. No consumer samples a read in the clock of a write to the same
+  address on the other port, except the last read data of a register access (SCDO of a later write, a don't-care on the bus).
+- 4 DSP blocks and 6 M10K blocks more than the cut (the full DSP: 1 and 9). A 24-bit true dual-port RAM takes two M10K blocks (TEMP,
+  MEMS, MIXS: 2 each; COEF, MADRS, EFREG 1 each; `MPRO_DRAM` 2; `MPRO_MIR` 1).
+
+### 6.4 Verification
+
+`make -C sim scsp-compact` (`CSEEDS`, default 16 seeds x 400 rounds x 2 builds, MIDI 0 and 1): PASS, WAV files identical; `run`
+(default build) and `cut-dsp` PASS with the same stimulus. New stimulus in `sim/scsp/tb.cpp`: a reverb-shaped DSP program (MIXS inputs,
+two ring-buffer taps, coefficient multiplies, float write-back with ADRS and the table addressing, EFREG returns), and register writes
+aimed at the slot and step being executed (SCR7 ISEL/IMXL, CR1 ring buffer, instruction words, TEMP, MEMS, MIXS, EFREG, COEF). Per seed
+the DSP issues 10,000-14,000 sound-RAM reads and 4,500-5,700 writes. The WAV sample is taken at the first settled output after the
+512th clock enable (the two-clock output lag of section 3a could land in it after a reset). `DBGQ` builds print the DSP activity and the
+first diverging DSP register. Mutation runs (`sim/scsp/mutate.sh`, `MUT_EXTRA=-DPOCKET_SCSP_DSP_COMPACT`, seeds as one quoted list)
+catch: MIXS data and lane, MEMS byte lane, ItoF NOFL shift and exponent, FtoI exponent patch, MIXS level slice, a masked TWT, the MIXS swap.
+Seeds beyond the default 6 matter: the ISEL rewrite and the swap corners were first hit by seeds 14 and 4 of the 400-round runs.
+
+The reference is `ref/Saturn_MiSTer`; where the submodule is not checked out, `make GOLD=<path to rtl/Saturn/SCSP>`.

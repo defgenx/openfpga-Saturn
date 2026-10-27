@@ -6,6 +6,8 @@ GOLD   := $(ROOT)/ref/Saturn_MiSTer/rtl/Saturn/SCSP
 NEW    ?= $(ROOT)/src/fpga/saturn/Saturn/SCSPP
 B      ?= build
 SEEDS  ?= 1 2 3 4 5 6
+# The compact DSP has narrow hand-over corners (reset pulses, SCR7 rewrites, the MIXS swap); 16 seeds reach them.
+CSEEDS ?= 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
 ROUNDS ?= 400
 
 # Drop the `define SIM and the synopsys translate_off regions, and make the one
@@ -65,6 +67,22 @@ $(B)/objd/Vtb_top: $(B)/REF_SCSP_dspoff.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.s
 cut-dsp: $(B)/objd/Vtb_top
 	@set -e; for s in $(SEEDS); do $(B)/objd/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedd$$s; done
 	@cmp $(B)/seedd1_ref.wav $(B)/seedd1_new.wav && echo "WAV files identical (DSP cut)"
+
+# POCKET_SCSP_DSP_COMPACT: the area-optimised DSP against the golden with its full DSP (both MIDI settings).
+# Run: make compact
+$(B)/objc/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator $(VFLAGS) -DPOCKET_SCSP_DSP_COMPACT -Mdir $(B)/objc \
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_nm.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
+	@test -x $@
+$(B)/objcm/Vtb_top: $(B)/REF_SCSP.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator $(VFLAGS) -DPOCKET_SCSP_DSP_COMPACT -GMIDI=1 -Mdir $(B)/objcm \
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
+	@test -x $@
+.PHONY: compact
+compact: $(B)/objc/Vtb_top $(B)/objcm/Vtb_top
+	@set -e; for s in $(CSEEDS); do $(B)/objc/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedc$$s; done
+	@set -e; for s in $(CSEEDS); do $(B)/objcm/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedcm$$s; done
+	@cmp $(B)/seedc1_ref.wav $(B)/seedc1_new.wav && echo "WAV files identical (compact DSP)"
 
 # Used by mutate.sh: build only, into $(B).
 .PHONY: build_mut_exe

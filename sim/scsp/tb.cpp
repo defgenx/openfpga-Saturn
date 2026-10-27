@@ -10,7 +10,7 @@
 #include <vector>
 #include <cmath>
 #include "Vtb_top.h"
-#ifdef DBGINT
+#if defined(DBGINT) || defined(DBGQ)
 #include "Vtb_top___024root.h"
 #endif
 #include "verilated.h"
@@ -64,6 +64,8 @@ static uint64_t clk_count = 0, ce_count = 0, mismatches = 0;
 static uint64_t st_irq = 0, st_ramw = 0, st_ramr = 0, st_nonzero = 0, st_dtack = 0, st_rdy = 0, st_avec = 0;
 
 // ---- 68K bus agent ----
+struct OpLog { uint64_t clk; uint32_t addr; uint16_t data; bool wr; uint8_t be; };
+static OpLog oplog[16]; static int oplog_n = 0;
 struct Bus68 {
 	std::deque<Op68> q;
 	int st = 0, wait = 0, ds_delay = 0;
@@ -79,6 +81,7 @@ struct Bus68 {
 			if (wait) { wait--; break; }
 			if (!q.empty()) {
 				cur = q.front(); q.pop_front();
+				oplog[oplog_n++ & 15] = {clk_count, cur.addr, cur.data, cur.wr, cur.be};
 				top->SCA = (cur.addr >> 1) & 0x7FFFFF;
 				top->SCFC = R->chance(50) ? 5 : 6;
 				top->SCRW_N = !cur.wr;
@@ -189,12 +192,15 @@ struct Wav {
 static Wav wav_r, wav_n;
 
 #define CMP(sig) if (top->R_##sig != top->N_##sig) { \
-	fprintf(stderr, "MISMATCH clk=%llu ce=%llu %s ref=%x new=%x\n", (unsigned long long)clk_count, \
-	(unsigned long long)ce_count, #sig, (unsigned)top->R_##sig, (unsigned)top->N_##sig); bad = true; }
+	fprintf(stderr, "MISMATCH clk=%llu ce=%llu %s ref=%x new=%x (SCA=%x last read %x)\n", (unsigned long long)clk_count, \
+	(unsigned long long)ce_count, #sig, (unsigned)top->R_##sig, (unsigned)top->N_##sig, (unsigned)top->SCA << 1, last_rd); bad = true; }
 
+static uint64_t dsp_rd = 0, dsp_wr = 0, dsp_mems = 0, dsp_temp = 0, dsp_ef = 0;  // DBGQ builds: DSP activity
+static uint32_t last_rd = 0;  // byte address of the last 68K bus cycle that started
 static int ce_acc = 0, ce_phase = 0;
 static bool force_ce = true;
 static uint32_t samp_ctr = 0;
+static bool wav_pending = false;
 // SND_EN[1:0] gate each slot's contribution as it is added (the reference gates the sums), so they may only change
 // between the sum latch and the first slot's direct contribution.
 static bool snd_want = false; static uint32_t snd_pend = 0;
@@ -217,6 +223,7 @@ static void tick() {
 	if (snd_want && top->N_OP7SLOT == 0 && top->N_CYC >= 2 && top->N_CYC <= 5) { top->SND_EN = (top->SND_EN & 4) | snd_pend; snd_want = false; }
 	b68.step();
 	bscu.step();
+	if (!top->SCAS_N) last_rd = (uint32_t)top->SCA << 1;
 	top->CLK = 0; top->eval();
 	top->CLK = 1; top->eval();
 	ce_advance();
@@ -224,17 +231,41 @@ static void tick() {
 	clk_count++;
 	if (ce) {
 		ce_count++;
-		if (++samp_ctr == 512) {
-			samp_ctr = 0;
-			wav_r.s.push_back((int16_t)top->R_SOUND_L); wav_r.s.push_back((int16_t)top->R_SOUND_R);
-			wav_n.s.push_back((int16_t)top->N_SOUND_L); wav_n.s.push_back((int16_t)top->N_SOUND_R);
-		}
+		if (++samp_ctr == 512) { samp_ctr = 0; wav_pending = true; }
 	}
 	ram_r.step(top->R_RAM_A, top->R_RAM_D, top->R_RAM_WE, top->R_RAM_RD, top->R_RAM_CS);
 	ram_n.step(top->N_RAM_A, top->N_RAM_D, top->N_RAM_WE, top->N_RAM_RD, top->N_RAM_CS);
 	top->R_RAM_Q = ram_r.q; top->N_RAM_Q = ram_n.q;
 	top->eval();
 	bool bad = false;
+#ifdef DBGQ
+	{ auto r = top->rootp; static bool done = false;
+	  struct H { unsigned ra, rrd, rq, nq, rm, nm, cyc; }; static H h[16]; static int hn = 0;
+	  h[hn++ & 15] = { (unsigned)r->tb_top__DOT__new_i__DOT__REG_A, (unsigned)r->tb_top__DOT__new_i__DOT__REG_RD, (unsigned)r->tb_top__DOT__ref_i__DOT__REG_Q, (unsigned)r->tb_top__DOT__new_i__DOT__REG_Q,
+	                   (unsigned)r->tb_top__DOT__ref_i__DOT__DSP_MIXS_Q, (unsigned)r->tb_top__DOT__new_i__DOT__DSP_MIXS_Q, (unsigned)r->tb_top__DOT__new_i__DOT__CYCLE_NUM };
+	  if (!done && r->tb_top__DOT__ref_i__DOT__REG_Q != r->tb_top__DOT__new_i__DOT__REG_Q) { for (int k = 12; k >= 1; k--) { H &x = h[(hn - k) & 15]; fprintf(stderr, "   REG_A=%x RD=%u REG_Q ref=%x new=%x DSP_MIXS_Q ref=%x new=%x cyc=%u\n", x.ra, x.rrd, x.rq, x.nq, x.rm, x.nm, x.cyc); } }
+	  if (!done && r->tb_top__DOT__ref_i__DOT__REG_Q != r->tb_top__DOT__new_i__DOT__REG_Q) { done = true;
+	    fprintf(stderr, "REG_Q first differs clk=%llu ref=%x new=%x REG_A ref=%x new=%x REG_RD=%d\n", (unsigned long long)clk_count,
+	      (unsigned)r->tb_top__DOT__ref_i__DOT__REG_Q, (unsigned)r->tb_top__DOT__new_i__DOT__REG_Q,
+	      (unsigned)r->tb_top__DOT__ref_i__DOT__REG_A, (unsigned)r->tb_top__DOT__new_i__DOT__REG_A, (int)r->tb_top__DOT__new_i__DOT__REG_RD);
+	    fprintf(stderr, "  MIXS gen ref=%d new=%d  ref A[15]=%x B[15]=%x  new mem[15]=%x mem[31]=%x\n", (int)r->tb_top__DOT__ref_i__DOT__MIXS_GEN, (int)r->tb_top__DOT__new_i__DOT__MIXS_GEN,
+	      (unsigned)r->tb_top__DOT__ref_i__DOT__MIXSA_RAM__DOT__altsyncram_component__DOT__mem[15], (unsigned)r->tb_top__DOT__ref_i__DOT__MIXSB_RAM__DOT__altsyncram_component__DOT__mem[15],
+	      (unsigned)r->tb_top__DOT__new_i__DOT__MIXS_RAM__DOT__altsyncram_component__DOT__mem[15], (unsigned)r->tb_top__DOT__new_i__DOT__MIXS_RAM__DOT__altsyncram_component__DOT__mem[31]);
+	    fprintf(stderr, "  DSP_MIXS_Q ref=%x new=%x REG_ST ref=%x new=%x REG_WE=%x\n", (unsigned)r->tb_top__DOT__ref_i__DOT__DSP_MIXS_Q, (unsigned)r->tb_top__DOT__new_i__DOT__DSP_MIXS_Q,
+	      (unsigned)r->tb_top__DOT__ref_i__DOT__REG_ST, (unsigned)r->tb_top__DOT__new_i__DOT__REG_ST, (unsigned)r->tb_top__DOT__new_i__DOT__REG_WE); } }
+#endif
+#ifdef DBGQ
+	{ auto r = top->rootp; static unsigned dev_prev = 0;
+	  unsigned dev = r->tb_top__DOT__new_i__DOT__MEM_DEV_LATCH;
+	  if (dev == 2 && dev_prev != 2) { if (r->tb_top__DOT__new_i__DOT__MEM_WE) dsp_wr++; else dsp_rd++; }
+	  dev_prev = dev;
+	  if (r->tb_top__DOT__new_i__DOT__DSP_MEMS_WE) dsp_mems++;
+	  if (r->tb_top__DOT__new_i__DOT__DSP_TEMP_WE) dsp_temp++;
+	  if (r->tb_top__DOT__new_i__DOT__DSP_EFREG_WE) dsp_ef++; }
+	{ auto r = top->rootp; static int nrep = 0;
+#define DQ(n) if (nrep < 6 && r->tb_top__DOT__ref_i__DOT__##n != r->tb_top__DOT__new_i__DOT__##n) { nrep++; fprintf(stderr, "DSP state " #n " first differs clk=%llu ref=%llx new=%llx OP7=%x cyc=%u\n", (unsigned long long)clk_count, (unsigned long long)r->tb_top__DOT__ref_i__DOT__##n, (unsigned long long)r->tb_top__DOT__new_i__DOT__##n, (unsigned)r->tb_top__DOT__new_i__DOT__OP7, (unsigned)r->tb_top__DOT__new_i__DOT__CYCLE_NUM); }
+	  DQ(SFT_REG) DQ(MDEC_CT) DQ(DSP_READ) DQ(DSP_WRITE) DQ(DSP_INP_REG) DQ(MIXS_D) DQ(MIXS_GEN) }
+#endif
 #ifdef DBGINT
 	{ auto r = top->rootp; static std::vector<std::string> seen;
 #define RAMCHK(n,arr,N) { bool d=false; for(int k=0;k<N;k++) if(r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k]!=r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]) d=true; if(d){ bool f=false; for(auto&x:seen) if(x==#n) f=true; if(!f){ seen.push_back(#n); fprintf(stderr,"RAM %s first differs clk=%llu\n",#n,(unsigned long long)clk_count); for(int k=0;k<N;k++) if(r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k]!=r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]) fprintf(stderr,"   [%d] ref=%x new=%x\n",k,(unsigned)r->tb_top__DOT__ref_i__DOT__##n##__DOT__##arr[k],(unsigned)r->tb_top__DOT__new_i__DOT__##n##__DOT__##arr[k]); fprintf(stderr,"   OP7 ref=%llx new=%llx OP6 ref=%llx new=%llx\n",(unsigned long long)r->tb_top__DOT__ref_i__DOT__OP7,(unsigned long long)r->tb_top__DOT__new_i__DOT__OP7,(unsigned long long)r->tb_top__DOT__ref_i__DOT__OP6,(unsigned long long)r->tb_top__DOT__new_i__DOT__OP6);} } }
@@ -250,8 +281,14 @@ static void tick() {
 	{ static uint16_t pl = 0, pr = 0; static int steady = 0;
 	  if (top->R_SOUND_L == pl && top->R_SOUND_R == pr) steady++; else steady = 0;
 	  pl = top->R_SOUND_L; pr = top->R_SOUND_R;
-	  if (steady >= 4) { CMP(SOUND_L) CMP(SOUND_R) } }
+	  if (steady >= 4) { CMP(SOUND_L) CMP(SOUND_R)
+	    // WAV sample: the first settled output after the 512th clock enable, so the two-clock output lag cannot land in it
+	    if (wav_pending) { wav_pending = false;
+	      wav_r.s.push_back((int16_t)top->R_SOUND_L); wav_r.s.push_back((int16_t)top->R_SOUND_R);
+	      wav_n.s.push_back((int16_t)top->N_SOUND_L); wav_n.s.push_back((int16_t)top->N_SOUND_R); } } }
 	if (bad) {
+		static bool logged = false;
+		if (!logged) { logged = true; for (int k = 8; k >= 1; k--) { auto &o = oplog[(oplog_n - k) & 15]; fprintf(stderr, "  68K op clk=%llu %s addr=%x data=%x be=%x\n", (unsigned long long)o.clk, o.wr ? "WR" : "RD", o.addr, o.data, o.be); } }
 #ifdef DBGINT
 		auto r = top->rootp;
 		fprintf(stderr, "  ref: DEVL=%u A=%x D=%x DMA_EXEC=%u DMA_DIR=%u DMA_WR=%u DMA_DAT=%x DMA_MA=%x DMA_RA=%x REGQ=%x\n", r->tb_top__DOT__ref_i__DOT__MEM_DEV_LATCH, r->tb_top__DOT__ref_i__DOT__MEM_A, r->tb_top__DOT__ref_i__DOT__MEM_D, r->tb_top__DOT__ref_i__DOT__DMA_EXEC, r->tb_top__DOT__ref_i__DOT__DMA_DIR, r->tb_top__DOT__ref_i__DOT__DMA_WR, r->tb_top__DOT__ref_i__DOT__DMA_DAT, r->tb_top__DOT__ref_i__DOT__DMA_MA, r->tb_top__DOT__ref_i__DOT__DMA_RA, r->tb_top__DOT__ref_i__DOT__REG_Q);
@@ -404,6 +441,78 @@ static void dsp_program(int density) {
 	for (int i = 0; i < 32; i++) wr_reg(0x780 + i * 2, R->next());
 }
 
+// One MPRO instruction word from named fields (layout of MPRO_t).
+struct Ins {
+	uint64_t tra = 0, twt = 0, twa = 0, xsel = 0, ysel = 0, ira = 0, iwt = 0, iwa = 0, table = 0, mwt = 0, mrd = 0, ewt = 0, ewa = 0,
+	         adrl = 0, frcl = 0, shft = 0, yrl = 0, negb = 0, zero = 0, bsel = 0, coef = 0, nofl = 0, masa = 0, adreb = 0, nxadr = 0;
+	uint64_t word() const {
+		return (tra << 56) | (twt << 55) | (twa << 48) | (xsel << 47) | (ysel << 45) | (ira << 38) | (iwt << 37) | (iwa << 32) |
+		       (table << 31) | (mwt << 30) | (mrd << 29) | (ewt << 28) | (ewa << 24) | (adrl << 23) | (frcl << 22) | (shft << 20) |
+		       (yrl << 19) | (negb << 18) | (zero << 17) | (bsel << 16) | (coef << 9) | (nofl << 8) | (masa << 2) | (adreb << 1) | nxadr;
+	}
+};
+
+static void dsp_load(const uint64_t *prog) {
+	for (int step = 0; step < 128; step++)
+		for (int k = 0; k < 4; k++)
+			wr_reg(0x800 + step * 8 + k * 2, (prog[step] >> (48 - 16 * k)) & 0xFFFF);
+}
+
+// A reverb-shaped program: per channel the MIXS send is mixed with two feedback taps read from the ring buffer, filtered
+// through coefficient multiplies with the accumulator carried over steps, written back to the ring buffer through the
+// float path and returned in EFREG; a modulated tap uses ADRS and the table addressing. Channel 1 repeats it on MIXS[1].
+static void dsp_reverb() {
+	uint64_t prog[128] = {0};
+	int n = 0;
+	for (int c = 0; c < 2; c++) {
+		auto put = [&](Ins i) { prog[n++] = i.word(); };
+		Ins a;
+		a = Ins(); a.ira = 0x20 + c; a.yrl = 1; put(a);                            // Y = send level
+		a = Ins(); a.ira = 0x20 + c; a.xsel = 1; a.ysel = 1; a.coef = c * 8; a.bsel = 1; a.zero = 1; put(a);  // acc = send * c0
+		a = Ins(); a.mrd = 1; a.masa = c * 4; a.nofl = 0; put(a);                   // tap 0
+		a = Ins(); a.mrd = 1; a.masa = c * 4 + 1; a.nxadr = 1; a.nofl = 0; put(a);  // tap 1, one word on
+		a = Ins(); put(a);
+		a = Ins(); a.iwt = 1; a.iwa = c * 4; put(a);                                // MEMS <- tap 0
+		a = Ins(); a.iwt = 1; a.iwa = c * 4 + 1; put(a);                            // MEMS <- tap 1
+		for (int t = 0; t < 2; t++) {
+			a = Ins(); a.ira = c * 4 + t; a.xsel = 1; a.ysel = 1; a.coef = c * 8 + 1 + t; a.bsel = 1; put(a);   // acc += tap * c
+			a = Ins(); a.ira = c * 4 + t; a.yrl = 1; put(a);
+			a = Ins(); a.ysel = 2; a.xsel = 0; a.tra = c * 8 + t; a.bsel = 1; a.coef = c * 8 + 4 + t; put(a);  // acc += TEMP * Y_REG
+		}
+		a = Ins(); a.shft = 1; a.twt = 1; a.twa = c * 8 + 4; a.frcl = 1; put(a);   // filter state out, FRC = acc
+		a = Ins(); a.xsel = 0; a.tra = c * 8 + 4; a.ysel = 0; a.bsel = 0; a.negb = 1; put(a);   // acc = state * FRC - state
+		a = Ins(); a.shft = 2; a.twt = 1; a.twa = c * 8 + 5; a.adrl = 1; put(a);   // ADRS <- acc
+		a = Ins(); a.mwt = 1; a.masa = c * 4 + 2; a.adreb = 1; a.nofl = 0; put(a); // feedback written back, offset by ADRS
+		a = Ins(); a.mwt = 1; a.masa = c * 4 + 3; a.table = 1; a.nofl = 1; a.shft = 3; put(a);   // table write, raw
+		a = Ins(); a.shft = 0; a.ewt = 1; a.ewa = c; put(a);                       // EFREG[c] <- wet
+		a = Ins(); a.shft = 1; a.ewt = 1; a.ewa = 2 + c; a.xsel = 1; a.ira = 0x20 + c; put(a);   // EFREG[2+c] <- dry mix
+		n += 3;
+	}
+	dsp_load(prog);
+	for (int i = 0; i < 64; i++) wr_reg(0x700 + i * 2, (i & 1 ? 0x2000 : 0x6000) + ((R->next() & 0xFF) << 3));  // coefficients
+	for (int i = 0; i < 32; i++) wr_reg(0x780 + i * 2, (i * 0x0123 + 0x0400) & 0xFFFF);                     // delay offsets
+}
+
+// Writes aimed at the DSP-visible state the slot or step being executed right now (the target is the next slot or the
+// current one, the write reaches the RAM a few dozen clocks later), to hit the pipeline hand-over points.
+static void race_burst(int n) {
+	for (int i = 0; i < n; i++) {
+		int slot = (top->N_OP7SLOT + R->below(3)) & 31;
+		int step = slot * 4 + R->below(4);
+		switch (R->below(8)) {
+		case 0: wr_reg(slot * 0x20 + SCR7, (R->below(16) << 3) | R->below(8)); break;                 // ISEL / IMXL of the slot
+		case 1: wr_reg(0x402, (R->below(4) << 7) | R->below(128)); break;                              // ring buffer length and pointer
+		case 2: wr_reg(0x800 + step * 8 + R->below(4) * 2, R->next() & 0xFFFF); break;                 // part of the instruction
+		case 3: wr_reg(0xC00 + R->below(128) * 4 + R->below(2) * 2, R->next() & 0xFFFF); break;        // TEMP
+		case 4: wr_reg(0xE00 + R->below(32) * 4 + R->below(2) * 2, R->next() & 0xFFFF); break;         // MEMS
+		case 5: wr_reg(0xE80 + R->below(16) * 4 + R->below(2) * 2, R->next() & 0xFFFF); break;         // MIXS (the DSP side)
+		case 6: wr_reg(0xEC0 + R->below(16) * 2, R->next() & 0xFFFF); break;                           // EFREG
+		default: wr_reg(0x700 + (step >> 1) * 2, R->next() & 0xFFF8); break;                           // COEF
+		}
+		if (R->chance(40)) run_clks(R->range(0, 25));
+	}
+}
+
 static void dsp_init_regs() {
 	wr_reg(0x402, (R->below(4) << 7) | R->below(128));  // RBL, RBP
 }
@@ -500,7 +609,7 @@ int main(int argc, char **argv) {
 			voice_write(s, v, false, false);
 		}
 		drain();
-		if (scen >= 4) { dsp_program(scen == 4 ? 90 : 60); dsp_init_regs(); }
+		if (scen >= 4) { if (scen == 4) dsp_reverb(); else dsp_program(60); dsp_init_regs(); }
 		drain();
 		for (int s = 0; s < 32; s++) {
 			uint32_t b = s * 0x20;
@@ -544,7 +653,8 @@ int main(int argc, char **argv) {
 			bool kon = R->chance(70);
 			voice_write(s, v, kon, R->chance(80));
 		}
-		else if (act < 52) { dsp_program(R->range(20, 100)); dsp_init_regs(); }
+		else if (act < 50) { dsp_program(R->range(20, 100)); dsp_init_regs(); }
+		else if (act < 52) { if (R->chance(50)) dsp_reverb(); else race_burst(R->range(4, 16)); dsp_init_regs(); }
 		else if (act < 60) {
 			for (int i = 0, n = R->range(1, 10); i < n; i++) { int s = R->below(32); wr_reg(s * 0x20, ((R->below(2)) << 11) | (R->below(2) << 12) | (R->below(2) << 4) | (R->below(4) << 5)); }
 		}
@@ -598,6 +708,10 @@ int main(int argc, char **argv) {
 	printf("coverage: irq_clks=%llu ram_wr_clks=%llu ram_rd_clks=%llu avec_clks=%llu 68k_ops=%llu scu_ops=%llu\n",
 	       (unsigned long long)st_irq, (unsigned long long)st_ramw, (unsigned long long)st_ramr,
 	       (unsigned long long)st_avec, (unsigned long long)b68.done, (unsigned long long)bscu.done);
+#ifdef DBGQ
+	printf("dsp activity (clks): sound-RAM reads=%llu writes=%llu MEMS writes=%llu TEMP writes=%llu EFREG writes=%llu\n", (unsigned long long)dsp_rd, (unsigned long long)dsp_wr,
+	       (unsigned long long)dsp_mems, (unsigned long long)dsp_temp, (unsigned long long)dsp_ef);
+#endif
 	if (mismatches || !same) { printf("FAIL\n"); return 1; }
 	printf("PASS\n");
 	return 0;
