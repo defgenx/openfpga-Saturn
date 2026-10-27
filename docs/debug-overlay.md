@@ -66,7 +66,7 @@ completes). A half that never changes stays 0000. Squares 7, 8 and 11 have no de
 
 ## debug7: runtime SDRAM timing and the self-check
 
-Same hex row as debug6 plus square 15 = SDRAM self-check (the SCSP activity detector is gone). The Core Settings menu has
+Same hex row as debug6. The shipped build has no SDRAM self-check (it did not fit), so square 15 is always red. The Core Settings menu has
 a new list, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +6 clk_ram after READ
 on the rising edge, +3.5 to +5.5 on the falling edge; default +5 rising). Options and the delay ranges they cover:
 docs/memory.md section 3.
