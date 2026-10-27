@@ -1,6 +1,6 @@
 # SMPC as firmware on SERV (`POCKET_SMPC_SERV`)
 
-`src/fpga/saturn/Saturn/SMPC_SERV.sv` (ports of `SMPC_HLE`) + `firmware/smpc/` (C, RV32IC, `make -C firmware/smpc`, image
+`src/fpga/saturn/Saturn/SMPC_SERV.sv` (ports of `SMPC_HLE`) + `firmware/smpc/` (C, RV32I, `make -C firmware/smpc`, image
 `smpc_fw.hex`). Hardware: SH-2 register interface, IREG/OREG RAM, output pins (set/clear masks), PDR/DDR/IOSEL/EXLE,
 24-bit 4 MHz tick counter, command timestamp, event flags, one deadline compare. Firmware: commands, INTBACK (status,
 peripheral, CONTINUE/BREAK, vblank wait), standard digital pad polling, RTC (EXT_RTC load, seconds/calendar, SETTIME), SETSMEM.

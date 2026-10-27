@@ -1,4 +1,4 @@
-/* SMPC behaviour as firmware for SERV (RV32IC). Follows src/fpga/saturn/Saturn/SMPC_HLE.sv, whose command, INTBACK,
+/* SMPC behaviour as firmware for SERV (RV32I). Follows src/fpga/saturn/Saturn/SMPC_HLE.sv, whose command, INTBACK,
  * pad and RTC timing was compared with the HMCS400 firmware (sim/smpc). Time unit: 1 tick = 0.25 us (4 MHz).
  * Standard digital pads only. SERV runs about one instruction per 5 ticks: the command path is kept short. */
 #include "hw.h"

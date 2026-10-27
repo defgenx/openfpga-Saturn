@@ -86,7 +86,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 `else
 	serv_rf_top
 `endif
-	#(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
+	#(.COMPRESSED(0), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 		.clk(CLK), .i_rst(!RST_N || !MRES_N), .i_timer_irq(1'b0),
 		.o_ibus_adr(ia), .o_ibus_cyc(ic), .i_ibus_rdt(ird_r), .i_ibus_ack(iack),
 		.o_dbus_adr(da), .o_dbus_dat(dd), .o_dbus_sel(dsel), .o_dbus_we(dwe), .o_dbus_cyc(dc),
