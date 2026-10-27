@@ -642,6 +642,7 @@ wire        clk_audio;
 wire        pll_locked_74a;
 wire signed [15:0] audio_l;
 wire signed [15:0] audio_r;
+wire               audio_stb;
 
 wire [23:0] vidout_rgb;
 wire        vidout_de, vidout_skip, vidout_vs, vidout_hs;
@@ -716,6 +717,7 @@ saturn_pocket saturn (
     .clk_audio  ( clk_audio ),
     .audio_l    ( audio_l ),
     .audio_r    ( audio_r ),
+    .audio_stb  ( audio_stb ),
 
     .pll_locked_74a ( pll_locked_74a ),
     .setup_ready_74a ( setup_ready_74a )
@@ -750,6 +752,7 @@ sound_i2s #(
     .clk_audio  ( clk_audio ),
     .audio_l    ( audio_l ),
     .audio_r    ( audio_r ),
+    .audio_stb  ( audio_stb ),
     .audio_mclk ( audio_mclk ),
     .audio_lrck ( audio_lrck ),
     .audio_dac  ( audio_dac )
