@@ -7,6 +7,7 @@ ROOT   := $(abspath ../..)
 B      ?= build
 CYCLES ?= 20000000
 GAP    ?= 32
+MACROS ?= macros.f
 MODELS := ../mem/models/psram_model.sv ../mem/models/sdram_model.sv ../mem/models/sram_model.sv
 SIMSRC := models/pll_sim.sv models/altera_mf_sim.sv
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-PROCASSWIRE -Wno-BLKANDNBLK \
@@ -19,8 +20,8 @@ all: run
 $(B)/files.f: prep.py qip2f.py $(wildcard $(ROOT)/src/fpga/core/*.sv $(ROOT)/src/fpga/saturn/*/*.sv)
 	python3 prep.py $(ROOT) $(B)
 
-$(B)/obj/Vtb_sys: Makefile $(B)/files.f tb_sys.sv macros.f $(SIMSRC) $(MODELS)
-	verilator $(VFLAGS) -f macros.f -F $(B)/files.f $(SIMSRC) $(MODELS) tb_sys.sv -Mdir $(B)/obj -o Vtb_sys > $(B)/verilator.log 2>&1 || (tail -30 $(B)/verilator.log; false)
+$(B)/obj/Vtb_sys: Makefile $(B)/files.f tb_sys.sv $(MACROS) $(SIMSRC) $(MODELS)
+	verilator $(VFLAGS) -f $(MACROS) -F $(B)/files.f $(SIMSRC) $(MODELS) tb_sys.sv -Mdir $(B)/obj -o Vtb_sys > $(B)/verilator.log 2>&1 || (tail -30 $(B)/verilator.log; false)
 
 # the boot test ROM (no Sega code) unless BIOS names an image
 rom: $(B)/rom.bin

@@ -285,7 +285,8 @@ always @(posedge clk_sys) if (sys_ce_r && !rst_sys) begin
 		if (pc_reg_n < 4000) $fdisplay(ftrace, "%0t PC-REGION %08h (cyc %0d)", $time, pc_q, cyc);
 		pc_reg_n++;
 	end
-	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
+	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   fbdrop=%0d vdp2 write groups %0d multi-lane %0d", dut.saturn.mem.fb.wf_drop, wg_total, wg_multi);
+		$fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
 		`SAT.MSH.bsc.BUS_STATE, `SAT.MSH.CACHE_BUSY, `SAT.MSH.BSC_IBUS_BUSY, `SAT.MSH.BSC_DBUS_BUSY, `SAT.MSH.MULT_BUSY, `SAT.MSH.IBUS_REQ, `SAT.MSH.DBUS_REQ,
 		`SAT.MSH.core.MA_ACTIVE, `SAT.MSH.core.IF_ACTIVE, `SAT.MSHBS_N, `SAT.MSHWAIT_N, sys_ce_r, `SAT.MSH.BUS_RLS); $fdisplay(ftrace, "   cache: IBUS_READ=%b READARRAY=%b READ_PEND=%b WRITE_PEND=%b IBREQ=%b IBUS_WRITE=%b CBUS_REQ=%b CBUS_WR=%b CBUS_A=%08h CCR=%02h HIT=%b",
 		`SAT.MSH.cache.IBUS_READ, `SAT.MSH.cache.IBUS_READARRAY, `SAT.MSH.cache.IBUS_READ_PEND, `SAT.MSH.cache.IBUS_WRITE_PEND, `SAT.MSH.cache.IBREQ, `SAT.MSH.cache.IBUS_WRITE,
@@ -378,7 +379,7 @@ task automatic dump_frame(input string tag);
 	integer f, x, y;
 	string fn;
 	if (have_dir) begin
-		fn = $sformatf("%s/frame_%0d_%s.ppm", frame_dir, frame_no, tag);
+		fn = $sformatf("%s/frame_%0d_%s_c%0d.ppm", frame_dir, frame_no, tag, layers ? (frame_no / 2) % 4 : 0);
 		f = $fopen(fn, "wb");
 		$fwrite(f, "P6\n%0d %0d\n255\n", fw, fh);
 		for (y = 0; y < fh; y++) for (x = 0; x < fw; x++) $fwrite(f, "%c%c%c", fbuf[x][y][23:16], fbuf[x][y][15:8], fbuf[x][y][7:0]);
@@ -403,7 +404,7 @@ always @(posedge video_rgb_clock) begin
 		if (fh > 0) begin
 			$fdisplay(ftrace, "%0t FRAME %0d: %0dx%0d, %0d non-black pixels, first pixel %06h, centre %06h", $time, frame_no, fw, fh, frame_nonblack,
 				fbuf[0][0], fbuf[fw/2][fh/2]);
-			if (frame_no < 3 || (t_disp != 0 && frame_no % 8 == 0 && dumped < 400)) begin
+			if (frame_no < 3 || (t_disp != 0 && (layers ? (frame_no >= 440 && frame_no % 2 == 0) : (frame_no % 8 == 0)) && dumped < 400)) begin
 				if (t_disp != 0) dumped++;
 				dump_frame(t_disp != 0 ? "disp" : "boot");
 			end
@@ -411,6 +412,41 @@ always @(posedge video_rgb_clock) begin
 		end
 		frame_no <= frame_no + 1; fx <= 0; fy <= 0; fh <= 0; frame_nonblack <= 0;
 	end
+end
+
+
+// ---- VDP2 VRAM write groups seen by sdram_pocket (one 16 bit lane is written per slot)
+longint wg_total = 0, wg_multi = 0;
+reg [7:0] wa_q = 0, wb_q = 0;
+function automatic int nl(input [7:0] w); nl = (|w[7:6]) + (|w[5:4]) + (|w[3:2]) + (|w[1:0]); endfunction
+always @(posedge clk_sys) begin
+	wa_q <= dut.saturn.mem.wr_a; wb_q <= dut.saturn.mem.wr_b;
+	if (dut.saturn.mem.wr_a != 0 && wa_q == 0) begin wg_total++; if (nl(dut.saturn.mem.wr_a) > 1) wg_multi++; end
+	if (dut.saturn.mem.wr_b != 0 && wb_q == 0) begin wg_total++; if (nl(dut.saturn.mem.wr_b) > 1) wg_multi++; end
+end
+
+// ---- +LAYERS: from frame 440 cycle the VDP2 layer enables every 2 frames: all, sprite only, NBG2 only, NBG3 only; dump each frame
+bit layers = 0;
+initial layers = $test$plusargs("LAYERS");
+reg [7:0] scrn_cfg = 8'hFF;
+always @(*) begin
+	scrn_cfg = 8'hFF;
+	if (layers && frame_no >= 440) case ((frame_no / 2) % 4) 1: scrn_cfg = 8'hE0; 2: scrn_cfg = 8'hC4; 3: scrn_cfg = 8'hC8; default: scrn_cfg = 8'hFF; endcase
+end
+initial begin #1; force dut.saturn.saturn.SCRN_EN = scrn_cfg; end
+
+// ---- +DUMPAT=<frame>: VDP1 VRAM (PSRAM1 die 0, halfwords 0..0x3FFFF) as raw big-endian bytes to vdp1vram.bin
+integer dumpat = -1;
+initial if (!$value$plusargs("DUMPAT=%d", dumpat)) dumpat = -1;
+always @(posedge video_vs) if (frame_no == dumpat) begin : dmp
+	integer f, i;
+	f = $fopen("vdp1vram.bin", "wb");
+	for (i = 0; i < 262144; i++) $fwrite(f, "%c%c", model1.mem[i][15:8], model1.mem[i][7:0]);
+	$fclose(f);
+	f = $fopen("sdram.bin", "wb");
+	for (i = 0; i < (4<<18); i++) $fwrite(f, "%c%c", sdmodel.mem[i][15:8], sdmodel.mem[i][7:0]);
+	$fclose(f);
+	$display("tb_sys: dumped VDP1 VRAM at frame %0d", frame_no);
 end
 
 // ------------------------------------------------------------------ run control and summary
@@ -427,6 +463,8 @@ task automatic summary();
 	$display("---- summary ----");
 	$display("clk_sys cycles (CE_R, out of reset) %0d, MSH bus cycles %0d, unmapped %0d", cyc, n_cycles, n_unmapped);
 	$display("TVMD.DISP set at: %0t ps, VBL toggles %0d, SH-2 IRL changes %0d, SSH bus toggles %0d", t_disp, vbl_toggles, irl_changes, sshbs_toggles);
+	$display("VDP2 VRAM write groups %0d, multi-lane %0d", wg_total, wg_multi);
+	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);
 	$display("model errors: psram0 %0d psram1 %0d sdram %0d sram %0d", m0_err, m1_err, sd_err, sr_err);
 	$display("load FIFO overflow %0d, SDRAM ready %b PSRAM ready %b", dut.saturn.dbg_ld_ovf, dut.saturn.dbg_sdram_ready, dut.saturn.dbg_psram_ready);

@@ -1150,6 +1150,10 @@ module VDP2P import VDP2P_PKG::*; (
 	bit  [ 7: 2] RP_POS;
 	bit  [ 1: 0] VRAM_BANK;
 	bit          VRAM_WRITE_PEND_CLR;
+	// sdram_pocket writes one 16 bit lane per VDP2 write slot, so a burst group with several lanes is issued one lane per slot
+	function automatic [7:0] WrLane(input [7:0] we);
+		WrLane = |we[7:6] ? 8'hC0 : |we[5:4] ? 8'h30 : |we[3:2] ? 8'h0C : 8'h03;
+	endfunction
 	bit          VRAM_RRDY;
 	bit          VRAM_WRDY;
 	bit          VRAM_WLOCK;
@@ -1210,9 +1214,10 @@ module VDP2P import VDP2P_PKG::*; (
 						VRAMB0_A <= {VRAM_WA[17:2],1'b0};
 						VRAMB1_A <= {VRAM_WA[16:2],1'b0};
 						VRAMA_D <= VRAM_D;
-						VRAMA_WE <= VRAM_WE & {8{~VRAM_WA[18]}};
-						VRAMB_WE <= VRAM_WE & {8{ VRAM_WA[18]}};
-						VRAM_WRITE_PEND_CLR = 1;
+						VRAMA_WE <= WrLane(VRAM_WE) & VRAM_WE & {8{~VRAM_WA[18]}};
+						VRAMB_WE <= WrLane(VRAM_WE) & VRAM_WE & {8{ VRAM_WA[18]}};
+						VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
+						VRAM_WRITE_PEND_CLR = (VRAM_WE & ~WrLane(VRAM_WE)) == 8'h00;
 					end else if (VRAM_READ_PEND) begin 
 						VRAMA0_A <= {1'b0,VRAM_RA[16:1]};
 						VRAMA1_A <= {     VRAM_RA[16:1]};
@@ -1245,8 +1250,9 @@ module VDP2P import VDP2P_PKG::*; (
 							if (VRAM_WRITE_PEND) begin
 								VRAMA0_A <= {VRAM_WA[17:2],1'b0};
 								VRAMA_D <= VRAM_D;
-								VRAMA_WE <= VRAM_WE;
-								VRAM_WRITE_PEND_CLR = 1;
+								VRAMA_WE <= WrLane(VRAM_WE) & VRAM_WE;
+								VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
+								VRAM_WRITE_PEND_CLR = (VRAM_WE & ~WrLane(VRAM_WE)) == 8'h00;
 							end else if (VRAM_READ_PEND) begin
 								VRAMA0_A <= {1'b0,VRAM_RA[16:1]};
 								VRAMA1_A <= {     VRAM_RA[16:1]};
@@ -1275,8 +1281,9 @@ module VDP2P import VDP2P_PKG::*; (
 							if (VRAM_WRITE_PEND) begin
 								VRAMB0_A <= {VRAM_WA[17:2],1'b0};
 								VRAMA_D <= VRAM_D;//////////////////////
-								VRAMB_WE <= VRAM_WE;
-								VRAM_WRITE_PEND_CLR = 1;
+								VRAMB_WE <= WrLane(VRAM_WE) & VRAM_WE;
+								VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
+								VRAM_WRITE_PEND_CLR = (VRAM_WE & ~WrLane(VRAM_WE)) == 8'h00;
 							end else if (VRAM_READ_PEND) begin
 								VRAMB0_A <= {1'b0,VRAM_RA[16:1]};
 								VRAMB1_A <= {     VRAM_RA[16:1]};

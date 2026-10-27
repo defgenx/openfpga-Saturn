@@ -97,3 +97,6 @@ sizing/cd/*.log
 # per-commit sizing snapshots belong under sizing/*/snap, not the repo root
 /[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]/
 sim/**/build_neg/
+
+# sim/sys build dirs hold BIOS-derived dumps
+sim/sys/build*/
