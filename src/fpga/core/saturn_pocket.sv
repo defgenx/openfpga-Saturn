@@ -274,9 +274,11 @@ assign PAL = (area_code >= 4'hA);
 wire [47:0] rtc_pl = {rtc_date_bcd[23:16], 3'b000, rtc_date_bcd[12:8], rtc_date_bcd[7:0], rtc_time_bcd[23:0]};
 reg        rtc_tog = 1'b0;
 reg  [1:0] rtc_dly;
+reg        rtc_valid_q;
 always @(posedge clk_74a) begin
+	rtc_valid_q <= rtc_valid;
 	rtc_dly <= {rtc_dly[0], 1'b0};
-	if (rtc_valid) rtc_dly <= 2'b01;
+	if (rtc_valid && !rtc_valid_q) rtc_dly <= 2'b01;   // the bridge holds rtc_valid high after the first RTC command
 	if (rtc_dly[1]) rtc_tog <= ~rtc_tog;
 end
 reg [1:0] tog_s;
