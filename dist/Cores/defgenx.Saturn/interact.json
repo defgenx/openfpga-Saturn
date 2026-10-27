@@ -67,6 +67,49 @@
             "name": "Backup RAM"
           }
         ]
+      },
+      {
+        "name": "SDRAM read capture",
+        "id": 4,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0x8000000C",
+        "defaultval": 3,
+        "options": [
+          {
+            "value": 7,
+            "name": "+3.25 (quarter)"
+          },
+          {
+            "value": 4,
+            "name": "+3.5 (falling edge)"
+          },
+          {
+            "value": 0,
+            "name": "+4 (rising edge)"
+          },
+          {
+            "value": 3,
+            "name": "+4.25 (quarter)"
+          },
+          {
+            "value": 5,
+            "name": "+4.5 (falling edge)"
+          },
+          {
+            "value": 1,
+            "name": "+5 (rising edge)"
+          },
+          {
+            "value": 6,
+            "name": "+5.5 (falling edge)"
+          },
+          {
+            "value": 2,
+            "name": "+6 (rising edge)"
+          }
+        ]
       }
     ],
     "messages": []

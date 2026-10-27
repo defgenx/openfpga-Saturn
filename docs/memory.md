@@ -171,22 +171,57 @@ least 9 times per 63.5 us line, against 64 rows per bank to cover in 64 ms. Resu
 
 ### Clock out and data capture
 
-The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the C64 core does. The first word of a read
-reaches the FPGA about 4.65 cycles after the command register edge, so the default samples DQ on rising edges at
-READ + 5 and + 6 (`CAP_NEG = 0`). Sweep of extra delay on the clock path in the model (pins 3.5 ns out, 1 ns in,
-tAC 5.5 ns, `make -C sim/mem skew`):
+The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the C64 and SNES cores do. The first word of a
+read reaches the FPGA register 4.7 to 5.7 cycles after the command register edge (half cycle + clock-out delay + 3 cycles
+CL3 + tAC + input delay), so the default samples DQ on rising edges at READ + 5 (word 0) and + 6 (word 1).
 
-| Clock path delay | Rising-edge capture (default) | Falling-edge capture (`CAP_NEG = 1`) |
+**Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
+while `init` is high, so they apply at the next menu Reset without reloading the core):
+
+| Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
+|---|---|---|---|
+| SDRAM read capture | +4 / +5 / +6 (rising edge) | 0 / 1 / 2 | 4,5 / 5,6 / 6,7 |
+| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
+| | +4.25 (default) / +3.25 (quarter) | **3** / 7 | 4.25,5.25 / 3.25,4.25 |
+
+The quarter settings sample on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) and land like +5 / +4. On the
+Pocket (debug7 sweep) only +4 rising and +4.5 falling reached the BIOS logo, both with corrupt graphics, and +3.5,
++5, +5.5 and +6 did not, so the data window sits about +4.25; the model's window is about 2 ns later than the hardware's.
+
+The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
+(`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
+edge. Later capture (+6) delays the VDP2 results by one clk_ram (VDP2 still samples 24 clk_ram after the request).
+Rule of thumb from the model, with T = clock-out delay + input delay (the data valid window is about 4.2 ns):
+
+| T (ns), clock out + pin to register | best setting |
+|---|---|
+| 2.0 to 3.0 | +4.5 falling (`cap_sel` 5) |
+| 3.5 to 7.5 | +5 rising (1, default) |
+| 8.0 to 11.5 | +5.5 falling (6) |
+| 12.5 | +6 rising (2); 12.0 and above 12.5 fail with every setting in the sweep |
+
+Sweep: `make -C sim sndram` then `sh sim/sndram/sweep.sh [TIN_ps]` (SH-2 through SCSP to the SDRAM model), or
+`sh sim/mem/sweep.sh [TIN_ps]` (`tb_sdram`: VDP2 and SCSP traffic, every model timing check). Both give the same
+table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7, `#` = pass.
+Command and clock share the TCO, as on the device. (An earlier `sim/sndram` sweep looked irregular for TCO above
+4.4 ns: Verilator evaluates the right-hand side of `<= #d` at the end of the delay, which flipped the clock phase;
+the bench now uses explicit delay FIFOs.)
+
+**Comparison with the controllers that run on a Pocket** (openfpga-SNES `rtl/upstream/sdram.sv`, openfpga-C64
+`sdram.v`, both from MiSTer):
+
+| | SNES / C64 | Saturn `sdram_pocket` |
 |---|---|---|
-| -4.0 / -3.0 ns | fails | -3.0: data ok, command hold violation |
-| -2.0 ns | fails | ok |
-| -1.5 ns | fails | fails |
-| -1.0 ... +3.0 ns | **ok** | fails |
-| +3.5 / +4.0 ns | command setup violation | fails |
+| clock | C64 64 MHz (SNES lower than ours), DDIO `~clk`, no PLL phase step | 114.5 MHz, DDIO `~clk`, no PLL phase step (same) |
+| CAS latency | 2 | 3 (a 2-cycle shorter window to hide, more tAC budget) |
+| capture | one register on the rising edge, SDC multicycle 2 from `dram_clk_pin` | rising edge READ + 5 (multicycle 5), or the falling-edge option |
+| pin output registers | C64: `FAST_OUTPUT_REGISTER` on every `dram_*` output and `FAST_OUTPUT_ENABLE_REGISTER` on `dram_dq` | **absent before this build**: command, address and data registers sat in the fabric, with a pad delay several ns above the DDIO clock's; now set in `ap_core.qsf` |
+| DQ input register | fabric register (no `FAST_INPUT_REGISTER`) | fabric register (same); both edges are captured from the same pad, so it cannot be packed into the I/O cell |
+| SDC | `dram_clk_pin` generated clock, input delay 6.4 / 3.2 ns (C64), output delay 1.5 / -0.8 | `dram_clk_pin`, input delay 5.5 / 2.5, output 1.5 / -1.0 |
 
-The usable window is 4 ns wide for rising-edge capture and does not include the falling-edge option unless the clock
-is moved 2 ns earlier by a PLL phase step. Pad delays on the device decide where the real design sits; this needs the
-hardware (section 10).
+The likeliest breaking difference is the output register placement: with fabric output registers the command pins
+lag the DDIO clock pin by an unknown, per-pin amount, so a command can be sampled a cycle late. Neither working core
+runs CL3 at 114 MHz, so the data window (about 4 ns) is tighter than theirs. Not yet confirmed on hardware.
 
 DQ turnaround: a write that follows read data by 2 cycles overlaps the SDRAM's output disable (tHZ) by up to 1.04 ns at
 the datasheet maximum tHZ of 5.4 ns; the overlap is 0 with the clock path 1 ns early. Byte writes (partial DQM) also
@@ -339,7 +374,8 @@ misreading with the controllers.
 
 ## 10. Untested on hardware, and risks
 
-1. SDRAM data capture edge and clock phase (section 3). Window is 4 ns wide in the model.
+1. SDRAM data capture edge and clock phase (section 3): menu settings SDRAM read capture / SDRAM clock; the debug overlay
+   square 15 is a write/read-back self-check of the SDRAM. Window is 4 ns wide in the model.
 2. SDRAM DQ turnaround at worst-case tHZ: 1 ns overlap; byte writes disturb word 1 of a neighbouring read.
 3. No AUTO REFRESH: retention depends on VDP2's real no-access windows. A game that disables them (it cannot: they are
    `H_CNT` based) or a pause state with VDP2 reading continuously would lose banks 0/1 after 64 ms.

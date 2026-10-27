@@ -539,8 +539,10 @@ wire [31:0] bk_rd_data = 32'h0;
 // interact.json registers at 0x8000_00xx, all read back.
 //   0x00 Reset (any write)   0x04 Region 0 auto 1 JP 2 US 3 EU
 //   0x08 Cartridge (MiSTer cart_sel) 0 auto 2 RAM 1M 3 RAM 4M 5 backup 6 none
+//   0x0C SDRAM read capture (sdram_pocket cap_sel), applies at the next Reset
 reg [1:0] cfg_region   = 2'd0;
 reg [2:0] cfg_cart     = 3'd0;
+reg [2:0] cfg_sdcap    = 3'd1;
 reg [3:0] reset_stretch = 4'd0;
 
 always @(posedge clk_74a) begin
@@ -550,6 +552,7 @@ always @(posedge clk_74a) begin
         8'h00: reset_stretch <= 4'hF;
         8'h04: cfg_region  <= bridge_wr_data[1:0];
         8'h08: cfg_cart    <= bridge_wr_data[2:0];
+        8'h0C: cfg_sdcap   <= bridge_wr_data[2:0];
         endcase
     end
 end
@@ -559,6 +562,7 @@ always @(*) begin
     case (bridge_addr[7:0])
     8'h04:   cfg_bridge_rd_data = {30'd0, cfg_region};
     8'h08:   cfg_bridge_rd_data = {29'd0, cfg_cart};
+    8'h0C:   cfg_bridge_rd_data = {29'd0, cfg_sdcap};
     default: cfg_bridge_rd_data = 32'h0;
     endcase
 end
@@ -648,6 +652,7 @@ saturn_pocket saturn (
 
     .cfg_region     ( cfg_region ),
     .cfg_cart       ( cfg_cart ),
+    .cfg_sdcap      ( cfg_sdcap ),
     .pad            ( pad ),
     .rtc_date_bcd   ( rtc_date_bcd ),
     .rtc_time_bcd   ( rtc_time_bcd ),

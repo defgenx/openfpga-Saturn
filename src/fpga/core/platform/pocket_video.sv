@@ -35,7 +35,10 @@ module pocket_video (
 	,
 	input  wire [15:0] dbg_g,       // square green
 	input  wire [15:0] dbg_y,       // square yellow (when not green), else red
-	input  wire        dbg_alive    // the Saturn produces sync and DE; else a 640x224 test timing is generated
+	input  wire        dbg_alive,   // the Saturn produces sync and DE; else a 640x224 test timing is generated
+	input  wire [15:0] dbg_wd,      // text row (clk_sys): word 0 = digits 0..3, word 1 = digits 4..7 (digit 0 in the top nibble)
+	input  wire        dbg_wa,
+	input  wire        dbg_we
 `endif
 );
 
@@ -76,6 +79,117 @@ wire       in_sq = x[9:5] < 5'd16 && y < 9'd12 && x[4:0] < 5'd24;
 wire [3:0] sq = x[8:5];
 wire [23:0] sq_c = dbg_g[sq] ? 24'h00FF00 : dbg_y[sq] ? 24'hFFFF00 : 24'hFF0000;
 
+
+// ---- hex text block: 2 rows x 8 digits at x 32..159, y 16..47, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
+// Digits come from a 32 x 4 M10K buffer written in clk_sys; the font is a 128 x 3 M10K ROM.
+(* ramstyle = "M10K" *) reg [15:0] tbuf [0:1];
+(* ramstyle = "M10K", romstyle = "M10K" *) reg [2:0] font [0:127];
+initial begin
+	font[0] = 3'b111;
+	font[1] = 3'b101;
+	font[2] = 3'b101;
+	font[3] = 3'b101;
+	font[4] = 3'b111;
+	font[8] = 3'b010;
+	font[9] = 3'b110;
+	font[10] = 3'b010;
+	font[11] = 3'b010;
+	font[12] = 3'b111;
+	font[16] = 3'b111;
+	font[17] = 3'b001;
+	font[18] = 3'b111;
+	font[19] = 3'b100;
+	font[20] = 3'b111;
+	font[24] = 3'b111;
+	font[25] = 3'b001;
+	font[26] = 3'b111;
+	font[27] = 3'b001;
+	font[28] = 3'b111;
+	font[32] = 3'b101;
+	font[33] = 3'b101;
+	font[34] = 3'b111;
+	font[35] = 3'b001;
+	font[36] = 3'b001;
+	font[40] = 3'b111;
+	font[41] = 3'b100;
+	font[42] = 3'b111;
+	font[43] = 3'b001;
+	font[44] = 3'b111;
+	font[48] = 3'b111;
+	font[49] = 3'b100;
+	font[50] = 3'b111;
+	font[51] = 3'b101;
+	font[52] = 3'b111;
+	font[56] = 3'b111;
+	font[57] = 3'b001;
+	font[58] = 3'b010;
+	font[59] = 3'b010;
+	font[60] = 3'b010;
+	font[64] = 3'b111;
+	font[65] = 3'b101;
+	font[66] = 3'b111;
+	font[67] = 3'b101;
+	font[68] = 3'b111;
+	font[72] = 3'b111;
+	font[73] = 3'b101;
+	font[74] = 3'b111;
+	font[75] = 3'b001;
+	font[76] = 3'b111;
+	font[80] = 3'b010;
+	font[81] = 3'b101;
+	font[82] = 3'b111;
+	font[83] = 3'b101;
+	font[84] = 3'b101;
+	font[88] = 3'b110;
+	font[89] = 3'b101;
+	font[90] = 3'b110;
+	font[91] = 3'b101;
+	font[92] = 3'b110;
+	font[96] = 3'b011;
+	font[97] = 3'b100;
+	font[98] = 3'b100;
+	font[99] = 3'b100;
+	font[100] = 3'b011;
+	font[104] = 3'b110;
+	font[105] = 3'b101;
+	font[106] = 3'b101;
+	font[107] = 3'b101;
+	font[108] = 3'b110;
+	font[112] = 3'b111;
+	font[113] = 3'b100;
+	font[114] = 3'b110;
+	font[115] = 3'b100;
+	font[116] = 3'b111;
+	font[120] = 3'b111;
+	font[121] = 3'b100;
+	font[122] = 3'b110;
+	font[123] = 3'b100;
+	font[124] = 3'b100;
+end
+always @(posedge clk_sys) if (dbg_we) tbuf[dbg_wa] <= dbg_wd;
+
+localparam TXT_LAT = 4;                    // clk_vid cycles from x to the pixel decision
+wire       t_in  = !y[8] && y[7:4] >= 4'd1 && y[7:4] <= 4'd1 && x[9:4] >= 6'd2 && x[9:4] <= 6'd9;
+wire [1:0] t_row = y[5:4] - 2'd1;
+wire [2:0] t_col = x[6:4] - 3'd2;
+reg  [2:0] t_c0;
+reg [15:0] t_word;
+reg  [3:0] t_nib;
+reg  [2:0] t_bits;
+reg  [6:0] t_p0, t_p1, t_p2;               // {in, gy < 5, gx[1:0], gy[2:0]}
+reg        t_on = 1'b0, t_bg = 1'b0;
+always @(posedge clk_vid) begin
+	t_c0   <= t_col;
+	t_word <= tbuf[t_col[2]];
+	t_p0   <= {t_in, y[3:1] < 3'd5, x[3:2], y[3:1]};
+	t_nib  <= t_word[(2'd3 - t_c0[1:0]) * 4 +: 4];
+	t_p1   <= t_p0;
+	t_bits <= font[{t_nib, t_p1[2:0]}];
+	t_p2   <= t_p1;
+	t_bg   <= t_p2[6];
+	t_on   <= t_p2[6] & t_p2[5] & (t_p2[4:3] != 2'd3) & t_bits[2 - t_p2[4:3]];
+end
+
 always @(posedge clk_vid) begin
 	de_d <= s_de;
 	hs_d <= s_hs;
@@ -91,7 +205,7 @@ always @(posedge clk_vid) begin
 	end
 
 	video_de  <= s_de;
-	video_rgb <= !s_de ? 24'h0 : (in_sq & x[9:5] < 5'd16) ? sq_c : gen ? 24'h202020 : pix;
+	video_rgb <= !s_de ? 24'h0 : t_on ? 24'hFFFFFF : t_bg ? 24'h000000 : (in_sq & x[9:5] < 5'd16) ? sq_c : gen ? 24'h202020 : pix;
 	video_vs  <= s_vs & ~vs_d;
 	hs_dly    <= {hs_dly[2:0], s_hs & ~hs_d};
 	video_hs  <= hs_dly[3];

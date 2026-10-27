@@ -20,6 +20,7 @@ module saturn_pocket #(
 
 	// interact.json settings (clk_74a)
 	input  wire  [1:0] cfg_region,                 // 0 auto, 1 Japan, 2 USA, 3 Europe
+	input  wire  [2:0] cfg_sdcap,                  // sdram_pocket read capture, latched while rst_ram
 	input  wire  [2:0] cfg_cart,                   // MiSTer cart_sel: 0 auto, 2 RAM 1M, 3 RAM 4M, 5 backup, 6 none
 
 	input  wire [27:0] pad,                        // {pad2, pad1}, MiSTer joystick_0 bit order, clk_74a
@@ -94,12 +95,12 @@ module saturn_pocket #(
 );
 
 // ---------------------------------------------------------------------------------- clocks
-wire clk_sys, clk_ram, pll_locked;
+wire clk_sys, clk_ram, clk_ram_cap, pll_locked;
 wire [63:0] rc_to, rc_from;
 
 pll_sys pll (
 	.refclk(clk_74a), .rst(1'b0),
-	.outclk_0(clk_sys), .outclk_1(clk_ram), .outclk_2(clk_vid), .outclk_3(clk_vid_90),
+	.outclk_0(clk_sys), .outclk_1(clk_ram), .outclk_2(clk_vid), .outclk_3(clk_vid_90), .outclk_4(clk_ram_cap),
 	.locked(pll_locked),
 	.reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from)
 );
@@ -199,11 +200,13 @@ end
 // ---------------------------------------------------------------------------------- settings into clk_sys
 reg [1:0] region_s1, region_s2;
 reg [2:0] cart_s1, cart_s2;
+reg [2:0] sdcap_s1, sdcap_s2;
 reg [27:0] pad_s1, pad_s2;
 reg [2:0] rst_s;
 always @(posedge clk_sys) begin
 	region_s1 <= cfg_region;  region_s2 <= region_s1;
 	cart_s1   <= cfg_cart;    cart_s2   <= cart_s1;
+	sdcap_s1  <= cfg_sdcap;   sdcap_s2  <= sdcap_s1;
 	pad_s1    <= pad;         pad_s2    <= pad_s1;
 	rst_s     <= {rst_s[1:0], rst_req_74};
 end
@@ -212,7 +215,7 @@ wire reset = rst_s[2];
 // ---------------------------------------------------------------------------------- reset
 wire rst_ram, download;
 wire loading, mem_ready;
-wire dbg_sdram_ready, dbg_psram_ready, dbg_ld_ovf;
+wire dbg_sdram_ready, dbg_psram_ready, dbg_ld_ovf, dbg_chk_done, dbg_chk_ok;
 ram_reset ramrst (.clk(clk_sys), .reset(reset), .loading(loading), .rst_ram(rst_ram), .download(download));
 
 wire boot_busy;
@@ -374,6 +377,11 @@ wire         HS_N, VS_N, DCLK, HBL_N, VBL_N, FIELD, INTERLACE, DCE_R, DCE_F;
 wire [ 1: 0] HRES, VRES;
 `ifdef POCKET_DEBUG_OVERLAY
 wire [ 6: 0] dbg_tap;
+wire [99: 0] dbg_txt;
+wire [28: 0] dbg_da;
+wire [26: 0] dbg_68k;
+wire [29: 0] dbg_serv;
+wire [33: 0] dbg_snd;
 `endif
 wire [15: 0] SOUND_L, SOUND_R;
 
@@ -545,7 +553,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.DBG_RUN(1'b0),
 	.DBG_EXT(8'h00)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .DBG_TAP(dbg_tap)
+	, .DBG_TAP(dbg_tap), .DBG_TXT(dbg_txt), .DBG_DA(dbg_da), .DBG_68K(dbg_68k), .DBG_SERV(dbg_serv), .DBG_SND(dbg_snd)
 `endif
 );
 
@@ -666,7 +674,7 @@ wire [31:0] ramh_do;
 wire        cdram_busy, raml_busy, ramh_busy, vdp1vram_busy, cart_busy;
 
 mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
-	.clk_ram(clk_ram), .clk_sys(clk_sys), .rst_ram(rst_ram),
+	.clk_ram(clk_ram), .clk_ram_cap(clk_ram_cap), .clk_sys(clk_sys), .rst_ram(rst_ram), .cap_sel(sdcap_s2),
 
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_clk(dram_clk), .dram_cke(dram_cke),
@@ -717,7 +725,7 @@ mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
 	.ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
 	.loading(loading),
 	.mem_ready(mem_ready),
-	.dbg_sdram_ready(dbg_sdram_ready), .dbg_psram_ready(dbg_psram_ready), .dbg_ld_ovf(dbg_ld_ovf)
+	.dbg_sdram_ready(dbg_sdram_ready), .dbg_psram_ready(dbg_psram_ready), .dbg_ld_ovf(dbg_ld_ovf), .dbg_chk_done(dbg_chk_done), .dbg_chk_ok(dbg_chk_ok)
 );
 
 assign VDP1_VRAM_Q   = vdp1vram_do;
@@ -737,7 +745,7 @@ assign MEM_WAIT_N    = !RAMH_CS_N ? ~ramh_busy : ~raml_busy;
 `ifdef POCKET_DEBUG_OVERLAY
 reg [1:0]  dbg_pll_s, dbg_rn_s;
 reg        dbg_bios_seen = 1'b0;            // clk_74a: a BIOS word arrived
-reg  [1:0] dbg_bios_s;
+reg  [1:0] dbg_bios_s, dbg_chk_s;
 always @(posedge clk_74a) if (ld_wr && ld_sel[0]) dbg_bios_seen <= 1'b1;
 reg        dbg_wramh = 1'b0;
 reg [24:0] dbg_win = 25'd0;
@@ -745,17 +753,14 @@ always @(posedge clk_sys) begin
 	dbg_pll_s  <= {dbg_pll_s[0], lock_s[1]};
 	dbg_rn_s   <= {dbg_rn_s[0], reset_n};
 	dbg_bios_s <= {dbg_bios_s[0], dbg_bios_seen};
+	dbg_chk_s  <= {dbg_chk_s[0], dbg_chk_done & dbg_chk_ok};
 	dbg_win    <= dbg_win + 25'd1;
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
-wire a_msh, a_ssh, a_vbl, a_irl, a_cd, a_scsp, a_vs, a_de;
-dbg_act d_msh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[1]), .y(a_msh));
-dbg_act d_ssh  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[2]), .y(a_ssh));
-dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(VBL_N), .y(a_vbl));
+wire a_irl, a_cd, a_vs, a_de;
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
-dbg_act d_scsp (.clk(clk_sys), .tick(dbg_tick), .s(SCSP_RAM_CS), .y(a_scsp));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -765,7 +770,7 @@ wire dbg_toc = 1'b0;
 `endif
 wire [15:0] dbg_g = {
 	dbg_toc,                                           // 16 TOC loaded
-	1'b0,                                              // 15 SCSP/68K (activity)
+	dbg_chk_s[1],                                      // 15 SDRAM self-check OK (sound RAM write/read-back)
 	dbg_tap[5],                                        // 14 SMPC released MSH
 	1'b0,                                              // 13 CD block (activity)
 	1'b0,                                              // 12 SCU irq (activity)
@@ -780,8 +785,13 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {1'b0, a_scsp, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_ssh, a_msh, 6'b000000};
+wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH) and 11 (VBL) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
+
+// hex text row (docs/debug-overlay.md): data of the last SH-2 write and read of sound RAM word 0
+wire        dbg_wa = dbg_snd[16];                                  // word 1 = read data
+wire [15:0] dbg_wd = dbg_snd[16] ? dbg_snd[15:0] : dbg_snd[32:17];
+wire        dbg_we = dbg_snd[33] | dbg_snd[16];
 `endif
 
 pocket_video video (
@@ -790,7 +800,7 @@ pocket_video video (
 	.HRES(HRES), .VRES(VRES),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
-	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive)
+	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_wa(dbg_wa), .dbg_we(dbg_we)
 `endif
 );
 

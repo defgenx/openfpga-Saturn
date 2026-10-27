@@ -23,11 +23,10 @@
 // restores that row. VDP2 stops fetching for several dots per line (REFRESH/NOACCESS windows).
 //
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
-// cycle after it is registered. With CL3 the first word reaches the FPGA register about
-// 4.65 cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC +
-// input delay), so the default samples DQ on rising edges at READ+5 and +6 and the 32 bit result
-// lands in doutXX at READ+6. CAP_NEG=1 samples on the falling edges at +4.5/+5.5 instead. The
-// split depends on the pad delays of the device; tune on hardware (docs/memory.md).
+// cycle after it is registered. With CL3 the first word reaches the FPGA register about 4.7 to 5.7
+// cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC + input
+// delay). The capture edge and offset (cap_sel) is a runtime setting latched at init, from the
+// Core Settings menu; see docs/memory.md section 3.
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -37,12 +36,13 @@
 
 module sdram_pocket #(
 	parameter int INIT_CLKS    = 24000, // power-up wait, 200 us at 114.5 MHz
-	parameter bit CAP_NEG      = 1'b0,  // 1: sample DQ on the falling edge (+4.5/+5.5), 0: rising edge (+5/+6)
 	parameter int SCSP_MIN_AGE = 14     // earliest SCSP read delivery, clk_ram cycles after the request
 ) (
 	input  wire        clk,             // clk_ram (2x clk_sys, phase aligned)
+	input  wire        clk_cap,         // clk + 90 degrees (quarter-cycle read capture, cap_sel 3 / 7)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
+	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: 0..2 +4..+6 rising, 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -83,6 +83,8 @@ module sdram_pocket #(
 	output wire        ch2rdy,
 
 	output reg         init_done,
+	output reg         chk_done,        // POCKET_DEBUG_OVERLAY: write/read-back self-check of two sound RAM words finished
+	output reg         chk_ok,
 	output reg   [7:0] dbg_scrub_wrap,  // wraps of the row-scrub counters, saturating
 	output reg   [7:0] dbg_scsp_drop    // SCSP requests that arrived while one was still pending
 );
@@ -94,12 +96,19 @@ localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
 
 assign dram_cke = 1'b1;
 
+// capture setting takes effect at the next init (core Reset)
+reg [2:0] cs = 3'd1;
+always @(posedge clk) if (init) cs <= cap_sel;
+
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-reg [15:0] cap_n;
+reg [15:0] cap_n, cap_q;
 always @(negedge clk) cap_n <= dram_dq_i;
-wire [15:0] dq_cap = CAP_NEG ? cap_n : dram_dq_i;
+always @(posedge clk_cap) cap_q <= dram_dq_i;   // sampled 0.75 clk before the landing edge
+wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_q : cs[2] ? cap_n : dram_dq_i;
+// landing stage index: cap_sel 3 lands like 1 (+5, sample +4.25), 7 like 0 (+4, sample +3.25)
+wire [1:0] cs_st = cs == 3'd3 ? 2'd1 : cs == 3'd7 ? 2'd0 : cs[1:0];
 
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
@@ -182,6 +191,36 @@ reg        s_act  [2:3];     // ACT issued, CAS due
 reg        s_wr   [2:3];
 reg        s_dum  [2:3];
 
+// ------------------------------------------------------------------ self-check (debug overlay only)
+// After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
+`ifdef POCKET_NEVER
+reg  [2:0] ck_st;
+wire       ck_run = init_done && !chk_done;
+wire       ck_p0  = ck_run && cyc[5:0] == 6'd0;
+wire [15:0] ck_d  = ck_st[0] ? 16'h5AA5 : 16'hA55A;
+always @(posedge clk) begin
+	if (init) begin
+		ck_st <= 3'd7; chk_done <= 1'b0; chk_ok <= 1'b1;
+	end else if (ck_run) begin
+		if (cyc[5:0] == 6'd50) begin
+			if (ck_st[2:1] == 2'b01 && ch2dout != ck_d) chk_ok <= 1'b0;
+			if (ck_st == 3'd3) chk_done <= 1'b1;
+		end
+		if (cyc[5:0] == 6'd63) ck_st <= ck_st + 1'd1;
+	end
+end
+wire [19:1] rq_addr = ck_run ? {1'b0, ck_st[0], 8'd0, 1'b1, 8'd0} : ch2addr;
+wire [15:0] rq_din  = ck_run ? ck_d : ch2din;
+wire  [1:0] rq_wr   = ck_run ? {2{ck_p0 & ck_st[2:1] == 2'b00}} : ch2wr;
+wire        rq_rd   = ck_run ? (ck_p0 & ck_st[2:1] == 2'b01) : ch2rd;
+`else
+wire [19:1] rq_addr = ch2addr;
+wire [15:0] rq_din  = ch2din;
+wire  [1:0] rq_wr   = ch2wr;
+wire        rq_rd   = ch2rd;
+initial begin chk_done = 1'b0; chk_ok = 1'b0; end
+`endif
+
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
 reg  [5:0] dl_t0[0:1];
@@ -211,6 +250,17 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
+// tag stage of word 0 (cs[1:0] + 3, at most 5) and of word 1 (+ 1), written as 4:1 selects
+reg        w0_v, w1_v, w0_i;
+reg  [2:0] w0_k, w1_k;
+always @* begin
+	case (cs_st)
+	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
+	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
+	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
+	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // unused (cs_st is 0..2)
+	endcase
+end
 reg [7:0] scr_q [0:3];
 
 function automatic [12:0] row_a(input [7:0] r);
@@ -222,15 +272,15 @@ endfunction
 
 always @(posedge clk) begin
 	// ---- SCSP request capture
-	old_rd <= ch2rd;
-	old_wr <= |ch2wr;
-	if (ch2rd && !old_rd) begin
+	old_rd <= rq_rd;
+	old_wr <= |rq_wr;
+	if (rq_rd && !old_rd) begin
 		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= ch2addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
+		sc_addr <= rq_addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
 	end
-	if ((|ch2wr) && !old_wr) begin
+	if ((|rq_wr) && !old_wr) begin
 		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= ch2addr[18:1]; sc_din <= ch2din; sc_be <= ch2wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
+		sc_addr <= rq_addr[18:1]; sc_din <= rq_din; sc_be <= rq_wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
 	end
 	cyc <= cyc + 1'd1;
 
@@ -378,19 +428,20 @@ always @(posedge clk) begin
 	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
-	// word 0 and word 1 land one cycle apart, both after the previous set was sampled (F + 8)
-	if (t_v[4]) begin
-		case (t_k[4])
+	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
+	// after the previous set was sampled (F + 8) for every stage
+	if (w0_v) begin
+		case (w0_k)
 			3'd0: dout_a0[31:16] <= dq_cap;
 			3'd1: dout_b0[31:16] <= dq_cap;
 			3'd2: dout_a1[31:16] <= dq_cap;
 			3'd3: dout_b1[31:16] <= dq_cap;
-			3'd4: begin dl_d[t_i[4]] <= dq_cap; dl_ld[t_i[4]] <= 1'b1; end
+			3'd4: begin dl_d[w0_i] <= dq_cap; dl_ld[w0_i] <= 1'b1; end
 			default: ;
 		endcase
 	end
-	if (t_v[5]) begin
-		case (t_k[5])
+	if (w1_v) begin
+		case (w1_k)
 			3'd0: dout_a0[15:0] <= dq_cap;
 			3'd1: dout_b0[15:0] <= dq_cap;
 			3'd2: dout_a1[15:0] <= dq_cap;

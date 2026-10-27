@@ -67,7 +67,10 @@ module SH7604P
 	input       [5:0] MD,
 	
 	input             FAST
-	
+`ifdef POCKET_DEBUG_OVERLAY
+	,output     [31:0] DBG_PC
+	,output     [28:0] DBG_DA      // {valid, CPU data read address[27:0]}: reads outside WRAM-H
+`endif
 );
 
 	import SH7604P_PKG::*;
@@ -248,6 +251,9 @@ module SH7604P
 		.VECT_WAIT(VECT_WAIT),
 		
 		.SLEEP(SLEEP)
+`ifdef POCKET_DEBUG_OVERLAY
+		,.DBG_PC(DBG_PC)
+`endif
 	);
 	
 	assign CBUS_DI = |MAC_SEL && MAC_OP == 4'b1100 && !MAC_WE ? MULT_DO : CACHE_DO;
@@ -765,4 +771,10 @@ module SH7604P
 		.SBY(MSBY_SBY)
 	);
 	
+`ifdef POCKET_DEBUG_OVERLAY
+	// data read request on the CPU bus (before the cache), skipping WRAM-H
+	assign DBG_DA = {CBUS_REQ & ~CBUS_ID & ~CBUS_WR & ~(CBUS_A[27:24] == 4'h6),
+	                 CBUS_A[27:0]};
+`endif
+
 endmodule

@@ -24,7 +24,7 @@ never green). Legend, left to right:
 | 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
-| 15 | SCSP | activity | sound RAM chip select toggling (SCSP slots / 68K) |
+| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to word 0x100 of SCSP bank 2 / 3, reads both back (within 320 clk_ram of init done, before the SH-2 runs; the check owns the sound RAM port meanwhile) and both match; red if any mismatch or not finished |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`) |
 
 Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and
@@ -33,3 +33,45 @@ the SH-2 is held by the SMPC. 9 green means the BIOS reached its copy of WRAM-H;
 turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
+
+## Hex text row
+
+Under the squares, at x 32..159 and y 16..31 (black background, white digits, cell 16 x 16, glyph 3 x 5 scaled 4 x 2),
+one row of 8 hex digits: the master SH-2 program counter.
+
+```
+ [square row]
+ P P P P P P P P      MSH PC, 32 bit
+```
+
+- **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
+  shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
+- Digits live in an 8 x 4 M10K buffer rewritten continuously by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
+  in `pocket_video`. Squares 7 (MSH), 8 (SSH) and 11 (VBL) have no activity detector in this build (always red).
+- The normal build leaves no room for more: with the PC row alone the fit is 1,847 / 1,848 LABs. A version with
+  COMREG/SF, IRL, IST (and IMS, TVMD, frame counter) needed 1,851 to 1,852 LABs. The taps for those exist
+  (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
+- `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
+
+## debug6: sound RAM word 0 handshake
+
+```
+ W W W W R R R R        W = data of the last SH-2 write to 0x25A00000 (B-bus, as seen at SCSPP)
+                        R = data returned for the last completed SH-2 read of that word
+```
+
+Each half is written into the M10K text word by its own byte enables when the event happens (a write is the data on
+the B-bus when SCSPP accepts it with word address 0; a read is the data on the B-bus output two cycles after the read
+completes). A half that never changes stays 0000. Squares 7, 8 and 11 have no detector.
+
+## debug7: runtime SDRAM timing and the self-check
+
+Same hex row as debug6. The shipped build has no SDRAM self-check (it did not fit), so square 15 is always red. The Core Settings menu has
+a new list, applied at the next menu **Reset** (no core reload): **SDRAM read capture** (+4 to +6 clk_ram after READ
+on the rising edge, +3.5 to +5.5 on the falling edge; default +5 rising). Options and the delay ranges they cover:
+docs/memory.md section 3.
+
+Bring-up procedure: with the default the self-check square tells whether the SDRAM works at all. If square 15 is red,
+step "SDRAM read capture" through +4.5 (falling), +5.5 (falling), +6, +4 (and +3.5), Reset each time, until square 15 turns green;
+then the BIOS read of word 0 (hex row, R half) should return the written value. The settings are not part of the normal
+build's constraints; note the first setting that turns square 15 green.
