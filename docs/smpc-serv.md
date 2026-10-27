@@ -32,3 +32,14 @@ Breakdown (s2): SERV 194, MLABs 60 (5 byte RAMs of 10 ALMs), shell about 160.
 ## Deviations
 Pad polls start 100-250 ticks later than the HLE; calendar ignores leap years (as the HLE); SRES soft reset not handled;
 frame length is the NTSC constant (PAL not handled yet); SETTIME applies at once.
+
+## Area round (branch `area-hunt`)
+
+- The firmware is built as RV32I (`-march=rv32i`, 3,024 bytes, fits the 4 KB ROM): SERV without the compressed decoder and the aligner
+  (`serv_compdec` 58 + `serv_aligner` 17 ALMs). `sim/smpc HLE=SMPC_SERV` data_diffs=0, timing_violations=0.
+- Data RAM (32 x 32), IREG (8 x 8) and OREG (32 x 8) are M10K blocks (3) instead of six MLABs (an MLAB instance takes whole LABs in the
+  fit). The data RAM and IREG are read through a register like the ROM (valid in the `dack` cycle). The data RAM is written with
+  byte enables as `reg [3:0][7:0]`, the form Quartus infers; a partial-vector write `ram[a][7:0] <= ..` is not inferred and becomes
+  1,024 flip-flops. OREG is read by the SH-2 side through the falling-edge address register (`SMPC_SERV_FERAM`; `A` is a register of the
+  SH-2 bus controller), which gives the data in the same clock as the MLAB did. `sim/smpc/tb_smpc.sv` therefore drives the bus inputs
+  with non-blocking assignments (after the clock edge, like the registered bus outputs).
