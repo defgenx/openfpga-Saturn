@@ -126,7 +126,6 @@ end
 
 // ------------------------------------------------------------------ host registers
 reg [15:0] HIRQ = 16'd0, HMASK = 16'd0;
-(* ramstyle = "MLAB, no_rw_check" *) reg [15:0] RR [0:3];   // response registers, written by the firmware
 reg        ev_cmd = 1'b0, ev_rrd = 1'b1;
 reg        ev_sec = 1'b0, ev_dchg = 1'b0, ev_to = 1'b0;
 
@@ -157,8 +156,9 @@ wire        hirq_set = mm_wr && mm_a == 8'h00;
 wire [3:0] bus_w   = AA[5:2];
 wire       cr_we   = RST_N && RES_N && scu_sel && (!AWRL_N || !AWRU_N) && awr_old && CE_F && bus_w >= 4'd6 && bus_w <= 4'd9;
 wire       rr_we   = mm_wr && mm_a >= 8'h06 && mm_a <= 8'h09;
-wire [15:0] rr_q   = RR[bus_w[1:0] + 2'd2];
-always @(posedge CLK) if (rr_we) RR[mm_a[1:0] + 2'd2] <= cpu_wd[15:0];
+// RR: M10K, read address (the SCU's A-bus address: a register) taken on the falling edge
+wire [15:0] rr_q;
+CDB_FERAM #(2,16) rr_ram(CLK, rr_we, mm_a[1:0] + 2'd2, cpu_wd[15:0], bus_w[1:0] + 2'd2, rr_q);
 
 always @(posedge CLK) begin
 	f_pop <= 1'b0; f_push <= 1'b0;
