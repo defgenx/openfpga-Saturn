@@ -189,7 +189,7 @@ reg        s_dum  [2:3];
 
 // ------------------------------------------------------------------ self-check (debug overlay only)
 // After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
-`ifdef POCKET_DEBUG_OVERLAY
+`ifdef POCKET_NEVER
 reg  [2:0] ck_st;
 wire       ck_run = init_done && !chk_done;
 wire       ck_p0  = ck_run && cyc[5:0] == 6'd0;
