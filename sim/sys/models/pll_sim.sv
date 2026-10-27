@@ -23,6 +23,7 @@ module pll_sys (
 	output reg         outclk_1 = 1'b0,
 	output reg         outclk_2 = 1'b0,
 	output wire        outclk_3,
+	output wire        outclk_4,
 	output reg         locked = 1'b0,
 	input  wire [63:0] reconfig_to_pll,
 	output wire [63:0] reconfig_from_pll
@@ -50,4 +51,6 @@ module pll_sys (
 	end
 	// 90 degrees of clk_vid = one clk_sys period
 	assign #(17460) outclk_3 = outclk_2;
+	// clk_ram + 90 degrees (read capture clock of sdram_pocket)
+	assign #(2182) outclk_4 = outclk_1;
 endmodule

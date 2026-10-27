@@ -15,8 +15,6 @@
 
 module tb_sys;
 
-localparam integer TCO = 3500;
-localparam integer TIN = 1000;
 
 // ------------------------------------------------------------------ clocks and host
 reg clk_74a = 1'b0;
@@ -65,76 +63,24 @@ core_top dut (
 	.cont1_trig(16'd0), .cont2_trig(16'd0), .cont3_trig(16'd0), .cont4_trig(16'd0)
 );
 
-// ------------------------------------------------------------------ PSRAM x2 (CellularRAM pin models)
+// ------------------------------------------------------------------ memory chips (pin-level models, no pad delays)
 `define PSRAM_PINS(N) \
-	reg [21:16] a_d_``N; reg [15:0] o_d_``N; reg oe_d_``N, clk_d_``N, adv_d_``N, cre_d_``N, ce0_d_``N, ce1_d_``N, oen_d_``N, wen_d_``N, ub_d_``N, lb_d_``N; \
-	always @(cram``N``_a)     a_d_``N   <= #(TCO) cram``N``_a; \
-	always @(dut.psram``N``_dq_o)  o_d_``N <= #(TCO) dut.psram``N``_dq_o; \
-	always @(dut.psram``N``_dq_oe) oe_d_``N <= #(TCO) dut.psram``N``_dq_oe; \
-	always @(cram``N``_clk)   clk_d_``N <= #(TCO) cram``N``_clk; \
-	always @(cram``N``_adv_n) adv_d_``N <= #(TCO) cram``N``_adv_n; \
-	always @(cram``N``_cre)   cre_d_``N <= #(TCO) cram``N``_cre; \
-	always @(cram``N``_ce0_n) ce0_d_``N <= #(TCO) cram``N``_ce0_n; \
-	always @(cram``N``_ce1_n) ce1_d_``N <= #(TCO) cram``N``_ce1_n; \
-	always @(cram``N``_oe_n)  oen_d_``N <= #(TCO) cram``N``_oe_n; \
-	always @(cram``N``_we_n)  wen_d_``N <= #(TCO) cram``N``_we_n; \
-	always @(cram``N``_ub_n)  ub_d_``N  <= #(TCO) cram``N``_ub_n; \
-	always @(cram``N``_lb_n)  lb_d_``N  <= #(TCO) cram``N``_lb_n; \
-	initial begin a_d_``N = 0; o_d_``N = 0; oe_d_``N = 0; clk_d_``N = 0; adv_d_``N = 1; cre_d_``N = 0; ce0_d_``N = 1; ce1_d_``N = 1; oen_d_``N = 1; wen_d_``N = 1; ub_d_``N = 1; lb_d_``N = 1; end \
-	wire [15:0] mq_``N = oe_d_``N ? o_d_``N : 16'hzzzz; \
-	wire [15:0] mdq_``N; \
-	assign mdq_``N = mq_``N; \
-	reg [15:0] mq_in_``N; \
-	always @(mdq_``N) mq_in_``N <= #(TIN) mdq_``N; \
-	assign cram``N``_dq = dut.psram``N``_dq_oe ? 16'hzzzz : mq_in_``N; \
 	wire [31:0] m``N``_err, m``N``_rd, m``N``_wr, m``N``_bursts, m``N``_cel, m``N``_xrow; \
 	psram_model #(.T_POWER(1000000)) model``N ( \
-		.clk(clk_d_``N), .host_oe(oe_d_``N), .a(a_d_``N), .dq(mdq_``N), .ce0_n(ce0_d_``N), .ce1_n(ce1_d_``N), .adv_n(adv_d_``N), \
-		.oe_n(oen_d_``N), .we_n(wen_d_``N), .ub_n(ub_d_``N), .lb_n(lb_d_``N), .cre(cre_d_``N), \
+		.clk(cram``N``_clk), .host_oe(dut.psram``N``_dq_oe), .a(cram``N``_a), .dq(cram``N``_dq), .ce0_n(cram``N``_ce0_n), .ce1_n(cram``N``_ce1_n), .adv_n(cram``N``_adv_n), \
+		.oe_n(cram``N``_oe_n), .we_n(cram``N``_we_n), .ub_n(cram``N``_ub_n), .lb_n(cram``N``_lb_n), .cre(cram``N``_cre), \
 		.errors(m``N``_err), .n_rd(m``N``_rd), .n_wr(m``N``_wr), .n_bursts(m``N``_bursts), .max_ce_low(m``N``_cel), .n_xrow(m``N``_xrow));
 
 `PSRAM_PINS(0)
 `PSRAM_PINS(1)
 
-// ------------------------------------------------------------------ SDRAM
-reg  [12:0] sa_d;  reg [1:0] sba_d, sdqm_d;  reg sras_d, scas_d, swe_d, sdr_clk, soe_d;  reg [15:0] so_d;
-always @(dram_a)      sa_d    <= #(TCO) dram_a;
-always @(dram_ba)     sba_d   <= #(TCO) dram_ba;
-always @(dram_dqm)    sdqm_d  <= #(TCO) dram_dqm;
-always @(dram_ras_n)  sras_d  <= #(TCO) dram_ras_n;
-always @(dram_cas_n)  scas_d  <= #(TCO) dram_cas_n;
-always @(dram_we_n)   swe_d   <= #(TCO) dram_we_n;
-always @(dut.sdram_dq_oe) soe_d <= #(TCO) dut.sdram_dq_oe;
-always @(dut.sdram_dq_o)  so_d  <= #(TCO) dut.sdram_dq_o;
-always @(dram_clk)    sdr_clk <= #(TCO) dram_clk;
-initial begin sa_d = 0; sba_d = 0; sdqm_d = 0; sras_d = 1; scas_d = 1; swe_d = 1; sdr_clk = 1; soe_d = 0; so_d = 0; end
-wire [15:0] sdq;
-assign sdq = soe_d ? so_d : 16'hzzzz;
-reg [15:0] sdq_in;
-always @(sdq) sdq_in <= #(TIN) sdq;
-assign dram_dq = dut.sdram_dq_oe ? 16'hzzzz : sdq_in;
 wire [31:0] sd_err, sd_act, sd_rd, sd_wr; wire sd_drive;
 wire [63:0] t_ref = 64'd64000000000;                      // 64 ms retention limit
-sdram_model sdmodel (.t_ref(t_ref), .clk(sdr_clk), .cke(dram_cke), .ras_n(sras_d), .cas_n(scas_d), .we_n(swe_d),
-	.ba(sba_d), .a(sa_d), .dqm(sdqm_d), .dq(sdq), .errors(sd_err), .dq_drive(sd_drive), .n_act(sd_act), .n_rd(sd_rd), .n_wr(sd_wr));
+sdram_model sdmodel (.t_ref(t_ref), .clk(dram_clk), .cke(dram_cke), .ras_n(dram_ras_n), .cas_n(dram_cas_n), .we_n(dram_we_n),
+	.ba(dram_ba), .a(dram_a), .dqm(dram_dqm), .dq(dram_dq), .errors(sd_err), .dq_drive(sd_drive), .n_act(sd_act), .n_rd(sd_rd), .n_wr(sd_wr));
 
-// ------------------------------------------------------------------ SRAM
-reg [16:0] ra_d; reg [15:0] ro_d; reg roe_d, roen_d, rwen_d, rub_d, rlb_d;
-always @(sram_a)     ra_d   <= #(TCO) sram_a;
-always @(dut.sram_dq_o)  ro_d  <= #(TCO) dut.sram_dq_o;
-always @(dut.sram_dq_oe) roe_d <= #(TCO) dut.sram_dq_oe;
-always @(sram_oe_n)  roen_d <= #(TCO) sram_oe_n;
-always @(sram_we_n)  rwen_d <= #(TCO) sram_we_n;
-always @(sram_ub_n)  rub_d  <= #(TCO) sram_ub_n;
-always @(sram_lb_n)  rlb_d  <= #(TCO) sram_lb_n;
-initial begin ra_d = 0; ro_d = 0; roe_d = 0; roen_d = 1; rwen_d = 1; rub_d = 1; rlb_d = 1; end
-wire [15:0] rdq;
-assign rdq = roe_d ? ro_d : 16'hzzzz;
-reg [15:0] rdq_in;
-always @(rdq) rdq_in <= #(TIN) rdq;
-assign sram_dq = dut.sram_dq_oe ? 16'hzzzz : rdq_in;
 wire [31:0] sr_err, sr_rd, sr_wr;
-sram_model #(.T_AA(10000)) srmodel (.a(ra_d), .dq(rdq), .oe_n(roen_d), .we_n(rwen_d), .ub_n(rub_d), .lb_n(rlb_d), .errors(sr_err), .n_rd(sr_rd), .n_wr(sr_wr));
+sram_model #(.T_AA(0)) srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_n(sram_we_n), .ub_n(sram_ub_n), .lb_n(sram_lb_n), .errors(sr_err), .n_rd(sr_rd), .n_wr(sr_wr));
 
 // ------------------------------------------------------------------ host (bridge) side
 reg [7:0] bios [0:524287];
@@ -182,6 +128,7 @@ initial begin : host
 	wait (dut.status_setup_done === 1'b1);
 	repeat (20) @(posedge clk_74a);
 	$fdisplay(ftrace, "%0t HOST setup done, Reset Enter", $time);
+	bridge_write(32'h8000000C, 32'd5);                     // SDRAM read capture: falling edge +4.5 (no pad delays in the sim)
 	host_cmd(16'h0010, 0, 0);                              // Reset Enter
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin
@@ -245,6 +192,7 @@ task automatic log_cycle();
 	string r;
 	r = region(cy_a);
 	n_cycles++;
+	bra[bri] = cy_a; brd[bri] = cy_d; bwr[bri] = cy_wr; bri = (bri + 1) % 64;
 	if (r == "UNMAPPED") begin
 		n_unmapped++;
 		if (n_unmapped < 50) $fdisplay(ftrace, "%0t UNMAPPED %s A=%07h data=%08h", $time, cy_wr ? "WR" : "RD", cy_a, cy_d);
@@ -260,6 +208,8 @@ task automatic log_cycle();
 			$fdisplay(ftrace, "%0t VDP2 WR  A=%07h D=%08h %s", $time, cy_a, cy_d, cy_a[8:0] == 9'h000 ? "TVMD" : cy_a[8:0] == 9'h020 ? "BGON" : "");
 		end else if (r == "VDP1-REGS" || r == "SCSP-REGS" || r == "ABUS-CS2/CD") begin
 			$fdisplay(ftrace, "%0t %s WR  A=%07h D=%08h", $time, r, cy_a, cy_d);
+		end else if (r == "WRAM-H" && cy_a[19:0] >= 20'h00600 && cy_a[19:0] < 20'h00700 && cyc > 100000) begin
+			$fdisplay(ftrace, "%0t WRH-WR A=%07h D=%08h", $time, cy_a, cy_d);
 		end else if (r == "WRAM-H" && cy_a[19:0] >= 20'h00F00 && cy_a[19:0] < 20'h00F40) begin
 			$fdisplay(ftrace, "%0t MARK [%0h] = %08h", $time, cy_a[7:0], cy_d);
 			if (cy_a[7:0] == 8'h00) $display("%0t ps  step marker %08h", $time, cy_d);
@@ -310,11 +260,36 @@ integer pc_win_n = 0;
 longint pc_total = 0;
 integer win_len = 200000;
 reg [31:0] pc_q;
+reg [31:0] pcr [0:511]; int pcr_i = 0; bit ring_dumped = 0;
+reg [26:0] bra [0:63]; reg [31:0] brd [0:63]; reg bwr [0:63]; int bri = 0;
+reg [19:0] pc_reg_q = 20'hFFFFF;
+int pc_reg_n = 0;
 always @(posedge clk_sys) if (sys_ce_r && !rst_sys) begin
 	pc_q = `SAT.MSH.core.PC;
 	pc_hist[pc_q >> 2] = pc_hist[pc_q >> 2] + 1;
 	pc_total++;
 	pc_win_n++;
+	if (pc_q != pcr[(pcr_i + 511) % 512]) begin
+		pcr[pcr_i] = pc_q; pcr_i = (pcr_i + 1) % 512;
+		if (!ring_dumped && pc_q >= 32'h06000600 && pc_q < 32'h06000700) begin
+			ring_dumped = 1;
+			$fdisplay(ftrace, "%0t RING: PC entered %08h; last 512 PC changes:", $time, pc_q);
+			for (int k = 0; k < 512; k++) $fdisplay(ftrace, "   pc %08h", pcr[(pcr_i + k) % 512]);
+			$fdisplay(ftrace, "   last 64 bus cycles:");
+			for (int k = 0; k < 64; k++) $fdisplay(ftrace, "   %s A=%07h D=%08h", bwr[(bri + k) % 64] ? "WR" : "RD", bra[(bri + k) % 64], brd[(bri + k) % 64]);
+			$fflush();
+		end
+	end
+	if (pc_q[31:12] != pc_reg_q) begin
+		pc_reg_q <= pc_q[31:12];
+		if (pc_reg_n < 4000) $fdisplay(ftrace, "%0t PC-REGION %08h (cyc %0d)", $time, pc_q, cyc);
+		pc_reg_n++;
+	end
+	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
+		`SAT.MSH.bsc.BUS_STATE, `SAT.MSH.CACHE_BUSY, `SAT.MSH.BSC_IBUS_BUSY, `SAT.MSH.BSC_DBUS_BUSY, `SAT.MSH.MULT_BUSY, `SAT.MSH.IBUS_REQ, `SAT.MSH.DBUS_REQ,
+		`SAT.MSH.core.MA_ACTIVE, `SAT.MSH.core.IF_ACTIVE, `SAT.MSHBS_N, `SAT.MSHWAIT_N, sys_ce_r, `SAT.MSH.BUS_RLS); $fdisplay(ftrace, "   cache: IBUS_READ=%b READARRAY=%b READ_PEND=%b WRITE_PEND=%b IBREQ=%b IBUS_WRITE=%b CBUS_REQ=%b CBUS_WR=%b CBUS_A=%08h CCR=%02h HIT=%b",
+		`SAT.MSH.cache.IBUS_READ, `SAT.MSH.cache.IBUS_READARRAY, `SAT.MSH.cache.IBUS_READ_PEND, `SAT.MSH.cache.IBUS_WRITE_PEND, `SAT.MSH.cache.IBREQ, `SAT.MSH.cache.IBUS_WRITE,
+		`SAT.MSH.cache.CBUS_REQ, `SAT.MSH.cache.CBUS_WR, `SAT.MSH.cache.CBUS_A, `SAT.MSH.cache.CCR, `SAT.MSH.cache.HIT); $fflush(); end
 	if (pc_win_n == win_len) begin
 		report_pc("window");
 		pc_hist.delete();
@@ -341,6 +316,20 @@ task automatic report_pc(input string why);
 	$fdisplay(ftrace, "%0t PC-HIST (%s, %0d samples): %08h x%0d, %08h x%0d, %08h x%0d, %08h x%0d", $time, why, tot,
 		best[0] << 2, bn[0], best[1] << 2, bn[1], best[2] << 2, bn[2], best[3] << 2, bn[3]);
 endtask
+
+
+// ---- cache FSM probe around the first PC at 0x06000680
+int cp_n = 0; reg cp_on = 0;
+always @(posedge clk_sys) begin
+	if (!cp_on && cp_n == 0 && `SAT.MSH.core.PC >= 32'h06000670 && `SAT.MSH.core.PC < 32'h06000700) cp_on <= 1;
+	if (cp_on && cp_n < 160) begin
+		cp_n <= cp_n + 1;
+		$fdisplay(ftrace, "CP R=%b F=%b PC=%08h CREQ=%b CWR=%b CA=%08h BUSY=%b IBREQ=%b IBWE=%b IBA=%08h RD=%b RA=%b RP=%b WP=%b WR=%b HIT=%b IBWAIT=%b BSC=%0d MA=%b IF=%b",
+			`SAT.SYS_CE_R, `SAT.MSH.CE_F, `SAT.MSH.core.PC, `SAT.MSH.cache.CBUS_REQ, `SAT.MSH.cache.CBUS_WR, `SAT.MSH.cache.CBUS_A, `SAT.MSH.cache.CBUS_BUSY,
+			`SAT.MSH.cache.IBREQ, `SAT.MSH.cache.IBWE, `SAT.MSH.cache.IBADDR, `SAT.MSH.cache.IBUS_READ, `SAT.MSH.cache.IBUS_READARRAY, `SAT.MSH.cache.IBUS_READ_PEND,
+			`SAT.MSH.cache.IBUS_WRITE_PEND, `SAT.MSH.cache.IBUS_WRITE, `SAT.MSH.cache.HIT, `SAT.MSH.cache.IBUS_WAIT, `SAT.MSH.bsc.BUS_STATE, `SAT.MSH.core.MA_ACTIVE, `SAT.MSH.core.IF_ACTIVE);
+	end
+end
 
 // ---- SCU interrupt state, SH-2 IRL, SMPC release, VDP2 TVMD.DISP
 reg [31:0] ims_q = 32'hx, ist_q = 32'hx;
@@ -414,8 +403,8 @@ always @(posedge video_rgb_clock) begin
 		if (fh > 0) begin
 			$fdisplay(ftrace, "%0t FRAME %0d: %0dx%0d, %0d non-black pixels, first pixel %06h, centre %06h", $time, frame_no, fw, fh, frame_nonblack,
 				fbuf[0][0], fbuf[fw/2][fh/2]);
-			if (frame_no < 3 || (frame_nonblack > 0 && dumped < 2 && t_disp != 0 && $time > t_disp + 40000000)) begin
-				if (frame_nonblack > 0 && t_disp != 0) dumped++;
+			if (frame_no < 3 || (t_disp != 0 && frame_no % 8 == 0 && dumped < 400)) begin
+				if (t_disp != 0) dumped++;
 				dump_frame(t_disp != 0 ? "disp" : "boot");
 			end
 			nnb_total = frame_nonblack;
