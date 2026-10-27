@@ -297,6 +297,7 @@ module SH2P_CACHE_TAG2 (
 	input   [5:0] wraddress,
 	output [37:0] q
 );
+`ifdef ALTERA_RESERVED_QIS
 	altsyncram	altsyncram_component (
 				.address_a (wraddress),
 				.address_b (rdaddress),
@@ -341,4 +342,16 @@ module SH2P_CACHE_TAG2 (
 		altsyncram_component.width_a = 38,
 		altsyncram_component.width_b = 38,
 		altsyncram_component.width_byteena_a = 2;
+`else
+	// simulation: read address registered on the falling edge, as clock1 = ~clock does in the M10K
+	reg [37:0] mem [0:63];
+	reg [37:0] qr = '0;
+	initial for (int i = 0; i < 64; i++) mem[i] = '0;
+	always @(posedge clock) begin
+		if (wren[0]) mem[wraddress][18:0]  <= data[18:0];
+		if (wren[1]) mem[wraddress][37:19] <= data[37:19];
+	end
+	always @(negedge clock) qr <= mem[rdaddress];
+	assign q = qr;
+`endif
 endmodule
