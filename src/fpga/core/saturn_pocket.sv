@@ -89,6 +89,7 @@ module saturn_pocket #(
 	output wire        clk_audio,
 	output wire signed [15:0] audio_l,
 	output wire signed [15:0] audio_r,
+	output wire        audio_stb,
 
 	output wire        pll_locked_74a,             // clk_74a
 	output wire        setup_ready_74a             // clk_74a: PLL locked and the RAM controllers initialised (APF setup done)
@@ -228,7 +229,7 @@ wire [15:0] boot_data;
 
 reg [2:0]   cart_auto_pending = 3'd0;
 reg [2:0]   cart_auto = 3'd0;
-reg [127:0] game_id;
+reg [3:0]   dz_ok;                      // game id characters 0..7 match "T-16804G", two per header word
 reg [7:0]   cd_area_symbol;
 reg         dezaemon2_hack = 1'b0;
 
@@ -238,15 +239,11 @@ always @(posedge clk_sys) begin
 		case (boot_addr)
 		9'h000: cart_auto_pending <= 3'd0;
 		9'h100: cart_auto_pending <= (boot_data == 16'hA102) ? 3'd2 : (boot_data == 16'hA103) ? 3'd3 : 3'd0;
-		9'h020: game_id[127:112] <= {boot_data[7:0], boot_data[15:8]};
-		9'h022: game_id[111:96]  <= {boot_data[7:0], boot_data[15:8]};
-		9'h024: game_id[95:80]   <= {boot_data[7:0], boot_data[15:8]};
-		9'h026: game_id[79:64]   <= {boot_data[7:0], boot_data[15:8]};
-		9'h028: game_id[63:48]   <= {boot_data[7:0], boot_data[15:8]};
-		9'h02A: game_id[47:32]   <= {boot_data[7:0], boot_data[15:8]};
-		9'h02C: game_id[31:16]   <= {boot_data[7:0], boot_data[15:8]};
-		9'h02E: game_id[15:0]    <= {boot_data[7:0], boot_data[15:8]};
-		9'h030: dezaemon2_hack   <= (game_id[127:64] == "T-16804G");
+		9'h020: dz_ok[3] <= ({boot_data[7:0], boot_data[15:8]} == "T-");
+		9'h022: dz_ok[2] <= ({boot_data[7:0], boot_data[15:8]} == "16");
+		9'h024: dz_ok[1] <= ({boot_data[7:0], boot_data[15:8]} == "80");
+		9'h026: dz_ok[0] <= ({boot_data[7:0], boot_data[15:8]} == "4G");
+		9'h030: dezaemon2_hack   <= &dz_ok;
 		9'h040: cd_area_symbol   <= boot_data[7:0];
 		default: ;
 		endcase
@@ -272,17 +269,14 @@ wire [3:0] area_code = region_s2 == 2'd1 ? 4'h1 :
 assign PAL = (area_code >= 4'hA);
 
 // ---------------------------------------------------------------------------------- RTC (clk_74a -> SMPC)
-// payload holds still for 2 clk_74a before the toggle flips
-reg [47:0] rtc_pl;
+// The payload is the bridge's RTC registers (written once per RTC command, stable for the 2 clk_74a before the toggle flips).
+// MSM6242B layout: sec, min, hour, day, month (4 + tens), year (2 BCD digits)
+wire [47:0] rtc_pl = {rtc_date_bcd[23:16], 3'b000, rtc_date_bcd[12:8], rtc_date_bcd[7:0], rtc_time_bcd[23:0]};
 reg        rtc_tog = 1'b0;
 reg  [1:0] rtc_dly;
 always @(posedge clk_74a) begin
 	rtc_dly <= {rtc_dly[0], 1'b0};
-	if (rtc_valid) begin
-		// MSM6242B layout: sec, min, hour, day, month (4 + tens), year (2 BCD digits)
-		rtc_pl <= {rtc_date_bcd[23:16], 3'b000, rtc_date_bcd[12:8], rtc_date_bcd[7:0], rtc_time_bcd[23:0]};
-		rtc_dly <= 2'b01;
-	end
+	if (rtc_valid) rtc_dly <= 2'b01;
 	if (rtc_dly[1]) rtc_tog <= ~rtc_tog;
 end
 reg [1:0] tog_s;
@@ -807,7 +801,7 @@ pocket_video video (
 pocket_audio audio (
 	.clk(clk_sys), .rst(rst_sys), .scsp_ce(SCSP_CE), .in_clk(in_clk),
 	.in_l($signed(SOUND_L)), .in_r($signed(SOUND_R)),
-	.out_l(audio_l), .out_r(audio_r)
+	.out_l(audio_l), .out_r(audio_r), .out_stb(audio_stb)
 );
 
 endmodule

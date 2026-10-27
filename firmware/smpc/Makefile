@@ -3,7 +3,7 @@ CC      := riscv64-elf-gcc
 OBJCOPY := riscv64-elf-objcopy
 OBJDUMP := riscv64-elf-objdump
 SIZE    := riscv64-elf-size
-CFLAGS  := -march=rv32ic -mabi=ilp32 -Os -ffreestanding -fno-builtin -nostdlib -fno-pic -ffunction-sections -fdata-sections \
+CFLAGS  := -march=rv32i -mabi=ilp32 -Os -ffreestanding -fno-builtin -nostdlib -fno-pic -ffunction-sections -fdata-sections \
            -fno-asynchronous-unwind-tables -fomit-frame-pointer -fno-jump-tables -ffixed-s0 -ffixed-s1 -Wall -Wextra $(EXTRA)
 LDFLAGS := -nostdlib -Wl,--gc-sections -T link.ld
 OUT     := ../../src/fpga/saturn/Saturn

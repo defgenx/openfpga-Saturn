@@ -123,3 +123,76 @@ Changes:
 
 
 Final 9ff7e8a timing (slow 1100mV 85C setup): counter[0] -0.846 (TNS -41), counter[1] -1.166 (TNS -79), cram0 -0.514, cram1 -0.315, dram_clk_pin +1.654; hold >= 0. Compile 22 min with map --parallel=1, fit/sta --parallel=11.
+
+## Area hunt (branch `area-hunt`, 2026-10-27)
+
+Goal: room for the SCU DSP (about 300 ALMs compact), the SCSP DSP (about 200), VDP2 line colour / extended colour calc / back line
+(about 108) and the framebuffer handshake fix, with no feature removed. Lite configuration of `main` e615372, one processor,
+`raetro/quartus:21.1`.
+
+How to read the numbers:
+- `quartus_map` takes 7 minutes and its ALM estimate follows the fitter's "ALMs needed" of the same netlist and seed.
+- "ALMs needed" = used in final placement - recoverable by dense packing + unavailable. Once the design has room the fitter packs
+  less densely and the estimate moves a lot with the seed (b2: seed 7 18,039, seed 1 17,795; "recoverable" 398 / 571), and the LAB count
+  of a successful fit sits at the 1,848 cap. Compare map estimates, the touched entities in the per-entity table and several seeds.
+- An MLAB instance takes 10 ALMs (a whole LAB) in the fit whatever its width (the map counts bits only); `SAFE_STATE_MACHINE` etc. below
+  were measured at map level.
+- Fit noise on entities nobody touched is +-50 ALMs per large block (MSH +30, SSH -76, M68K +42 between two runs).
+
+| Build | map est. | ALMs needed seed 7 / seed 1 | LABs | M10K | slack counter[0] / [1] |
+|---|---|---|---|---|---|
+| lite e615372 (before) | 17,912 | 18,204 / 18,216 | 1,847 / 1,848 | 285 | -1.456 / -2.929 |
+| + SMPC firmware RV32I | 17,808 | 18,145 / | 1,844 | 285 | |
+| + SMPC RAMs, game id, RTC, audio, CR/RR in MLAB (a2) | 17,712 | 18,074 / | 1,847 | 287 | |
+| + tiny MLABs to M10K, bridge loader, RTC regs (b2) | 17,692 | 18,039 / 17,795 | 1,848 / 1,843 | 293 | |
+| `area-hunt` HEAD (F): + RR in M10K, SAFE_STATE_MACHINE off | 17,639 | 17,762 / 17,733 | 1,848 / 1,848 | 294 | -0.577 / -2.567 |
+
+Stress test (same seed 7, quartus_fit stops at the LAB check): the same restore on both trees, SCSP DSP uncut (`POCKET_CUT_SCSP_DSP` off:
+the full DSP, about 440 ALMs, not the compact one) and the VDP2 `LNCOL`, `EXTCC`, `BACKLINE` cuts off (about 108), map estimate 18,361 on
+e615372 and 18,098 on `area-hunt`: the fitter requires **1,885 LABs before and 1,853 after** (device 1,848). The hunt freed about 32 LABs
+(map estimate -263 ALMs); with the compact SCSP DSP (about 200 instead of 440) the restore fits, the SCU DSP (about 300) does not yet.
+
+Savings (fit entity table, seed 7, "ALMs needed" of the touched entity before -> after; each has a simulation, see the commit):
+
+| Change | Entity ALMs | How verified |
+|---|---|---|
+| SMPC_SERV firmware as RV32I, SERV without `serv_compdec` and `serv_aligner` (ROM stays 4 KB: 3,024 bytes) | SMPC_SERV 397.7 -> 308.7 (-89) | `sim/smpc HLE=SMPC_SERV`: data_diffs=0, timing_violations=0; `sim/irq` |
+| SMPC_SERV data RAM, IREG and OREG: six MLABs -> three M10K (data RAM `reg [3:0][7:0]` byte lanes, OREG read on the falling edge) | SMPC_SERV 308.7 -> 261.6 (-47) | same, plus `-DPOCKET_FE_CHECK`: no `FE_ADDR_LATE` |
+| cdb_hle: CR and RR (128 flip-flops, then MLABs) and the transfer FIFO (MLAB) in M10K (falling-edge read), `sk_base` copy dropped | cdb_hle 611.2 -> 544.0 (-67) | `sim/cdb test` with `-DPOCKET_FE_CHECK`: 26 + 6 checks, 0 failed |
+| SCSPP KB / KBO / KEY RAMs (three MLAB LABs) in M10K (falling-edge read) | SCSP 1,179.0 -> 1,160.3 (-19) | `sim/scsp` 6 seeds x 2 builds, golden vs shrunk, WAV identical |
+| bridge_loader: `ld_addr` / `ld_data` are the held bridge bus instead of a 56 bit copy | loader 17.4 -> 1.5 (-16) | `sim/sys` boot ROM (BIOS goes through the loader): 0 failed steps |
+| core_bridge_cmd: RTC date / time registers are the host parameter registers 0x24 / 0x28 | icb 195.3 -> 174.5 (-21) | `sim/sys` |
+| sound_i2s: FIFO write on a strobe from pocket_audio instead of comparing the previous 32 bit sample | sound_i2s 83.3 -> 65.5 (-18) | I2S pins identical to the old pair over 8 ms (random and silent samples) |
+| pocket_audio: 27 bit accumulator (acc < in_clk < 2^26) | audio 108.4 -> 93.9 (-15, with the strobe) | output identical to the old module, four in_clk values; `sim/platform` |
+| saturn_pocket: Dezaemon 2 game id kept as four compare bits (was 64 flip-flops), RTC payload not copied (45 flip-flops) | in saturn_pocket | unit comparison of the match result (4,000 headers); `sim/sys` |
+| `SAFE_STATE_MACHINE` off | map 17,661 -> 17,639 (-22) | no RTL change |
+
+Touched entities together about -290 ALMs; the whole design -441 (the rest is packing and seed noise in blocks nobody touched).
+M10K +9 (285 -> 294): SMPC data RAM, IREG, OREG; SCSPP KB, KBO, KEY; cdb CR, RR, transfer FIFO. 14 blocks remain (the DSP restores
+need some). Setup slack after the changes is not worse (table; the same seed, counter[4] is the 90 degree clk_ram_cap output).
+
+Tried, no gain (map estimate on the same RTL, or fit with the same seed): `SYNTH_TIMING_DRIVEN_SYNTHESIS off` (0),
+`REMOVE_REDUNDANT_LOGIC_CELLS on` (0), `ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP on` (0), `PRE_MAPPING_RESYNTHESIS on` (+451),
+`ALLOW_ANY_SHIFT_REGISTER_SIZE_FOR_RECOGNITION on` + `AUTO_SHIFT_REGISTER_RECOGNITION always` (+39; the netlist has no fabric shift
+chains outside SERV's bit-serial registers), `QII_AUTO_PACKED_REGISTERS "MINIMIZE AREA"` (fit identical), `PLACEMENT_EFFORT_MULTIPLIER 3`
+(fit ALMs identical). A `ramstyle` MLAB `reg [1:0][8:0]` two-lane array is not inferred as a RAM (72 flip-flops): merging
+`cdpa_lo` / `cdpa_hi` into one MLAB was dropped.
+
+Looked at, nothing to take: the debug overlay is `ifdef`-ed out (no `dbg_*` entity in the fit; `dbg_tx` is a tie-off); the PLL writer
+`pll_lite` is 90 ALMs (M and K only; a Altera reconfiguration core is 737, the read-modify-write values of DPRIO 0x15/0x17 cannot be
+made constants without the silicon); the pad controller and bridge peripheral use only `cont1_key` / `cont2_key`; PSRAM address
+counters are row-limited already; DIVU is a serial single-adder unit.
+
+Not done (estimates):
+- VDP1P MLABs (CLT, GSTEP, PAT_FIFO, ACCS x2: five LABs, -50 ALMs) with `VDP1P_MLAB FE=1`: the read becomes a half-cycle path
+  (the reason `timing2` put them back).
+- VDP2P `nmp` / `rmp` (two LABs): the read address comes from another falling-edge RAM.
+- Write-data holds of `ddram_pocket` shared between `raml` and `cart` (about -25 ALMs): a write on one channel stalls the other.
+- The 763 VDP2 register-file flip-flops (`REGS.*`, about 380 ALMs) as RAM need sequential readers in the dot pipeline
+  (`vdp2-rewrite.md`).
+- The firmware's MMIO read mux of `cdb_hle` (199 LUTs) and `pll_lite`'s 16 bit write-data mux (55 LUTs).
+
+Observation (not changed): `rtc_valid` of `core_bridge_cmd` is a level that stays high after the first RTC command, while
+`saturn_pocket` treats it as a pulse (`rtc_dly <= 2'b01` on every clock), so `rtc_tog` never toggles and the SMPC never gets
+the Pocket's time through `rtc_load`. An edge detector on `rtc_valid` would fix it.
+

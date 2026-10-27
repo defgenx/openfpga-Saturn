@@ -120,11 +120,12 @@ module tb_smpc;
 		if ({P1D_H, P1O_H} !== pp_h) $display("PIN H %0d DDR=%b PDR=%b in=%b fr=%0d", ce, P1D_H, P1O_H, P1I_H, fr);
 	end
 	task automatic idle(input int n); repeat (n) @(posedge CLK); endtask
+	// bus inputs change like the registered outputs of the SH-2 bus controller (after the clock edge), not before it
 	task automatic wr(input [6:0] addr, input [7:0] d);
-		CA = addr[6:1]; CDI = d; CS_N = 0; MWR_N = 1; idle(6); MWR_N = 0; idle(30); MWR_N = 1; idle(6); CS_N = 1; idle(10);
+		CA <= addr[6:1]; CDI <= d; CS_N <= 0; MWR_N <= 1; idle(6); MWR_N <= 0; idle(30); MWR_N <= 1; idle(6); CS_N <= 1; idle(10);
 	endtask
 	task automatic rd(input [6:0] addr, output [7:0] vl, output [7:0] vh);
-		CA = addr[6:1]; CS_N = 0; MWR_N = 1; idle(8); vl = DO_L; vh = DO_H; CS_N = 1; idle(10);
+		CA <= addr[6:1]; CS_N <= 0; MWR_N <= 1; idle(8); vl = DO_L; vh = DO_H; CS_N <= 1; idle(10);
 	endtask
 	task automatic waitce(input int n); int t; t = ce + n; while (ce < t) @(posedge CLK); endtask
 

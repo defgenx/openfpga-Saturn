@@ -126,8 +126,6 @@ end
 
 // ------------------------------------------------------------------ host registers
 reg [15:0] HIRQ = 16'd0, HMASK = 16'd0;
-reg [15:0] CR [0:3];
-reg [15:0] RR [0:3];
 reg        ev_cmd = 1'b0, ev_rrd = 1'b1;
 reg        ev_sec = 1'b0, ev_dchg = 1'b0, ev_to = 1'b0;
 
@@ -152,12 +150,21 @@ reg  [7:0]  mm_a = 8'd0;
 reg         mm_wr = 1'b0;
 wire        hirq_set = mm_wr && mm_a == 8'h00;
 
+// CR / RR: four words each (SH-2 word 0x18, 0x1C, 0x20, 0x24 and MMIO 0x02..0x05 / 0x06..0x09 map to index 0..3 as x + 2).
+// Not cleared by reset: the firmware reads CR only after a command (ev_cmd) and writes RR before the host reads it.
+// CR is written from the SH-2 side and read by the firmware; RR the other way round.
+wire [3:0] bus_w   = AA[5:2];
+wire       cr_we   = RST_N && RES_N && scu_sel && (!AWRL_N || !AWRU_N) && awr_old && CE_F && bus_w >= 4'd6 && bus_w <= 4'd9;
+wire       rr_we   = mm_wr && mm_a >= 8'h06 && mm_a <= 8'h09;
+// RR: M10K, read address (the SCU's A-bus address: a register) taken on the falling edge
+wire [15:0] rr_q;
+CDB_FERAM #(2,16) rr_ram(CLK, rr_we, mm_a[1:0] + 2'd2, cpu_wd[15:0], bus_w[1:0] + 2'd2, rr_q);
+
 always @(posedge CLK) begin
 	f_pop <= 1'b0; f_push <= 1'b0;
 	if (CD_CE) shclk <= ~shclk;
 	if (!RST_N || !RES_N) begin
 		HIRQ <= 16'd0; HMASK <= 16'd0; abus_wait <= 1'b0; wait_cnt <= 3'd0; ev_cmd <= 1'b0; ev_rrd <= 1'b1;
-		CR[0] <= 16'd0; CR[1] <= 16'd0; CR[2] <= 16'd0; CR[3] <= 16'd0;
 		ADO <= 16'd0;
 	end else begin
 		if (CE_R) begin awr_old <= AWRL_N & AWRU_N; ard_old <= ARD_N; end
@@ -168,10 +175,7 @@ always @(posedge CLK) begin
 				case ({AA[5:2], 2'b00})
 				6'h08: HIRQ <= HIRQ & ADI;
 				6'h0C: HMASK <= ADI;
-				6'h18: CR[0] <= ADI;
-				6'h1C: CR[1] <= ADI;
-				6'h20: CR[2] <= ADI;
-				6'h24: begin CR[3] <= ADI; ev_cmd <= 1'b1; end
+				6'h24: ev_cmd <= 1'b1;
 				default: ;
 				endcase
 				if ({AA[5:2], 2'b00} == 6'h00) begin abus_wait <= 1'b1; data_port <= 1'b1; dp_wr <= 1'b1; wait_cnt <= FAST ? 3'd0 : 3'd3; to_cnt <= 12'd0; end
@@ -180,10 +184,8 @@ always @(posedge CLK) begin
 				case ({AA[5:2], 2'b00})
 				6'h08: ADO <= HIRQ;
 				6'h0C: ADO <= HMASK;
-				6'h18: ADO <= RR[0];
-				6'h1C: ADO <= RR[1];
-				6'h20: ADO <= RR[2];
-				6'h24: begin ADO <= RR[3]; ev_rrd <= 1'b1; end
+				6'h18, 6'h1C, 6'h20: ADO <= rr_q;
+				6'h24: begin ADO <= rr_q; ev_rrd <= 1'b1; end
 				default: ADO <= 16'd0;
 				endcase
 				if ({AA[5:2], 2'b00} == 6'h00) begin abus_wait <= 1'b1; data_port <= 1'b1; dp_wr <= 1'b0; wait_cnt <= FAST ? 3'd2 : 3'd5; to_cnt <= 12'd0; end
@@ -211,10 +213,7 @@ always @(posedge CLK) begin
 		if (mm_wr) begin
 			case (mm_a)
 			8'h00: HIRQ <= HIRQ | cpu_wd[15:0];
-			8'h06: RR[0] <= cpu_wd[15:0];
-			8'h07: RR[1] <= cpu_wd[15:0];
-			8'h08: RR[2] <= cpu_wd[15:0];
-			8'h09: begin RR[3] <= cpu_wd[15:0]; ev_rrd <= 1'b0; end
+			8'h09: ev_rrd <= 1'b0;
 			8'h0B: begin
 				if (cpu_wd[0]) ev_cmd <= 1'b0;
 				if (cpu_wd[1]) ev_sec <= 1'b0;
@@ -240,7 +239,6 @@ wire [2:0]  dram_done;
 reg  [17:0] dr_a = 18'd0;
 reg         dr_we = 1'b0;
 reg  [15:0] dr_d = 16'd0;
-reg  [17:0] sk_base = 18'd0;
 reg         armed = 1'b0;
 reg  [1:0]  a_kind = 2'd0;
 reg         a_synth = 1'b0, a_spd2 = 1'b0;
@@ -251,7 +249,7 @@ reg         xf_mode_we = 1'b0, xf_a_we = 1'b0, xf_b_we = 1'b0, xf_cnt_we = 1'b0;
 reg  [11:0] xf_cnt = 12'd0;
 
 cdb_sink sink (
-	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_start), .kind_audio(sd_kind == 2'd1), .base_d(sk_base),
+	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_start), .kind_audio(sd_kind == 2'd1), .base_d(a_base),
 	.cd_data(cd_data), .cd_ck(cd_ck), .done(sk_done), .overrun(sk_overrun), .hdr_a(hdr_a), .hdr_b(hdr_b),
 	.rq(sk_rq), .rq_a(sk_a), .rq_d(sk_d), .dn(dram_done[0]), .cd_sl(CD_SL), .cd_sr(CD_SR));
 
@@ -274,6 +272,9 @@ reg [31:0] ticks = 32'd0;
 reg        dr_pend = 1'b0, lk_done_w = 1'b0;
 assign dr_rq = dr_pend;
 wire [7:0] mi = da[9:2];
+// CR: M10K, read address (the firmware's data address: a register) taken on the falling edge
+wire [15:0] cr_q;
+CDB_FERAM #(2,16) cr_ram(CLK, cr_we, bus_w[1:0] + 2'd2, ADI, mi[1:0] + 2'd2, cr_q);
 
 reg sk_overrun_r = 1'b0;
 wire [31:0] ev_word = {17'd0, armed, ev_to, sk_overrun_r, !eng_idle, fd_busy, pf_ready, disc_ok, lk_busy, xf_idle, seg1_free, f_empty,
@@ -284,10 +285,7 @@ always @* begin
 	case (mi)
 	8'h00: mm_q = {16'd0, HIRQ};
 	8'h01: mm_q = {16'd0, HMASK};
-	8'h02: mm_q = {16'd0, CR[0]};
-	8'h03: mm_q = {16'd0, CR[1]};
-	8'h04: mm_q = {16'd0, CR[2]};
-	8'h05: mm_q = {16'd0, CR[3]};
+	8'h02, 8'h03, 8'h04, 8'h05: mm_q = {16'd0, cr_q};
 	8'h0A: mm_q = ev_word;
 	8'h0C: mm_q = ticks;
 	8'h14: mm_q = hostcnt;
@@ -312,7 +310,7 @@ always @(posedge CLK) begin
 	// fire the armed sector as soon as the feed is idle and the ring has one
 	if (armed && !fd_busy && !sd_go && !sk_start && pf_ready) begin
 		armed <= 1'b0; sd_go <= 1'b1; sk_start <= 1'b1;
-		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr; sk_base <= a_base;
+		sd_kind <= a_kind; sd_synth <= a_synth; sd_spd2 <= a_spd2; sd_hdr <= a_hdr;
 	end
 	if (sk_overrun) sk_overrun_r <= 1'b1;
 	if (!RST_N || !RES_N) begin

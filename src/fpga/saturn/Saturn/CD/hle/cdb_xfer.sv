@@ -37,10 +37,8 @@ module cdb_xfer (
 	input  wire [15:0] dq
 );
 
-(* ramstyle = "MLAB, no_rw_check" *) reg [15:0] fifo [0:7];   // an entry is read only after n counts it
 reg [2:0]  wp = 3'd0, rp = 3'd0;
 reg [3:0]  n = 4'd0;
-assign f_q     = fifo[rp];
 assign f_empty = (n == 4'd0);
 assign f_full  = (n == 4'd8);
 
@@ -64,6 +62,9 @@ wire pop_eng  = (mode == 3'd2) && ph == 2'd0 && c0 != 12'd0 && !rq && !f_empty;
 wire do_push  = push_eng || f_push;
 wire do_pop   = pop_eng || f_pop;
 
+// an entry is read only after n counts it; M10K with the read address (rp, a register) taken on the falling edge
+CDB_FERAM #(3,16) fifo(clk, do_push && rst_n && !mode_we, wp, push_eng ? dq : f_wd, rp, f_q);
+
 always @(posedge clk) begin
 	if (!rst_n || (mode_we)) begin
 		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0;
@@ -79,7 +80,7 @@ always @(posedge clk) begin
 
 		if (f_push || f_pop) hc <= hc + 18'd1;
 
-		if (do_push) begin fifo[wp] <= push_eng ? dq : f_wd; wp <= wp + 3'd1; end
+		if (do_push) wp <= wp + 3'd1;
 		if (do_pop)  rp <= rp + 3'd1;
 		n <= n + {3'd0, do_push} - {3'd0, do_pop};
 
@@ -108,4 +109,45 @@ always @(posedge clk) begin
 	end
 end
 
+endmodule
+
+// Simple dual port RAM in M10K, read address registered on the falling edge: for a register-sourced RA the value is what
+// an asynchronous MLAB read gives before the next rising edge (MLAB instances take whole LABs). RA must not come from another
+// such RAM, writes are on the rising edge.
+module CDB_FERAM #(
+	parameter AW = 3,
+	parameter DW = 16
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(AW), .widthad_b(AW), .width_a(DW), .width_b(DW), .width_byteena_a(1)
+	) ram (
+		.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(~CLK), .data_a(WD), .wren_a(WE), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({DW{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) if (WE) mem[WA] <= WD;
+	always @(negedge CLK) q <= mem[RA];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
+`endif
 endmodule

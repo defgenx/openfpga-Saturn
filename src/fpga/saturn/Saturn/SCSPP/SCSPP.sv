@@ -261,8 +261,8 @@ module SCSPP #(
 	wire        KB_SWEEP = RST & SLOT1_CE;
 	wire        KB_WR = CYCLE1_CE & RES_N & REG_A[11:10] == 2'b00 & {REG_A[4:1],1'b0} == 5'h00 & REG_WE[1];
 	wire        KB_Q,KBO_Q;
-	SCSPP_BIT_RAM #(5) KB_RAM (CLK, KB_SWEEP ? SLOT : REG_A[9:5], ~KB_SWEEP & REG_D[11], KB_SWEEP | KB_WR, SLOT, KB_Q);
-	SCSPP_BIT_RAM #(5) KBO_RAM(CLK, SLOT, ~KB_SWEEP & KB_Q, KB_SWEEP | (SLOT1_CE & KYONEX_RUN & RES_N), SLOT, KBO_Q);
+	SCSPP_BIT_RAM #(5,1) KB_RAM (CLK, KB_SWEEP ? SLOT : REG_A[9:5], ~KB_SWEEP & REG_D[11], KB_SWEEP | KB_WR, SLOT, KB_Q);
+	SCSPP_BIT_RAM #(5,1) KBO_RAM(CLK, SLOT, ~KB_SWEEP & KB_Q, KB_SWEEP | (SLOT1_CE & KYONEX_RUN & RES_N), SLOT, KBO_Q);
 
 	wire [ 9: 0] OP1_LFO_DIV = OP1_LFO_Q[17:8];
 	wire [ 7: 0] OP1_LFO_DATA = OP1_LFO_Q[7:0];
@@ -379,7 +379,7 @@ module SCSPP #(
 	
 	bit  [ 1:0] KEY_RAM_D;
 	bit  [ 1:0] KEY_RAM_Q;
-	SCSPP_KEY_RAM KEY_RAM(CLK, OP2.SLOT, KEY_RAM_D, SLOT1_CE, SLOT, KEY_RAM_Q);
+	SCSPP_FERAM #(5,2) KEY_RAM(CLK, SLOT1_CE, OP2.SLOT, KEY_RAM_D, SLOT, KEY_RAM_Q);   // M10K: SLOT is a register
 	
 	bit  [17:0] LFO_RAM_D;
 	
@@ -2558,7 +2558,8 @@ module SCSPP_RAM_LW
 endmodule
 
 module SCSPP_BIT_RAM #(
-	parameter addr_width = 5
+	parameter addr_width = 5,
+	parameter FE = 0                      // 1: M10K, read address registered on the falling edge (SCSPP_FERAM)
 )
 (
 	input                  CLK,
@@ -2568,6 +2569,9 @@ module SCSPP_BIT_RAM #(
 	input [addr_width-1:0] RDADDR,
 	output                 Q
 );
+	generate if (FE) begin : g_fe
+		SCSPP_FERAM #(addr_width,1) ram(CLK, WREN, WRADDR, DATA, RDADDR, Q);
+	end else begin : g_ml
 	altdpram	altdpram_component (
 				.data (DATA),
 				.inclock (CLK),
@@ -2602,6 +2606,7 @@ module SCSPP_BIT_RAM #(
 		altdpram_component.wraddress_reg = "INCLOCK",
 		altdpram_component.wrcontrol_aclr = "OFF",
 		altdpram_component.wrcontrol_reg = "INCLOCK";
+	end endgenerate
 endmodule
 
 module SCSPP_PHASE_RAM (

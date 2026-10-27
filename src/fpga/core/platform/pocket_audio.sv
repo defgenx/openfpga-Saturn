@@ -11,17 +11,18 @@ module pocket_audio (
 	input  wire               clk,
 	input  wire               rst,
 	input  wire               scsp_ce,
-	input  wire        [31:0] in_clk,
+	input  wire        [25:0] in_clk,
 	input  wire signed [15:0] in_l,
 	input  wire signed [15:0] in_r,
 	output reg  signed [15:0] out_l,
-	output reg  signed [15:0] out_r
+	output reg  signed [15:0] out_r,
+	output reg                out_stb       // one clk after out_r is written: a new 48 kHz sample is on out_l/out_r
 );
 
 localparam [15:0] STEP = 16'd60211;        // 65536 * 44100 / 48000
 
 reg [8:0]  scsp_cnt;
-reg [31:0] acc;
+reg [26:0] acc;                            // acc < in_clk < 2^26, so acc + 48000 fits 27 bits
 reg signed [15:0] prev_l, prev_r, cur_l, cur_r;
 reg [16:0] ph;
 reg        in_ev, out_ev, out_pend;
@@ -35,15 +36,15 @@ always @(posedge clk) begin
 		if (&scsp_cnt) in_ev <= 1'b1;
 	end
 
-	acc <= acc + 32'd48000;
-	if (acc + 32'd48000 >= in_clk) begin
-		acc    <= acc + 32'd48000 - in_clk;
+	acc <= acc + 27'd48000;
+	if (acc + 27'd48000 >= {1'b0, in_clk}) begin
+		acc    <= acc + 27'd48000 - {1'b0, in_clk};
 		out_ev <= 1'b1;
 	end
 
 	if (rst) begin
 		scsp_cnt <= 9'd0;
-		acc      <= 32'd0;
+		acc      <= 27'd0;
 	end
 end
 
@@ -60,6 +61,7 @@ always @(posedge clk) begin
 		ph     <= (ph >= 17'd65536) ? ph - 17'd65536 : 17'd0;
 	end
 
+	out_stb <= 1'b0;
 	case (st)
 	2'd0: if (out_pend && !in_ev) begin
 		out_pend <= 1'b0;
@@ -79,8 +81,9 @@ always @(posedge clk) begin
 		st    <= 2'd3;
 	end
 	2'd3: begin
-		out_r <= prev_r + prod[31:16];
-		st    <= 2'd0;
+		out_r   <= prev_r + prod[31:16];
+		out_stb <= 1'b1;
+		st      <= 2'd0;
 	end
 	endcase
 

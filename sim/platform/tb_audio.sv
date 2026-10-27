@@ -12,7 +12,7 @@ module tb_audio;
 	wire signed [15:0] out_l, out_r;
 	integer acc = 0;
 
-	pocket_audio dut (.clk(clk), .rst(rst), .scsp_ce(scsp_ce), .in_clk(32'd57272800), .in_l(in_l), .in_r(in_r), .out_l(out_l), .out_r(out_r));
+	pocket_audio dut (.clk(clk), .rst(rst), .scsp_ce(scsp_ce), .in_clk(26'd57272800), .in_l(in_l), .in_r(in_r), .out_l(out_l), .out_r(out_r));
 
 	// SCSP_CE: 22.5792 MHz from clk_sys, and one new sample per 512 enables
 	integer n = 0, cnt = 0;

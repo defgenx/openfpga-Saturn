@@ -19,12 +19,15 @@ module bridge_loader (
 	input  wire        bridge_wr,
 	input  wire [31:0] bridge_wr_data,
 
-	output reg         ld_wr,       // one-cycle pulse per word
+	output reg         ld_wr,       // one-cycle pulse per word, one clock after bridge_wr
 	output reg  [2:0]  ld_sel,      // one-hot: [0] BIOS, [1] backup RAM, [2] backup cart
-	output reg  [23:0] ld_addr,     // byte offset of the word inside its slot
-	output reg  [31:0] ld_data,
+	output wire [23:0] ld_addr,     // byte offset of the word inside its slot (the bridge address: held until the next transfer)
+	output wire [31:0] ld_data,     // the bridge data, held likewise
 	output wire        ld_active    // a slot is being written (idles out after 4096 clocks)
 );
+
+assign ld_addr = bridge_addr[23:0];
+assign ld_data = bridge_wr_data;
 
 reg [12:0] idle = 13'h1FFF;
 assign ld_active = ~&idle;
@@ -42,8 +45,6 @@ always @(posedge clk) begin
 		endcase
 		if (bridge_addr[31:28] == 4'h2 || bridge_addr[31:28] == 4'h4 || bridge_addr[31:28] == 4'h5) begin
 			ld_wr   <= 1'b1;
-			ld_addr <= bridge_addr[23:0];
-			ld_data <= bridge_wr_data;
 			idle    <= 13'd0;
 		end
 	end
