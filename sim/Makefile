@@ -8,6 +8,7 @@
 #   make -C sim cdb-compare  the same script on the SH-1 LLE and the HLE (needs ../ref)
 #   make -C sim sh1        SH-1 golden vs pruned (Verilator; firmware read from ../ref)
 #   make -C sim scsp       SCSP golden vs shrunk (Verilator)
+#   make -C sim scsp-compact  the same with POCKET_SCSP_DSP_COMPACT (CSEEDS: 16 seeds by default)
 #   make -C sim vdp1       VDP1 golden vs shrunk (Verilator; vdp1-ppm dumps frames)
 #   make -C sim sh2        SH-2 pair golden vs shrunk (Verilator)
 #   make -C sim scu        SCU and DSP golden vs shrunk (Verilator)
@@ -21,7 +22,7 @@
 CDRTL := $(wildcard ../src/fpga/core/cd/*.sv)
 CD    := cd
 
-.PHONY: sys pll cdb cdb-compare cd cd-real mem mem-long platform sh1 scsp vdp1 vdp1-ppm sh2 scu smpc irq sndram vdp2 vdp2-ppm clean
+.PHONY: sys pll cdb cdb-compare cd cd-real mem mem-long platform sh1 scsp scsp-compact vdp1 vdp1-ppm sh2 scu smpc irq sndram vdp2 vdp2-ppm clean
 
 mem:
 	$(MAKE) -C mem all
@@ -46,6 +47,9 @@ sh1:
 
 scsp:
 	$(MAKE) -C scsp run
+
+scsp-compact:
+	$(MAKE) -C scsp compact
 
 vdp1:
 	$(MAKE) -C vdp1 all

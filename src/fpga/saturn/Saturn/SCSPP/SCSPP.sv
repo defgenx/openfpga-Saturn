@@ -2,6 +2,13 @@
 `define SIM
 // synopsys translate_on
 
+//POCKET_SCSP_DSP_COMPACT: area-optimised DSP (docs/scsp-rewrite.md section 6); POCKET_CUT_SCSP_DSP takes precedence.
+`ifdef POCKET_SCSP_DSP_COMPACT
+`ifndef POCKET_CUT_SCSP_DSP
+`define SCSPP_DSPC
+`endif
+`endif
+
 //MIDI_REGS: keep the MIDI buffer registers (CR2, CR3) readable. The Saturn has no
 //MIDI port, nothing in the SCSPP uses them, so they read as 0 by default.
 module SCSPP #(
@@ -974,7 +981,11 @@ module SCSPP #(
 	bit [15:0] EFF_W;
 	always_comb begin
 		EFF_W = '0;
+`ifdef POCKET_CUT_SCSP_DSP
+		if (OP7.SLOT <= 5'd15) EFF_W = '0;		//the cut DSP returns nothing; EFREG is a plain 68K RAM
+`else
 		if (OP7.SLOT <= 5'd15) EFF_W = EFREG_Q;
+`endif
 		else if (OP7.SLOT == 5'd16) EFF_W = !SND_EN[2] ? 16'h0000 : ESL;
 		else if (OP7.SLOT == 5'd17) EFF_W = !SND_EN[2] ? 16'h0000 : ESR;
 	end
@@ -1035,6 +1046,11 @@ module SCSPP #(
 `ifdef POCKET_CUT_SCSP_DSP
 	//DSP removed: an all-zero program issues no RAM write, no sound-RAM access and no EFREG/TEMP/MEMS update.
 	assign MPRO0_Q = '0;
+`elsif SCSPP_DSPC
+	//A masked entry reads as zero. Fields that only matter through a masked-off enable (write addresses, the memory
+	//address fields, TABLE/ADREB/NXADR, SHFT, COEF) are passed unmasked.
+	localparam MPRO_t MPRO_PASS = '{TWA:'1, IWA:'1, EWA:'1, TABLE:1'b1, ADREB:1'b1, NXADR:1'b1, SHFT:'1, COEF:'1, MASA:'1, default:'0};
+	assign MPRO0_Q = MPRO_DRAM_Q & (MPRO_PASS | {64{MPRO_SET_Q & MPRO_OK}});
 `else
 	assign MPRO0_Q = MPRO_DRAM_Q & {64{MPRO_SET_Q & MPRO_OK}};
 `endif
@@ -1057,7 +1073,11 @@ module SCSPP #(
 	wire         MIXS_NULL_Q;
 	wire         MIXS_NULL_SET = SLOT1_CE & ~OP7.SLOT[4] & RES_N;
 	wire         MIXS_NULL_CLR = CYCLE1_CE & CYCLE_NUM[2:1] == 2'b00 & RES_N;
+`ifdef SCSPP_DSPC
+	//The flag is a fourth byte lane of the MIXS RAM entry (MIXS_RAM below).
+`else
 	SCSPP_BIT_RAM #(5) MIXS_NULL_RAM (CLK, MIXS_NULL_SET ? {~MIXS_GEN,OP7.SLOT[3:0]} : {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_SET, MIXS_NULL_SET | MIXS_NULL_CLR, {MIXS_GEN,OP7_SCR7.ISEL}, MIXS_NULL_Q);
+`endif
 
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [19: 0] SD;
@@ -1072,7 +1092,11 @@ module SCSPP #(
 			if (CYCLE0_CE) begin
 			end
 			
+`ifdef SCSPP_DSPC
+			SD = SDL_P[22:3];
+`else
 			SD = DSPLevelCalc({OP7.SD,4'h00},OP7_SCR7.IMXL);
+`endif
 
 			if (CYCLE1_CE) begin
 				if (CYCLE_NUM[2:1] == 2'b00) begin
@@ -1093,6 +1117,14 @@ module SCSPP #(
 	end
 	assign MIXS_WA = OP7_SCR7.ISEL;
 	assign MIXS_WE = (CYCLE_NUM[2:1] == 2'b10);
+`ifdef SCSPP_DSPC
+	//One 32 x 20 RAM holds both generations: port A is the accumulation side, port B the DSP and 68K side.
+	//Byte lane 3 of an entry (bit 24) is its 'not written yet' flag.
+	wire [31:0] MIXS_QA,MIXS_QB;
+	assign PCM_MIXS_Q = {12'h000,MIXS_QA[19:0]};
+	assign DSP_MIXS_Q = {12'h000,MIXS_QB[19:0]};
+	assign MIXS_NULL_Q = MIXS_QA[24];
+`else
 	assign MIXSA_RA = !MIXS_GEN ? OP7_SCR7.ISEL : MPRO0_Q.IRA[3:0];
 	assign MIXSB_RA = !MIXS_GEN ? MPRO0_Q.IRA[3:0] : OP7_SCR7.ISEL;
 	
@@ -1101,6 +1133,7 @@ module SCSPP #(
 	assign DSP_MIXS_Q = '0;
 `else
 	assign DSP_MIXS_Q = !MIXS_GEN ? MIXSB_RAM_Q : MIXSA_RAM_Q;
+`endif
 `endif
 	
 	//DSP execute
@@ -1113,7 +1146,11 @@ module SCSPP #(
 	
 	
 	wire         MPRO_SET_WR = CYCLE1_CE & RES_N & |REG_WE & REG_A[11:10] == 2'b10 & REG_A[2:1] == 2'b11;
+`ifdef SCSPP_DSPC
+	//The flag is carried by two unused bits of the MPRO RAM entry (MPRO_DRAM below).
+`else
 	SCSPP_BIT_RAM #(7) MPRO_SET_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], ~OP7.RST, OP7.RST | MPRO_SET_WR, DSP_MPRO_STEP, MPRO_SET_Q);
+`endif
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) MPRO_OK <= 0;
 		else if (!RES_N) MPRO_OK <= 0;
@@ -1145,24 +1182,72 @@ module SCSPP #(
 	bit          DSP_READ_NOFL1,DSP_READ_NOFL2;
 	
 	wire [23: 0] SHFT_OUT = DSPShifter(SFT_REG, MPRO1_Q.SHFT);
+`ifdef SCSPP_DSPC
+	//FtoI, ItoF and the MIXS level are shifts by a variable amount, done as multiplications by a one-hot value (one DSP block each).
+	//FtoI: result = sext(X) * 2^(11-EXP); the raw word (NOFL2) is the same product with X = the word and 2^8.
+	wire        FI_S   = DSP_INP_REG[15];
+	wire [ 3:0] FI_EXP = DSP_INP_REG[14:11];
+	wire [15:0] FI_X   = DSP_READ_NOFL2 ? DSP_INP_REG : {{4{FI_S}},(FI_EXP >= 4'd12) ? FI_S : ~FI_S,DSP_INP_REG[10:0]};
+	wire [11:0] FI_Y;
+	assign FI_Y[0] = DSP_READ_NOFL2 ? 1'b0 : (FI_EXP >= 4'd11);
+	assign FI_Y[8] = DSP_READ_NOFL2 | (FI_EXP == 4'd3);
+	genvar gi;
+	generate for (gi = 1; gi < 12; gi++) begin : g_fiy
+		if (gi != 8) assign FI_Y[gi] = ~DSP_READ_NOFL2 & (FI_EXP == 4'd11 - gi);
+	end endgenerate
+	wire [28:0] FI_P = $signed(FI_X) * $signed({1'b0,FI_Y});
+	//ItoF: the shift that normalises the value is the run of bits equal to the sign (capped at 11, exponent capped at 12); the
+	//mantissa is bits 21:11 of the value shifted left by it. NOFL passes bits 23:8, which is a shift by 3.
+	wire [23: 0] IT_I = SHFT_OUT;
+	wire         IT_S = IT_I[23];
+	wire [12: 1] IT_E;
+	assign IT_E[1] = ~(IT_I[22] ^ IT_S);
+	generate for (gi = 2; gi <= 12; gi++) begin : g_ite
+		assign IT_E[gi] = IT_E[gi-1] & ~(IT_I[23-gi] ^ IT_S);
+	end endgenerate
+	wire [11: 0] IT_Y;
+	assign IT_Y[0] = MPRO1_Q.NOFL ? 1'b0 : ~IT_E[1];
+	generate for (gi = 1; gi < 11; gi++) begin : g_ity
+		assign IT_Y[gi] = MPRO1_Q.NOFL ? (gi == 3) : (IT_E[gi] & ~IT_E[gi+1]);
+	end endgenerate
+	assign IT_Y[11] = ~MPRO1_Q.NOFL & IT_E[11];
+	wire [36:0] IT_P = $signed(IT_I) * $signed({1'b0,IT_Y});
+	wire [ 3: 0] IT_EXP = {IT_E[8], (IT_E[4] & ~IT_E[8]) | IT_E[12],
+	                       (IT_E[2] & ~IT_E[4]) | (IT_E[6] & ~IT_E[8]) | (IT_E[10] & ~IT_E[12]),
+	                       (IT_E[1] & ~IT_E[2]) | (IT_E[3] & ~IT_E[4]) | (IT_E[5] & ~IT_E[6]) | (IT_E[7] & ~IT_E[8]) | (IT_E[9] & ~IT_E[10]) | (IT_E[11] & ~IT_E[12])};
+	wire [15: 0] IT_OUT = {IT_S, MPRO1_Q.NOFL ? IT_I[22:19] : IT_EXP, IT_P[21:11]};
+	//MIXS level: SD * 2^IMXL >> 3 (zero for IMXL = 0).
+	wire [ 7: 0] SDL_Y = {OP7_SCR7.IMXL == 3'd7, OP7_SCR7.IMXL == 3'd6, OP7_SCR7.IMXL == 3'd5, OP7_SCR7.IMXL == 3'd4,
+	                      OP7_SCR7.IMXL == 3'd3, OP7_SCR7.IMXL == 3'd2, OP7_SCR7.IMXL == 3'd1, 1'b0};
+	wire [24: 0] SDL_P = $signed(OP7.SD) * $signed({1'b0,SDL_Y});
+`endif
 	wire [23:0] TEMP_Q = {TEMP_DRAM_Q[15:0],TEMP_DRAM_Q[23:16]};
 	
 	wire [12:0] COEF_Q = COEF_DQ[15:3];
 	wire [16:1] MADRS_Q = MADRS_DRAM_Q;
 	//INPUTS keeps its previous value when no source is selected, so the input
 	//select and the MEMS/EXTS data stay latched as before.
+`ifdef SCSPP_DSPC
+	//Loaded at CYCLE0_CE straight from the sources of the instruction fetched there; no per-source latches.
+	wire [23:0] MEMS_QA,MEMS_QB;
+	wire [23:0] MEMS_Q = {MEMS_QB[15:0],MEMS_QB[23:16]};
+	bit  [23:0] INPUTS;
+`else
 	bit [5:0]  MPRO1_IRA;
 	wire [23:0] MEMS_Q = {MEMS_DQ[15:0],MEMS_DQ[23:16]};
 	bit [15:0] EXTS_Q;
+`endif
 	
 	always @(posedge CLK or negedge RST_N) begin
 		
 		
 		
 		
+`ifndef SCSPP_DSPC
 		MIXS_t       MIXS_Q;
 		
 		bit  [23: 0] INPUTS;
+`endif
 		bit  [23: 0] X;
 		bit  [12: 0] Y;
 		bit  [25: 0] BS;
@@ -1172,6 +1257,9 @@ module SCSPP #(
 		bit  [11: 0] ADRS_REG;
 		bit  [25: 0] MUL;
 		bit  [16: 1] ADDR;
+`ifdef SCSPP_DSPC
+		bit  [16: 0] ADS;
+`endif
 		
 		if (!RST_N) begin
 			MDEC_CT <= '0;
@@ -1187,16 +1275,20 @@ module SCSPP #(
 		end else if (!RES_N) begin
 			
 			MDEC_CT <= '0;
+`ifndef SCSPP_DSPC
 			MPRO1_IRA <= '0;
+`endif
 			DSP_READ <= 0;
 			DSP_WRITE <= 0;
 		end else begin
+`ifndef SCSPP_DSPC
 			if (!MPRO1_IRA[5])
 				INPUTS = MEMS_Q;
 			else if (!MPRO1_IRA[4])
 				INPUTS = {MIXS_Q,4'h0};
 			else if (!MPRO1_IRA[3:1])
 				INPUTS = {EXTS_Q,8'h00};
+`endif
 			
 			case (MPRO1_Q.XSEL)
 				1'b0: X = TEMP_Q;
@@ -1220,18 +1312,27 @@ module SCSPP #(
 				
 			MUL = DSPMult(X, Y);
 			
+`ifdef SCSPP_DSPC
+			//NXADR enters as the carry into the first sum.
+			ADS = {MADRS_Q,1'b1} + {(!MPRO1_Q.TABLE ? MDEC_CT : 16'h0000),MPRO1_Q.NXADR} + {(MPRO1_Q.ADREB ? {{4{ADRS_REG[11]}},ADRS_REG} : 16'h0000),1'b0};
+			ADDR = ADS[16:1];
+`else
 			ADDR = MADRS_Q + (!MPRO1_Q.TABLE ? MDEC_CT : 16'h0000) + (MPRO1_Q.ADREB ? {{4{ADRS_REG[11]}},ADRS_REG} : 16'h0000) + (MPRO1_Q.NXADR ? 16'h0001 : 16'h0000);
+`endif
 			
 			if (CYCLE0_CE) begin
-				
-				
+`ifdef SCSPP_DSPC
+				if (!MPRO0_Q.IRA[5])
+					INPUTS <= MEMS_Q;
+				else if (!MPRO0_Q.IRA[4])
+					INPUTS <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16],4'h0};
+				else if (!MPRO0_Q.IRA[3:1])
+					INPUTS <= {DSP_EXTS[MPRO0_Q.IRA[0]],8'h00};
+`else
 				MIXS_Q <= {DSP_MIXS_Q[15:0],DSP_MIXS_Q[19:16]};
 				MPRO1_IRA <= MPRO0_Q.IRA;
 				EXTS_Q <= DSP_EXTS[MPRO0_Q.IRA[0]];
-				
-				
-				
-				
+`endif
 			end
 			if (CYCLE1_CE) begin
 				if (OP7.SLOT == 5'd31 && SLOT1_CE) 
@@ -1262,7 +1363,11 @@ module SCSPP #(
 					2'b10: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {4'b0000,ADDR[15:1]};
 					2'b11: DSP_MEMA_REG <= {CR1.RBP,12'h000} + {3'b000,ADDR[16:1]};
 				endcase
+`ifdef SCSPP_DSPC
+				DSP_OUT_REG <= IT_OUT;
+`else
 				DSP_OUT_REG <= !MPRO1_Q.NOFL ? DSPItoF(SHFT_OUT) : SHFT_OUT[23:8];
+`endif
 				DSP_READ <= MPRO1_Q.MRD;
 				DSP_READ_NOFL1 <= MPRO1_Q.NOFL;
 				DSP_READ_NOFL2 <= DSP_READ_NOFL1;
@@ -1285,7 +1390,11 @@ module SCSPP #(
 	assign DSP_MEMS_RA = MPRO0_Q.IRA[4:0];
 	assign DSP_MEMS_WA = MPRO1_Q.IWA;
 	assign DSP_MEMS_WE = MPRO1_Q.IWT;
+`ifdef SCSPP_DSPC
+	assign DSP_MEMS_D = FI_P[23:0];
+`else
 	assign DSP_MEMS_D = !DSP_READ_NOFL2 ? DSPFtoI(DSP_INP_REG) : {DSP_INP_REG,8'h00};
+`endif
 	
 	assign DSP_COEF_RA = MPRO0_Q.COEF;
 	assign DSP_MADRS_RA = MPRO0_Q.MASA;
@@ -2091,15 +2200,27 @@ module SCSPP #(
 	wire [ 5:0] COEF_WA = OP7.RST ? DSP_MPRO_STEP[6:1] : REG_A[6:1];
 	wire [ 1:0] COEF_WE = OP7.RST ? 2'b11 : (REG_WE & {2{COEF_SEL}} & {2{CYCLE1_CE}});
 	wire [15:0] COEF_DQ;
+`ifdef SCSPP_DSPC
+	//One RAM for both readers: port A is the 68K side, port B the DSP's read through its output register.
+	wire [15:0] COEF_QB;
+	SCSPP_RAM_TDP #(6,2,1) COEF_RAM (CLK, COEF_WA, SW_D, COEF_WE, COEF_RAM_Q, DSP_COEF_RA, 16'h0000, 2'b00, CYCLE0_CE & RES_N, COEF_QB);
+	assign COEF_DQ = COEF_QB;
+`else
 	SCSPP_RAM_8X2 #(6) COEF_RAM (CLK, COEF_WA, SW_D, COEF_WE, REG_A[6:1], COEF_RAM_Q);
 	SCSPP_RAM_OR  #(6) COEF_DRAM(CLK, COEF_WA, SW_D, COEF_WE, DSP_COEF_RA, CYCLE0_CE & RES_N, 1'b0, COEF_DQ);
+`endif
 	
 	//MADRS,100780-1007BF
 	wire       MADRS_SEL = REG_A[11:6] == 6'b011110;
 	bit [15:0] MADRS_RAM_Q;
 	bit [15:0] MADRS_DRAM_Q;
+`ifdef SCSPP_DSPC
+	SCSPP_RAM_TDP #(5,2,0) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], SW_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, MADRS_RAM_Q,
+		DSP_MADRS_RA, 16'h0000, 2'b00, 1'b1, MADRS_DRAM_Q);
+`else
 	SCSPP_RAM_8X2 #(5) MADRS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, REG_A[5:1], MADRS_RAM_Q);
 	SCSPP_RAM_8X2 #(5) MADRS_DRAM (CLK, OP7.RST ? OP7.SLOT : REG_A[5:1], OP7.RST ? '0 : REG_D, OP7.RST ? 2'b11 : (REG_WE & {2{MADRS_SEL}}) & {2{CYCLE1_CE}}, DSP_MADRS_RA, MADRS_DRAM_Q);
+`endif
 	
 	//MPRO,100800-100BFF
 	wire       MPRO_SEL = REG_A[11:10] == 2'b10;
@@ -2112,7 +2233,16 @@ module SCSPP #(
 	//68K-side copy of the program RAM, one 16-bit word per address; the sweep walks it with SWC9.
 	SCSPP_RAM_8X2 #(9) MPRO_MIR(CLK, OP7.RST ? SWC9 : REG_A[9:1], SW_D, OP7.RST ? 2'b11 : REG_WE & {2{MPRO_SEL & CYCLE1_CE}}, REG_A[9:1], MPRO_MIR_Q);
 	//Written at CYCLE1_CE only, so an entry changes between DSP steps, not under the step in flight.
+`ifdef SCSPP_DSPC
+	//Entry-valid flag: bits 15 and 7 of an entry (unused fields) are set by a write of either byte of its last word, so a RAM bit
+	//per byte lane carries it; the sweep clears them. The DSP copy is not read by the 68K.
+	wire        MPRO_VF = RES_N & ~OP7.RST;
+	wire [63:0] MPRO_WD = {SW_D,SW_D,SW_D,MPRO_VF,SW_D[14:8],MPRO_VF,SW_D[6:0]};
+	assign MPRO_SET_Q = MPRO_DRAM_Q[15] | MPRO_DRAM_Q[7];
+	SCSPP_MPRO_RAM MPRO_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], MPRO_WD, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}} & {8{CYCLE1_CE}}), DSP_MPRO_STEP, MPRO_DRAM_Q);
+`else
 	SCSPP_MPRO_RAM MPRO_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[9:3], OP7.RST ? '0 : {4{REG_D}}, OP7.RST ? 8'hFF : ({4{REG_WE}} & {{2{MPRO0_SEL}},{2{MPRO1_SEL}},{2{MPRO2_SEL}},{2{MPRO3_SEL}}} & {8{CYCLE1_CE}}), DSP_MPRO_STEP, MPRO_DRAM_Q);
+`endif
 	
 	//TEMP,100C00-100DFF
 	wire       TEMP_SEL = REG_A[11:9] == 3'b110;
@@ -2120,37 +2250,81 @@ module SCSPP #(
 	wire       TEMP1_SEL = TEMP_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] TEMP_RAM_Q;
 	bit [31:0] TEMP_DRAM_Q;
+`ifdef SCSPP_DSPC
+	//The sweep data (SW_D) is zero in the earlier stages' windows too; the OP7 sweep clears every entry afterwards anyway.
+	//One true dual-port RAM per DSP-written store: port A is the 68K/sweep side, port B the DSP. A DSP write
+	//in a clock replaces a 68K write in the same clock, as with the shared write bus of the default build.
+	wire        DSP_C1 = CYCLE1_CE & ~OP7.RST;
+	wire [23:0] TEMP_QA,TEMP_QB;
+	wire [ 2:0] TEMP_WEA = OP7.RST ? 3'b111 : {TEMP0_SEL & REG_WE[0],{2{TEMP1_SEL}} & REG_WE} & {3{CYCLE1_CE & ~DSP_TEMP_WE}};
+	SCSPP_RAM_TDP #(7,3,0) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : REG_A[8:2], {SW_D[7:0],SW_D}, TEMP_WEA, TEMP_QA,
+		((DSP_TEMP_WE & CYCLE1_CE) ? MPRO1_Q.TWA : MPRO0_Q.TRA) + MDEC_CT[6:0], {DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]}, {3{DSP_TEMP_WE & DSP_C1}}, 1'b1, TEMP_QB);
+	assign TEMP_RAM_Q  = {8'h00,TEMP_QA};
+	assign TEMP_DRAM_Q = {8'h00,TEMP_QB};
+`else
 	SCSPP_RAM_8X4 #(7) TEMP_RAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, REG_A[8:2], TEMP_RAM_Q);
 	SCSPP_RAM_8X4 #(7) TEMP_DRAM (CLK, OP7.RST ? DSP_MPRO_STEP : (DSP_TEMP_WE ? DSP_TEMP_WA : REG_A[8:2]), OP7.RST ? '0 : (DSP_TEMP_WE ? {8'h00,DSP_TEMP_D[7:0],DSP_TEMP_D[23:8]} : {2{REG_D}}), OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{TEMP0_SEL}},{2{TEMP1_SEL}}}) | {4{DSP_TEMP_WE}}) & {4{CYCLE1_CE}}, DSP_TEMP_RA, TEMP_DRAM_Q);
+	
+`endif
 	
 	//MEMS,100E00-100E7F
 	wire       MEMS_SEL = REG_A[11:7] == 5'b11100;
 	wire       MEMS0_SEL = MEMS_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       MEMS1_SEL = MEMS_SEL & (REG_A[1:1] == 2'h2>>1);
 	bit [31:0] MEMS_RAM_Q;
+`ifdef SCSPP_DSPC
+	wire [ 2:0] MEMS_WEA = OP7.RST ? 3'b111 : {MEMS0_SEL & REG_WE[0],{2{MEMS1_SEL}} & REG_WE} & {3{CYCLE1_CE & ~DSP_MEMS_WE}};
+	SCSPP_RAM_TDP #(5,3,0) MEMS_RAM (CLK, OP7.RST ? OP7.SLOT : REG_A[6:2], {SW_D[7:0],SW_D}, MEMS_WEA, MEMS_QA,
+		(DSP_MEMS_WE & CYCLE1_CE) ? DSP_MEMS_WA : DSP_MEMS_RA, {DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]}, {3{DSP_MEMS_WE & DSP_C1}}, 1'b1, MEMS_QB);
+	assign MEMS_RAM_Q = {8'h00,MEMS_QA};
+`else
+	wire [31:0] MEMS_DQ;
 	wire [ 4:0] MEMS_WA = OP7.RST ? OP7.SLOT : (DSP_MEMS_WE ? DSP_MEMS_WA : REG_A[6:2]);
 	wire [31:0] MEMS_WD = OP7.RST ? 32'd0 : (DSP_MEMS_WE ? {8'h00,DSP_MEMS_D[7:0],DSP_MEMS_D[23:8]} : {2{REG_D}});
 	wire [ 3:0] MEMS_WE = OP7.RST ? 4'hF : (({2{REG_WE}} & {{2{MEMS0_SEL}},{2{MEMS1_SEL}}}) | {4{DSP_MEMS_WE}}) & {4{CYCLE1_CE}};
-	wire [31:0] MEMS_DQ;
 	SCSPP_RAM_8X4 #(5) MEMS_RAM (CLK, MEMS_WA, MEMS_WD, MEMS_WE, REG_A[6:2], MEMS_RAM_Q);
 	SCSPP_RAM_ORN #(4) MEMS_DRAM(CLK, MEMS_WA, MEMS_WD, MEMS_WE, DSP_MEMS_RA, CYCLE0_CE & RES_N, 1'b0, MEMS_DQ);
+	
+`endif
 	
 	//MIXS,100E80-100EBF
 	wire       MIXS_SEL = REG_A[11:6] == 12'hE80>>6;
 	wire       MIXS0_SEL = MIXS_SEL & (REG_A[1:1] == 2'h0>>1);
 	wire       MIXS1_SEL = MIXS_SEL & (REG_A[1:1] == 2'h2>>1);
+`ifdef SCSPP_DSPC
+	//Entry {gen,index}; the 68K word lanes are 7:0, 15:8 and 19:16 (lane 2 holds one word's low byte).
+	//In the clock the generations swap, the reference reads the former accumulation RAM at its accumulation address; the
+	//last read data of a register access (visible through SCDO) depends on it.
+	wire        MIXS_TOG = SLOT1_CE & (OP7.SLOT == 5'd31) & RES_N & ~|REG_WE;
+	wire [ 2:0] MIXS_WEB = {MIXS0_SEL & REG_WE[0],{2{MIXS1_SEL}} & REG_WE} & {3{CYCLE1_CE}};
+	SCSPP_RAM_TDP #(5,4,0) MIXS_RAM (CLK,
+		MIXS_NULL_SET ? {~MIXS_GEN,OP7.SLOT[3:0]} : {MIXS_GEN,MIXS_WA}, {7'h00,MIXS_NULL_SET,4'h0,MIXS_D[3:0],MIXS_D[19:4]},
+		{MIXS_NULL_SET | MIXS_NULL_CLR,{3{MIXS_WE & CYCLE1_CE}}}, MIXS_QA,
+		{MIXS_GEN ^ ~MIXS_TOG,MIXS_TOG ? MIXS_WA : (REG_RD|(|REG_WE)) ? REG_A[5:2] : MPRO0_Q.IRA[3:0]}, {8'h00,REG_D[7:0],REG_D}, {1'b0,MIXS_WEB}, 1'b1, MIXS_QB);
+`else
 	bit [31:0] MIXSA_RAM_Q,MIXSB_RAM_Q;
 	SCSPP_RAM_8X4 #(4) MIXSA_RAM (CLK, (!MIXS_GEN && MIXS_WE ? MIXS_WA : REG_A[5:2]), (!MIXS_GEN && MIXS_WE ? {12'h000,MIXS_D[3:0],MIXS_D[19:4]} : {2{REG_D}}), (({2{REG_WE}} & {4{ MIXS_GEN}} & {{2{MIXS0_SEL}},{2{MIXS1_SEL}}}) | {4{~MIXS_GEN&MIXS_WE}}) & {4{CYCLE1_CE}}, ( MIXS_GEN && REG_RD ? REG_A[5:2] : MIXSA_RA), MIXSA_RAM_Q);
 	SCSPP_RAM_8X4 #(4) MIXSB_RAM (CLK, ( MIXS_GEN && MIXS_WE ? MIXS_WA : REG_A[5:2]), ( MIXS_GEN && MIXS_WE ? {12'h000,MIXS_D[3:0],MIXS_D[19:4]} : {2{REG_D}}), (({2{REG_WE}} & {4{~MIXS_GEN}} & {{2{MIXS0_SEL}},{2{MIXS1_SEL}}}) | {4{ MIXS_GEN&MIXS_WE}}) & {4{CYCLE1_CE}}, (!MIXS_GEN && REG_RD ? REG_A[5:2] : MIXSB_RA), MIXSB_RAM_Q);
 	
+`endif
+	
 	//EFREG,100EC0-100EDF
 	wire       EFREG_SEL = REG_A[11:5] == 7'b1110110;
 	bit [15:0] EFREG_RAM_Q;
+`ifdef SCSPP_DSPC
+	wire [15:0] EFREG_QA;
+	wire [ 1:0] EFREG_WEA = OP7.RST ? 2'b11 : REG_WE & {2{EFREG_SEL & CYCLE1_CE & ~DSP_EFREG_WE}};
+	SCSPP_RAM_TDP #(4,2,1) EFREG_RAM (CLK, OP7.RST ? OP7.SLOT[4:1] : REG_A[4:1], SW_D, EFREG_WEA, EFREG_QA,
+		(DSP_EFREG_WE & CYCLE1_CE) ? DSP_EFREG_WA : DSP_EFREG_RA, DSP_EFREG_D, {2{DSP_EFREG_WE & DSP_C1}}, RES_N & SLOT0_EN & CYCLE0_CE, EFREG_Q);
+	assign EFREG_RAM_Q = EFREG_QA;
+`else
 	wire [ 3:0] EFREG_WA = OP7.RST ? OP7.SLOT[4:1] : (DSP_EFREG_WE ? DSP_EFREG_WA : REG_A[4:1]);
 	wire [15:0] EFREG_WD = OP7.RST ? 16'd0 : (DSP_EFREG_WE ? DSP_EFREG_D : REG_D);
 	wire [ 1:0] EFREG_WE = OP7.RST ? 2'b11 : ((REG_WE & {2{EFREG_SEL}}) | {2{DSP_EFREG_WE}}) & {2{CYCLE1_CE}};
 	SCSPP_RAM_8X2 #(4) EFREG_RAM (CLK, EFREG_WA, EFREG_WD, EFREG_WE, REG_A[4:1], EFREG_RAM_Q);
 	SCSPP_RAM_OR  #(4) EFREG_DRAM(CLK, EFREG_WA, EFREG_WD, EFREG_WE, DSP_EFREG_RA, RES_N & SLOT0_EN & CYCLE0_CE, 1'b0, EFREG_Q);
+	
+`endif
 	
 	//EXTS,100EE0-100EE3
 	wire       EXTS_SEL = REG_A[11:2] == 12'hEE0>>2;
@@ -3252,6 +3426,7 @@ module SCSPP_MPRO_RAM
 endmodule
 
 
+
 //16-bit RAM with byte enables whose read data is held in the block's output register:
 //Q changes only at clocks with EN (replaces a latch of the plain RAM output); CLR clears it.
 module SCSPP_RAM_OR
@@ -3403,4 +3578,61 @@ module SCSPP_RAM_ORN
 		altsyncram_component.width_a = 8*NB,
 		altsyncram_component.width_b = 8*NB,
 		altsyncram_component.width_byteena_a = NB;
+endmodule
+
+//True dual-port RAM, one clock, NB byte lanes. Port A: registered address, Q straight from the array.
+//Port B: the same, or with BREG the output register that is enabled by BEN.
+module SCSPP_RAM_TDP
+#(
+	parameter AW = 5,
+	parameter NB = 3,
+	parameter BREG = 0
+)
+(
+	input                CLK,
+	input     [AW-1:0]   AA,
+	input     [8*NB-1:0] AD,
+	input     [NB-1:0]   AWE,
+	output    [8*NB-1:0] QA,
+	input     [AW-1:0]   BA,
+	input     [8*NB-1:0] BD,
+	input     [NB-1:0]   BWE,
+	input                BEN,
+	output    [8*NB-1:0] QB
+);
+	altsyncram	altsyncram_component (
+				.address_a (AA), .byteena_a (AWE), .clock0 (CLK), .data_a (AD), .wren_a (|AWE), .q_a (QA),
+				.address_b (BA), .byteena_b (BWE), .clock1 (CLK), .data_b (BD), .wren_b (|BWE), .q_b (QB),
+				.aclr0 (1'b0), .aclr1 (1'b0), .addressstall_a (1'b0), .addressstall_b (1'b0),
+				.clocken0 (1'b1), .clocken1 (1'b1), .clocken2 (1'b1), .clocken3 (BEN),
+				.eccstatus (), .rden_a (1'b1), .rden_b (1'b1));
+	defparam
+		altsyncram_component.address_reg_b = "CLOCK1",
+		altsyncram_component.byte_size = 8,
+		altsyncram_component.byteena_reg_b = "CLOCK1",
+		altsyncram_component.clock_enable_input_a = "BYPASS",
+		altsyncram_component.clock_enable_input_b = "BYPASS",
+		altsyncram_component.clock_enable_output_a = "BYPASS",
+		altsyncram_component.clock_enable_output_b = BREG ? "NORMAL" : "BYPASS",
+		altsyncram_component.indata_reg_b = "CLOCK1",
+		altsyncram_component.intended_device_family = "Cyclone V",
+		altsyncram_component.lpm_type = "altsyncram",
+		altsyncram_component.numwords_a = 2**AW,
+		altsyncram_component.numwords_b = 2**AW,
+		altsyncram_component.operation_mode = "BIDIR_DUAL_PORT",
+		altsyncram_component.outdata_aclr_a = "NONE",
+		altsyncram_component.outdata_aclr_b = "NONE",
+		altsyncram_component.outdata_reg_a = "UNREGISTERED",
+		altsyncram_component.outdata_reg_b = BREG ? "CLOCK1" : "UNREGISTERED",
+		altsyncram_component.power_up_uninitialized = "FALSE",
+		altsyncram_component.ram_block_type = "M10K",
+		altsyncram_component.read_during_write_mode_port_a = "DONT_CARE",
+		altsyncram_component.read_during_write_mode_port_b = "DONT_CARE",
+		altsyncram_component.widthad_a = AW,
+		altsyncram_component.widthad_b = AW,
+		altsyncram_component.width_a = 8*NB,
+		altsyncram_component.width_b = 8*NB,
+		altsyncram_component.width_byteena_a = NB,
+		altsyncram_component.width_byteena_b = NB,
+		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK1";
 endmodule

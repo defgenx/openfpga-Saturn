@@ -8,6 +8,7 @@ module altsyncram #(
 	parameter widthad_b = 5,
 	parameter numwords_b = 32,
 	parameter width_byteena_a = 1,
+	parameter width_byteena_b = 1,
 	parameter byte_size = 8,
 	parameter operation_mode = "DUAL_PORT",
 	parameter address_aclr_b = "NONE",
@@ -18,15 +19,24 @@ module altsyncram #(
 	parameter intended_device_family = "Cyclone V",
 	parameter lpm_type = "altsyncram",
 	parameter outdata_aclr_b = "NONE",
+	parameter outdata_reg_a = "UNREGISTERED",
 	parameter outdata_reg_b = "UNREGISTERED",
 	parameter power_up_uninitialized = "FALSE",
 	parameter ram_block_type = "M10K",
-	parameter read_during_write_mode_mixed_ports = "DONT_CARE"
+	parameter read_during_write_mode_mixed_ports = "DONT_CARE",
+	// true dual-port settings, not modelled beyond the registered read address
+	parameter byteena_reg_b = "CLOCK1",
+	parameter clock_enable_output_a = "BYPASS",
+	parameter indata_reg_b = "CLOCK1",
+	parameter outdata_aclr_a = "NONE",
+	parameter read_during_write_mode_port_a = "DONT_CARE",
+	parameter read_during_write_mode_port_b = "DONT_CARE",
+	parameter wrcontrol_wraddress_reg_b = "CLOCK1"
 ) (
 	input  [widthad_a-1:0] address_a,
 	input  [widthad_b-1:0] address_b,
 	input  [width_byteena_a-1:0] byteena_a,
-	input                  byteena_b,
+	input  [width_byteena_b-1:0] byteena_b,
 	input                  clock0, clock1,
 	input                  clocken0, clocken1, clocken2, clocken3,
 	input  [width_a-1:0]   data_a,
@@ -40,28 +50,57 @@ module altsyncram #(
 	localparam LANES = width_byteena_a;
 	localparam LW = width_a / LANES;
 	reg [width_a-1:0] mem [0:numwords_a-1];
-	reg [width_b-1:0] q;
 	integer i;
 	initial for (i = 0; i < numwords_a; i = i + 1) mem[i] = 0;
-	// outdata_reg_b = "CLOCK1" (clock1 tied to clock0): the block's output register, enabled by clocken3,
-	// holds what the array returned for the registered address.
-	reg [widthad_b-1:0] areg;
-	// outdata_aclr_b = "CLEAR1": aclr1 clears the output register asynchronously.
-	always @(posedge clock0 or posedge aclr1) if (aclr1 && outdata_aclr_b == "CLEAR1") q <= 0; else begin
-		if (outdata_reg_b == "CLOCK1") begin
-			if (clocken3) q <= mem[areg];
-		end else
-			q <= mem[address_b];
-	end
-	always @(posedge clock0) begin
-		areg <= address_b;
-		if (wren_a)
-			for (i = 0; i < LANES; i = i + 1)
-				if (LANES == 1 || byteena_a[i])
-					mem[address_a][i*LW +: LW] <= data_a[i*LW +: LW];
-	end
-	assign q_b = q;
-	assign q_a = 0;
+	generate if (operation_mode == "BIDIR_DUAL_PORT") begin : g_tdp
+		// True dual port, one clock: both ports read (registered address, old data on a same-edge write) and write;
+		// port B can hold its read data in an output register enabled by clocken3.
+		localparam LB = width_byteena_b;
+		localparam LWB = width_b / LB;
+		reg [width_a-1:0] qa;
+		reg [width_b-1:0] qb;
+		reg [widthad_b-1:0] ab_r;
+		integer k;
+		always @(posedge clock0) begin
+			qa <= mem[address_a];
+			ab_r <= address_b;
+			if (outdata_reg_b == "CLOCK1") begin
+				if (clocken3) qb <= mem[ab_r];
+			end else
+				qb <= mem[address_b];
+			if (wren_a)
+				for (k = 0; k < LANES; k = k + 1)
+					if (LANES == 1 || byteena_a[k])
+						mem[address_a][k*LW +: LW] <= data_a[k*LW +: LW];
+			if (wren_b)
+				for (k = 0; k < LB; k = k + 1)
+					if (LB == 1 || byteena_b[k])
+						mem[address_b][k*LWB +: LWB] <= data_b[k*LWB +: LWB];
+		end
+		assign q_a = qa;
+		assign q_b = qb;
+	end else begin : g_sdp
+		reg [width_b-1:0] q;
+		// outdata_reg_b = "CLOCK1" (clock1 tied to clock0): the block's output register, enabled by clocken3,
+		// holds what the array returned for the registered address.
+		reg [widthad_b-1:0] areg;
+		// outdata_aclr_b = "CLEAR1": aclr1 clears the output register asynchronously.
+		always @(posedge clock0 or posedge aclr1) if (aclr1 && outdata_aclr_b == "CLEAR1") q <= 0; else begin
+			if (outdata_reg_b == "CLOCK1") begin
+				if (clocken3) q <= mem[areg];
+			end else
+				q <= mem[address_b];
+		end
+		always @(posedge clock0) begin
+			areg <= address_b;
+			if (wren_a)
+				for (i = 0; i < LANES; i = i + 1)
+					if (LANES == 1 || byteena_a[i])
+						mem[address_a][i*LW +: LW] <= data_a[i*LW +: LW];
+		end
+		assign q_b = q;
+		assign q_a = 0;
+	end endgenerate
 	assign eccstatus = 0;
 endmodule
 
