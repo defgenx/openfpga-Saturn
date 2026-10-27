@@ -39,9 +39,10 @@ module sdram_pocket #(
 	parameter int SCSP_MIN_AGE = 14     // earliest SCSP read delivery, clk_ram cycles after the request
 ) (
 	input  wire        clk,             // clk_ram (2x clk_sys, phase aligned)
+	input  wire        clk_cap,         // clk + 90 degrees (quarter-cycle read capture, cap_sel 3 / 7)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
-	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: [1:0] +4..+6 rising edge (3 = +6), +3.5..+5.5 falling edge if [2]
+	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: 0..2 +4..+6 rising, 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -102,9 +103,12 @@ always @(posedge clk) if (init) cs <= cap_sel;
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-reg [15:0] cap_n;
+reg [15:0] cap_n, cap_q;
 always @(negedge clk) cap_n <= dram_dq_i;
-wire [15:0] dq_cap = cs[2] ? cap_n : dram_dq_i;
+always @(posedge clk_cap) cap_q <= dram_dq_i;   // sampled 0.75 clk before the landing edge
+wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_q : cs[2] ? cap_n : dram_dq_i;
+// landing stage index: cap_sel 3 lands like 1 (+5, sample +4.25), 7 like 0 (+4, sample +3.25)
+wire [1:0] cs_st = cs == 3'd3 ? 2'd1 : cs == 3'd7 ? 2'd0 : cs[1:0];
 
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
@@ -250,11 +254,11 @@ integer k;
 reg        w0_v, w1_v, w0_i;
 reg  [2:0] w0_k, w1_k;
 always @* begin
-	case (cs[1:0])
+	case (cs_st)
 	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
 	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
 	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
-	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // 3 is +6 as well
+	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // unused (cs_st is 0..2)
 	endcase
 end
 reg [7:0] scr_q [0:3];

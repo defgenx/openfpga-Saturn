@@ -2,11 +2,12 @@
 # user core constraints
 #
 # Clocks: clk_74a / clk_74b / bridge_spiclk come from apf_constraints.sdc. The system PLL (ic|saturn|pll) is
-# referenced from clk_74a; its four outputs are one synchronous family:
+# referenced from clk_74a; its five outputs are one synchronous family:
 #   counter[0] clk_sys    57.27 MHz at compile time (53.4 .. 57.3 MHz at run time, PLL reconfiguration)
 #   counter[1] clk_ram    2 x clk_sys, phase aligned
 #   counter[2] clk_vid    clk_sys / 4 (APF pixel clock)
 #   counter[3] clk_vid_90 clk_vid + 90 degrees
+#   counter[4] clk_ram_cap clk_ram + 90 degrees (SDRAM read capture, sdram_pocket cap_sel 3 / 7)
 # Analysis runs at the fastest mode (NTSC, 352 wide); every other mode is slower.
 #
 
@@ -14,6 +15,7 @@ set clk_sys   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter
 set clk_ram   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk}
 set clk_vid   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk}
 set clk_vid90 {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk}
+set clk_ramc  {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[4].output_counter|divclk}
 
 # clk_74a (bridge, settings, loader, PLL management) and the PLL family are asynchronous to each other. The crossings
 # are 2-flop synchronisers (pads, settings, reset, RTC toggle), the gray-pointer FIFO in load_pocket and held
@@ -22,7 +24,7 @@ set_clock_groups -asynchronous \
  -group { bridge_spiclk } \
  -group { clk_74a } \
  -group { clk_74b } \
- -group [list $clk_sys $clk_ram $clk_vid $clk_vid90]
+ -group [list $clk_sys $clk_ram $clk_vid $clk_vid90 $clk_ramc]
 
 # SH_core advances on CE_R only (every second clk_sys), so a register-to-register path inside the core has two
 # clk_sys periods. The unconstrained core is a 19 ns path (docs/sh2.md); clk_sys is 17.5 ns.

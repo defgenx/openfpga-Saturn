@@ -17,6 +17,8 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	wire init_done;
 	reg clk_run = 0;
 	always begin wait (clk_run); #(T_RAM/2) clk_ram = ~clk_ram; end
+	reg clk_cap = 0;   // clk_ram + 90 degrees (PLL counter 4)
+	always @(clk_ram) clk_cap <= #(T_RAM/4) clk_ram;
 	always begin wait (clk_run); #(T_RAM)   CLK = ~CLK; end
 	reg MCLK_DIV = 0;
 	always @(posedge CLK) MCLK_DIV <= ~MCLK_DIV;
@@ -113,7 +115,7 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	initial begin #1; #(T_RAM*10); init = 0; end
 	wire [31:0] dout_a0, dout_a1, dout_b0, dout_b1;
 	sdram_pocket #(.INIT_CLKS(2000)) sdram (
-		.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(CAPV[2:0]),
+		.clk(clk_ram), .clk_cap(clk_cap), .init(init), .sync(dot_ce_r), .cap_sel(CAPV[2:0]),
 		.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 		.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n), .dram_clk(dram_clk),
 		.addr_a0(17'd0), .addr_a1(16'd0), .din_a(64'd0), .wr_a(8'd0), .rd_a(1'b0), .dout_a0(dout_a0), .dout_a1(dout_a1),

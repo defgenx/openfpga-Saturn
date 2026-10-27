@@ -180,8 +180,13 @@ while `init` is high, so they apply at the next menu Reset without reloading the
 
 | Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
 |---|---|---|---|
-| SDRAM read capture | +4 / +5 (default) / +6 (rising edge) | 0 / **1** / 2 (3 = 2) | 4,5 / 5,6 / 6,7 |
-| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 (7 = 6) | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
+| SDRAM read capture | +4 / +5 / +6 (rising edge) | 0 / 1 / 2 | 4,5 / 5,6 / 6,7 |
+| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
+| | +4.25 (default) / +3.25 (quarter) | **3** / 7 | 4.25,5.25 / 3.25,4.25 |
+
+The quarter settings sample on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) and land like +5 / +4. On the
+Pocket (debug7 sweep) only +4 rising and +4.5 falling reached the BIOS logo, both with corrupt graphics, and +3.5,
++5, +5.5 and +6 did not, so the data window sits about +4.25; the model's window is about 2 ns later than the hardware's.
 
 The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
 (`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
@@ -197,7 +202,7 @@ Rule of thumb from the model, with T = clock-out delay + input delay (the data v
 
 Sweep: `make -C sim sndram` then `sh sim/sndram/sweep.sh [TIN_ps]` (SH-2 through SCSP to the SDRAM model), or
 `sh sim/mem/sweep.sh [TIN_ps]` (`tb_sdram`: VDP2 and SCSP traffic, every model timing check). Both give the same
-table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7 (3 and 7 repeat 2 and 6), `#` = pass.
+table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7, `#` = pass.
 Command and clock share the TCO, as on the device. (An earlier `sim/sndram` sweep looked irregular for TCO above
 4.4 ns: Verilator evaluates the right-hand side of `<= #d` at the end of the delay, which flipped the clock phase;
 the bench now uses explicit delay FIFOs.)

@@ -18,6 +18,7 @@ module mem_pocket #(
 	parameter bit  LD_LITTLE = 1'b1
 ) (
 	input  wire        clk_ram,
+	input  wire        clk_ram_cap,         // clk_ram + 90 degrees, SDRAM read capture only
 	input  wire        clk_sys,
 	input  wire        rst_ram,             // pulse after load / reset, as the Saturn rst_ram
 	input  wire  [2:0] cap_sel,             // sdram_pocket read capture, latched while rst_ram (docs/memory.md section 3)
@@ -100,7 +101,7 @@ assign dbg_sdram_ready = sdram_ready;
 assign dbg_psram_ready = p0_idle & p1_idle;
 assign mem_ready = sdram_ready & p0_idle & p1_idle & ~rst_ram;
 sdram_pocket sdram (
-	.clk(clk_ram), .init(rst_ram), .sync(sync), .cap_sel(cap_sel),
+	.clk(clk_ram), .clk_cap(clk_ram_cap), .init(rst_ram), .sync(sync), .cap_sel(cap_sel),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i), .dram_dqm(dram_dqm),
 	.dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n), .dram_clk(dram_clk),
 	.addr_a0(addr_a0), .addr_a1(addr_a1), .din_a(din_a), .wr_a(wr_a), .rd_a(rd_a), .dout_a0(dout_a0), .dout_a1(dout_a1),
