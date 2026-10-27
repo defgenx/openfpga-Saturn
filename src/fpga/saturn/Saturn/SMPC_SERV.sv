@@ -67,7 +67,8 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	reg         ev_cmd, ev_vbin, ev_vbout, ev_rtc, ev_i0, ev_tmr;
 
 	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] oreg_m [32];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ireg_m [8];
+	(* ramstyle = "M10K, no_rw_check" *) reg [7:0] ireg_m [8];
+	reg  [ 7:0] ireg_q;
 	wire [ 6:0] ba     = {A, 1'b1};
 	wire        bus_wr = !RW_N && RW_N_OLD && !CS_N && MRES_N;
 	wire        bus_rd = !CS_N && CS_N_OLD && RW_N;
@@ -101,21 +102,24 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 		iack  <= ic && !iack;
 	end
 
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram0 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram1 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram2 [0:(1<<RAM_AW)-1];
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] ram3 [0:(1<<RAM_AW)-1];
+	// data RAM and IREG: M10K, read data registered like rom_d (valid in the dack cycle)
+	(* ramstyle = "M10K, no_rw_check" *) reg [31:0] ram_m [0:(1<<RAM_AW)-1];
+	reg  [31:0] ram_q;
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
 	wire        sel_rom = da[31:30] == 2'b00;
 	wire        dgo     = dc && !dack;
 	wire [RAM_AW-1:0] ra = da[RAM_AW+1:2];
 	wire [ 7:0] mi      = da[9:2];        // MMIO word index
-	always @(posedge CLK) if (dgo && dwe && sel_ram) begin
-		if (dsel[0]) ram0[ra] <= dd[ 7: 0];
-		if (dsel[1]) ram1[ra] <= dd[15: 8];
-		if (dsel[2]) ram2[ra] <= dd[23:16];
-		if (dsel[3]) ram3[ra] <= dd[31:24];
+	always @(posedge CLK) begin
+		if (dgo && dwe && sel_ram) begin
+			if (dsel[0]) ram_m[ra][ 7: 0] <= dd[ 7: 0];
+			if (dsel[1]) ram_m[ra][15: 8] <= dd[15: 8];
+			if (dsel[2]) ram_m[ra][23:16] <= dd[23:16];
+			if (dsel[3]) ram_m[ra][31:24] <= dd[31:24];
+		end
+		ram_q  <= ram_m[ra];
+		ireg_q <= ireg_m[mi[2:0]];
 	end
 
 	reg [31:0] mm_q;
@@ -130,12 +134,12 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 			6'h0C: mm_q = {16'd0, TS};
 			6'h08: mm_q = EXT_RTC[31:0];
 			6'h09: mm_q = EXT_RTC[63:32];
-			6'h10, 6'h11, 6'h12, 6'h13, 6'h14, 6'h15, 6'h16: mm_q = {24'd0, ireg_m[mi[2:0]]};
+			6'h10, 6'h11, 6'h12, 6'h13, 6'h14, 6'h15, 6'h16: mm_q = {24'd0, ireg_q};
 			default: mm_q = 32'd0;
 		endcase
 	end
 
-	assign drd = sel_ram ? {ram3[ra], ram2[ra], ram1[ra], ram0[ra]} : sel_mm ? mm_q : rom_d;
+	assign drd = sel_ram ? ram_q : sel_mm ? mm_q : rom_d;
 
 	// ---------------------------------------------------------------- state
 	always @(posedge CLK or negedge RST_N) begin
