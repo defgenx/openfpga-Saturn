@@ -66,13 +66,11 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	reg         RW_N_OLD, CS_N_OLD, IRQV_N_OLD, RTC64_OLD;
 	reg         ev_cmd, ev_vbin, ev_vbout, ev_rtc, ev_i0, ev_tmr;
 
-	(* ramstyle = "MLAB, no_rw_check" *) reg [7:0] oreg_m [32];
 	(* ramstyle = "M10K, no_rw_check" *) reg [7:0] ireg_m [8];
 	reg  [ 7:0] ireg_q;
 	wire [ 6:0] ba     = {A, 1'b1};
 	wire        bus_wr = !RW_N && RW_N_OLD && !CS_N && MRES_N;
 	wire        bus_rd = !CS_N && CS_N_OLD && RW_N;
-	wire [ 7:0] oreg_q = oreg_m[A - 6'h10];
 
 	// ---------------------------------------------------------------- CPU, ROM, RAM
 	wire [31:0] ia, da, dd;
@@ -103,7 +101,7 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	end
 
 	// data RAM and IREG: M10K, read data registered like rom_d (valid in the dack cycle)
-	(* ramstyle = "M10K, no_rw_check" *) reg [31:0] ram_m [0:(1<<RAM_AW)-1];
+	(* ramstyle = "M10K, no_rw_check" *) reg [3:0][7:0] ram_m [0:(1<<RAM_AW)-1];   // byte lanes: the inferable byte-enable form
 	reg  [31:0] ram_q;
 	wire        sel_ram = da[31:30] == 2'b10;
 	wire        sel_mm  = da[31:30] == 2'b01;
@@ -113,10 +111,10 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	wire [ 7:0] mi      = da[9:2];        // MMIO word index
 	always @(posedge CLK) begin
 		if (dgo && dwe && sel_ram) begin
-			if (dsel[0]) ram_m[ra][ 7: 0] <= dd[ 7: 0];
-			if (dsel[1]) ram_m[ra][15: 8] <= dd[15: 8];
-			if (dsel[2]) ram_m[ra][23:16] <= dd[23:16];
-			if (dsel[3]) ram_m[ra][31:24] <= dd[31:24];
+			if (dsel[0]) ram_m[ra][0] <= dd[ 7: 0];
+			if (dsel[1]) ram_m[ra][1] <= dd[15: 8];
+			if (dsel[2]) ram_m[ra][2] <= dd[23:16];
+			if (dsel[3]) ram_m[ra][3] <= dd[31:24];
 		end
 		ram_q  <= ram_m[ra];
 		ireg_q <= ireg_m[mi[2:0]];
@@ -231,9 +229,13 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 		end
 	end
 
+	// OREG: M10K, read address (A, a register of the SH-2 bus controller) taken on the falling edge
+	wire        oreg_we = (bus_wr && ba == 7'h1F && DI[7:5] == 3'd0) || (dgo && dwe && sel_mm && mi[5]);
+	wire [ 4:0] oreg_wa = (bus_wr && ba == 7'h1F && DI[7:5] == 3'd0) ? 5'd31 : mi[4:0];     // command echo, else the firmware
+	wire [ 7:0] oreg_wd = (bus_wr && ba == 7'h1F && DI[7:5] == 3'd0) ? DI : dd[7:0];
+	wire [ 7:0] oreg_q;
+	SMPC_SERV_FERAM #(5,8) oreg_ram(CLK, oreg_we, oreg_wa, oreg_wd, {~A[5], A[4:1]}, oreg_q);
 	always @(posedge CLK) begin
-		if (bus_wr && ba == 7'h1F && DI[7:5] == 3'd0) oreg_m[31] <= DI;     // command echo
-		else if (dgo && dwe && sel_mm && mi[5]) oreg_m[mi[4:0]] <= dd[7:0];
 		if (bus_wr && ba[0] && ba[6:4] == 3'd0 && ba[3:1] != 3'd7) ireg_m[ba[3:1]] <= DI;
 	end
 
@@ -248,4 +250,44 @@ module SMPC_SERV #(parameter FW_FILE = "smpc_fw.hex", parameter ROM_AW = 10, par
 	assign DBG_SMPC = {!RST_N || !MRES_N, ia[11:2], SF, COMREG, PINS};
 `endif
 
+endmodule
+
+// Simple dual port RAM in M10K, read address registered on the falling edge: for a register-sourced RA the value is what an
+// asynchronous MLAB read gives before the next rising edge (an MLAB instance takes whole LABs). Writes on the rising edge.
+module SMPC_SERV_FERAM #(
+	parameter AW = 5,
+	parameter DW = 8
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+`ifdef ALTERA_RESERVED_QIS
+	altsyncram #(
+		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+		.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+		.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+		.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+		.widthad_a(AW), .widthad_b(AW), .width_a(DW), .width_b(DW), .width_byteena_a(1)
+	) ram (
+		.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(~CLK), .data_a(WD), .wren_a(WE), .q_b(Q),
+		.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+		.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({DW{1'b1}}), .eccstatus(),
+		.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
+`else
+	reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) if (WE) mem[WA] <= WD;
+	always @(negedge CLK) q <= mem[RA];
+	assign Q = q;
+`ifdef POCKET_FE_CHECK
+	reg [AW-1:0] ra_neg;
+	reg          ra_ok = 0;
+	always @(negedge CLK) begin ra_neg <= RA; ra_ok <= 1; end
+	always @(posedge CLK) if (ra_ok && ra_neg !== RA) $display("FE_ADDR_LATE %m RA %0h -> %0h", ra_neg, RA);
+`endif
+`endif
 endmodule
