@@ -18,6 +18,7 @@ Per-entity tables are in `sizing/pocket-build/`.
 | lite d1402c7, seeds 1 / 2 / 3 | same as `mlab-m10k`, SEED changed | 18,566 / 18,551 / 18,521 | 1,874 / 1,875 / 1,868 (of 1,848) | not placed | 37 / 66 |
 | **lite smpc-serv2 (seed 13)** | same + SMPC on SERV | **18,295 (99%)** | **1,848 / 1,848: fits** | 293 / 308 | 37 / 66 |
 | **lite cd-trim (on 1a3c356)** | + CD path and CE trims | **18,155 (98%)** | **1,846 / 1,848: fits** | 292 / 308 | 38 / 66 |
+| **lite restore (on a797a8c), seeds 7 / 1 / 2** | + area hunt, compact SCSP DSP, VDP2 EXTCC / LNCOL / BACKLINE back in | **18,146 / 18,147 / 18,160 (98%)** | **1,843 / 1,846 / 1,846: fits** | | 42 / 66 |
 
 Lite smpc-serv2 timing (slow 85C): main clock (counter[0]) setup slack -11.641 ns, TNS -7,728, Fmax 24.5 MHz; counter[1] -4.367; cram0/1 clock pins -3.2/-3.3. Not closed.
 

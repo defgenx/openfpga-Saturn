@@ -800,11 +800,8 @@ set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_
 set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
 # >1 makes quartus_map spawn helper processes that hang under x86 emulation; pass --parallel to quartus_fit instead
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCU_DSP=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCSP_DSP=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_SCSP_DSP_COMPACT=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_RPARAMB=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_EXTCC=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LNCOL=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_MOSAIC=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPRWIN=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LINEWIN=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_BACKLINE=1"
