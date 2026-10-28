@@ -46,31 +46,38 @@ module altsyncram #(
 	reg [width_a-1:0] qa_r = '0;
 	reg [width_b-1:0] qb_r = '0;
 
+	reg [widthad_b-1:0] ab_r;
 	always @(posedge clock0) begin
 		if (DUAL) begin
 			// read first (old data), then write
 			if (width_b == width_a) qb_r <= mem[address_b];
 			else qb_r <= {mem[{address_b, 1'b1}], mem[{address_b, 1'b0}]};
 			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
-		end else begin
-			// A write by the same port is seen by the same port; port A wins an address collision on the write
-			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
-			if (BIDIR && wren_b) for (int l = 0; l < width_byteena_b; l++)
-				if (byteena_b[l] && !(wren_a && address_a == address_b && byteena_a[l])) mem[address_b][l*LB +: LB] <= data_b[l*LB +: LB];
+		end else if (BIDIR) begin
+			// true dual port, one clock (same model as sim/scsp/altsyncram.v): both ports read the array as it was before this
+			// edge (old data on a same-edge write); port B can hold its data in an output register enabled by clocken3
 			qa_r <= mem[address_a];
-			if (BIDIR) qb_r <= mem[address_b];
+			ab_r <= address_b;
+			if (outdata_reg_b == "CLOCK1") begin
+				if (clocken3) qb_r <= mem[ab_r];
+			end else
+				qb_r <= mem[address_b];
+			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
+			if (wren_b) for (int l = 0; l < width_byteena_b; l++) if (byteena_b[l]) mem[address_b][l*LB +: LB] <= data_b[l*LB +: LB];
+		end else begin
+			// single port / ROM: the output shows the post-write word
+			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
+			qa_r <= mem[address_a];
 		end
 	end
-	// BIDIR/single port outputs show the post-write word (reads sampled after the nonblocking update)
+	// single port outputs show the post-write word (reads sampled after the nonblocking update)
 	reg [width_a-1:0] qa_n = '0;
-	reg [width_b-1:0] qb_n = '0;
-	always @(posedge clock0) if (!DUAL) begin
+	always @(posedge clock0) if (!DUAL && !BIDIR) begin
 		#1;
 		qa_n <= mem[address_a];
-		if (BIDIR) qb_n <= mem[address_b];
 	end
-	assign q_a = DUAL ? '0 : qa_n;
-	assign q_b = DUAL ? qb_r : qb_n;
+	assign q_a = DUAL ? '0 : BIDIR ? qa_r : qa_n;
+	assign q_b = qb_r;
 	assign eccstatus = 1'b0;
 endmodule
 

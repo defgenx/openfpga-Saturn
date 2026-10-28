@@ -23,7 +23,7 @@ always #6734 clk_74a = ~clk_74a;
 reg [31:0] bridge_addr = 32'd0;
 reg        bridge_wr = 1'b0;
 reg [31:0] bridge_wr_data = 32'd0;
-wire       bridge_rd = 1'b0;
+reg        bridge_rd = 1'b0;
 
 // ------------------------------------------------------------------ pins
 wire [21:16] cram0_a, cram1_a;
@@ -109,11 +109,82 @@ task automatic host_cmd(input [15:0] cmd, input [31:0] p0, input [31:0] p1);
 	end
 endtask
 
+
+// ------------------------------------------------------------------ disc: TOC push and dataslot read service
+// +TOC=<file> (2048 bytes, tools/mktoc.py) is pushed to bridge 0x60000000 before the slots complete; +DISC0..3=<file> are the
+// track files (data slots 16..19, read on demand with $fseek/$fread, so a full image is fine). After Reset Exit the host polls the
+// target command register (core_bridge_cmd 0xF8001000), answers "ready to run" and every dataslot read the core issues, writing the
+// sector words to the bridge address like the APF.
+string    toc_path = "";
+string    disc_path [0:3];
+integer   disc_fd [0:3];
+integer   n_ds_reads = 0, n_ds_err = 0;
+reg [7:0] sec [0:4095];
+
+task automatic bridge_read(input [31:0] a, output [31:0] d);
+	begin
+		@(posedge clk_74a);
+		bridge_addr <= a; bridge_rd <= 1'b1;
+		@(posedge clk_74a);
+		bridge_rd <= 1'b0;
+		repeat (3) @(posedge clk_74a);
+		d = bridge_rd_data;
+	end
+endtask
+
+task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] baddr, input [31:0] len);
+	integer fd, got, i, n;
+	reg [31:0] w;
+	begin
+		n_ds_reads++;
+		fd = (id >= 16 && id < 20) ? disc_fd[id - 16] : 0;
+		got = 0;
+		if (fd != 0) begin
+			void'($fseek(fd, off, 0));
+			got = $fread(sec, fd, 0, len);
+		end
+		for (i = got; i < len; i++) sec[i] = 8'h00;
+		bridge_write(32'hF8001000, 32'h62750000);                 // ack: data follows
+		for (i = 0; i < len; i = i + 4) begin
+			bridge_write(baddr + i, {sec[i], sec[i+1], sec[i+2], sec[i+3]});
+			repeat (gap) @(posedge clk_74a);
+		end
+		repeat (40) @(posedge clk_74a);
+		if (got < len) n_ds_err++;
+		bridge_write(32'hF8001000, got < len ? 32'h6F6B0002 : 32'h6F6B0000);   // done, err 2 on a short read
+		$fdisplay(ftrace, "%0t DISC dataslot read id=%0d off=%0d baddr=%08h len=%0d got=%0d", $time, id, off, baddr, len, got);
+	end
+endtask
+
+task automatic poll_target();
+	reg [31:0] t0, p0, p1, p2, p3;
+	begin
+		forever begin
+			bridge_read(32'hF8001000, t0);
+			if (t0[31:16] == 16'h636D) begin
+				if (t0[15:0] == 16'h0140) bridge_write(32'hF8001000, 32'h6F6B0000);       // ready to run
+				else if (t0[15:0] == 16'h0180) begin
+					bridge_read(32'hF8001020, p0); bridge_read(32'hF8001024, p1);
+					bridge_read(32'hF8001028, p2); bridge_read(32'hF800102C, p3);
+					serve_dataslot(p0, p1, p2, p3);
+				end else bridge_write(32'hF8001000, 32'h6F6B0001);                         // unsupported: error
+			end
+			repeat (400) @(posedge clk_74a);
+		end
+	end
+endtask
+
 initial begin : host
 	integer fd, i, n;
 	bit [31:0] w;
 	if (!$value$plusargs("BIOS=%s", bios_path)) bios_path = "";
 	if (!$value$plusargs("GAP=%d", gap)) gap = 32;
+	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";
+	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
+	if ($value$plusargs("DISC0=%s", disc_path[0])) disc_fd[0] = $fopen(disc_path[0], "rb");
+	if ($value$plusargs("DISC1=%s", disc_path[1])) disc_fd[1] = $fopen(disc_path[1], "rb");
+	if ($value$plusargs("DISC2=%s", disc_path[2])) disc_fd[2] = $fopen(disc_path[2], "rb");
+	if ($value$plusargs("DISC3=%s", disc_path[3])) disc_fd[3] = $fopen(disc_path[3], "rb");
 	for (i = 0; i < 524288; i = i + 1) bios[i] = 8'h00;
 	if (bios_path != "") begin
 		fd = $fopen(bios_path, "rb");
@@ -137,10 +208,21 @@ initial begin : host
 	end
 	$fdisplay(ftrace, "%0t HOST slot 0 write end, %0d words, FIFO overflow %0d", $time, bios_len/4, dut.saturn.dbg_ld_ovf);
 	repeat (50) @(posedge clk_74a);
+	if (toc_path != "") begin : tocpush
+		integer ft, k, nb;
+		reg [7:0] tb8 [0:2047];
+		ft = $fopen(toc_path, "rb"); nb = $fread(tb8, ft); $fclose(ft);
+		$fdisplay(ftrace, "%0t HOST TOC push %0d bytes", $time, nb);
+		for (k = 0; k < 2048; k = k + 4) begin
+			bridge_write(32'h60000000 + k, {tb8[k], tb8[k+1], tb8[k+2], tb8[k+3]});
+			repeat (gap) @(posedge clk_74a);
+		end
+	end
 	host_cmd(16'h008F, 0, 0);                              // all slots complete
 	host_cmd(16'h0011, 0, 0);                              // Reset Exit
 	$fdisplay(ftrace, "%0t HOST Reset Exit", $time);
 	$display("tb_sys: host sequence done at %0t ps", $time);
+	poll_target();
 end
 
 // ------------------------------------------------------------------ probes
@@ -285,7 +367,9 @@ always @(posedge clk_sys) if (sys_ce_r && !rst_sys) begin
 		if (pc_reg_n < 4000) $fdisplay(ftrace, "%0t PC-REGION %08h (cyc %0d)", $time, pc_q, cyc);
 		pc_reg_n++;
 	end
-	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   fbdrop=%0d vdp2 write groups %0d multi-lane %0d", dut.saturn.mem.fb.wf_drop, wg_total, wg_multi);
+	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   audio scsp=%0d nz=%0d poc=%0d nz=%0d i2s=%0d nz=%0d kyonex=%0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
+		$fdisplay(ftrace, "   scsp_drop=%0d ch2 reads=%0d bad=%0d", dut.saturn.mem.sd_drop, ch2_reads, ch2_bad);
+		$fdisplay(ftrace, "   fbdrop=%0d vdp2 write groups %0d multi-lane %0d", dut.saturn.mem.fb.wf_drop, wg_total, wg_multi);
 		$fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
 		`SAT.MSH.bsc.BUS_STATE, `SAT.MSH.CACHE_BUSY, `SAT.MSH.BSC_IBUS_BUSY, `SAT.MSH.BSC_DBUS_BUSY, `SAT.MSH.MULT_BUSY, `SAT.MSH.IBUS_REQ, `SAT.MSH.DBUS_REQ,
 		`SAT.MSH.core.MA_ACTIVE, `SAT.MSH.core.IF_ACTIVE, `SAT.MSHBS_N, `SAT.MSHWAIT_N, sys_ce_r, `SAT.MSH.BUS_RLS); $fdisplay(ftrace, "   cache: IBUS_READ=%b READARRAY=%b READ_PEND=%b WRITE_PEND=%b IBREQ=%b IBUS_WRITE=%b CBUS_REQ=%b CBUS_WR=%b CBUS_A=%08h CCR=%02h HIT=%b",
@@ -425,6 +509,127 @@ always @(posedge clk_sys) begin
 	if (dut.saturn.mem.wr_b != 0 && wb_q == 0) begin wg_total++; if (nl(dut.saturn.mem.wr_b) > 1) wg_multi++; end
 end
 
+
+// ---- audio probes: SCSP output (44.1 kHz), pocket_audio output (48 kHz), decoded I2S pins; 68K reset and SCSP key-ons
+integer fa_scsp, fa_poc, fa_i2s;
+longint n_scsp = 0, n_scsp_nz = 0, n_poc = 0, n_poc_nz = 0, n_i2s = 0, n_i2s_nz = 0, n_kyonex = 0;
+reg ev_q = 0;
+reg sndres_q = 1'bx, m68kres_q = 1'bx, kyp_q = 0;
+initial begin fa_scsp = $fopen("scsp.raw", "wb"); fa_poc = $fopen("pocket.raw", "wb"); fa_i2s = $fopen("i2s.raw", "wb"); end
+always @(posedge clk_sys) begin
+	ev_q <= dut.saturn.audio.in_ev;
+	if (dut.saturn.audio.in_ev && !ev_q) begin
+		$fwrite(fa_scsp, "%c%c%c%c", dut.saturn.SOUND_L[7:0], dut.saturn.SOUND_L[15:8], dut.saturn.SOUND_R[7:0], dut.saturn.SOUND_R[15:8]);
+		if (n_scsp % 2205 == 0) $fdisplay(ftrace, "%0t SCSPMIX n=%0d MVOL=%0d DB=%b SUM_L=%0d SUM_R=%0d ACC_L=%0d out=%0d", $time, n_scsp, `SAT.SCSP.CR0.MVOL, `SAT.SCSP.CR0.DB, $signed(`SAT.SCSP.SUM_L), $signed(`SAT.SCSP.SUM_R), $signed(`SAT.SCSP.ACC_L), $signed(dut.saturn.SOUND_L));
+		n_scsp++; if (dut.saturn.SOUND_L != 0 || dut.saturn.SOUND_R != 0) n_scsp_nz++;
+	end
+	if (dut.saturn.audio.out_stb) begin
+		$fwrite(fa_poc, "%c%c%c%c", dut.saturn.audio.out_l[7:0], dut.saturn.audio.out_l[15:8], dut.saturn.audio.out_r[7:0], dut.saturn.audio.out_r[15:8]);
+		n_poc++; if (dut.saturn.audio.out_l != 0 || dut.saturn.audio.out_r != 0) n_poc_nz++;
+	end
+	if (`SAT.SNDRES_N !== sndres_q) begin sndres_q <= `SAT.SNDRES_N; $fdisplay(ftrace, "%0t SNDRES_N = %b", $time, `SAT.SNDRES_N); end
+	if (`SAT.M68K_RESO_N !== m68kres_q) begin m68kres_q <= `SAT.M68K_RESO_N; $fdisplay(ftrace, "%0t M68K_RESO_N = %b", $time, `SAT.M68K_RESO_N); end
+	kyp_q <= `SAT.SCSP.KYONEX_PEND;
+	if (`SAT.SCSP.KYONEX_PEND && !kyp_q) begin n_kyonex++; if (n_kyonex < 200) $fdisplay(ftrace, "%0t SCSP KYONEX #%0d", $time, n_kyonex); end
+end
+// I2S decode (clk_74a): sample the data pin at each rising edge of SCLK, 1 bit delay after an LRCK edge
+reg lr_q = 0; reg sclk_q = 0; integer i2s_bc = 0; reg [15:0] i2s_sh = 0; reg [15:0] i2s_l = 0;
+always @(posedge clk_74a) begin
+	sclk_q <= dut.sound_i2s.audgen_sclk;
+	if (dut.sound_i2s.audgen_sclk && !sclk_q) begin
+		if (audio_lrck !== lr_q) begin lr_q <= audio_lrck; i2s_bc = 0; end
+		else i2s_bc++;
+		// bit counter 0 = first clock after the edge (the I2S delay bit); data bits are 1..16
+		if (i2s_bc >= 1 && i2s_bc <= 16) i2s_sh <= {i2s_sh[14:0], audio_dac};
+		if (i2s_bc == 17) begin
+			if (!lr_q) i2s_l <= i2s_sh;
+			else begin
+				$fwrite(fa_i2s, "%c%c%c%c", i2s_l[7:0], i2s_l[15:8], i2s_sh[7:0], i2s_sh[15:8]);
+				n_i2s++; if (i2s_l != 0 || i2s_sh != 0) n_i2s_nz++;
+			end
+		end
+	end
+end
+
+
+// ---- SCSP mixer contributors once the output sits at DC
+integer mxn = 0;
+always @(posedge clk_sys) if (n_scsp > 75000 && mxn < 120 && `SAT.SCSP.MX_W != 0 && `SAT.SCSP.MX_SDL != 0) begin
+	mxn++;
+	$fdisplay(ftrace, "%0t SCSPMX slot=%0d DSEL=%b MX_W=%0d SDL=%0d PAN=%0d EFREG_Q=%0d SD=%0d", $time, `SAT.SCSP.OP7.SLOT, `SAT.SCSP.DSEL, $signed(`SAT.SCSP.MX_W), `SAT.SCSP.MX_SDL, `SAT.SCSP.MX_PAN, $signed(`SAT.SCSP.EFREG_Q), $signed(`SAT.SCSP.OP7.SD));
+end
+
+
+integer efn = 0, efnz = 0;
+always @(posedge clk_sys) if (`SAT.SCSP.DSP_EFREG_WE && !`SAT.SCSP.OP7.RST) begin
+	efn++;
+	if (`SAT.SCSP.DSP_EFREG_D != 0 && efnz < 60) begin efnz++;
+		$fdisplay(ftrace, "%0t DSPEF write #%0d wa=%0d d=%0d mpro1=%h", $time, efn, `SAT.SCSP.DSP_EFREG_WA, $signed(`SAT.SCSP.DSP_EFREG_D), `SAT.SCSP.MPRO1_Q);
+	end
+end
+
+
+integer rgn = 0;
+// every SCSP register write (any region), for replaying the BIOS configuration in sim/scsp
+always @(posedge clk_sys) if (|`SAT.SCSP.REG_WE && rgn < 20000 && `SAT.SCSP.CYCLE1_CE) begin
+	rgn++;
+	$fdisplay(ftrace, "%0t SCSPDSPREG a=%03h we=%b d=%04h", $time, {`SAT.SCSP.REG_A, 1'b0}, `SAT.SCSP.REG_WE, `SAT.SCSP.REG_D);
+end
+
+
+integer wmn = 0;
+always @(posedge clk_sys) if (sys_ce_r && `SAT.MSH.core.PC == 32'h000032e8 && wmn < 6) begin
+	wmn++;
+	$fdisplay(ftrace, "%0t WAITHIRQ (PC 32e8) last bus cycles: %s A=%07h D=%08h | %s A=%07h D=%08h | %s A=%07h D=%08h", $time,
+		bwr[(bri+63)%64] ? "WR" : "RD", bra[(bri+63)%64], brd[(bri+63)%64], bwr[(bri+62)%64] ? "WR" : "RD", bra[(bri+62)%64], brd[(bri+62)%64], bwr[(bri+61)%64] ? "WR" : "RD", bra[(bri+61)%64], brd[(bri+61)%64]);
+end
+
+
+// ---- sound RAM read check: data delivered to the SCSP against the SDRAM model content at the requested address
+reg ch2rd_q = 0; reg [19:1] ch2_a = 0; reg ch2_pend = 0; reg [15:0] ch2_exp;
+longint ch2_reads = 0, ch2_bad = 0; reg [15:0] ch2dq = 0;
+function automatic [19:0] sc_idx(input [19:1] a);
+	reg [17:0] sc; sc = a[18:1];
+	sc_idx = {1'b0, 2'd2 + {1'b0, sc[17]}, 1'b1, sc[16:0]} ;
+endfunction
+always @(posedge dut.saturn.clk_ram) begin
+	ch2rd_q <= dut.saturn.mem.ch2rd;
+	if (dut.saturn.mem.ch2rd && !ch2rd_q) begin ch2_a <= dut.saturn.mem.ch2addr; ch2_pend <= 1; ch2_exp <= sdmodel.mem[{2'd2 + {1'b0, dut.saturn.mem.ch2addr[18]}, 1'b1, dut.saturn.mem.ch2addr[17:1]}]; end
+	ch2dq <= dut.saturn.mem.ch2dout;
+	if (ch2_pend && dut.saturn.mem.ch2dout !== ch2dq) begin
+		ch2_pend <= 0; ch2_reads++;
+		if (dut.saturn.mem.ch2dout !== ch2_exp) begin ch2_bad++; if (ch2_bad < 40) $fdisplay(ftrace, "%0t CH2 mismatch addr=%05h got=%04h model=%04h", $time, ch2_a, dut.saturn.mem.ch2dout, ch2_exp); end
+	end
+end
+
+
+// ---- +SNDDUMP: sound RAM (512 KB, 16 bit big endian words) at about 1.8 s of SCSP time
+reg snd_dumped = 0;
+always @(posedge clk_sys) if (!snd_dumped && n_scsp == 80000 && $test$plusargs("SNDDUMP")) begin : sd
+	integer f, i;
+	snd_dumped <= 1;
+	f = $fopen("sndram.bin", "wb");
+	for (i = 0; i < (1 << 18); i++) $fwrite(f, "%c%c", sdmodel.mem[{2'd2 + {1'b0, i[17]}, 1'b1, i[16:0]}][15:8], sdmodel.mem[{2'd2 + {1'b0, i[17]}, 1'b1, i[16:0]}][7:0]);
+	$fclose(f);
+	$display("tb_sys: dumped sound RAM");
+end
+
+
+// ---- DSP step trace around the DC onset (compare the full and the compact DSP builds)
+always @(posedge clk_sys) if (`SAT.SCSP.CYCLE1_CE && n_scsp >= 53250 && n_scsp < 53253)
+	$fdisplay(ftrace, "DSPSTEP n=%0d step=%0d mpro=%h sft=%h temp=%h", n_scsp, `SAT.SCSP.DSP_MPRO_STEP, `SAT.SCSP.MPRO1_Q, `SAT.SCSP.SFT_REG, `SAT.SCSP.TEMP_Q);
+
+
+// ---- per-sample hash of the DSP datapath (SFT_REG, TEMP_Q) to find the first divergence between DSP builds
+reg [31:0] dsph = 0; reg [31:0] dsph_prev = 0;
+always @(posedge clk_sys) begin
+	if (`SAT.SCSP.CYCLE1_CE) dsph <= dsph * 32'd31 + {5'd0, `SAT.SCSP.SFT_REG} + {8'd0, `SAT.SCSP.TEMP_Q};
+	if (dut.saturn.audio.in_ev && !ev_q) begin
+		if (n_scsp > 20000 && n_scsp < 82000 && dsph != dsph_prev) $fdisplay(ftrace, "DSPHASH n=%0d h=%08h", n_scsp, dsph);
+		dsph_prev <= dsph; dsph <= 0;
+	end
+end
+
 // ---- +LAYERS: from frame 440 cycle the VDP2 layer enables every 2 frames: all, sprite only, NBG2 only, NBG3 only; dump each frame
 bit layers = 0;
 initial layers = $test$plusargs("LAYERS");
@@ -463,6 +668,9 @@ task automatic summary();
 	$display("---- summary ----");
 	$display("clk_sys cycles (CE_R, out of reset) %0d, MSH bus cycles %0d, unmapped %0d", cyc, n_cycles, n_unmapped);
 	$display("TVMD.DISP set at: %0t ps, VBL toggles %0d, SH-2 IRL changes %0d, SSH bus toggles %0d", t_disp, vbl_toggles, irl_changes, sshbs_toggles);
+	$display("audio: SCSP samples %0d (%0d non-zero), pocket_audio %0d (%0d), I2S %0d (%0d); SCSP key-on events %0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
+	$fflush();
+	$display("disc: %0d dataslot reads, %0d short", n_ds_reads, n_ds_err);
 	$display("VDP2 VRAM write groups %0d, multi-lane %0d", wg_total, wg_multi);
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);

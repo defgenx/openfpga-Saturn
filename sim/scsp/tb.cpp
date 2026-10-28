@@ -578,15 +578,22 @@ int main(int argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 	uint32_t seed = 1, nrand = 300;
 	const char *wavp = "scsp";
+	const char *replayp = nullptr; bool zeroram = false; const char *ramfile = nullptr; uint32_t replay_samples = 40000;
 	for (int i = 1; i < argc; i++) {
 		if (!strncmp(argv[i], "+seed=", 6)) seed = atoi(argv[i] + 6);
 		if (!strncmp(argv[i], "+rounds=", 8)) nrand = atoi(argv[i] + 8);
 		if (!strcmp(argv[i], "+nomidi")) nomidi = true;
 		if (!strncmp(argv[i], "+wav=", 5)) wavp = argv[i] + 5;
+		if (!strncmp(argv[i], "+replay=", 8)) replayp = argv[i] + 8;
+		if (!strcmp(argv[i], "+zeroram")) zeroram = true;
+		if (!strncmp(argv[i], "+ramfile=", 9)) ramfile = argv[i] + 9;
+		if (!strncmp(argv[i], "+replaysamples=", 15)) replay_samples = atoi(argv[i] + 15);
 	}
 	Rng rng(seed); R = &rng;
 	top = new T;
 	setup_ram();
+	if (zeroram) for (uint32_t i = 0; i < (1u << 18); i++) { ram_r.mem[i] = 0; ram_n.mem[i] = 0; }
+	if (ramfile) { FILE *rf = fopen(ramfile, "rb"); if (rf) { for (uint32_t i = 0; i < (1u << 18); i++) { int h = fgetc(rf), l = fgetc(rf); if (h < 0 || l < 0) break; ram_r.mem[i] = ram_n.mem[i] = (h << 8) | l; } fclose(rf); } }
 	top->CLK = 0; top->RST_N = 0; top->RES_N = 0; top->CE = 0; top->CE_R = 0; top->CE_F = 0;
 	top->DI = 0; top->CS_N = 1; top->AD_N = 1; top->DTEN_N = 1; top->REQ_N = 1;
 	top->SCA = 0; top->SCDI = 0; top->SCRW_N = 1; top->SCAS_N = 1; top->SCLDS_N = 1; top->SCUDS_N = 1;
@@ -595,6 +602,31 @@ int main(int argc, char **argv) {
 	run_clks(20); top->RST_N = 1; run_clks(20); top->RES_N = 1;
 	wait_reset_done();
 
+	// ---- replay mode: the register writes of a real system log (lines "... a=XXX we=NN d=DDDD"), then run ----
+	if (replayp) {
+		static uint16_t shadow[0x800];
+		FILE *f = fopen(replayp, "r"); char line[512]; long nw = 0;
+		while (f && fgets(line, sizeof line, f)) {
+			char *p = strstr(line, " a="); if (!p) continue;
+			unsigned a, we, d; char wes[8];
+			if (sscanf(p, " a=%x we=%7[01] d=%x", &a, wes, &d) != 3) continue;
+			we = (wes[0] == '1' ? 2 : 0) | (wes[1] == '1' ? 1 : 0);
+			uint16_t& sh = shadow[(a >> 1) & 0x7FF];
+			if (we & 2) sh = (sh & 0x00FF) | (d & 0xFF00);
+			if (we & 1) sh = (sh & 0xFF00) | (d & 0x00FF);
+			wr_reg(a & ~1u, sh); drain(); run_clks(R->range(0, 40)); nw++;
+		}
+		if (f) fclose(f);
+		printf("replayed %ld register writes\n", nw);
+		run_samples(replay_samples);
+		drain();
+		char fn[256];
+		snprintf(fn, sizeof fn, "%s_ref.wav", wavp); wav_r.save(fn);
+		snprintf(fn, sizeof fn, "%s_new.wav", wavp); wav_n.save(fn);
+		size_t nd = 0, first = (size_t)-1; for (size_t i = 0; i < wav_r.s.size() && i < wav_n.s.size(); i++) if (wav_r.s[i] != wav_n.s[i]) { if (first == (size_t)-1) first = i; nd++; }
+		printf("replay: %zu samples, %zu differ (first at %zd), ref[%zu]=%d new[%zu]=%d\n", wav_r.s.size() / 2, nd, (ssize_t)first, wav_r.s.size() - 2, wav_r.s.empty() ? 0 : wav_r.s[wav_r.s.size() - 2], wav_n.s.size() - 2, wav_n.s.empty() ? 0 : wav_n.s[wav_n.s.size() - 2]);
+		return nd ? 1 : 0;
+	}
 	// ---- directed phase ----
 	common_cr();
 	dsp_init_regs();
