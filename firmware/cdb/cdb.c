@@ -1120,7 +1120,7 @@ static void cmd_exec(void)
 			start_seek(sfad | 0x800000, 0);
 		}
 		break; }
-	case 0x75: cdstatus(0, 0); fls.abort = 1; break;
+	case 0x75: cdstatus(0, 0); fls.abort = 1; irq(H_EFLS); break;
 	case 0x05: case 0x12: cdstatus(0, 0); break;      /* open tray, scan: status only */
 	default: cdstatus(1, 0); break;      /* includes the MPEG commands: no card */
 	}
