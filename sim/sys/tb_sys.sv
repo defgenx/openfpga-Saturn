@@ -370,6 +370,7 @@ always @(posedge clk_sys) if (sys_ce_r && !rst_sys) begin
 		pc_reg_n++;
 	end
 	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   audio scsp=%0d nz=%0d poc=%0d nz=%0d i2s=%0d nz=%0d kyonex=%0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
+		$fdisplay(ftrace, "   SSH PC=%08h SSHRES_N=%b SSHBS_N=%b | MSH SR.I=%0d IRL_N=%h", `SAT.SSH.core.PC, `SAT.SSHRES_N, `SAT.SSHBS_N, `SAT.MSH.core.SR.I, `SAT.MSHIRL_N);
 		$fdisplay(ftrace, "   scsp_drop=%0d ch2 reads=%0d bad=%0d", dut.saturn.mem.sd_drop, ch2_reads, ch2_bad);
 		$fdisplay(ftrace, "   fbdrop=%0d vdp2 write groups %0d multi-lane %0d", dut.saturn.mem.fb.wf_drop, wg_total, wg_multi);
 		$fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
@@ -442,10 +443,11 @@ end
 
 // ---- SCU interrupt internals
 reg [15:0] scuint_q = 16'hx;
+longint n_scuint = 0;
 wire [15:0] scuint = {`SAT.SCU.CIVECF_N, `SAT.SCU.INT_SET, `SAT.SCU.VBIN_INT, `SAT.SCU.VBOUT_INT, `SAT.SCU.HBIN_INT, `SAT.SCU.SM_INT, `SAT.SCU.PAD_INT};
 always @(posedge clk_sys) if (scuint !== scuint_q) begin
 	scuint_q <= scuint;
-	if (cyc > 1) $fdisplay(ftrace, "%0t SCUINT IVECF_N=%b INT_SET=%b VBIN=%b VBOUT=%b HBIN=%b SM=%b PAD=%b CIRL_N=%h", $time,
+	if (cyc > 1 && n_scuint++ < 200000) $fdisplay(ftrace, "%0t SCUINT IVECF_N=%b INT_SET=%b VBIN=%b VBOUT=%b HBIN=%b SM=%b PAD=%b CIRL_N=%h", $time,
 		`SAT.SCU.CIVECF_N, `SAT.SCU.INT_SET, `SAT.SCU.VBIN_INT, `SAT.SCU.VBOUT_INT, `SAT.SCU.HBIN_INT, `SAT.SCU.SM_INT, `SAT.SCU.PAD_INT, `SAT.SCU.CIRL_N);
 end
 
@@ -482,7 +484,7 @@ always @(posedge video_rgb_clock) begin
 			if (video_rgb != 24'h000000) frame_nonblack++;
 		end
 		fx <= fx + 1;
-		if (fx + 1 > fw) fw <= fx + 1;
+		if (fx + 1 > fw && fx < 1024) fw <= fx + 1;
 	end
 	if (de_q && !video_de) begin fx <= 0; fy <= fy + 1; fh <= fy + 1; end
 	if (video_vs && !vs_q) begin
@@ -490,7 +492,8 @@ always @(posedge video_rgb_clock) begin
 		if (fh > 0) begin
 			$fdisplay(ftrace, "%0t FRAME %0d: %0dx%0d, %0d non-black pixels, first pixel %06h, centre %06h", $time, frame_no, fw, fh, frame_nonblack,
 				fbuf[0][0], fbuf[fw/2][fh/2]);
-			if (frame_no < 3 || (t_disp != 0 && (layers ? (frame_no >= 440 && frame_no % 2 == 0) : (frame_no % 8 == 0)) && dumped < 400)) begin
+			if (fx > 1024 || fh > 512) $fdisplay(ftrace, "%0t FRAME %0d ABNORMAL: last-line px=%0d lines=%0d", $time, frame_no, fx, fh);
+			if (fx <= 1024 && fh <= 512 && (frame_no < 3 || (t_disp != 0 && (layers ? (frame_no >= 440 && frame_no % 2 == 0) : (frame_no % 32 == 0)) && dumped < 60))) begin
 				if (t_disp != 0) dumped++;
 				dump_frame(t_disp != 0 ? "disp" : "boot");
 			end

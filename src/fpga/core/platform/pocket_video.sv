@@ -50,13 +50,19 @@ reg        de, hs, vs;
 reg  [2:0] slot;
 reg        vbl_old;
 
+// DCLK stops while the VDP2 is held in reset (SMPC clock change, about 100 ms): blank DE and HS then, so the
+// last line does not stay high.
+reg  [4:0] idle = 5'd0;
+
 always @(posedge clk_sys) begin
 	if (DCLK) begin
 		pix <= {R, G, B};
 		de  <= HBL_N & VBL_N;
 		hs  <= ~HS_N;
 		vs  <= ~VS_N;
-	end
+		idle <= 5'd0;
+	end else if (!idle[4]) idle <= idle + 5'd1;
+	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; end
 
 	// mode is locked for the whole frame, as in MiSTer's top
 	vbl_old <= VBL_N;
