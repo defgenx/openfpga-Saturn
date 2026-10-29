@@ -290,6 +290,8 @@ task automatic log_cycle();
 			$fdisplay(ftrace, "%0t VDP2 WR  A=%07h D=%08h %s", $time, cy_a, cy_d, cy_a[8:0] == 9'h000 ? "TVMD" : cy_a[8:0] == 9'h020 ? "BGON" : "");
 		end else if (r == "VDP1-REGS" || r == "SCSP-REGS" || r == "ABUS-CS2/CD") begin
 			$fdisplay(ftrace, "%0t %s WR  A=%07h D=%08h", $time, r, cy_a, cy_d);
+		end else if (r == "WRAM-H" && cy_a[19:2] == 18'h0D23B) begin
+			$fdisplay(ftrace, "%0t VAR348EC WR D=%08h PC=%08h", $time, cy_d, `SAT.MSH.core.PC);
 		end else if (r == "WRAM-H" && cy_a[19:0] >= 20'h00600 && cy_a[19:0] < 20'h00700 && cyc > 100000) begin
 			$fdisplay(ftrace, "%0t WRH-WR A=%07h D=%08h", $time, cy_a, cy_d);
 		end else if (r == "WRAM-H" && cy_a[19:0] >= 20'h00F00 && cy_a[19:0] < 20'h00F40) begin
@@ -648,6 +650,10 @@ always @(posedge video_vs) if (frame_no == dumpat) begin : dmp
 	f = $fopen("vdp1vram.bin", "wb");
 	for (i = 0; i < 262144; i++) $fwrite(f, "%c%c", model1.mem[i][15:8], model1.mem[i][7:0]);
 	$fclose(f);
+	f = $fopen("wramh.bin", "wb");
+	for (i = 0; i < 524288; i++) $fwrite(f, "%c%c", model0.mem[24'h180000 + i][15:8], model0.mem[24'h180000 + i][7:0]);
+	$fclose(f);
+	$fdisplay(ftrace, "PC ring at dump:"); for (i = 0; i < 64; i++) $fdisplay(ftrace, "   pc %08h", pcr[(pcr_i + 448 + i) % 512]); $fflush();
 	f = $fopen("sdram.bin", "wb");
 	for (i = 0; i < (4<<18); i++) $fwrite(f, "%c%c", sdmodel.mem[i][15:8], sdmodel.mem[i][7:0]);
 	$fclose(f);
