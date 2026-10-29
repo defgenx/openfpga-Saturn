@@ -759,7 +759,7 @@ static void cmd_exec(void)
 		break; }
 	case 0x04:
 		inited = 1;
-		clear_pending_sec(); play_end = 0x800000; play_rep = 0; pos.status = S_BUSY;
+		clear_pending_sec(); play_end = 0x800000; play_rep = 0; pos.status = S_BUSY; at_end = 0;
 		cdstatus(0, 0);
 		if (CD[0] & 1) { wait_ticks(3); sw_reset_pending = 1; }
 		break;
