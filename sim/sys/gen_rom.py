@@ -18,6 +18,7 @@ SLAVE_UP = 0x26000F84
 VBFLAG = 0x26000F40
 SMFLAG = 0x26000F44
 MAGIC = 0x5A5AA5A5
+SLV_CMD, SLV_ACK, SLV_RES = 0x26000F90, 0x26000F94, 0x26000F98
 VT = 0x06000000           # vector table (VBR)
 MSP, SSP = 0x06080000, 0x060A0000
 
@@ -147,6 +148,26 @@ a.li(1, SLAVE_UP)
 a.li(2, 0x55AA0001)
 a.movl_st(2, 1)
 a.label('slave_spin')
+a.li(1, SLV_CMD)
+a.movl_ld(1, 0)
+a.movi(2, 1)
+a.cmpeq(2, 0)
+a.bf('slv_n1')
+st(0x21800000, 0x1234, 2)                        # SINIT write, as the games do after SSHON
+st(SLV_CMD, 0)
+a.label('slv_n1')
+a.li(1, SLV_CMD)
+a.movl_ld(1, 0)
+a.movi(2, 2)
+a.cmpeq(2, 0)
+a.bf('slave_spin')
+ld(0xFFFFFE11, 1)
+st(0xFFFFFE11, 0, 1)                             # clear own FTCSR.ICF
+st(SLV_ACK, 1)
+poll(0xFFFFFE11, 1, 0x80, True, T_MISC)          # the master's MINIT write must raise it
+a.li(1, SLV_RES)
+a.movl_st(4, 1)
+st(SLV_CMD, 0)
 a.bra('slave_spin')
 a.nop()
 
@@ -174,7 +195,7 @@ a.dt(3)
 a.bf('vcopy')
 st(0xFFFFFE92, 0x10, 1)                          # CCR: purge, then enable the cache (the BIOS runs cached)
 st(0xFFFFFE92, 0x01, 1)
-for addr in (VBFLAG, SMFLAG, SLAVE_UP):
+for addr in (VBFLAG, SMFLAG, SLAVE_UP, SLV_CMD, SLV_ACK, SLV_RES):
     st(addr, 0)
 st(SLAVE_FLAG, MAGIC)
 ld(VT + 0x40 * 4)
@@ -402,11 +423,41 @@ a.dt(3)
 a.bf('cchk')
 verdict(25)
 
+# ---- 26-28: SINIT write (0x21800000) of each width raises the master's FTCSR.ICF (input capture via DCC MFTI)
+for step, size in ((26, 1), (27, 2), (28, 4)):
+    begin(step)
+    ld(0xFFFFFE11, 1)
+    st(0xFFFFFE11, 0, 1)                         # clear ICF
+    st(0x21800000, 0x1234, size)
+    poll(0xFFFFFE11, 1, 0x80, True, T_MISC)
+    timeout_check(step)
+
 # ---- 15-17: slave SH-2: SSHON, wait for it to run, SSHOFF
 smpc(15, 0x02)
 begin(16)
 poll(SLAVE_UP, 4, 0xFFFFFFFF, True, T_MISC)
 timeout_check(16)
+# ---- 29: slave writes SINIT -> master ICF; 30: master writes MINIT (0x21000000) -> slave ICF
+begin(29)
+ld(0xFFFFFE11, 1)
+st(0xFFFFFE11, 0, 1)
+st(SLV_CMD, 1)
+poll(0xFFFFFE11, 1, 0x80, True, T_MISC)
+timeout_check(29)
+begin(30)
+st(SLV_CMD, 2)
+poll(SLV_ACK, 4, 0xFFFFFFFF, True, T_MISC)
+st(0x21000000, 0x1234, 2)
+poll(SLV_CMD, 4, 0xFFFFFFFF, False, T_MISC)
+ld(SLV_RES)
+a.li(3, 0xFFFFFFFF)
+a.and_(3, 0)
+a.li(3, 0)
+a.cmpeq(3, 0)
+a.movt(6)
+a.movi(9, 1)
+a.and_(6, 9)
+verdict(30)
 smpc(17, 0x03)                                   # SSHOFF again
 
 # ---- 18: let a few frames go by with the display on, then finish
