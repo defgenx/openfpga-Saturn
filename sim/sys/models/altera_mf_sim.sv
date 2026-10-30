@@ -16,7 +16,7 @@ module altsyncram #(
 	parameter string outdata_reg_a = "UNREGISTERED", parameter string outdata_reg_b = "UNREGISTERED",
 	parameter string address_reg_b = "CLOCK1",
 	parameter string init_file = "", parameter string power_up_uninitialized = "FALSE",
-	parameter string intended_device_family = "", parameter string lpm_type = "",
+	parameter string intended_device_family = "", parameter string lpm_hint = "", parameter string lpm_type = "",
 	parameter string ram_block_type = "", parameter string clock_enable_input_a = "", parameter string clock_enable_input_b = "",
 	parameter string clock_enable_output_a = "", parameter string clock_enable_output_b = "",
 	parameter string indata_reg_b = "", parameter string byteena_reg_b = "", parameter string wrcontrol_wraddress_reg_b = "",

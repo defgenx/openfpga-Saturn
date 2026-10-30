@@ -135,3 +135,11 @@ Bit MD of T1MD (timer 1 "once per line with timer 0 match" mode) reads back 0: t
 every-line mode. Saves only 21 ALUTs; not recommended unless a census shows nothing uses the sync mode.
 
 The cut builds do not match the golden by design; only the macro-less build is compared in `make -C sim scu`.
+
+## Compact SCU DSP (`POCKET_SCU_DSP_COMPACT`, `SCUP2_DSPC.sv`)
+
+Same ports as `SCUP2_DSP`; `POCKET_CUT_SCU_DSP` wins if both are set. A step is a 1-6 clk micro-sequence (D1 source and flags,
+AC, P=RX*RY, X read, Y read, D1 write and commit; idle phases skipped) with one data-RAM read copy each for the engine, the DMA and the
+CPU, and one write port (DMA, CPU, engine). Differences from `SCUP2_DSP`: the DMA hazard pause is evaluated at step start instead
+of at CE_F, a CPU data-RAM access while T0 uses the transfer address, DSP-to-program-RAM DMA is not lock-step with the program.
+Verification: `make -C sim/scu/dspc` (control-port bench against `SCUP2_DSP`, state compared after every step; `mutate.sh`).

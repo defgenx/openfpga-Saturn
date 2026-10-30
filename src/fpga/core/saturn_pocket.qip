@@ -28,6 +28,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) .
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SCUP2/SCUP2_RAM.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SCUP2/SCUP2_PKG.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SCUP2/SCUP2_DSP.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SCUP2/SCUP2_DSPC.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/SCUP2/SCUP2.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/VDP1/VDP1_pkg.sv]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../saturn/Saturn/VDP1/VDP1.sv]

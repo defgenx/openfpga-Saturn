@@ -2591,6 +2591,39 @@ module SCUP2
 	assign DSP_DMA_RUN = 0;
 	assign DSP_DMA_LAST = 0;
 	assign DSP_IRQ = 0;
+`elsif POCKET_SCU_DSP_COMPACT
+	SCUP2_DSPC dsp(
+		.CLK(CLK),
+		.RST_N(RST_N),
+		.CE(DSP_CE & CE_R),
+		
+		.RES_N(RES_N),
+		
+		.CE_R(CE_R),
+		.CE_F(CE_F),
+		.A(REG_A[3:2]),
+		.DI(REG_WDI),
+		.DO(DSP_DO),
+		.WE(DSP_SEL & REG_WWAIT & CE_R),
+		.RE(DSP_SEL & REG_RWAIT & REG_WAIT_DELAY == 3'd2 & CE_F),
+		
+		.DSO(DSP_DSO),
+		.DMAC(DSP_DMAC),
+		.RA0W(DSP_RA0_SET),
+		.WA0W(DSP_WA0_SET),
+		.DMAW(DSP_DMA_SET),
+		
+		.DMA_DI(DSP_DMA_DI),
+		.DMA_DO(DSP_DMA_DO),
+		.DMA_WE(DSP_DMA_WE),
+		.DMA_REQ(DSP_DMA_REQ),
+		.DMA_ACK(DSP_DMA_ACK),
+		.DMA_RUN(DSP_DMA_RUN),
+		.DMA_LAST(DSP_DMA_LAST),
+		.DMA_END(DSP_DMA_END),
+		
+		.IRQ(DSP_IRQ)
+	);
 `else
 	SCUP2_DSP dsp(
 		.CLK(CLK),
