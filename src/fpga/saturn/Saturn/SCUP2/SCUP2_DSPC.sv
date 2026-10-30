@@ -118,7 +118,7 @@ module SCUP2_DSPC (
 
 	//Write-port users that outrank the engine
 	wire CPU_WE = ~RUN & DATA_TRANS_WE & CE_R & ~(T0 & ~DDIR & ~DS[2] & DATA_TRANS_ADDR[7:6] == DS[1:0]);
-	wire commit = step & pe == 3'd5 & ~DWR_WE & ~CPU_WE;
+	wire commit = step & pe == 3'd5 & CE_R & ~DWR_WE & ~CPU_WE;   //CE_R: the SCU samples RA0W/WA0W/DMAW there
 
 	//ALU
 	wire        ALU_SUB = IC[29:26] == 4'b0101;

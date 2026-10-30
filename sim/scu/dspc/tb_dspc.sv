@@ -60,6 +60,11 @@ module tb;
 	end
 
 	integer errors = 0, checks = 0;
+	always @(posedge CLK) if ((d_RA0W | d_WA0W | d_DMAW) && !CE_R) begin errors = errors + 1; $display("%0t STROBE outside CE_R", $time); end
+	always @(posedge CLK) if ($test$plusargs("DMAW")) begin
+		if (r_DMAW) $display("%0t REF DMAW IC %08x CT0 %0d ram0[ct0]=%08x TN0(before) %0d", $time, u_r.IC, u_r.CT0, u_r.DATA_RAM_X.MEM[{2'b00,u_r.CT0}], u_r.TN0);
+		if (d_DMAW) $display("%0t DUT DMAW IC %08x CT0 %0d D1T=%08x ram0[ct0]=%08x", $time, u_d.IC, u_d.CT0, u_d.D1T, u_d.DATA_RAM_E.MEM[{2'b00,u_d.CT0}]);
+	end
 	integer dbg = 0;
 	always @(posedge CLK) if (dbg && (r_ACK || d_ACK || r_END != 0)) $display("%0t ACK r%b d%b END r%b d%b TN r%0d d%0d T0 %b %b REQ %b %b EPEND %b %b", $time, r_ACK, d_ACK, r_END, d_END, u_r.TN0, u_d.TN0, u_r.T0, u_d.T0, r_REQ, d_REQ, u_r.DMA_END_PEND, u_d.DMA_END_PEND);
 
@@ -74,6 +79,16 @@ module tb;
 		end
 	endtask
 
+	task wrg(input [1:0] a, input [31:0] d, input integer gap);
+		begin
+			@(posedge CLK); #1;
+			while (!CE_R) begin @(posedge CLK); #1; end
+			A = a; DI = d; WE = 4'hF;
+			@(posedge CLK); #1; WE = 0;
+			repeat (gap) @(posedge CLK);
+			#1;
+		end
+	endtask
 	reg [31:0] rd_r, rd_d;
 	task rd(input [1:0] a);
 		begin
@@ -202,7 +217,7 @@ module tb;
 			t = 0;
 			repeat (8) @(posedge CLK);
 			while ((u_r.EX || u_d.EX || u_r.T0 || u_d.T0 || u_r.DMA_END_PEND || u_d.DMA_END_PEND) && t < maxclk) begin @(posedge CLK); t = t + 1; end
-			if (t >= maxclk) begin mism("FREE TIMEOUT"); $display("  EX %b %b T0 %b %b PC %02x %02x", u_r.EX, u_d.EX, u_r.T0, u_d.T0, u_r.PC, u_d.PC); end
+			if (t >= maxclk) begin mism("FREE TIMEOUT"); $display("  EX %b %b T0 %b %b PC %02x %02x | dut ph %0d hz %b RUN %b PAUSED %b REQ %b TN %0d DS %0d DDIR %b IC %08x | ref TN %0d REQ %b", u_r.EX, u_d.EX, u_r.T0, u_d.T0, u_r.PC, u_d.PC, u_d.ph, u_d.hz, u_d.RUN, u_d.PAUSED, u_d.DMA_REQ, u_d.TN0, u_d.DS, u_d.DDIR, u_d.IC, u_r.TN0, u_r.DMA_REQ); end
 			repeat (20) @(posedge CLK);
 			#1;
 			cmp("free");
@@ -268,6 +283,26 @@ module tb;
 		dfinish(14);
 
 		// ---- random single-step ----
+		if ($test$plusargs("PUMPRT")) begin   // BIOS-like timing: 3 data words, PPAF 0x18000, 9 clk apart
+			do_reset; $readmemh("pump.prog", prog); load_prg(32);
+			wrg(2, 0, 9); wrg(3, 32'h09708000, 9); wrg(3, 32'h09694000, 9); wrg(3, 32'h00004001, 9); wrg(0, 32'h0001_8000, 9);
+			k2 = 0;
+			while ((u_r.EX || u_d.EX || u_r.T0 || u_d.T0) && k2 < 60000) begin @(posedge CLK); k2 = k2 + 1; end
+			repeat (20) @(posedge CLK);
+			$display("pumprt: clk %0d ref EX %b PC %02x sink %0d | dut EX %b PC %02x sink %0d | RAM0..2 ref %08x %08x %08x dut %08x %08x %08x", k2, u_r.EX, u_r.PC, r_CNT, u_d.EX, u_d.PC, d_CNT,
+			        u_r.DATA_RAM_X.MEM[0], u_r.DATA_RAM_X.MEM[1], u_r.DATA_RAM_X.MEM[2], u_d.DATA_RAM_E.MEM[0], u_d.DATA_RAM_E.MEM[1], u_d.DATA_RAM_E.MEM[2]);
+			cmp("pumprt");
+		end
+		if ($test$plusargs("PUMP")) begin   // local DSP program/data image (not committed): +PUMP, files pump.prog / pump.ram
+			do_reset; $readmemh("pump.prog", prog); $readmemh("pump.ram", ramimg);
+			load_ram; if ($test$plusargs("PFREE")) begin run_free(32, 20000); k2 = 2000; end else load_prg(32);
+			for (k2 = (k2 == 2000 ? 2000 : 0); k2 < 80; k2 = k2 + 1) begin
+				wr(0, 32'h0002_0000); settle;
+				if (dbg) $display("pstep %0d IC r%08x d%08x PC r%02x d%02x CT0 %0d %0d TN %0d %0d", k2, u_r.IC, u_d.IC, u_r.PC, u_d.PC, u_r.CT0, u_d.CT0, u_r.TN0, u_d.TN0);
+				cmp("pump"); if (errors != 0) k2 = 1000;
+			end
+			$display("pump: ref sink %0d words hash %08x, dut %0d words hash %08x, PC %02x/%02x", r_CNT, r_SUM, d_CNT, d_SUM, u_r.PC, u_d.PC);
+		end
 		if (!$value$plusargs("ONLY=%d", only)) only = -1;
 		for (s = 0; s < 60; s = s + 1) begin
 			if (only < 0 || only == s) run_single(s, 8 + (s % 40), 120, 0);
