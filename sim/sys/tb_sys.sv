@@ -371,6 +371,9 @@ always @(posedge clk_sys) if (sys_ce_r && !rst_sys) begin
 	end
 	if (cyc % 100000 == 0) begin $fdisplay(ftrace, "%0t PC-SAMPLE %08h (cyc %0d) last bus %s %s A=%07h D=%08h", $time, pc_q, cyc, cy_wr ? "WR" : "RD", region(cy_a), cy_a, cy_d); $fdisplay(ftrace, "   audio scsp=%0d nz=%0d poc=%0d nz=%0d i2s=%0d nz=%0d kyonex=%0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
 		$fdisplay(ftrace, "   SSH PC=%08h SSHRES_N=%b SSHBS_N=%b | MSH SR.I=%0d IRL_N=%h", `SAT.SSH.core.PC, `SAT.SSHRES_N, `SAT.SSHBS_N, `SAT.MSH.core.SR.I, `SAT.MSHIRL_N);
+		$fdisplay(ftrace, "   smp dev1 %0d/%0d dev2 %0d/%0d dev3 %0d/%0d dev4 %0d/%0d dev5 %0d/%0d (bad/total)", smp_bad[1], smp_n[1], smp_bad[2], smp_n[2], smp_bad[3], smp_n[3], smp_bad[4], smp_n[4], smp_bad[5], smp_n[5]);
+		$fdisplay(ftrace, "   ch2 latency <16 %0d <20 %0d <24 %0d <28 %0d <32 %0d <36 %0d more %0d", lat_h[0], lat_h[1], lat_h[2], lat_h[3], lat_h[4], lat_h[5], lat_h[6]);
+		$fdisplay(ftrace, "   m68k word reads %0d stale %0d, byte reads %0d stale %0d", m68_rn, m68_rbad, m68_bn, m68_bbad);
 		$fdisplay(ftrace, "   scsp_drop=%0d ch2 reads=%0d bad=%0d", dut.saturn.mem.sd_drop, ch2_reads, ch2_bad);
 		$fdisplay(ftrace, "   fbdrop=%0d vdp2 write groups %0d multi-lane %0d", dut.saturn.mem.fb.wf_drop, wg_total, wg_multi);
 		$fdisplay(ftrace, "   biu: BUS_STATE=%0d CACHE_BUSY=%b IBUSY=%b DBUSY=%b MULT_BUSY=%b IBUS_REQ=%b DBUS_REQ=%b MA_ACT=%b IF_ACT=%b BS_N=%b WAIT_N=%b CE_R=%b BUS_RLS=%b",
@@ -632,6 +635,76 @@ always @(posedge clk_sys) begin
 	if (dut.saturn.audio.in_ev && !ev_q) begin
 		if (n_scsp > 20000 && n_scsp < 82000 && dsph != dsph_prev) $fdisplay(ftrace, "DSPHASH n=%0d h=%08h", n_scsp, dsph);
 		dsph_prev <= dsph; dsph <= 0;
+	end
+end
+
+
+// ---- 68K bus cycles in the window around the BIOS sound command (+M68KLOG)
+longint m68_rn = 0, m68_rbad = 0, m68_bn = 0, m68_bbad = 0; integer m68n = 0; reg dtk_q = 1; reg [1:0] m68p = 0; reg [23:0] m68a; reg [15:0] m68d0; reg m68rw; reg [1:0] m68be;
+always @(posedge clk_sys) begin
+	dtk_q <= `SAT.SCDTACK_N;
+	if (`SAT.SCDTACK_N && !dtk_q && m68rw && $time > 64'd1000000000000) begin : m68c reg [15:0] mw; mw = sdmodel.mem[{2'd2 + {1'b0, m68a[18]}, 1'b1, m68a[17:1]}]; if (m68be == 2'b11) begin m68_rn++; if (`SAT.SCDO !== mw) m68_rbad++; end else if (m68be == 2'b10) begin m68_bn++; if (`SAT.SCDO[15:8] !== mw[15:8]) m68_bbad++; end else if (m68be == 2'b01) begin m68_bn++; if (`SAT.SCDO[7:0] !== mw[7:0]) m68_bbad++; end end
+	if (!`SAT.SCDTACK_N && dtk_q) begin
+		m68p <= 2'd2; m68d0 <= `SAT.SCDO; m68a <= {`SAT.SCA, 1'b0}; m68rw <= `SAT.SCRW_N; m68be <= {~`SAT.SCUDS_N, ~`SAT.SCLDS_N};
+	end else if (m68p != 0) begin
+		m68p <= m68p - 1'd1;
+		if (m68p == 1) begin if ($test$plusargs("M68KLOG") && $time > 64'd1917000000000 && $time < 64'd1947000000000) $fdisplay(ftrace, "%0t M68KBUS %s A=%06h be=%b D=%04h model=%04h", $time, m68rw ? "RD" : "WR", m68a, m68be, m68rw ? m68d0 : `SAT.SCDI, sdmodel.mem[{2'd2 + {1'b0, m68a[18]}, 1'b1, m68a[17:1]}]); end
+	end
+end
+
+
+// ---- data the SCSP samples from the RAM port (RAM_Q at CYCLE0_CE) against the SDRAM model at the REQUEST address, per requester
+longint smp_n [0:7]; longint smp_bad [0:7]; integer smp_log = 0;
+reg [18:0] sp_a2; reg sp_v2 = 0; longint smp_stale_tot = 0;
+initial for (int q = 0; q < 8; q++) begin smp_n[q] = 0; smp_bad[q] = 0; end
+always @(posedge clk_sys) if (!rst_sys) begin : smp
+	reg [15:0] exp_w;
+	// MEM_RD/MEM_A are stable over the CYCLE0_CE of the request cycle; the device latch takes it there and RAM_Q is sampled at the next one
+	if (`SAT.SCSP.CYCLE0_CE) begin
+		if (sp_v2 && `SAT.SCSP.MEM_DEV_LATCH != 0) begin
+			exp_w = sdmodel.mem[{2'd2 + {1'b0, sp_a2[17]}, 1'b1, sp_a2[16:0]}];
+			smp_n[`SAT.SCSP.MEM_DEV_LATCH]++;
+			if (`SAT.SCSP.RAM_Q !== exp_w) begin
+				smp_bad[`SAT.SCSP.MEM_DEV_LATCH]++; smp_stale_tot++;
+				if (smp_log < 40 && $time > 64'd900000000000) begin smp_log++; $fdisplay(ftrace, "%0t SCSPSAMPLE bad dev=%0d A=%05h got=%04h model=%04h", $time, `SAT.SCSP.MEM_DEV_LATCH, sp_a2, `SAT.SCSP.RAM_Q, exp_w); end
+			end
+		end
+		sp_a2 <= `SAT.SCSP.MEM_A; sp_v2 <= `SAT.SCSP.MEM_RD & `SAT.SCSP.MEM_CS;
+	end
+end
+
+
+// ---- latency of the SCSP RAM port: request (ch2rd rise) to delivery (ch2dout change), clk_ram cycles
+longint lat_h [0:7]; longint ramclk = 0; longint lat_t0 = 0; reg lat_pend = 0; reg lat_rd_q = 0; reg [15:0] lat_dq = 0;
+initial for (int q = 0; q < 8; q++) lat_h[q] = 0;
+always @(posedge dut.saturn.clk_ram) begin
+	ramclk++;
+	lat_rd_q <= dut.saturn.mem.ch2rd; lat_dq <= dut.saturn.mem.ch2dout;
+	if (dut.saturn.mem.ch2rd && !lat_rd_q) begin lat_t0 <= ramclk; lat_pend <= 1; end
+	if (lat_pend && dut.saturn.mem.ch2dout !== lat_dq) begin
+		lat_pend <= 0;
+		case (1'b1)
+			(ramclk - lat_t0) < 16: lat_h[0]++;
+			(ramclk - lat_t0) < 20: lat_h[1]++;
+			(ramclk - lat_t0) < 24: lat_h[2]++;
+			(ramclk - lat_t0) < 28: lat_h[3]++;
+			(ramclk - lat_t0) < 32: lat_h[4]++;
+			(ramclk - lat_t0) < 36: lat_h[5]++;
+			default: lat_h[6]++;
+		endcase
+	end
+end
+
+
+// ---- RAM port event trace in a short window (+RAMEV): request, delivery, SCSP sample
+reg ev_rd_q = 0; reg [15:0] ev_dq = 0; integer evn = 0;
+always @(posedge dut.saturn.clk_ram) begin
+	ev_rd_q <= dut.saturn.mem.ch2rd; ev_dq <= dut.saturn.mem.ch2dout;
+	if ($test$plusargs("RAMEV") && $time > 64'd1930000000000 && $time < 64'd1930040000000 && evn < 400) begin
+		if (dut.saturn.mem.ch2rd && !ev_rd_q) begin evn++; $fdisplay(ftrace, "%0t EV req  A=%05h", $time, dut.saturn.mem.ch2addr); end
+		if (dut.saturn.mem.ch2dout !== ev_dq) begin evn++; $fdisplay(ftrace, "%0t EV dlv  D=%04h", $time, dut.saturn.mem.ch2dout); end
+		if (`SAT.SCSP.CYCLE0_CE && `SAT.SCSP.MEM_DEV_LATCH != 0) begin evn++; $fdisplay(ftrace, "%0t EV smp  dev=%0d Q=%04h", $time, `SAT.SCSP.MEM_DEV_LATCH, `SAT.SCSP.RAM_Q); end
+		if (`SAT.SCSP.CYCLE1_CE && `SAT.SCSP.MEM_ST == 0 ) begin end
 	end
 end
 
