@@ -25,8 +25,7 @@
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
 // cycle after it is registered. With CL3 the first word reaches the FPGA register about 4.7 to 5.7
 // cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC + input
-// delay). The capture edge and offset (cap_sel) is a runtime setting latched at init, from the
-// Core Settings menu; see docs/memory.md section 3.
+// delay); it is captured by an I/O cell register on clk_cap at +4.25 (docs/memory.md section 3).
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -42,7 +41,7 @@ module sdram_pocket #(
 	input  wire        clk_cap,         // clk + 90 degrees (quarter-cycle read capture, cap_sel 3 / 7)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
-	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: 0..2 +4..+6 rising, 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
+	input  wire  [2:0] cap_sel,         // unused: the read capture is the fixed IOE register on clk_cap
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -52,9 +51,9 @@ module sdram_pocket #(
 	input  wire [15:0] dram_dq_i,
 	output reg   [1:0] dram_dqm,
 	output wire        dram_cke,
-	output reg         dram_ras_n,
-	output reg         dram_cas_n,
-	output reg         dram_we_n,
+	output reg         dram_ras_n = 1'b1,   // power-up NOP: zero would be an MRS before the init wait
+	output reg         dram_cas_n = 1'b1,
+	output reg         dram_we_n  = 1'b1,
 	output wire        dram_clk,
 
 	// VDP2 (as sdram1)
@@ -96,19 +95,17 @@ localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
 
 assign dram_cke = 1'b1;
 
-// capture setting takes effect at the next init (core Reset)
-reg [2:0] cs = 3'd1;
-always @(posedge clk) if (init) cs <= cap_sel;
-
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-reg [15:0] cap_n, cap_q;
-always @(negedge clk) cap_n <= dram_dq_i;
-always @(posedge clk_cap) cap_q <= dram_dq_i;   // sampled 0.75 clk before the landing edge
-wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_q : cs[2] ? cap_n : dram_dq_i;
-// landing stage index: cap_sel 3 lands like 1 (+5, sample +4.25), 7 like 0 (+4, sample +3.25)
-wire [1:0] cs_st = cs == 3'd3 ? 2'd1 : cs == 3'd7 ? 2'd0 : cs[1:0];
+// cap_io is packed into the I/O cell (FAST_INPUT_REGISTER on dram_dq, ap_core.qsf) and clocked by clk_cap
+// (clk + 90 degrees), so the sample point is fixed at pad + one IOE register, +4.25 after the command edge.
+// cap_h hands it over to clk (0.75 cycle path), landing one edge later: tag stage 5 / 6. cap_sel is unused.
+(* altera_attribute = "-name FAST_INPUT_REGISTER ON" *) reg [15:0] cap_io;
+reg [15:0] cap_h;
+always @(posedge clk_cap) cap_io <= dram_dq_i;
+always @(posedge clk) cap_h <= cap_io;
+wire [15:0] dq_cap = cap_h;
 
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
@@ -123,7 +120,7 @@ end
 // ------------------------------------------------------------------ init
 localparam int INIT_W = $clog2(INIT_CLKS + 64);
 reg [INIT_W-1:0] icnt;
-reg  [2:0] i_cmd;
+reg  [2:0] i_cmd = CMD_NOP;
 reg [12:0] i_a;
 reg  [3:0] i_step;
 reg  [4:0] i_wait;
@@ -250,17 +247,9 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
-// tag stage of word 0 (cs[1:0] + 3, at most 5) and of word 1 (+ 1), written as 4:1 selects
-reg        w0_v, w1_v, w0_i;
-reg  [2:0] w0_k, w1_k;
-always @* begin
-	case (cs_st)
-	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
-	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
-	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
-	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // unused (cs_st is 0..2)
-	endcase
-end
+// tag stage of word 0 (5) and of word 1 (6)
+wire        w0_v = t_v[5], w1_v = t_v[6], w0_i = t_i[5];
+wire  [2:0] w0_k = t_k[5], w1_k = t_k[6];
 reg [7:0] scr_q [0:3];
 
 function automatic [12:0] row_a(input [7:0] r);
@@ -428,7 +417,7 @@ always @(posedge clk) begin
 	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
-	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
+	// word 0 lands at tag stage 5, word 1 one cycle later; the VDP2 sets land
 	// after the previous set was sampled (F + 8) for every stage
 	if (w0_v) begin
 		case (w0_k)

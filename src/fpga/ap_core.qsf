@@ -805,3 +805,14 @@ set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_RPARAMB=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_MOSAIC=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPRWIN=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LINEWIN=1"
+
+# SDRAM pins: command/address/data/enable registers and the DQ capture register live in the I/O cells
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_a[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_ba[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_dqm[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_ras_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_cas_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_we_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to dram_dq[*]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[*]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to dram_dq[*]
