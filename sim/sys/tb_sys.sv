@@ -611,6 +611,24 @@ always @(posedge dut.saturn.clk_ram) begin
 end
 
 
+// ---- +SCUPROBE: SCU DSP DMA -> B-bus -> sound RAM write path
+longint pb_dma_rd = 0, pb_dma_rd_nz = 0, pb_dma_wr = 0, pb_dma_wr_nz = 0, pb_bw = 0, pb_bw_snd = 0, pb_bw_snd_nz = 0, pb_ram = 0, pb_ram_nz = 0, pb_ppaf = 0;
+integer pb_n5 = 0, pb_n1 = 0, pb_n2 = 0, pb_n3 = 0, pb_n4 = 0; reg pb_en; initial pb_en = $test$plusargs("SCUPROBE");
+reg pb_bcss_q = 1;
+always @(posedge clk_sys) if (pb_en) begin
+	pb_bcss_q <= `SAT.BCSS_N;
+	if (`SAT.SCU.DSP_DMA_ACK && !`SAT.SCU.DSP_DMA_WE) begin pb_dma_rd++; if (`SAT.SCU.DSP_DMA_DI != 0) pb_dma_rd_nz++;
+		if (pb_n1 < 40) begin pb_n1++; $display("%0t SCUPROBE DSP-DMA-RD  RA=%07h di=%08h", $time, `SAT.SCU.DMA_RA, `SAT.SCU.DSP_DMA_DI); end end
+	if (`SAT.SCU.DSP_DMA_ACK && `SAT.SCU.DSP_DMA_WE) begin pb_dma_wr++; if (`SAT.SCU.DSP_DMA_DO != 0) pb_dma_wr_nz++;
+		if (pb_n2 < 40) begin pb_n2++; $display("%0t SCUPROBE DSP-DMA-WR  WA=%07h do=%08h", $time, `SAT.SCU.DMA_WA, `SAT.SCU.DSP_DMA_DO); end end
+	if (`SAT.SCU.f_pd && `SAT.SCU.DMA_WRITE_B && !`SAT.BCSS_N) begin pb_bw++; pb_bw_snd++; if (`SAT.SCU.bdo_n != 0) pb_bw_snd_nz++;
+		if (pb_n3 < 60) begin pb_n3++; $display("%0t SCUPROBE BBUS-WRDATA WA=%07h bdo_n=%04h rpos=%0d wpos=%0d size=%0d rba=%0d dsp=%b", $time, `SAT.SCU.DMA_WA, `SAT.SCU.bdo_n, `SAT.SCU.DMA_BUF_RPOS, `SAT.SCU.DMA_BUF_WPOS, `SAT.SCU.DMA_BUF_SIZE, `SAT.SCU.DMA_RBA, `SAT.SCU.DMA_DSP); end end
+	if (`SAT.SCU.DSP_PUSH && pb_n5 < 60) begin pb_n5++; $display("%0t SCUPROBE DSP-PUSH do=%08h wpos=%0d size=%0d rba=%0d", $time, `SAT.SCU.DSP_DMA_DO, `SAT.SCU.DMA_BUF_WPOS, `SAT.SCU.DMA_BUF_SIZE, `SAT.SCU.DMA_RBA); end
+	if (|`SAT.SCSP_RAM_WE && `SAT.SCSP_RAM_A >= 18'h28000 && `SAT.SCSP_RAM_A < 18'h2C000) begin pb_ram++; if (`SAT.SCSP_RAM_D != 0) pb_ram_nz++;
+		if (pb_n4 < 40) begin pb_n4++; $display("%0t SCUPROBE SNDRAM-WR A=%05h d=%04h we=%b", $time, {`SAT.SCSP_RAM_A,1'b0}, `SAT.SCSP_RAM_D, `SAT.SCSP_RAM_WE); end end
+	if (0) $display("%0t SCUPROBE-SUM dmaRD=%0d(nz %0d) dmaWR=%0d(nz %0d) bbusWR_scsp=%0d(nz %0d) sndram50000WR=%0d(nz %0d)", $time, pb_dma_rd, pb_dma_rd_nz, pb_dma_wr, pb_dma_wr_nz, pb_bw_snd, pb_bw_snd_nz, pb_ram, pb_ram_nz);
+end
+
 // ---- +SNDDUMP: sound RAM (512 KB, 16 bit big endian words) at about 1.8 s of SCSP time
 reg snd_dumped = 0;
 always @(posedge clk_sys) if (!snd_dumped && n_scsp == 80000 && $test$plusargs("SNDDUMP")) begin : sd
@@ -752,6 +770,7 @@ task automatic summary();
 	$display("TVMD.DISP set at: %0t ps, VBL toggles %0d, SH-2 IRL changes %0d, SSH bus toggles %0d", t_disp, vbl_toggles, irl_changes, sshbs_toggles);
 	$display("audio: SCSP samples %0d (%0d non-zero), pocket_audio %0d (%0d), I2S %0d (%0d); SCSP key-on events %0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
 	$fflush();
+	if (pb_en) $display("SCUPROBE-FINAL dmaRD=%0d(nz %0d) dmaWR=%0d(nz %0d) bbusWR_scsp=%0d(nz %0d) sndram50000WR=%0d(nz %0d)", pb_dma_rd, pb_dma_rd_nz, pb_dma_wr, pb_dma_wr_nz, pb_bw_snd, pb_bw_snd_nz, pb_ram, pb_ram_nz);
 	$display("disc: %0d dataslot reads, %0d short", n_ds_reads, n_ds_err);
 	$display("VDP2 VRAM write groups %0d, multi-lane %0d", wg_total, wg_multi);
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
