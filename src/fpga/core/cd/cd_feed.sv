@@ -44,8 +44,8 @@ reg [1:0]  r_kind;
 reg        r_synth, r_spd2;
 reg [10:0] w;
 reg [15:0] wrd;
-reg [31:0] crc;
-reg [15:0] lf;
+reg [31:0] crc;                 // data: the EDC; ring: bits 15:0 are the LFSR (the two never run in one sector)
+wire [15:0] lf = crc[15:0];
 reg [7:0]  la, lowb;
 reg [3:0]  sc;
 reg        edc_on;
@@ -56,38 +56,29 @@ assign sr_a = {r_slot, w};
 wire is_data = (r_kind == 2'd0);
 wire is_ring = (r_kind == 2'd2);
 
-// Words that never come from a ring slot.
+// Words that never come from a ring slot. The eight header words are shared by the ring and the synthesised data header
+// (they differ only in the mode byte of word 7).
 reg        syn_v;
 reg [15:0] syn_w;
+wire       hdr_w = (is_ring || (is_data && r_synth)) && w < 11'd8;
 always @* begin
 	syn_v = 1'b0;
 	syn_w = 16'h0000;
-	if (is_ring) begin
+	if (hdr_w) begin
 		syn_v = 1'b1;
-		case (w)
-			11'd0: syn_w = 16'hFF00;
-			11'd1, 11'd2, 11'd3, 11'd4: syn_w = 16'hFFFF;
-			11'd5: syn_w = 16'h00FF;
-			11'd6: syn_w = {hdr[15:8], hdr[23:16]};
-			11'd7: syn_w = {8'h02, hdr[7:0]};
-			11'd9, 11'd11: syn_w = 16'h0028;
-			default: syn_w = 16'h0000;
+		case (w[2:0])
+			3'd0: syn_w = 16'hFF00;
+			3'd1, 3'd2, 3'd3, 3'd4: syn_w = 16'hFFFF;
+			3'd5: syn_w = 16'h00FF;
+			3'd6: syn_w = {hdr[15:8], hdr[23:16]};
+			default: syn_w = {is_ring ? 8'h02 : 8'h01, hdr[7:0]};
 		endcase
-		if (w >= 11'd12 && w < 11'd1174) syn_v = 1'b0; // LFSR output
-	end else if (is_data) begin
-		if (r_synth && w < 11'd8) begin
-			syn_v = 1'b1;
-			case (w)
-				11'd0: syn_w = 16'hFF00;
-				11'd1, 11'd2, 11'd3, 11'd4: syn_w = 16'hFFFF;
-				11'd5: syn_w = 16'h00FF;
-				11'd6: syn_w = {hdr[15:8], hdr[23:16]};
-				default: syn_w = {8'h01, hdr[7:0]};
-			endcase
-		end else if (w >= 11'd1032 && edc_on) begin
-			syn_v = 1'b1;
-			syn_w = (w == 11'd1032) ? crc[15:0] : (w == 11'd1033) ? crc[31:16] : 16'h0000;
-		end
+	end else if (is_ring) begin
+		syn_v = !(w >= 11'd12 && w < 11'd1174);          // LFSR output in between
+		if (w == 11'd9 || w == 11'd11) syn_w = 16'h0028;
+	end else if (is_data && w >= 11'd1032 && edc_on) begin
+		syn_v = 1'b1;
+		syn_w = (w == 11'd1032) ? crc[15:0] : (w == 11'd1033) ? crc[31:16] : 16'h0000;
 	end
 end
 
@@ -112,7 +103,7 @@ always @(posedge clk) begin
 		case (fs)
 		F_IDLE: if (go) begin
 			r_slot <= slot; r_kind <= kind; r_synth <= synth; r_spd2 <= spd2;
-			w <= 11'd0; crc <= 32'd0; lf <= 16'd1; edc_on <= 1'b1;
+			w <= 11'd0; crc <= {31'd0, kind == 2'd2}; edc_on <= 1'b1;
 			busy <= 1'b1;
 			held <= (kind != 2'd2);
 			fs <= F_PREP;
@@ -142,10 +133,12 @@ always @(posedge clk) begin
 		end
 
 		F_STEP: begin
-			if (crc_run) crc <= {1'b0, crc[31:1]} ^ (fb ? POLY : 32'd0);
+			if (crc_run || lf_run) begin    // both shift right; the LFSR takes its new top bit from the taps
+				crc <= {1'b0, crc[31:1]} ^ ((crc_run && fb) ? POLY : 32'd0);
+				if (lf_run) crc[14] <= lf[1] ^ lf[0];
+			end
 			if (lf_run) begin
 				la <= a_nx;
-				lf <= {1'b0, lf[1] ^ lf[0], lf[14:1]};
 				if (sc == 4'd7) lowb <= a_nx;
 				if (sc == 4'd15 && w >= 11'd12) wrd <= {a_nx, lowb};
 			end
