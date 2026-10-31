@@ -27,6 +27,7 @@ package() {
 	rm -rf release && mkdir -p release
 	cp -R dist/Cores dist/Platforms dist/Assets release/
 	cp INSTALL.md release/Saturn-INSTALL.md
+	cp tools/mktoc.py release/Saturn-mktoc.py
 	find release -name .keep -delete
 	(cd release && zip -qr "../$CORE.zip" .)
 	echo "packaged $CORE.zip - unzip it onto the root of the Pocket SD card"

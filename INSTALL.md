@@ -48,11 +48,12 @@ renamed to it) in `Assets/saturn/defgenx.Saturn/`. The core does not start witho
 
 ## 3. Add discs
 
-The core does not read `.cue` sheets itself. For each game, run `tools/mktoc.py` from this repository
-(Python 3) on the `.cue`:
+The core does not read `.cue` sheets itself. For each game, run `Saturn-mktoc.py` (Python 3) on the
+`.cue`. The release zip and the install scripts put it at the root of the card; in this repository it
+is `tools/mktoc.py`.
 
 ```
-python3 tools/mktoc.py "Game (USA).cue" -o out/
+python3 Saturn-mktoc.py "Game (USA).cue" -o out/
 ```
 
 It writes `Game (USA).toc` and `Game (USA).json`, and a merged `.img` if the tracks need merging. Copy
