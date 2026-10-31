@@ -629,6 +629,17 @@ always @(posedge clk_sys) if (pb_en) begin
 	if (0) $display("%0t SCUPROBE-SUM dmaRD=%0d(nz %0d) dmaWR=%0d(nz %0d) bbusWR_scsp=%0d(nz %0d) sndram50000WR=%0d(nz %0d)", $time, pb_dma_rd, pb_dma_rd_nz, pb_dma_wr, pb_dma_wr_nz, pb_bw_snd, pb_bw_snd_nz, pb_ram, pb_ram_nz);
 end
 
+// SCSP common-register writes (0x400-0x41F) incl. MVOL
+integer pb_n6 = 0;
+always @(posedge clk_sys) if (pb_en && `SAT.SCSP.CYCLE1_CE && |`SAT.SCSP.REG_WE && `SAT.SCSP.REG_A[11:9] == 3'b010 && `SAT.SCSP.REG_A[5:1] < 5'd16 && pb_n6 < 80) begin pb_n6++;
+	$display("%0t SCUPROBE SCSP-CREG A=%03h D=%04h WE=%b MVOL=%0d", $time, {`SAT.SCSP.REG_A[11:1],1'b0}, `SAT.SCSP.REG_D, `SAT.SCSP.REG_WE, `SAT.SCSP.CR0.MVOL); end
+
+// 68K writes to SCSP common registers 0x100400-0x10041F
+integer pb_n7 = 0; reg pb_dtk_q = 1;
+always @(posedge clk_sys) begin pb_dtk_q <= `SAT.SCDTACK_N;
+	if (pb_en && !`SAT.SCDTACK_N && pb_dtk_q && !`SAT.SCRW_N && {`SAT.SCA[23:5],5'd0} == 24'h100400 && pb_n7 < 60) begin pb_n7++;
+		$display("%0t SCUPROBE M68K-CREG-WR A=%06h D=%04h uds=%b lds=%b", $time, {`SAT.SCA, 1'b0}, `SAT.SCDI, `SAT.SCUDS_N, `SAT.SCLDS_N); end end
+
 // ---- +SNDDUMP: sound RAM (512 KB, 16 bit big endian words) at about 1.8 s of SCSP time
 reg snd_dumped = 0;
 always @(posedge clk_sys) if (!snd_dumped && n_scsp == 80000 && $test$plusargs("SNDDUMP")) begin : sd
