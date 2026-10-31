@@ -2447,10 +2447,11 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 	bit  [l-1: 0] WADDR;
 	bit  [l: 0] AMOUNT;
 	bit         NULL;
+	wire [l-1: 0] RADDR_NXT = RST ? '0 : (RDREQ && AMOUNT) ? RADDR + 1'd1 : RADDR;
 	always @(posedge CLK) begin
+		RADDR <= RADDR_NXT;
 		if (RST) begin
 			AMOUNT <= '0;
-			RADDR <= '0;
 			WADDR <= '0;
 			NULL <= 1;
 		end
@@ -2458,9 +2459,6 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 			if (WRREQ && !AMOUNT[l]) begin
 				WADDR <= WADDR + 1'd1;
 				NULL <= 0;
-			end
-			if (RDREQ && AMOUNT) begin
-				RADDR <= RADDR + 1'd1;
 			end
 			
 			if (WRREQ && !RDREQ && !AMOUNT[l]) begin
@@ -2473,7 +2471,7 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 	assign EMPTY = ~|AMOUNT;
 	assign FULL = AMOUNT[l];
 	
-	VDP1P_MLAB #(.W(16),.AW(l)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(l),.FE(2)) ram(CLK, WRREQ, WADDR, DATA, RADDR_NXT, sub_wire0);
 	
 	assign Q = NULL ? '0 : sub_wire0;
 
@@ -2549,6 +2547,24 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4, parameter FE = 1) (
 		(* ramstyle = "MLAB, no_rw_check" *) reg [W-1:0] mem [0:(1<<AW)-1];
 		always @(posedge CLK) if (WE) mem[WA] <= D;
 		assign Q = mem[RA];
+	end else if (FE == 2) begin : g_ahead
+		wire [W-1:0] q_b;
+		reg          byp;
+		reg  [W-1:0] bd;
+		always @(posedge CLK) begin byp <= WE && WA == RA; bd <= D; end
+		assign Q = byp ? bd : q_b;
+		altsyncram #(
+			.address_aclr_b("NONE"), .address_reg_b("CLOCK0"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
+			.clock_enable_output_b("BYPASS"), .intended_device_family("Cyclone V"), .lpm_type("altsyncram"),
+			.numwords_a(2**AW), .numwords_b(2**AW), .operation_mode("DUAL_PORT"), .outdata_aclr_b("NONE"),
+			.outdata_reg_b("UNREGISTERED"), .power_up_uninitialized("FALSE"), .ram_block_type("M10K"),
+			.read_during_write_mode_mixed_ports("DONT_CARE"),
+			.widthad_a(AW), .widthad_b(AW), .width_a(W), .width_b(W), .width_byteena_a(1)
+		) ram (
+			.address_a(WA), .address_b(RA), .clock0(CLK), .clock1(1'b1), .data_a(D), .wren_a(WE), .q_b(q_b),
+			.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+			.clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1), .data_b({W{1'b1}}), .eccstatus(),
+			.q_a(), .rden_a(1'b1), .rden_b(1'b1), .wren_b(1'b0));
 	end else begin : g_fe
 	altsyncram #(
 		.address_aclr_b("NONE"), .address_reg_b("CLOCK1"), .clock_enable_input_a("BYPASS"), .clock_enable_input_b("BYPASS"),
@@ -2564,10 +2580,13 @@ module VDP1P_MLAB #(parameter W = 16, parameter AW = 4, parameter FE = 1) (
 	end endgenerate
 `else
 	reg [W-1:0] mem [0:(1<<AW)-1];
-	reg [W-1:0] q = '0;
+	reg [W-1:0] q = '0, qa = '0, bd = '0;
+	reg         byp = 0;
 	always @(posedge CLK) if (WE) mem[WA] <= D;
 	always @(negedge CLK) q <= mem[RA];
-	assign Q = FE ? q : mem[RA];
+	// FE=2: RA is next cycle's address, read on the rising edge; a same-edge write is bypassed
+	always @(posedge CLK) begin qa <= mem[RA]; byp <= WE && WA == RA; bd <= D; end
+	assign Q = FE == 2 ? (byp ? bd : qa) : FE ? q : mem[RA];
 `ifdef POCKET_FE_CHECK
 	reg [AW-1:0] ra_neg;
 	reg          ra_ok = 0;
