@@ -75,7 +75,7 @@
         "enabled": true,
         "persist": true,
         "address": "0x8000000C",
-        "defaultval": 3,
+        "defaultval": 0,
         "options": [
           {
             "value": 7,
