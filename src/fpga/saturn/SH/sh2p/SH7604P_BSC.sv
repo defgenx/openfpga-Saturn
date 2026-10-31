@@ -260,7 +260,7 @@ module SH7604P_BSC
 		bit [ 3: 0] BURST_CNT;
 		bit         BURST_EN,BURST_SINGLE;
 		bit         BURST_LAST,BURST_PRELAST;
-		bit         SDRAM_INSERT_NOP,INSERT_WAIT;
+		bit         SDRAM_INSERT_NOP,INSERT_WAIT,NOP_NEW,NOP_SEL;
 		bit         DATA_LATCH;
 		bit         DELAYED_RFS_REQ;
 		
@@ -686,21 +686,37 @@ module SH7604P_BSC
 								STATE_NEXT = TV1;
 							end
 						end 
-						else if ((DBUS_REQ && !CBUS_LOCK_INT && !(CBUS_EXT_REQ && DBUS_SKIP) && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) || (DBUS_REQ && DBUS_LOCK_INT && !CBUS_LOCK_INT)) begin
+						else if (D_SEL || (CBUS_EXT_REQ && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) || (CBUS_EXT_REQ && CBUS_LOCK_INT)) begin
+							// D_SEL: DBUS request, otherwise CBUS request; the two share all datapath assignments
 							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(S_A27,MCR));
-							SDRAM_INSERT_NOP <= IS_SAME_BANK_SDRAM && BUS_WE_LATCH && S_ISSD;
-							if (INSERT_WAIT && ((A[26:25] != S_A27[26:25] && !S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && BUS_STATE == T0 && !S_ISSD) || (!DBUS_LOCK_INT && !MASTER))) begin
+							NOP_NEW = IS_SAME_BANK_SDRAM && BUS_WE_LATCH && S_ISSD;
+							SDRAM_INSERT_NOP <= NOP_NEW;
+							NOP_SEL = D_SEL ? SDRAM_INSERT_NOP : NOP_NEW;   // the CBUS request sees the new value in the same cycle
+							if (INSERT_WAIT && ((A[26:25] != S_A27[26:25] && !S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && BUS_STATE == T0 && !S_ISSD) ||
+							                    (D_SEL ? (!DBUS_LOCK_INT && !MASTER) :
+							                             ((S_WE && REFRESH_ACTIVE) || (S_WE && CBUS_REQ_CNT == 2'd3 && (BRLS || !MASTER) && (NOP_WAIT_CNT == 2'd0)))))) begin
 								A <= S_A27;
 								INSERT_WAIT <= 0;
-							end else if (BUS_STATE == T0 || BUS_STATE == T2 || (BUS_STATE == TWCAS && !SDRAM_INSERT_NOP && !DELAYED_RFS_REQ) || (BUS_STATE == TWNOP && (NOP_WAIT_CNT == 2'd0)) || BUS_STATE == TRD || BUS_STATE == TRFS2) begin
-								DBUS_ACTIVE <= 1;
-								DBUS_SKIP <= 1;
-								DBUS_LOCK_INT <= DBUS_LOCK;
+								if (!D_SEL) CBUS_REQ_CNT <= 2'd0;
+							end else if (BUS_STATE == T0 || BUS_STATE == T2 || (BUS_STATE == TWCAS && !NOP_SEL && !DELAYED_RFS_REQ) || (BUS_STATE == TWNOP && (NOP_WAIT_CNT == 2'd0)) || BUS_STATE == TRD || BUS_STATE == TRFS2) begin
+								if (D_SEL) begin
+									DBUS_ACTIVE <= 1;
+									DBUS_SKIP <= 1;
+									DBUS_LOCK_INT <= DBUS_LOCK;
+								end else begin
+									CBUS_ACTIVE <= 1;
+									DBUS_SKIP <= 0;
+									if (S_WE && CBUS_REQ_CNT < 2'd3) CBUS_REQ_CNT <= CBUS_REQ_CNT + 2'd1;
+									else CBUS_REQ_CNT <= 2'd0;
+									CBUS_LOCK_INT <= CBUS_LOCK;
+								end
 								if (S_V) begin
 									DO <= S_DO; WE_N <= S_WEN; NEXT_BA <= S_NBA;
-									if (S_WE) DBUSY <= 0;
+									if (S_WE) begin
+										if (D_SEL) DBUSY <= 0; else CBUSY <= 0;
+									end
 								end
-								if (S_ISSD && !S_WE) begin
+								if ((S_ISSD || (!D_SEL && S_BURST)) && !S_WE) begin
 									if (!BURST_EN || BURST_LAST) begin
 										BURST_CNT <= 4'd0;
 										BURST_EN <= 1;
@@ -711,10 +727,10 @@ module SH7604P_BSC
 									BURST_EN <= 0;
 									BURST_SINGLE <= 1;
 								end
-								RCD_WAIT_CNT <= 2'd1 + MCR.RCD;
-								SDRAM_PRECHARGE_PEND <= MASTER;
+								RCD_WAIT_CNT <= (!D_SEL && IS_SDRAM_LATCH && !BUS_WE_LATCH && S_ISSD && !S_WE ? 2'd0 : 2'd1) + MCR.RCD;
+								if (D_SEL || !S_WE) SDRAM_PRECHARGE_PEND <= MASTER;
 								IS_SDRAM_LATCH <= S_ISSD;
-								INSERT_WAIT <= ~FAST; 
+								INSERT_WAIT <= ~FAST;
 								
 								A <= S_A27;
 								if (S_ISSD && MCR.RFSH && MCR.RMD && MASTER) begin
@@ -724,6 +740,7 @@ module SH7604P_BSC
 									CS3_N <= 1;
 									BS_N <= 1;
 									RD_WR_N <= 1;
+									if (!D_SEL) WE_N <= '1;
 									RD_N <= 1;
 								end else begin
 									CS0_N <= ~(S_A27[26:25] == 2'b00);
@@ -738,9 +755,9 @@ module SH7604P_BSC
 								
 								BUS_WE_LATCH <= S_WE;
 								BUS_DI_LATCH <= S_DI;
-								DELAYED_RFS_REQ <= RFS_REQ;
+								DELAYED_RFS_REQ <= RFS_REQ && (D_SEL || S_ISSD);
 								STATE_NEXT = S_ISSD ? TRAS : T1;
-								if (!(DBUS_A[31:27] ==? 5'b00?00)) begin
+								if (D_SEL && !(DBUS_A[31:27] ==? 5'b00?00)) begin
 									BURST_CNT <= 4'd0;
 									BURST_EN <= 0;
 									BURST_SINGLE <= 1;
@@ -759,67 +776,6 @@ module SH7604P_BSC
 									BUS_DI_LATCH <= '0;
 									STATE_NEXT = T0;
 								end
-							end
-						end
-						else if ((CBUS_EXT_REQ && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) || (CBUS_EXT_REQ && CBUS_LOCK_INT)) begin
-							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(S_A27,MCR));
-							SDRAM_INSERT_NOP = IS_SAME_BANK_SDRAM && BUS_WE_LATCH && S_ISSD;
-							if (INSERT_WAIT && ((A[26:25] != S_A27[26:25] && !S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && BUS_STATE == T0 && !S_ISSD) || (S_WE && REFRESH_ACTIVE) || 
-							                    (S_WE && CBUS_REQ_CNT == 2'd3 && (BRLS || !MASTER) && (NOP_WAIT_CNT == 2'd0)))) begin
-								A <= S_A27;
-								INSERT_WAIT <= 0;
-								CBUS_REQ_CNT <= 2'd0;
-							end else if (BUS_STATE == T0 || BUS_STATE == T2 || (BUS_STATE == TWCAS && !SDRAM_INSERT_NOP && !DELAYED_RFS_REQ) || (BUS_STATE == TWNOP && (NOP_WAIT_CNT == 2'd0)) || BUS_STATE == TRD || BUS_STATE == TRFS2) begin
-								CBUS_ACTIVE <= 1;
-								DBUS_SKIP <= 0;
-								if (S_WE && CBUS_REQ_CNT < 2'd3) CBUS_REQ_CNT <= CBUS_REQ_CNT + 2'd1;
-								else CBUS_REQ_CNT <= 2'd0;
-								CBUS_LOCK_INT <= CBUS_LOCK;
-								if (S_V) begin
-									DO <= S_DO; WE_N <= S_WEN; NEXT_BA <= S_NBA;
-									if (S_WE) CBUSY <= 0;
-								end
-								if ((S_BURST || S_ISSD) && !S_WE) begin
-									if (!BURST_EN || BURST_LAST) begin
-										BURST_CNT <= 4'd0;
-										BURST_EN <= 1;
-										BURST_SINGLE <= ~S_BURST;
-									end
-								end else begin
-									BURST_CNT <= 4'd0;
-									BURST_EN <= 0;
-									BURST_SINGLE <= 1;
-								end
-								RCD_WAIT_CNT <= (IS_SDRAM_LATCH && !BUS_WE_LATCH && S_ISSD && !S_WE ? 2'd0 : 2'd1) + MCR.RCD;
-								if (!S_WE) SDRAM_PRECHARGE_PEND <= MASTER;
-								IS_SDRAM_LATCH <= S_ISSD;
-								INSERT_WAIT <= ~FAST;
-								
-								A <= S_A27;
-								if (S_ISSD && MCR.RFSH && MCR.RMD && MASTER) begin
-									CS0_N <= 1;
-									CS1_N <= 1;
-									CS2_N <= 1;
-									CS3_N <= 1;
-									BS_N <= 1;
-									RD_WR_N <= 1;
-									WE_N <= '1;
-									RD_N <= 1;
-								end else begin
-									CS0_N <= ~(S_A27[26:25] == 2'b00);
-									CS1_N <= ~(S_A27[26:25] == 2'b01);
-									CS2_N <= ~(S_A27[26:25] == 2'b10);
-									CS3_N <= ~(S_A27[26:25] == 2'b11);
-									BS_N <= 0;
-									RD_WR_N <= ~S_WE;
-									RD_N <= S_WE;
-								end
-								CACK <= 1;
-								
-								BUS_WE_LATCH <= S_WE;
-								BUS_DI_LATCH <= S_DI; 
-								DELAYED_RFS_REQ <= RFS_REQ && S_ISSD;
-								STATE_NEXT = S_ISSD ? TRAS : T1;
 							end
 						end
 					end
