@@ -640,6 +640,11 @@ always @(posedge clk_sys) begin pb_dtk_q <= `SAT.SCDTACK_N;
 	if (pb_en && !`SAT.SCDTACK_N && pb_dtk_q && !`SAT.SCRW_N && {`SAT.SCA[23:5],5'd0} == 24'h100400 && pb_n7 < 60) begin pb_n7++;
 		$display("%0t SCUPROBE M68K-CREG-WR A=%06h D=%04h uds=%b lds=%b", $time, {`SAT.SCA, 1'b0}, `SAT.SCDI, `SAT.SCUDS_N, `SAT.SCLDS_N); end end
 
+// all 68K bus cycles in a window (+M68KWIN=<start_ps>), 4 ms long
+longint pb_w0; reg pb_wen; initial pb_wen = $value$plusargs("M68KWIN=%d", pb_w0);
+always @(posedge clk_sys) if (pb_wen && !`SAT.SCDTACK_N && pb_dtk_q && $time > pb_w0 && $time < pb_w0 + 64'd6000000000)
+	$display("%0t M68KW %s A=%06h D=%04h uds=%b lds=%b", $time, `SAT.SCRW_N ? "RD" : "WR", {`SAT.SCA, 1'b0}, `SAT.SCRW_N ? `SAT.SCDO : `SAT.SCDI, `SAT.SCUDS_N, `SAT.SCLDS_N);
+
 // ---- +SNDDUMP: sound RAM (512 KB, 16 bit big endian words) at about 1.8 s of SCSP time
 reg snd_dumped = 0;
 always @(posedge clk_sys) if (!snd_dumped && n_scsp == 80000 && $test$plusargs("SNDDUMP")) begin : sd

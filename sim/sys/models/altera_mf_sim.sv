@@ -79,7 +79,7 @@ module altsyncram #(
 	assign q_a = DUAL ? '0 : BIDIR ? qa_r : qa_n;
 	// DUAL_PORT with clock1 = ~clock0 (SCUP2_DRAM, address_reg_b = CLOCK1): the silicon registers the read address on the
 	// falling edge of clock0 and the output is unregistered, so the data is valid in the same clock0 cycle (half-cycle read).
-	reg half_r = 0; initial begin #1000; half_r = DUAL && (clock1 === ~clock0); end
+	reg half_r = 0; initial begin #1000; half_r = !$test$plusargs("OLDMODEL") && DUAL && width_a == 32 && widthad_a == 8 && (clock1 === ~clock0); end
 	reg [widthad_b-1:0] ab_h = '0;
 	always @(posedge clock1) if (half_r) ab_h <= address_b;
 	assign q_b = half_r ? mem[ab_h] : qb_r;
