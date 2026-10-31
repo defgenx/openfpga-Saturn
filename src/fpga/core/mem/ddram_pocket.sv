@@ -179,9 +179,14 @@ reg  [ 15:  0] raml_write_data;
 reg  [  1:  0] raml_be;
 reg            raml_read_busy,raml_write_busy;
 
-reg  [ 18:  1] vdp1vram_rcache_addr,vdp1vram_rcache_addr_end;
+reg  [ 18:  1] vdp1vram_rcache_addr;
 reg  [  2:  1] vdp1vram_rcache_addr_lsb;
 reg  [  8:  0] vdp1vram_rcache_blen;
+// vdp1vram_addr inside the cached burst [start, start + blen - 1] (valid while blen != 0); a burst whose last address
+// wraps past the top of the 18 bit space covers nothing
+wire [ 18:  0] vdp1vram_off = {1'b0, vdp1vram_addr} - {1'b0, vdp1vram_rcache_addr};
+wire           vdp1vram_bwrap = (&vdp1vram_rcache_addr[18:10]) && ({1'b0, vdp1vram_rcache_addr[9:1]} + {1'b0, vdp1vram_rcache_blen} > 10'd512);
+wire           vdp1vram_in_burst = !vdp1vram_off[18] && !(|vdp1vram_off[17:9]) && vdp1vram_off[8:0] < vdp1vram_rcache_blen && !vdp1vram_bwrap;
 reg            vdp1vram_rcache_dirty;
 reg            vdp1vram_rcache_busy;
 reg            vdp1vram_read_busy;
@@ -501,11 +506,10 @@ always @(posedge clk) begin
 				if (vdp1vram_addr != vdp1vram_rcache_addr || vdp1vram_rcache_dirty) begin
 					vdp1vram_read_busy <= 1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
-					vdp1vram_rcache_addr_end <= vdp1vram_addr + vdp1vram_blen - 18'd1;
 					vdp1vram_rcache_blen <= vdp1vram_blen;
 				end
 			end else if (vdp1vram_rcache_blen) begin
-				if (vdp1vram_addr < vdp1vram_rcache_addr || vdp1vram_addr > vdp1vram_rcache_addr_end || vdp1vram_rcache_dirty) begin
+				if (!vdp1vram_in_burst || vdp1vram_rcache_dirty) begin
 					vdp1vram_read_busy <= 1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
 					vdp1vram_rcache_blen <= '0;
@@ -556,7 +560,7 @@ always @(posedge clk) begin
 					vdp1vram_rcache_dirty <= 1;
 				end
 			end else begin
-				if (vdp1vram_addr >= vdp1vram_rcache_addr && vdp1vram_addr <= vdp1vram_rcache_addr_end) begin
+				if (vdp1vram_in_burst) begin
 					vdp1vram_rcache_dirty <= 1;
 				end
 			end
