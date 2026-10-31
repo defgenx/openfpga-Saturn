@@ -282,7 +282,7 @@ set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
 
 # Compiler Assignments (area profile: see sizing/area_profile.qsf)
 # ====================
-set_global_assignment -name OPTIMIZATION_MODE "BALANCED"
+set_global_assignment -name OPTIMIZATION_MODE "AGGRESSIVE AREA"
 
 # Analysis & Synthesis Assignments
 # ================================
@@ -320,7 +320,7 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name ROUTER_LCELL_INSERTION_AND_LOGIC_DUPLICATION OFF
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT HIGH
-set_global_assignment -name SEED 7
+set_global_assignment -name SEED 3
 
 # Assembler Assignments
 # =====================
@@ -799,8 +799,15 @@ set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram1_lb_n
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
 # >1 makes quartus_map spawn helper processes that hang under x86 emulation; pass --parallel to quartus_fit instead
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCU_DSP=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_SCSP_DSP_COMPACT=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_SCU_DSP_COMPACT=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SCSP_DSP=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SH2_WDT=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_EXTCC=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SHADOW=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_BACKLINE=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPECIAL=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LNCOL=1"
+set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_ZOOM=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_RPARAMB=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_MOSAIC=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPRWIN=1"
