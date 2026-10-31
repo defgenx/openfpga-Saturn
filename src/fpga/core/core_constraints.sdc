@@ -60,9 +60,10 @@ set_output_delay -clock dram_clk_pin -max 1.5  -add_delay $sdram_out
 set_output_delay -clock dram_clk_pin -min -1.0 -add_delay $sdram_out
 set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
 set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
-# DQ is captured by an IOE register on clk_ram_cap (clk_ram + 90 degrees, sdram_pocket cap_io) at READ + 4.25 clk_ram.
-# The data is launched by the dram_clk edge 3.5 clk_ram after the READ register edge (CL3), so the plain
-# dram_clk_pin -> clk_ramc relation (0.75 clk_ram) is the real one: no multicycle, input delay = tAC / tOH.
+# read data is captured at READ+5 / READ+6 clk_ram edges (sdram_pocket cap_sel = 1, the default), not at the next edge;
+# the other cap_sel values are runtime experiments (docs/memory.md section 3) and are not constrained
+set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 5
+set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 4
 
 # ---------------------------------------------------------------------------------- PSRAM
 # The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,

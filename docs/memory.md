@@ -175,17 +175,27 @@ The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the 
 read reaches the FPGA register 4.7 to 5.7 cycles after the command register edge (half cycle + clock-out delay + 3 cycles
 CL3 + tAC + input delay), so the default samples DQ on rising edges at READ + 5 (word 0) and + 6 (word 1).
 
-**Capture** (`cap_io` / `cap_h` in `sdram_pocket`): DQ goes into a register packed in the I/O cell
-(`FAST_INPUT_REGISTER` on `dram_dq`) clocked by `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees), i.e. sampled at
-READ + 4.25 (word 0) / + 5.25 (word 1). `cap_h` hands it to `clk_ram` (0.75 cycle path), words land at tag stage 5 / 6.
-The `cap_sel` port (Core Settings entry SDRAM read capture) is unused. The earlier sweep (fabric register) passed only at
-+4 rising and +4.5 falling, both with corrupt graphics; the I/O cell register removes the routing delay and its
-spread, which moves the data window earlier relative to a given clock edge. If the picture still glitches, the next
-experiment is the `clk_ram_cap` phase (`phase_shift4` in `pll_sys.v`).
-The command, address, data and enable pin registers are I/O cell registers too (`FAST_OUTPUT_REGISTER`,
-`FAST_OUTPUT_ENABLE_REGISTER`, `ap_core.qsf`). The pin command registers power up as NOP (zero is an MRS).
-The SDC times `dram_clk_pin` to `clk_ramc` with the plain 0.75 cycle relation (no multicycle).
+**Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
+while `init` is high, so they apply at the next menu Reset without reloading the core):
 
+| Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
+|---|---|---|---|
+| SDRAM read capture | +4 / +5 / +6 (rising edge) | 0 / 1 / 2 | 4,5 / 5,6 / 6,7 |
+| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
+| | +4.25 (default) / +3.25 (quarter) | **3** / 7 | 4.25,5.25 / 3.25,4.25 |
+
+The quarter settings sample on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) and land like +5 / +4. On the
+Pocket (debug7 sweep) only +4 rising and +4.5 falling reached the BIOS logo, both with corrupt graphics, and +3.5,
++5, +5.5 and +6 did not, so the data window sits about +4.25; the model's window is about 2 ns later than the hardware's.
+
+The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
+(`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
+edge. Later capture (+6) delays the VDP2 results by one clk_ram (VDP2 still samples 24 clk_ram after the request).
+
+The command, address, data and enable pin registers are I/O cell registers (`FAST_OUTPUT_REGISTER`,
+`FAST_OUTPUT_ENABLE_REGISTER`, `ap_core.qsf`), and the pin command registers power up as NOP (zero is an MRS).
+An I/O cell capture register on `clk_ram_cap` (fixed +4.25) was tried: the sim SDRAM model, whose window is
+about 2 ns late, then corrupts sound RAM reads (the 68K driver never sets CR0.MVOL), so the runtime setting stays.
 Rule of thumb from the model, with T = clock-out delay + input delay (the data valid window is about 4.2 ns):
 
 | T (ns), clock out + pin to register | best setting |
