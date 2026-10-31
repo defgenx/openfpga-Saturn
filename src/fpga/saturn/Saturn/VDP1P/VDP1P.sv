@@ -2490,7 +2490,7 @@ module VDP1P_COL_TBL (
 
 	wire [15:0] sub_wire0;
 
-	VDP1P_MLAB #(.W(16),.AW(4)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(4),.FE(0)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
 
 	assign Q =  sub_wire0;
 
@@ -2645,7 +2645,7 @@ module VDP1P_EDGE_LANE (
 	wire         WE = ACT && (MODE_INIT || K == 2'd0 || DHIT);
 	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
 	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
-	VDP1P_MLAB #(.W(14),.AW(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
+	VDP1P_MLAB #(.W(14),.AW(2),.FE(0)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
 endmodule
 
 
