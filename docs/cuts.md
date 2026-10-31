@@ -120,6 +120,8 @@ Sim (72 runs, 18 programs x 4 environments): **68 match exactly**; `t_intc` (all
 ~24,600 / 24,900 / 40,800 / 28,600, the WDT interval-timer test: the interrupt at vector 0x70 never arrives and
 WTCSR/RSTCSR reads return 0. Other programs never touch the WDT. Games: none found (`game-impact.md` section 7).
 
+SH7604P (`POCKET_SH2P`): `SH7604P_WDT` is instantiated with `WDT_DISABLE=1` under this macro, same behaviour (about -46 ALMs per CPU).
+
 ## POCKET_CUT_SH2_PURGE (not recommended)
 
 Replaces the 256 tag-dirty and 64 LRU-dirty flip-flops of each cache (with their 64:1 read muxes and per-bit write
@@ -171,3 +173,7 @@ No macro, no change: `make -C sim sh2` (72 runs = 18 programs x 4 environments, 
 `t_divu_msh`, `t_divu_ssh`, `t_divu_both`, `t_purge_few`, `t_purge_burst`), `make -C sim scsp` (6 seeds x 2 builds
 PASS), `make -C sim sh1` PASS. Standalone map of the final default source: SCSP 2,174 ALM / 3,155 ALUT / 1,643 regs
 (identical to before), SH-2 pair 8,084 ALM / 11,587 ALUT / 5,901 regs (identical).
+
+SH7604P (`POCKET_SH2P`): same `DVS_I`/`DVS_O` ports and Saturn.sv hookup; `SH7604P_DIVU` is replaced by `SH7604_DIVU_CL`
+(about -220 ALMs per CPU, less the shared unit). Block test `make -C sim/sh2 unit-divu_shared` (two clients, 8000 random
+32/32 and 64/32 divides issued together vs an SV model); CPU-level: `make DUT=sh2p CUTS=POCKET_CUT_SH2_DIVU_SHARED contend-mem`.

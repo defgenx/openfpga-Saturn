@@ -67,6 +67,10 @@ module SH7604P
 	input       [5:0] MD,
 	
 	input             FAST
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	,input     [140:0] DVS_I,
+	output     [65:0] DVS_O
+`endif
 `ifdef POCKET_DEBUG_OVERLAY
 	,output     [31:0] DBG_PC
 	,output     [28:0] DBG_DA      // {valid, CPU data read address[27:0]}: reads outside WRAM-H
@@ -615,7 +619,11 @@ module SH7604P
 		.VBUS_WAIT(BSC_VBUS_BUSY)
 	);
 	
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+	SH7604_DIVU_CL divu   // per-CPU registers and bus side; the datapath is SH7604_DIVU_SHR (SH/SH7604/DIVU_SHARED.sv)
+`else
 	SH7604P_DIVU divu
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
@@ -634,8 +642,15 @@ module SH7604P
 		.IBUS_BUSY(DIVU_BUSY),
 		.IBUS_ACT(DIVU_ACT),
 		
+`ifdef POCKET_CUT_SH2_DIVU_SHARED
+		.IRQ(DIVU_IRQ),
+		.VEC(DIVU_VEC),
+		.SH_I(DVS_I),
+		.SH_O(DVS_O)
+`else
 		.IRQ(DIVU_IRQ),
 		.VEC(DIVU_VEC)
+`endif
 	);
 
 	SH7604P_SCI #(SCI_DISABLE) sci
@@ -709,7 +724,11 @@ module SH7604P
 		.OVI_IRQ(OVI_IRQ)
 	);
 	
+`ifdef POCKET_CUT_SH2_WDT
+	SH7604P_WDT #(1) wdt
+`else
 	SH7604P_WDT #(WDT_DISABLE) wdt
+`endif
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),

@@ -11,6 +11,7 @@ DUT     ?= old
 ifeq ($(DUT),sh2p)
 BUILD   := build_p
 DUT_INC ?= $(BUILD)/sh_pair_inst_p.inc
+P_INC_SRC := $(if $(findstring DIVU_SHARED,$(CUTS)),tb/sh_pair_inst_divs.inc,tb/sh_pair_inst.inc)
 else
 BUILD   := build
 DUT_INC ?= $(if $(findstring DIVU_SHARED,$(CUTS)),tb/sh_pair_inst_divs.inc,tb/sh_pair_inst.inc)
@@ -24,7 +25,7 @@ SH2P_FILES := SH2P_pkg.sv SH2P_mem.sv SH2P_regfile.sv SH2P_dec.sv SH2P_alu.sv SH
               SH7604P_DMAC.sv SH7604P_UBC.sv SH7604P_INTC.sv SH7604P_FRT.sv SH7604P_WDT.sv SH7604P_SCI.sv SH7604P_DIVU.sv \
               SH7604P_MULT.sv SH7604P_MSBY.sv SH7604P.sv $(notdir $(wildcard $(SRC)/SH/sh2p/SH2P_x_*.sv)) $(notdir $(wildcard $(SRC)/SH/sh2p/SH7604P_x_*.sv))
 ifeq ($(DUT),sh2p)
-DUT_SRCS := $(addprefix $(SRC)/SH/sh2p/,$(SH2P_FILES))
+DUT_SRCS := $(addprefix $(SRC)/SH/sh2p/,$(SH2P_FILES)) $(if $(findstring DIVU_SHARED,$(CUTS)),$(SRC)/SH/SH7604/SH7604_pkg.sv $(SRC)/SH/SH7604/DIVU_SHARED.sv)
 else
 DUT_SRCS := $(addprefix $(SRC)/,$(SH_FILES)) $(wildcard $(SRC)/SH/SH7604_dual/*.sv) $(SRC)/SH/SH7604/DIVU_SHARED.sv
 endif
@@ -42,7 +43,7 @@ $(BUILD)/ref/.stamp: $(GOLD_SRCS) tools/ref_rename.py
 	for f in $(SH_FILES); do python3 tools/ref_rename.py $(GOLD)/$$f $(BUILD)/ref/$$(echo $$f | sed 's|/|__|g'); done
 	touch $@
 
-$(BUILD)/sh_pair_inst_p.inc: tb/sh_pair_inst.inc
+$(BUILD)/sh_pair_inst_p.inc: $(P_INC_SRC)
 	mkdir -p $(BUILD) && perl -pe 's/\bSH7604 #\(/SH7604P #(/' $< > $@
 
 $(BUILD)/env_dut.sv: tb/env.sv.in $(DUT_INC) tools/gen_env.py
@@ -112,3 +113,10 @@ unit-%: $(BUILD)/Vtb_%
 clean:
 	rm -rf $(BUILD)
 .PHONY: all test ptest soak report one clean
+
+# POCKET_CUT_SH2_DIVU_SHARED block test: two clients on one shared divider, random simultaneous divides vs an SV model.
+$(BUILD)/Vtb_divu_shared: unit/tb_divu_shared.sv $(SRC)/SH/SH7604/SH7604_pkg.sv $(SRC)/SH/SH7604/DIVU_SHARED.sv
+	verilator --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -DPOCKET_CUT_SH2_DIVU_SHARED --x-assign 0 --x-initial 0 \
+	  --top-module tb_divu_shared --Mdir $(BUILD)/obj_divu_shared -o ../Vtb_divu_shared $(SRC)/SH/SH7604/SH7604_pkg.sv $(SRC)/SH/SH7604/DIVU_SHARED.sv unit/tb_divu_shared.sv
+unit-divu_shared: $(BUILD)/Vtb_divu_shared
+	@$(BUILD)/Vtb_divu_shared | grep -E "^(PASS|FAIL)"
