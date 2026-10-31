@@ -43,11 +43,9 @@ reg [4:0] wt;
 
 reg        o_wr = 1'b0, o_rd = 1'b0;
 reg  [5:0] o_addr = 6'd0;
-reg [15:0] o_wd = 16'd0;
 reg [15:0] d1, d2;
 
 wire        wide = mode[1];
-wire  [7:0] m_hi = wide ? 8'd5 : 8'd4;
 wire [31:0] k_val = !mode[0] ? (!wide ? 32'hAFC38FAE : 32'h4196FC35)
                              : (!wide ? 32'hA052BF5B : 32'h31219DBD);
 
@@ -66,19 +64,19 @@ always @(posedge clk) begin
 			valid <= 1'b1;
 			st <= 5'd1;
 		end
-		5'd1: begin o_wr <= 1'b1; o_addr <= 6'h12; o_wd <= {m_hi, 8'd4}; st <= 5'd2; end
+		5'd1: begin o_wr <= 1'b1; o_addr <= 6'h12; st <= 5'd2; end
 		5'd2: begin o_rd <= 1'b1; o_addr <= 6'h15; st <= 5'd3; end
 		5'd3: begin o_rd <= 1'b1; o_addr <= 6'h17; st <= 5'd4; end
 		5'd5: begin d1 <= rd; st <= 5'd6; end                // read latency 2: 0x15 seen at st 3, valid at st 5
 		5'd6: begin d2 <= rd; st <= 5'd7; end
-		5'd7: begin o_wr <= 1'b1; o_addr <= 6'h15; o_wd <= {d1[15:5], 1'b0, d1[3:0]}; st <= 5'd8; end
-		5'd8: begin o_wr <= 1'b1; o_addr <= 6'h17; o_wd <= {d2[15:5], wide, d2[3:0]}; st <= 5'd9; end
+		5'd7: begin o_wr <= 1'b1; o_addr <= 6'h15; st <= 5'd8; end
+		5'd8: begin o_wr <= 1'b1; o_addr <= 6'h17; st <= 5'd9; end
 		5'd9: begin o_rd <= 1'b1; o_addr <= 6'h17; st <= 5'd10; end
 		5'd12: begin d2 <= rd; st <= 5'd13; end              // 0x17 seen at st 10, valid at st 12
-		5'd13: begin o_wr <= 1'b1; o_addr <= 6'h17; o_wd <= {d2[15:12], 1'b0, d2[10:0]}; st <= 5'd14; end
-		5'd14: begin o_wr <= 1'b1; o_addr <= 6'h18; o_wd <= k_val[15:0];  st <= 5'd15; end
-		5'd15: begin o_wr <= 1'b1; o_addr <= 6'h19; o_wd <= k_val[31:16]; st <= 5'd16; end
-		5'd16: begin o_wr <= 1'b1; o_addr <= 6'h17; o_wd <= {d2[15:12], 1'b1, d2[10:0]}; st <= 5'd17; wt <= 5'd0; end
+		5'd13: begin o_wr <= 1'b1; o_addr <= 6'h17; st <= 5'd14; end
+		5'd14: begin o_wr <= 1'b1; o_addr <= 6'h18;  st <= 5'd15; end
+		5'd15: begin o_wr <= 1'b1; o_addr <= 6'h19; st <= 5'd16; end
+		5'd16: begin o_wr <= 1'b1; o_addr <= 6'h17; st <= 5'd17; wt <= 5'd0; end
 		5'd17: begin wt <= wt + 5'd1; if (&wt) st <= 5'd18; end   // let the lock flag drop
 		5'd18: if (locked) st <= 5'd0;
 		default: st <= st + 5'd1;                              // wait states 4, 10, 11
@@ -86,12 +84,20 @@ always @(posedge clk) begin
 	end
 end
 
+// Write data, valid while o_wr is high (data is ignored otherwise), selected by the state that follows the write:
+//   2: 0x12 {M hi, M lo}   8: 0x15   9: 0x17 with bit 4   14: 0x17 with bit 11 = 0   15, 16: K lo, K hi   17: 0x17 with bit 11 = 1
+wire        w_k   = (st == 5'd15) || (st == 5'd16);
+wire [15:0] w_k16 = (st == 5'd15) ? k_val[15:0] : k_val[31:16];
+wire [15:0] w_dat = (st == 5'd8) ? {d1[15:5], 1'b0, d1[3:0]} :
+                    (st == 5'd2) ? {5'd0, 1'b1, 1'b0, wide, 5'd0, 1'b1, 2'b00} :
+                    w_k ? w_k16 :
+                    {d2[15:12], (st == 5'd17) ? 1'b1 : (st == 5'd14) ? 1'b0 : d2[11], d2[10:5], (st == 5'd9) ? wide : d2[4], d2[3:0]};
 assign reconfig_to_pll[0]     = clk;
 assign reconfig_to_pll[1]     = ~init_reset;
 assign reconfig_to_pll[2]     = i_done ? o_wr : i_wr;
 assign reconfig_to_pll[3]     = i_done ? o_rd : i_rd;
 assign reconfig_to_pll[9:4]   = i_done ? o_addr : i_addr;
-assign reconfig_to_pll[25:10] = i_done ? o_wd : i_wd;
+assign reconfig_to_pll[25:10] = i_done ? w_dat : i_wd;
 assign reconfig_to_pll[27:26] = 2'b11;
 assign reconfig_to_pll[28]    = i_ssl;
 assign reconfig_to_pll[29]    = i_mdio_dis;
