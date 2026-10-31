@@ -43,7 +43,10 @@ module SH7604P_MULT (
 	wire        ACC  = MACW_EXEC | MACL_EXEC;
 	wire [31:0] RL = MACL & {M0[3], {31{M0[2]}}} | {M1[3], {31{M1[2]}}};
 	wire [31:0] RH = MACH & {{17{M0[1]}}, {15{M0[0]}}} | {{17{M1[1]}}, {15{M1[0]}}};
-	wire signed [63:0] AM = {RH,RL} & {64{ACC}};
+	wire [3:0] A0 = M0 & {4{ACC}}, A1 = M1 & {4{ACC}};
+	wire [31:0] AML = MACL & {A0[3], {31{A0[2]}}} | {A1[3], {31{A1[2]}}};
+	wire [31:0] AMH = MACH & {{17{A0[1]}}, {15{A0[0]}}} | {{17{A1[1]}}, {15{A1[0]}}};
+	wire signed [63:0] AM = {AMH,AML};
 	wire        [63:0] SUM = AM + SRES;
 	
 	// MAC.W: bit 32 of {MACL[31],MACL}+SRES[32:0] equals MACL[31]^MACH[0]^SUM[32]
@@ -163,7 +166,11 @@ module SH7604P_MULT (
 		end
 	end
 	
-	assign CBUS_DO = MAC_SEL[1] ? RH : RL;
+	wire SH = MAC_SEL[1];
+	wire [31:0] OSRC = SH ? MACH : MACL;
+	wire [2:0] OM0 = SH ? {M0[1], M0[1], M0[0]} : {M0[3], M0[2], M0[2]};
+	wire [2:0] OM1 = SH ? {M1[1], M1[1], M1[0]} : {M1[3], M1[2], M1[2]};
+	assign CBUS_DO = {OSRC[31] & OM0[2] | OM1[2], OSRC[30:15] & {16{OM0[1]}} | {16{OM1[1]}}, OSRC[14:0] & {15{OM0[0]}} | {15{OM1[0]}}};
 	assign CBUS_BUSY = ~MM_DONE && (!MAC_OP[2] ? MAC_SEL[0] : |MAC_SEL);
 
 endmodule
