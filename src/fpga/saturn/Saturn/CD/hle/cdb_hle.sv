@@ -280,25 +280,21 @@ reg sk_overrun_r = 1'b0;
 wire [31:0] ev_word = {17'd0, armed, ev_to, sk_overrun_r, !eng_idle, fd_busy, pf_ready, disc_ok, lk_busy, xf_idle, seg1_free, f_empty,
                        ev_dchg, ev_sec, ev_rrd, ev_cmd};
 
-reg [31:0] mm_q;
-always @* begin
-	case (mi)
-	8'h00: mm_q = {16'd0, HIRQ};
-	8'h01: mm_q = {16'd0, HMASK};
-	8'h02, 8'h03, 8'h04, 8'h05: mm_q = {16'd0, cr_q};
-	8'h0A: mm_q = ev_word;
-	8'h0C: mm_q = ticks;
-	8'h14: mm_q = hostcnt;
-	8'h19: mm_q = {16'd0, dram_q};
-	8'h1D: mm_q = hdr_a;
-	8'h1E: mm_q = hdr_b;
-	8'h23: mm_q = {7'd0, lk_data, lk_s2048, lk_track[6:0], lk_tbcd, lk_idx1} ;
-	8'h24: mm_q = {8'd0, lk_start};
-	8'h25: mm_q = {16'd0, ntbcd, 1'b0, ntracks};
-	8'h26: mm_q = {8'd0, toc_end};
-	default: mm_q = 32'd0;
-	endcase
-end
+// Read-data select: one-hot, registered from the data address (stable for the whole bus access) and used in the
+// access's second cycle, as AND-OR instead of a decoded case. Source order: rom, ram, then the MMIO words.
+wire sm = da[30];                     // neither rom (00) nor ram (10)
+reg [14:0] rs = 15'd0;
+always @(posedge CLK) rs <= {sel_rom, sel_ram,
+	sm && mi == 8'h00, sm && mi == 8'h01, sm && (mi[7:1] == 7'd1 || mi[7:1] == 7'd2), sm && mi == 8'h0A,
+	sm && mi == 8'h0C, sm && mi == 8'h14, sm && mi == 8'h19, sm && mi == 8'h1D, sm && mi == 8'h1E,
+	sm && mi == 8'h23, sm && mi == 8'h24, sm && mi == 8'h25, sm && mi == 8'h26};
+wire [31:0] rd_q =
+	({32{rs[14]}} & rom_d) | ({32{rs[13]}} & ram_d) |
+	({32{rs[12]}} & {16'd0, HIRQ}) | ({32{rs[11]}} & {16'd0, HMASK}) | ({32{rs[10]}} & {16'd0, cr_q}) |
+	({32{rs[9]}} & ev_word) | ({32{rs[8]}} & ticks) | ({32{rs[7]}} & hostcnt) | ({32{rs[6]}} & {16'd0, dram_q}) |
+	({32{rs[5]}} & hdr_a) | ({32{rs[4]}} & hdr_b) |
+	({32{rs[3]}} & {7'd0, lk_data, lk_s2048, lk_track[6:0], lk_tbcd, lk_idx1}) | ({32{rs[2]}} & {8'd0, lk_start}) |
+	({32{rs[1]}} & {16'd0, ntbcd, 1'b0, ntracks}) | ({32{rs[0]}} & {8'd0, toc_end});
 
 reg  mm_busy = 1'b0;
 reg  dst = 1'b0;                      // second cycle of a bus access
@@ -350,9 +346,7 @@ always @(posedge CLK) begin
 			end else begin
 				dst <= 1'b0;
 				dack <= 1'b1;
-				if (sel_rom) drd <= rom_d;
-				else if (sel_ram) drd <= ram_d;
-				else drd <= mm_q;
+				drd <= rd_q;
 			end
 		end
 	end

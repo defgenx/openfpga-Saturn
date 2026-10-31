@@ -167,6 +167,9 @@ Savings (fit entity table, seed 7, "ALMs needed" of the touched entity before ->
 | pocket_audio: 27 bit accumulator (acc < in_clk < 2^26) | audio 108.4 -> 93.9 (-15, with the strobe) | output identical to the old module, four in_clk values; `sim/platform` |
 | saturn_pocket: Dezaemon 2 game id kept as four compare bits (was 64 flip-flops), RTC payload not copied (45 flip-flops) | in saturn_pocket | unit comparison of the match result (4,000 headers); `sim/sys` |
 | `SAFE_STATE_MACHINE` off | map 17,661 -> 17,639 (-22) | no RTL change |
+| cdb_hle: the firmware read mux (rom, ram and 13 MMIO words) is one AND-OR on a one-hot select registered from the data address (was a decoded `case` plus a 3:1 mux) | cdb_hle: estimate -35 to -45 (yosys LUT6: 243 -> 194 incl. 15 flip-flops; not fitted) | `sim/cdb` HLE logs byte-identical to the previous RTL (script_cmds, script_nodisc, script_cooked), plus 200,000 random cases old vs new mux |
+| pll_lite: DPRIO write data is a combinational select on `st` (was a 16 bit register `o_wd` with a 7-way load); only valid while `o_wr` is high, DPRIO ignores it otherwise | pll_lite: estimate -20 to -30 (yosys LUT6: 205 -> 163 and 16 flip-flops fewer; not fitted) | `sim/pll` PASS; cycle-by-cycle old vs new over 136 writes: wr, rd, address, data identical |
+| ce_gen: `nxt >= in_clk` taken from the borrow of `nxt - in_clk` (one carry chain less, SCSP and CD clock enables) | saturn_pocket: estimate -0 to -13 (Quartus may already share them; not fitted) | 3 M cycles random old vs new, `ce` and `ev` identical (real `in_clk` values, chained CD instance, free parameters) |
 
 Touched entities together about -290 ALMs; the whole design -441 (the rest is packing and seed noise in blocks nobody touched).
 M10K +9 (285 -> 294): SMPC data RAM, IREG, OREG; SCSPP KB, KBO, KEY; cdb CR, RR, transfer FIFO. 14 blocks remain (the DSP restores
@@ -191,7 +194,6 @@ Not done (estimates):
 - Write-data holds of `ddram_pocket` shared between `raml` and `cart` (about -25 ALMs): a write on one channel stalls the other.
 - The 763 VDP2 register-file flip-flops (`REGS.*`, about 380 ALMs) as RAM need sequential readers in the dot pipeline
   (`vdp2-rewrite.md`).
-- The firmware's MMIO read mux of `cdb_hle` (199 LUTs) and `pll_lite`'s 16 bit write-data mux (55 LUTs).
 
 Observation (not changed): `rtc_valid` of `core_bridge_cmd` is a level that stays high after the first RTC command, while
 `saturn_pocket` treats it as a pulse (`rtc_dly <= 2'b01` on every clock), so `rtc_tog` never toggles and the SMPC never gets
