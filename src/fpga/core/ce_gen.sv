@@ -14,11 +14,12 @@ module ce_gen #(
 );
 reg  [W-1:0] sum = '0;
 wire [W:0]   nxt = {1'b0, sum} + {1'b0, out_clk};
-wire         ge  = nxt >= {1'b0, in_clk};
+wire [W+1:0] dif = {1'b0, nxt} - {2'b0, in_clk};   // nxt >= in_clk is "no borrow": the compare shares the subtractor
+wire         ge  = !dif[W+1];
 assign ev = in_ce & ge;
 always @(posedge clk) begin
 	ce <= ev;
-	if (in_ce) sum <= ge ? nxt[W-1:0] - in_clk : nxt[W-1:0];
+	if (in_ce) sum <= ge ? dif[W-1:0] : nxt[W-1:0];
 end
 endmodule
 
