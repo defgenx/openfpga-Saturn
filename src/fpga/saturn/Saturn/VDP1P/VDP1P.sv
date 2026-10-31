@@ -410,7 +410,7 @@ module VDP1P (
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
 	bit  [16: 0] GS_WD;
-	VDP1P_MLAB #(.W(17),.AW(3)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
+	VDP1P_MLAB #(.W(17),.AW(3),.FE(0)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
 	wire [ 1: 0] GL_CH = GSEQ - 4'd7;
 	wire         GL_WE = GSEQ >= 4'd7;
 	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
