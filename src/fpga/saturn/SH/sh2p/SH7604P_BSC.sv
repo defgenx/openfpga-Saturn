@@ -199,6 +199,44 @@ module SH7604P_BSC
 	wire CBUS_EXT_REQ = (CBUS_A[31:27] ==? 5'b00?00) && CBUS_REQ; 
 	wire BUS_SEL = CBUS_EXT_REQ | DBUS_REQ | VBUS_REQ | RFS_REQ; 
 	
+	bit          CBUS_LOCK_INT,DBUS_LOCK_INT,DBUS_SKIP,SDRAM_PRECHARGE_PEND;
+	
+	// The DBUS and CBUS request paths use one size/lane encoder; D_SEL is exactly the DBUS branch condition of the arbiter.
+	wire D_SEL = (DBUS_REQ && !CBUS_LOCK_INT && !(CBUS_EXT_REQ && DBUS_SKIP) && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) ||
+	             (DBUS_REQ && DBUS_LOCK_INT && !CBUS_LOCK_INT);
+	wire [31:0] S_DI = D_SEL ? DBUS_DI      : CBUS_DI;
+	wire [ 3:0] S_BA = D_SEL ? DBUS_BA      : CBUS_BA;
+	wire        S_WE = D_SEL ? DBUS_WE      : CBUS_WE;
+	wire [26:0] S_A27 = D_SEL ? DBUS_A[26:0] : CBUS_A[26:0];
+	wire [ 1:0] S_A  = S_A27[1:0];
+	wire        S_BURST = D_SEL ? DBUS_BURST : CBUS_BURST;
+	wire        S_ISSD = IsSDRAMArea(S_A27[26:25],BCR1);
+	wire [ 1:0] S_SZ = GetAreaSZ(S_A27[26:25],BCR1,BCR2,A0_SZ,DRAM_SZ);
+	logic [31:0] S_DO;
+	logic [ 3:0] S_WEN, S_NBA;
+	bit         S_V;
+	always_comb begin
+		S_DO = 'x; S_WEN = 'x; S_NBA = 'x; S_V = 0;
+		case (S_SZ)
+			2'b01: if (!SIZE_BYTE_DISABLE) begin
+				S_V = 1;
+				case (S_A)
+					2'b00: begin S_DO = {24'h000000,S_DI[31:24]}; S_WEN = ~{3'b000,S_WE & S_BA[3]}; S_NBA = {1'b0,S_BA[2:0]}; end
+					2'b01: begin S_DO = {24'h000000,S_DI[23:16]}; S_WEN = ~{3'b000,S_WE & S_BA[2]}; S_NBA = {2'b00,S_BA[1:0]}; end
+					2'b10: begin S_DO = {24'h000000,S_DI[15: 8]}; S_WEN = ~{3'b000,S_WE & S_BA[1]}; S_NBA = {3'b000,S_BA[0]}; end
+					2'b11: begin S_DO = {24'h000000,S_DI[ 7: 0]}; S_WEN = ~{3'b000,S_WE & S_BA[0]}; S_NBA = 4'b0000; end
+				endcase
+			end
+			2'b10: if (!SIZE_WORD_DISABLE) begin
+				S_V = 1;
+				if (!S_A[1]) begin S_DO = {16'h0000,S_DI[31:16]}; S_WEN = ~{2'b00,{2{S_WE}} & S_BA[3:2]}; S_NBA = {2'b00,S_BA[1:0]}; end
+				else         begin S_DO = {16'h0000,S_DI[15: 0]}; S_WEN = ~{2'b00,{2{S_WE}} & S_BA[1:0]}; S_NBA = 4'b0000; end
+			end
+			2'b11: begin S_V = 1; S_DO = S_DI; S_WEN = ~({4{S_WE}} & S_BA); S_NBA = 4'b0000; end
+			default:;
+		endcase
+	end
+	
 	bit          BUSY;
 	bit          CBUSY,CBUSY2,DBUSY,VBUSY;
 	bit          CBUS_ACTIVE,DBUS_ACTIVE,VBUS_ACTIVE,REFRESH_ACTIVE;
@@ -207,8 +245,6 @@ module SH7604P_BSC
 	bit  [ 1: 0] RFS_WAIT_CNT;
 	always @(posedge CLK or negedge RST_N) begin
 		BusState_t  STATE_NEXT;
-		bit         DBUS_SKIP;
-		bit         CBUS_LOCK_INT,DBUS_LOCK_INT;
 		bit [ 1: 0] CBUS_REQ_CNT;
 		bit [ 2: 0] WAIT_CNT;
 		bit [ 1: 0] RCD_WAIT_CNT;
@@ -219,12 +255,12 @@ module SH7604P_BSC
 		bit [ 3: 0] NEXT_BA;
 		bit [ 1: 0] AREA_SZ;
 		bit         LL;
-		bit         CBUS_IS_SDRAM,DBUS_IS_SDRAM,BUS_IS_SDRAM,IS_SAME_BANK_SDRAM;
+		bit         BUS_IS_SDRAM,IS_SAME_BANK_SDRAM;
 		bit [ 3: 0] SDRAM_AREA;
 		bit [ 3: 0] BURST_CNT;
 		bit         BURST_EN,BURST_SINGLE;
 		bit         BURST_LAST,BURST_PRELAST;
-		bit         SDRAM_PRECHARGE_PEND,SDRAM_INSERT_NOP,INSERT_WAIT;
+		bit         SDRAM_INSERT_NOP,INSERT_WAIT;
 		bit         DATA_LATCH;
 		bit         DELAYED_RFS_REQ;
 		
@@ -530,8 +566,6 @@ module SH7604P_BSC
 					end
 					
 					SDRAM_AREA = SDRAMAreaSel(BCR1);
-					CBUS_IS_SDRAM = IsSDRAMArea(CBUS_A[26:25],BCR1); 
-					DBUS_IS_SDRAM = IsSDRAMArea(DBUS_A[26:25],BCR1); 
 					BUS_IS_SDRAM = IsSDRAMArea(A[26:25],BCR1);
 					VBUS_ACTIVE <= 0;
 					if (((BUS_STATE == T2 || BUS_STATE == TWCAS || BUS_STATE == TRD) && BUSY && (NEXT_BA != 4'd0)) || ((BUS_STATE == T2 || BUS_STATE == TRD) && BURST_EN && !BURST_LAST)) begin
@@ -653,73 +687,24 @@ module SH7604P_BSC
 							end
 						end 
 						else if ((DBUS_REQ && !CBUS_LOCK_INT && !(CBUS_EXT_REQ && DBUS_SKIP) && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) || (DBUS_REQ && DBUS_LOCK_INT && !CBUS_LOCK_INT)) begin
-							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(DBUS_A[26:0],MCR));
-							SDRAM_INSERT_NOP <= IS_SAME_BANK_SDRAM && BUS_WE_LATCH && DBUS_IS_SDRAM;
-							if (INSERT_WAIT && ((A[26:25] != DBUS_A[26:25] && !DBUS_WE && !BUS_WE_LATCH && !DBUS_IS_SDRAM) || (DBUS_WE && !BUS_WE_LATCH && !DBUS_IS_SDRAM) || (DBUS_WE && BUS_STATE == T0 && !DBUS_IS_SDRAM) || (!DBUS_LOCK_INT && !MASTER))) begin
-								A <= DBUS_A[26:0];
+							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(S_A27,MCR));
+							SDRAM_INSERT_NOP <= IS_SAME_BANK_SDRAM && BUS_WE_LATCH && S_ISSD;
+							if (INSERT_WAIT && ((A[26:25] != S_A27[26:25] && !S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && BUS_STATE == T0 && !S_ISSD) || (!DBUS_LOCK_INT && !MASTER))) begin
+								A <= S_A27;
 								INSERT_WAIT <= 0;
 							end else if (BUS_STATE == T0 || BUS_STATE == T2 || (BUS_STATE == TWCAS && !SDRAM_INSERT_NOP && !DELAYED_RFS_REQ) || (BUS_STATE == TWNOP && (NOP_WAIT_CNT == 2'd0)) || BUS_STATE == TRD || BUS_STATE == TRFS2) begin
 								DBUS_ACTIVE <= 1;
 								DBUS_SKIP <= 1;
 								DBUS_LOCK_INT <= DBUS_LOCK;
-								case (GetAreaSZ(DBUS_A[26:25],BCR1,BCR2,A0_SZ,DRAM_SZ))
-									2'b01: if (!SIZE_BYTE_DISABLE) begin 
-										case (DBUS_A[1:0])
-											2'b00: begin 
-												DO <= {24'h000000,DBUS_DI[31:24]}; 
-												WE_N <= ~{3'b000,DBUS_WE & DBUS_BA[3]};
-												NEXT_BA <= {1'b0,DBUS_BA[2:0]};
-												if (DBUS_WE) DBUSY <= 0;
-											end
-											2'b01: begin 
-												DO <= {24'h000000,DBUS_DI[23:16]};
-												WE_N <= ~{3'b000,DBUS_WE & DBUS_BA[2]};
-												NEXT_BA <= {2'b00,DBUS_BA[1:0]};
-												if (DBUS_WE) DBUSY <= 0;
-											end
-											2'b10: begin 
-												DO <= {24'h000000,DBUS_DI[15: 8]}; 
-												WE_N <= ~{3'b000,DBUS_WE & DBUS_BA[1]};
-												NEXT_BA <= {3'b000,DBUS_BA[0]};
-												if (DBUS_WE) DBUSY <= 0;
-											end
-											2'b11: begin 
-												DO <= {24'h000000,DBUS_DI[ 7: 0]};
-												WE_N <= ~{3'b000,DBUS_WE & DBUS_BA[0]}; 
-												NEXT_BA <= 4'b0000;
-												if (DBUS_WE) DBUSY <= 0;
-											end
-										endcase
-									end
-									2'b10: if (!SIZE_WORD_DISABLE) begin 
-										case (DBUS_A[1])
-											1'b0: begin 
-												DO <= {16'h0000,DBUS_DI[31:16]}; 
-												WE_N <= ~{2'b00,{2{DBUS_WE}} & DBUS_BA[3:2]};
-												NEXT_BA <= {2'b00,DBUS_BA[1:0]};
-												if (DBUS_WE) DBUSY <= 0;
-											end
-											1'b1: begin 
-												DO <= {16'h0000,DBUS_DI[15: 0]}; 
-												WE_N <= ~{2'b00,{2{DBUS_WE}} & DBUS_BA[1:0]};
-												NEXT_BA <= 4'b0000;
-												if (DBUS_WE) DBUSY <= 0;
-											end
-										endcase
-									end
-									2'b11: begin 
-										DO <= DBUS_DI; 
-										WE_N <= ~({DBUS_WE,DBUS_WE,DBUS_WE,DBUS_WE} & DBUS_BA);
-										NEXT_BA <= 4'b0000;
-										if (DBUS_WE) DBUSY <= 0;
-									end
-									default:; 
-								endcase
-								if (DBUS_IS_SDRAM && !DBUS_WE) begin
+								if (S_V) begin
+									DO <= S_DO; WE_N <= S_WEN; NEXT_BA <= S_NBA;
+									if (S_WE) DBUSY <= 0;
+								end
+								if (S_ISSD && !S_WE) begin
 									if (!BURST_EN || BURST_LAST) begin
 										BURST_CNT <= 4'd0;
 										BURST_EN <= 1;
-										BURST_SINGLE <= ~DBUS_BURST;
+										BURST_SINGLE <= ~S_BURST;
 									end
 								end else begin
 									BURST_CNT <= 4'd0;
@@ -728,11 +713,11 @@ module SH7604P_BSC
 								end
 								RCD_WAIT_CNT <= 2'd1 + MCR.RCD;
 								SDRAM_PRECHARGE_PEND <= MASTER;
-								IS_SDRAM_LATCH <= DBUS_IS_SDRAM;
+								IS_SDRAM_LATCH <= S_ISSD;
 								INSERT_WAIT <= ~FAST; 
 								
-								A <= DBUS_A[26:0];
-								if (DBUS_IS_SDRAM && MCR.RFSH && MCR.RMD && MASTER) begin
+								A <= S_A27;
+								if (S_ISSD && MCR.RFSH && MCR.RMD && MASTER) begin
 									CS0_N <= 1;
 									CS1_N <= 1;
 									CS2_N <= 1;
@@ -741,20 +726,20 @@ module SH7604P_BSC
 									RD_WR_N <= 1;
 									RD_N <= 1;
 								end else begin
-									CS0_N <= ~(DBUS_A[26:25] == 2'b00);
-									CS1_N <= ~(DBUS_A[26:25] == 2'b01);
-									CS2_N <= ~(DBUS_A[26:25] == 2'b10);
-									CS3_N <= ~(DBUS_A[26:25] == 2'b11);
+									CS0_N <= ~(S_A27[26:25] == 2'b00);
+									CS1_N <= ~(S_A27[26:25] == 2'b01);
+									CS2_N <= ~(S_A27[26:25] == 2'b10);
+									CS3_N <= ~(S_A27[26:25] == 2'b11);
 									BS_N <= 0;
-									RD_WR_N <= ~DBUS_WE;
-									RD_N <= DBUS_WE;
+									RD_WR_N <= ~S_WE;
+									RD_N <= S_WE;
 								end
 								CACK <= 1;
 								
-								BUS_WE_LATCH <= DBUS_WE;
-								BUS_DI_LATCH <= DBUS_DI;
+								BUS_WE_LATCH <= S_WE;
+								BUS_DI_LATCH <= S_DI;
 								DELAYED_RFS_REQ <= RFS_REQ;
-								STATE_NEXT = DBUS_IS_SDRAM ? TRAS : T1;
+								STATE_NEXT = S_ISSD ? TRAS : T1;
 								if (!(DBUS_A[31:27] ==? 5'b00?00)) begin
 									BURST_CNT <= 4'd0;
 									BURST_EN <= 0;
@@ -777,90 +762,41 @@ module SH7604P_BSC
 							end
 						end
 						else if ((CBUS_EXT_REQ && !(SDRAM_PRECHARGE_PEND && BUS_STATE != TRFS2 && BRLS && MASTER)) || (CBUS_EXT_REQ && CBUS_LOCK_INT)) begin
-							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(CBUS_A[26:0],MCR));
-							SDRAM_INSERT_NOP = IS_SAME_BANK_SDRAM && BUS_WE_LATCH && CBUS_IS_SDRAM;
-							if (INSERT_WAIT && ((A[26:25] != CBUS_A[26:25] && !CBUS_WE && !BUS_WE_LATCH && !CBUS_IS_SDRAM) || (CBUS_WE && !BUS_WE_LATCH && !CBUS_IS_SDRAM) || (CBUS_WE && BUS_STATE == T0 && !CBUS_IS_SDRAM) || (CBUS_WE && REFRESH_ACTIVE) || 
-							                    (CBUS_WE && CBUS_REQ_CNT == 2'd3 && (BRLS || !MASTER) && (NOP_WAIT_CNT == 2'd0)))) begin
-								A <= CBUS_A[26:0];
+							IS_SAME_BANK_SDRAM = (SDRAMBank(A,MCR) == SDRAMBank(S_A27,MCR));
+							SDRAM_INSERT_NOP = IS_SAME_BANK_SDRAM && BUS_WE_LATCH && S_ISSD;
+							if (INSERT_WAIT && ((A[26:25] != S_A27[26:25] && !S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && !BUS_WE_LATCH && !S_ISSD) || (S_WE && BUS_STATE == T0 && !S_ISSD) || (S_WE && REFRESH_ACTIVE) || 
+							                    (S_WE && CBUS_REQ_CNT == 2'd3 && (BRLS || !MASTER) && (NOP_WAIT_CNT == 2'd0)))) begin
+								A <= S_A27;
 								INSERT_WAIT <= 0;
 								CBUS_REQ_CNT <= 2'd0;
 							end else if (BUS_STATE == T0 || BUS_STATE == T2 || (BUS_STATE == TWCAS && !SDRAM_INSERT_NOP && !DELAYED_RFS_REQ) || (BUS_STATE == TWNOP && (NOP_WAIT_CNT == 2'd0)) || BUS_STATE == TRD || BUS_STATE == TRFS2) begin
 								CBUS_ACTIVE <= 1;
 								DBUS_SKIP <= 0;
-								if (CBUS_WE && CBUS_REQ_CNT < 2'd3) CBUS_REQ_CNT <= CBUS_REQ_CNT + 2'd1;
+								if (S_WE && CBUS_REQ_CNT < 2'd3) CBUS_REQ_CNT <= CBUS_REQ_CNT + 2'd1;
 								else CBUS_REQ_CNT <= 2'd0;
 								CBUS_LOCK_INT <= CBUS_LOCK;
-								case (GetAreaSZ(CBUS_A[26:25],BCR1,BCR2,A0_SZ,DRAM_SZ))
-									2'b01: if (!SIZE_BYTE_DISABLE) begin 
-										case (CBUS_A[1:0])
-											2'b00: begin 
-												DO <= {24'h000000,CBUS_DI[31:24]}; 
-												WE_N <= ~{3'b000,CBUS_WE & CBUS_BA[3]};
-												NEXT_BA <= {1'b0,CBUS_BA[2:0]};
-												if (CBUS_WE) CBUSY <= 0;
-											end
-											2'b01: begin 
-												DO <= {24'h000000,CBUS_DI[23:16]};
-												WE_N <= ~{3'b000,CBUS_WE & CBUS_BA[2]};
-												NEXT_BA <= {2'b00,CBUS_BA[1:0]};
-												if (CBUS_WE) CBUSY <= 0;
-											end
-											2'b10: begin 
-												DO <= {24'h000000,CBUS_DI[15: 8]}; 
-												WE_N <= ~{3'b000,CBUS_WE & CBUS_BA[1]};
-												NEXT_BA <= {3'b000,CBUS_BA[0]};
-												if (CBUS_WE) CBUSY <= 0;
-											end
-											2'b11: begin 
-												DO <= {24'h000000,CBUS_DI[ 7: 0]};
-												WE_N <= ~{3'b000,CBUS_WE & CBUS_BA[0]}; 
-												NEXT_BA <= 4'b0000;
-												if (CBUS_WE) CBUSY <= 0;
-											end
-										endcase
-									end
-									2'b10: if (!SIZE_WORD_DISABLE) begin 
-										case (CBUS_A[1])
-											1'b0: begin 
-												DO <= {16'h0000,CBUS_DI[31:16]}; 
-												WE_N <= ~{2'b00,{2{CBUS_WE}} & CBUS_BA[3:2]};
-												NEXT_BA <= {2'b00,CBUS_BA[1:0]};
-												if (CBUS_WE) CBUSY <= 0;
-											end
-											1'b1: begin 
-												DO <= {16'h0000,CBUS_DI[15: 0]}; 
-												WE_N <= ~{2'b00,{2{CBUS_WE}} & CBUS_BA[1:0]};
-												NEXT_BA <= 4'b0000;
-												if (CBUS_WE) CBUSY <= 0;
-											end
-										endcase
-									end
-									2'b11: begin 
-										DO <= CBUS_DI; 
-										WE_N <= ~({CBUS_WE,CBUS_WE,CBUS_WE,CBUS_WE} & CBUS_BA);
-										NEXT_BA <= 4'b0000;
-										if (CBUS_WE) CBUSY <= 0;
-									end
-									default:; 
-								endcase
-								if ((CBUS_BURST || CBUS_IS_SDRAM) && !CBUS_WE) begin
+								if (S_V) begin
+									DO <= S_DO; WE_N <= S_WEN; NEXT_BA <= S_NBA;
+									if (S_WE) CBUSY <= 0;
+								end
+								if ((S_BURST || S_ISSD) && !S_WE) begin
 									if (!BURST_EN || BURST_LAST) begin
 										BURST_CNT <= 4'd0;
 										BURST_EN <= 1;
-										BURST_SINGLE <= ~CBUS_BURST;
+										BURST_SINGLE <= ~S_BURST;
 									end
 								end else begin
 									BURST_CNT <= 4'd0;
 									BURST_EN <= 0;
 									BURST_SINGLE <= 1;
 								end
-								RCD_WAIT_CNT <= (IS_SDRAM_LATCH && !BUS_WE_LATCH && CBUS_IS_SDRAM && !CBUS_WE ? 2'd0 : 2'd1) + MCR.RCD;
-								if (!CBUS_WE) SDRAM_PRECHARGE_PEND <= MASTER;
-								IS_SDRAM_LATCH <= CBUS_IS_SDRAM;
+								RCD_WAIT_CNT <= (IS_SDRAM_LATCH && !BUS_WE_LATCH && S_ISSD && !S_WE ? 2'd0 : 2'd1) + MCR.RCD;
+								if (!S_WE) SDRAM_PRECHARGE_PEND <= MASTER;
+								IS_SDRAM_LATCH <= S_ISSD;
 								INSERT_WAIT <= ~FAST;
 								
-								A <= CBUS_A[26:0];
-								if (CBUS_IS_SDRAM && MCR.RFSH && MCR.RMD && MASTER) begin
+								A <= S_A27;
+								if (S_ISSD && MCR.RFSH && MCR.RMD && MASTER) begin
 									CS0_N <= 1;
 									CS1_N <= 1;
 									CS2_N <= 1;
@@ -870,20 +806,20 @@ module SH7604P_BSC
 									WE_N <= '1;
 									RD_N <= 1;
 								end else begin
-									CS0_N <= ~(CBUS_A[26:25] == 2'b00);
-									CS1_N <= ~(CBUS_A[26:25] == 2'b01);
-									CS2_N <= ~(CBUS_A[26:25] == 2'b10);
-									CS3_N <= ~(CBUS_A[26:25] == 2'b11);
+									CS0_N <= ~(S_A27[26:25] == 2'b00);
+									CS1_N <= ~(S_A27[26:25] == 2'b01);
+									CS2_N <= ~(S_A27[26:25] == 2'b10);
+									CS3_N <= ~(S_A27[26:25] == 2'b11);
 									BS_N <= 0;
-									RD_WR_N <= ~CBUS_WE;
-									RD_N <= CBUS_WE;
+									RD_WR_N <= ~S_WE;
+									RD_N <= S_WE;
 								end
 								CACK <= 1;
 								
-								BUS_WE_LATCH <= CBUS_WE;
-								BUS_DI_LATCH <= CBUS_DI; 
-								DELAYED_RFS_REQ <= RFS_REQ && CBUS_IS_SDRAM;
-								STATE_NEXT = CBUS_IS_SDRAM ? TRAS : T1;
+								BUS_WE_LATCH <= S_WE;
+								BUS_DI_LATCH <= S_DI; 
+								DELAYED_RFS_REQ <= RFS_REQ && S_ISSD;
+								STATE_NEXT = S_ISSD ? TRAS : T1;
 							end
 						end
 					end
