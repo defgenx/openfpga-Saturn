@@ -410,7 +410,7 @@ module VDP1P (
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
 	bit  [16: 0] GS_WD;
-	VDP1P_MLAB #(.W(17),.AW(3),.FE(0)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
+	VDP1P_MLAB #(.W(17),.AW(3)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
 	wire [ 1: 0] GL_CH = GSEQ - 4'd7;
 	wire         GL_WE = GSEQ >= 4'd7;
 	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
@@ -2473,7 +2473,7 @@ module VDP1P_PAT_FIFO #(parameter l = 1) (
 	assign EMPTY = ~|AMOUNT;
 	assign FULL = AMOUNT[l];
 	
-	VDP1P_MLAB #(.W(16),.AW(l),.FE(0)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(l)) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
 	
 	assign Q = NULL ? '0 : sub_wire0;
 
@@ -2490,7 +2490,7 @@ module VDP1P_COL_TBL (
 
 	wire [15:0] sub_wire0;
 
-	VDP1P_MLAB #(.W(16),.AW(4),.FE(0)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(4)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
 
 	assign Q =  sub_wire0;
 
@@ -2645,7 +2645,7 @@ module VDP1P_EDGE_LANE (
 	wire         WE = ACT && (MODE_INIT || K == 2'd0 || DHIT);
 	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
 	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
-	VDP1P_MLAB #(.W(14),.AW(2),.FE(0)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
+	VDP1P_MLAB #(.W(14),.AW(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
 endmodule
 
 
