@@ -151,8 +151,10 @@ previous request's word before that was sampled.
 | worst landing, request just after the slot (1 + 16 + 3 + 5 + 1) | 26 | 227 |
 | measured in `tb_sdram`, requests every 177 ns, 65% reads | 1-25 | 8-218 |
 
-Margin at the late end is 27 ns; there is none for a second request that arrives while the first is still waiting
-(`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot and are posted. The slot reads its request
+There is no margin at the late end: the full-system simulation consumes deliveries up to 28 clk_ram after the request
+(`ch2 latency` histogram in `trace.log`), and a build that landed the word one clk_ram later (READ + 6) returned every SCSP
+sample fetch one request stale (silence); the capture of section 3 lands at READ + 5, as Saturn_MiSTer's. There is none
+either for a second request that arrives while the first is still waiting (`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot and are posted. The slot reads its request
 registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT and CAS instead of keeping a copy: a request is captured at most
 16 cycles before its ACT and the CAS follows 3 cycles later, and the next request is at least 20 cycles behind it.
 
@@ -213,9 +215,9 @@ Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, one line per TCO
 (slow) and 3.2 ns (fast), so the margins are 2.4 ns at the slow end and 1.2 ns at the fast end. `sim/sndram` (SH-2 through
 SCSP to the model, `NOCHK=1`: the self-check it gates on is compiled out) gives the same range.
 
-The one-clk later landing keeps the VDP2 window (words land from F + 10 to F + 17, the set is sampled at F + 24, the
-previous one at F + 8) and the SCSP delivery is that of the old +5 default (worst case 26 clk_ram after the request, SCSP
-samples at 29 or later); `tb_sdram` shows the same latency range.
+Landing at READ + 5 keeps the VDP2 window (words land from F + 10 to F + 17, the set is sampled at F + 24, the previous
+one at F + 8) and is the SCSP delivery of the old +5 default (worst case 26 clk_ram after the request); one clk_ram later is
+too late for the SCSP (section "SCSP" above), so a capture register may not be added without moving the sample edge.
 
 The command, address, data and enable pin registers are I/O cell registers (`FAST_OUTPUT_REGISTER`,
 `FAST_OUTPUT_ENABLE_REGISTER`, `ap_core.qsf`), and the pin command registers power up as NOP (zero is an MRS).
