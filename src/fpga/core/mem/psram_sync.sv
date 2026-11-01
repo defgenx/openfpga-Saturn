@@ -82,10 +82,12 @@ localparam logic [2:0] ST_INIT = 3'd0, ST_CFG = 3'd1, ST_IDLE = 3'd2,
 
 // ---- pin registers (I/O cell output registers, ap_core.qsf). p_dq and p_oe are written in the same branches (p_dq
 // gets 0 where the bus is released, p_oe 1 with every write word) so they share one clock enable: the I/O cell has a
-// single enable for its output and output-enable registers, and p_oe cannot be packed next to p_dq otherwise.
+// single enable for its output and output-enable registers, and p_oe cannot be packed next to p_dq otherwise. No
+// synchronous clear / load may be inferred for them either (the 0 of a release would become one): same reason.
 reg  [5:0]  p_a = 6'd0;
-reg  [15:0] p_dq = 16'd0;
-reg         p_oe = 1'b0, p_adv_n = 1'b1, p_cre = 1'b0, p_oe_n = 1'b1, p_we_n = 1'b1;
+(* altera_attribute = "-name ALLOW_SYNCH_CTRL_USAGE OFF" *) reg [15:0] p_dq = 16'd0;
+(* altera_attribute = "-name ALLOW_SYNCH_CTRL_USAGE OFF" *) reg p_oe = 1'b0;
+reg         p_adv_n = 1'b1, p_cre = 1'b0, p_oe_n = 1'b1, p_we_n = 1'b1;
 reg  [1:0]  p_ce_n = 2'b11;                           // {die 1, die 0}
 reg  [1:0]  p_bm_n = 2'b11;                           // {ub, lb}
 reg         p_clk = 1'b0;

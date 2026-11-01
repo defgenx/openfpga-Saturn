@@ -218,6 +218,7 @@ initial begin : host
 	wait (dut.status_setup_done === 1'b1);
 	repeat (20) @(posedge clk_74a);
 	$fdisplay(ftrace, "%0t HOST setup done, Reset Enter", $time);
+	repeat (2) @(posedge clk_74a);                         // keeps the host timing of the earlier runs (a settings write stood here)
 	host_cmd(16'h0010, 0, 0);                              // Reset Enter
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin
