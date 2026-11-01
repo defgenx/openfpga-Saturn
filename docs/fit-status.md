@@ -199,3 +199,62 @@ Observation (not changed): `rtc_valid` of `core_bridge_cmd` is a level that stay
 `saturn_pocket` treats it as a pulse (`rtc_dly <= 2'b01` on every clock), so `rtc_tog` never toggles and the SMPC never gets
 the Pocket's time through `rtc_load`. An edge detector on `rtc_valid` would fix it.
 
+
+## Timing round 3 (branch `memfix`, 2026-11-01)
+
+Goal: close the memory clock (counter[1]) and the main clock (counter[0]) without changing cycle behaviour. v0.2.3 (seed 7,
+18,265 ALMs, 1,848 LABs) had counter[4] -5.17, counter[1] -3.21 (TNS -197), counter[0] -1.88, cram0/1 -0.39 / -0.46 at the slow
+corner, and its SDRAM constraints were wrong (below), so the +1.65 of `dram_clk_pin` meant nothing. The release build is still in
+`openfpga-Saturn-worktrees/rel19T-s7`; its paths were listed with `quartus_sta -t` scripts (per group: source, destination,
+clock pair, launch / latch edge, data delay).
+
+What each failing group turned out to be:
+
+| Group (v0.2.3 slack) | Finding | Done |
+|---|---|---|
+| counter[4] -5.17, dram_dq -> cap_q | quarter-phase capture register; the read path is wrong as a whole (below) | register removed |
+| counter[1] -3.21, cap_q -> dout (0.75 clk) | same | removed |
+| psram0 internal -2.06, ddram -> psram0 -1.99 (231 paths) | half-rate machine: the pin and segment registers are written only at F edges from F-edge registers, two clk_ram; ph was merged across both chips and in every pin cone | multicycle 2 / 1 per chip in the SDC (proof in its comment); `req_f` without ph; `dont_merge` on ph |
+| SSH / MSH / SCU -> ddram ramh_tag -0.67 (359 + 82 + 44 paths) | real one-clk_ram paths: the CA bus mux, 15 bit tag compare, hit, victim, tag enable in 8.7 ns, 6 ns of it routing | left to the fitter; -0.29 in the best fit |
+| ddram internal ramh_tag -> ramh_tag -0.56 (65) | tags are written at read-request edges only (odd clk_ram edges, four apart); dirty is not in the set (write edges are even) | multicycle 2 / 1 |
+| counter[0] -1.88, VDP1P PAT_FIFO falling-edge read | `fit-dsp` bf3abe7: rising-edge read one cycle ahead with a bypass | cherry-picked; counter[0] +0.15 |
+| cram0/1 -0.39 / -0.46, p_oe -> cram_dq | the fitter could not pack p_oe into the I/O cell: its clock enable differed from p_dq's (synchronous clear inferred for the release value) | p_dq / p_oe written together, no synchronous control (`ALLOW_SYNCH_CTRL_USAGE OFF`) |
+| vdp1_fb_pocket -0.23, VDP1 -> fb i0r / i1r | display-address pipeline registers on clk_ram fed by VDP1's address cone; a one-clk_ram later display read is probably tolerated (`tb_fb`: pixel within 4 clk_sys of the address change) but not proven, so no exception | left to the fitter |
+
+The SDRAM read path (docs/memory.md section 3) was the real problem of the release, timing report or not: DQ went from the pad
+through a 3:1 mux into the ten landing registers (9.5 to 10.5 ns at the slow corner, 1 ns of spread between bits), and the SDC
+multicycle counted from the READ edge instead of the SDRAM's data launch edge, two clk_ram too lenient, while the simulation model
+launched the data one SDRAM clock late. It is now Saturn_MiSTer's structure (I/O cell input register, READ + 4, used one clk later),
+with the model corrected and the pad delays in the benches.
+
+Fits of the final RTL (`memfix`, `AGGRESSIVE AREA`, one processor; `openfpga-Saturn-worktrees/memfix<round>-s<seed>`):
+
+| Round | RTL | Seeds | ALMs needed | LABs | Result |
+|---|---|---|---|---|---|
+| 1 | I/O cell DDIO pair + quarter register + cap_sel | 7 2 8 9 10 11 | 18,318 to 18,346 | 1,852 to 1,857 | no fit |
+| 2 | one I/O cell register, fixed READ + 4 | 7 2 8 9 10 11 14 | 18,282 (14) to 18,345 | 1,848 (14), 1,852 to 1,857 | **seed 14 fits** |
+| 2 | same | 16 1 3 4 5 13 | 18,316 to 18,355 | 1,852 to 1,857 | no fit |
+| 3 | + psram pin registers without synchronous control (`4da6f29`, map estimate 18,089) | 14 2, then 7 8, 9 10, 16 11 | pending (two fitter containers at a time) | | fill in |
+
+Slow 1100mV 85C slack of the round 2 seed 14 build (`memfix2-s14`, RTL `aaf7818`), setup / hold in ns:
+
+| Clock | v0.2.3 seed 7 | round 2 seed 14 | Remaining paths |
+|---|---|---|---|
+| counter[0] clk_sys | -1.879 / 0.264 | **+0.148** / 0.270 | |
+| counter[1] clk_ram | -3.208 / 0.139 | -0.792 / 0.168 | VDP1 HTIM_PIPE -> fb i1r (44, -0.79), VDP2 HTIM -> fb i1r (3), fb rptr0 -> rptr1 (56, -0.33), MSH / SSH BUS_RLS -> ddram ramh_tag (135, -0.29) |
+| counter[4] clk_ram_cap | -5.166 / - | unused | register removed |
+| cram0_clk_pin / cram1_clk_pin | -0.388 / -0.460 | -0.462 / -0.457 (hold +1.66) | p_oe still in the fabric in this round (round 3 adds the attribute) |
+| dram_clk_pin | +1.652 (wrong multicycle) | +1.644 / +3.077 with the corrected constraint | I/O cell `cap_p[15:0]`: all 16 packed ("Fast Input Register assignment") |
+| sram_ref | +1.787 | +1.772 / +3.028 | |
+| clk_74a, bridge_spiclk, counter[2] | positive | +3.47, +8.62, +12.31 | |
+
+18,282 ALMs, 1,848 / 1,848 LABs; hold >= 0 on every clock; recovery / removal positive. Round 3 is fitted two seeds at a
+time (`memfix3-s<seed>/fit.log`, `output_files/ap_core.sta.summary`); when one fits, replace this table with its numbers and
+check that `psram0|p_oe` and `psram1|p_oe` appear as "Fast Output Enable Register assignment" in `ap_core.fit.rpt` (round 2
+still had "Can't pack ... clock enable signal violation" for them).
+
+Full-system simulation (`sim/sys`, Hyper Duel, 120 M clk_sys, `+SCUPROBE`, the worktree's bench and corrected model): `i2s.raw`,
+`scsp.raw`, `pocket.raw` and `trace.log` identical to `build_fit/run4`, `audio:` line identical (196,918 SCSP samples, 113,765
+non-zero, 8 key-on events). A first run from the main checkout's old bench (capture +4.5 written at boot, old model) with the
+round 1 RTL landed the words one clk_ram later than the release and returned every SCSP sample fetch one request stale: the SCSP
+has no clk_ram to spare past READ + 5 (docs/memory.md).
