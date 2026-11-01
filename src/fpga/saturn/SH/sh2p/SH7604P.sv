@@ -362,60 +362,36 @@ module SH7604P
 	);
 	
 	
-	//Clock divider
+	//Clock divider: CLKn_CE is high for one CE_R period after the low log2(n) bits of the counter wrap to zero
+	bit [12:0] DIV_CNT;
+	bit        DIV_RUN;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [12:0] DIV_CNT;
-		
 		if (!RST_N) begin
-			CLK2_CE <= 0;
-			CLK4_CE <= 0;
-			CLK8_CE <= 0;
-			CLK16_CE <= 0;
-			CLK32_CE <= 0;
-			CLK64_CE <= 0;
-			CLK128_CE <= 0;
-			CLK256_CE <= 0;
-			CLK512_CE <= 0;
-			CLK1024_CE <= 0;
-			CLK2048_CE <= 0;
-			CLK4096_CE <= 0;
-			CLK8192_CE <= 0;
 			DIV_CNT <= '0;
+			DIV_RUN <= 0;
 		end
 		else if (!RES_SYNC_N) begin
-			CLK2_CE <= 0;
-			CLK4_CE <= 0;
-			CLK8_CE <= 0;
-			CLK16_CE <= 0;
-			CLK32_CE <= 0;
-			CLK64_CE <= 0;
-			CLK128_CE <= 0;
-			CLK256_CE <= 0;
-			CLK512_CE <= 0;
-			CLK1024_CE <= 0;
-			CLK2048_CE <= 0;
-			CLK4096_CE <= 0;
-			CLK8192_CE <= 0;
 			DIV_CNT <= '0;
+			DIV_RUN <= 0;
 		end
-		else if (CE_R) begin	
+		else if (CE_R) begin
 			DIV_CNT <= DIV_CNT + 13'd1;
-			
-			CLK2_CE    <= (DIV_CNT ==? 13'b????????????1);
-			CLK4_CE    <= (DIV_CNT ==? 13'b???????????11);
-			CLK8_CE    <= (DIV_CNT ==? 13'b??????????111);
-			CLK16_CE   <= (DIV_CNT ==? 13'b?????????1111);
-			CLK32_CE   <= (DIV_CNT ==? 13'b????????11111);
-			CLK64_CE   <= (DIV_CNT ==? 13'b???????111111);
-			CLK128_CE  <= (DIV_CNT ==? 13'b??????1111111);
-			CLK256_CE  <= (DIV_CNT ==? 13'b?????11111111);
-			CLK512_CE  <= (DIV_CNT ==? 13'b????111111111);
-			CLK1024_CE <= (DIV_CNT ==? 13'b???1111111111);
-			CLK2048_CE <= (DIV_CNT ==? 13'b??11111111111);
-			CLK4096_CE <= (DIV_CNT ==? 13'b?111111111111);
-			CLK8192_CE <= (DIV_CNT ==? 13'b1111111111111);
+			DIV_RUN <= 1;
 		end
 	end
+	assign CLK2_CE    = DIV_RUN && DIV_CNT[0]    == 1'b0;
+	assign CLK4_CE    = DIV_RUN && DIV_CNT[1:0]  == '0;
+	assign CLK8_CE    = DIV_RUN && DIV_CNT[2:0]  == '0;
+	assign CLK16_CE   = DIV_RUN && DIV_CNT[3:0]  == '0;
+	assign CLK32_CE   = DIV_RUN && DIV_CNT[4:0]  == '0;
+	assign CLK64_CE   = DIV_RUN && DIV_CNT[5:0]  == '0;
+	assign CLK128_CE  = DIV_RUN && DIV_CNT[6:0]  == '0;
+	assign CLK256_CE  = DIV_RUN && DIV_CNT[7:0]  == '0;
+	assign CLK512_CE  = DIV_RUN && DIV_CNT[8:0]  == '0;
+	assign CLK1024_CE = DIV_RUN && DIV_CNT[9:0]  == '0;
+	assign CLK2048_CE = DIV_RUN && DIV_CNT[10:0] == '0;
+	assign CLK4096_CE = DIV_RUN && DIV_CNT[11:0] == '0;
+	assign CLK8192_CE = DIV_RUN && DIV_CNT       == '0;
 	
 	bit  [31:0] DBUS_A;
 	bit  [31:0] DBUS_DO;
