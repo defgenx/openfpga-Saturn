@@ -292,11 +292,19 @@ wire [3:0]     ramh_hit   = ramh_match & ~{ramh_dirty[3], ramh_dirty[2], ramh_di
 wire [1:0]     ramh_victim = {ramh_plru[0], ramh_plru[0] ? ramh_plru[2] : ramh_plru[1]};
 wire [1:0]     ramh_hway  = ramh_hit[0] ? 2'd0 : ramh_hit[1] ? 2'd1 : ramh_hit[2] ? 2'd2 : 2'd3;
 wire [1:0]     ramh_way   = |ramh_hit ? ramh_hway : ramh_victim;
+// A missed line's tag is written at the edge after the request edge (ramh_alloc, one-hot) from ramh_addr, which the
+// master holds under WAIT until the fill is done; the fill address is ramh_addr for the same reason. The request edge
+// follows a clk_sys edge, so both take the address two clk_ram after it was launched (core_constraints.sdc). A write
+// edge at the tag-write edge treats the pending line as matching, as it would with the tag already written.
+reg  [3:0]     ramh_alloc = 4'd0;
+wire [3:0]     ramh_wmatch = ramh_match | ramh_alloc;
 integer        wi;
 
 // ================================================================ chip A: ramh raml cart bsram loader
 always @(posedge clk) begin
 	{raml_rcache_busy,cart_rcache_busy,bsram_rcache_busy} <= '0;
+	ramh_alloc <= '0;
+	for (wi = 0; wi < 4; wi = wi + 1) if (ramh_alloc[wi]) ramh_tag[wi] <= ramh_addr[19:5];
 	if (rst_pulse) begin
 		for (wi = 0; wi < 4; wi = wi + 1) ramh_dirty[wi] <= 1'b1;
 		{raml_rcache_dirty,cart_rcache_dirty,bsram_rcache_dirty} <= '1;
@@ -310,7 +318,7 @@ always @(posedge clk) begin
 			ramh_plru[0] <= !ramh_way[1];
 			if (ramh_way[1]) ramh_plru[2] <= !ramh_way[0]; else ramh_plru[1] <= !ramh_way[0];
 			if (!(|ramh_hit)) begin
-				ramh_tag[ramh_victim] <= ramh_addr[19:5];
+				ramh_alloc[ramh_victim] <= 1'b1;
 				ramh_dirty[ramh_victim] <= 0;
 				ramh_read_busy <= 1;
 			end
@@ -346,7 +354,7 @@ always @(posedge clk) begin
 	end
 	else begin
 		if (|ramh_wr && !ramh_wr_old) begin
-			for (wi = 0; wi < 4; wi = wi + 1) if (ramh_match[wi]) ramh_dirty[wi] <= 1;
+			for (wi = 0; wi < 4; wi = wi + 1) if (ramh_wmatch[wi]) ramh_dirty[wi] <= 1;
 		end
 		if (|raml_wr && !raml_wr_old) begin
 			if (raml_addr[21:5] == raml_rcache_addr[21:5]) begin
@@ -402,7 +410,7 @@ always @(posedge clk) begin
 					a_state <= 2'd1;
 				end
 				else if (ramh_read_busy) begin
-					a_addr  <= {4'b0011, ramh_tag[ramh_curr], 4'b0000};
+					a_addr  <= {4'b0011, ramh_addr[19:5], 4'b0000};
 					a_read  <= 1;
 					a_chan  <= 3'd0;
 					a_state <= 2'd2;

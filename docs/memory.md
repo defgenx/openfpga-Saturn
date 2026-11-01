@@ -298,7 +298,11 @@ WRAM-H line fill seen by the CPU (`ramh_busy`), `tb_ddram`:
 | PSRAM0 otherwise idle | 198 | 47-48 cycles = 410-419 ns |
 | WRAM-H/WRAM-L/cart/backup mix on PSRAM0 plus VDP1 VRAM, CD RAM/buffer and the loader running | 148 | 48-120 cycles = 419-1047 ns, mean 593 ns |
 
-Hits answer in 4 clk_ram. The loaded maximum is a fill queued behind a posted write drain and a long burst on the same
+Hits answer in 4 clk_ram. The hit test runs at the clk_ram edge after the request's clk_sys edge; a missed line's tag is
+written one edge later and the fill address is taken from `ramh_addr` as well, which the master holds under WAIT until
+the fill is done, so both are two-clk_ram paths from the SH-2 address registers (`core_constraints.sdc`) and the 15 bit
+compare, the way choice and the busy flag are the only one-clk_ram paths left on that crossing. The loaded maximum is a
+fill queued behind a posted write drain and a long burst on the same
 chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait on `ramh_busy`) is required; at
 28.6 MHz a fill is 12 bus cycles idle.
 
