@@ -80,7 +80,9 @@ localparam logic [15:0] RCR_ALL   = 16'h0010;         // power-on value: full ar
 localparam logic [2:0] ST_INIT = 3'd0, ST_CFG = 3'd1, ST_IDLE = 3'd2,
                        ST_LAT  = 3'd3, ST_DATA = 3'd4, ST_SCFG = 3'd7;
 
-// ---- pin registers
+// ---- pin registers (I/O cell output registers, ap_core.qsf). p_dq and p_oe are written in the same branches (p_dq
+// gets 0 where the bus is released, p_oe 1 with every write word) so they share one clock enable: the I/O cell has a
+// single enable for its output and output-enable registers, and p_oe cannot be packed next to p_dq otherwise.
 reg  [5:0]  p_a = 6'd0;
 reg  [15:0] p_dq = 16'd0;
 reg         p_oe = 1'b0, p_adv_n = 1'b1, p_cre = 1'b0, p_oe_n = 1'b1, p_we_n = 1'b1;
@@ -126,7 +128,7 @@ wire [15:0] cfg_val = cop[0] ? BCR_SYNC : RCR_ALL;
 task automatic pins_idle;
 	begin
 		p_ce_n <= 2'b11; p_adv_n <= 1'b1; p_we_n <= 1'b1; p_oe_n <= 1'b1;
-		p_oe <= 1'b0; p_bm_n <= 2'b11;
+		p_oe <= 1'b0; p_dq <= 16'd0; p_bm_n <= 2'b11;
 	end
 endtask
 
@@ -209,7 +211,7 @@ always @(posedge clk) begin
 			4'd2: begin p_adv_n <= 1'b1; p_we_n <= 1'b0; end
 			4'd6: p_we_n <= 1'b1;
 			4'd7: p_ce_n <= 2'b11;
-			4'd8: begin p_cre <= 1'b0; p_oe <= 1'b0; cfg_next(); end
+			4'd8: begin p_cre <= 1'b0; p_oe <= 1'b0; p_dq <= 16'd0; cfg_next(); end
 			default: ;
 			endcase
 		end
@@ -227,7 +229,7 @@ always @(posedge clk) begin
 			end
 			4'd2: begin p_adv_n <= 1'b1; p_we_n <= 1'b1; end
 			4'd10: p_ce_n <= 2'b11;
-			4'd11: begin p_cre <= 1'b0; p_oe <= 1'b0; cfg_next(); end
+			4'd11: begin p_cre <= 1'b0; p_oe <= 1'b0; p_dq <= 16'd0; cfg_next(); end
 			default: ;
 			endcase
 		end
@@ -240,7 +242,7 @@ always @(posedge clk) begin
 
 		ST_LAT: begin
 			p_adv_n <= 1'b1; p_we_n <= 1'b1;
-			if (!cur_we) begin p_oe <= 1'b0; if (tmr >= 4'(OE_SLOT)) p_oe_n <= 1'b0; end
+			if (!cur_we) begin p_oe <= 1'b0; p_dq <= 16'd0; if (tmr >= 4'(OE_SLOT)) p_oe_n <= 1'b0; end
 			tmr <= tmr + 4'd1;
 			if (tmr == 4'((cur_we ? WR_FIRST : RD_FIRST) - 1)) st <= ST_DATA;
 		end
@@ -259,7 +261,7 @@ always @(posedge clk) begin
 				if (w_rem == 2'd0) begin
 					pins_idle(); act_busy <= 1'b0; st <= ST_IDLE;
 				end else begin
-					p_dq <= w_cur ? din[15:0] : din[31:16];
+					p_dq <= w_cur ? din[15:0] : din[31:16]; p_oe <= 1'b1;
 					p_bm_n <= ~(w_cur ? be[1:0] : be[3:2]);
 					w_cur <= 1'b1; w_rem <= w_rem - 2'd1;
 				end
