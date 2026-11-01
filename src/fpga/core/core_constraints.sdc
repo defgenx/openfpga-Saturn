@@ -101,6 +101,17 @@ foreach n {0 1} {
 	set_multicycle_path -hold  -from $rq -to $pf 1
 }
 
+# ddram_pocket WRAM-H line tags: written only at a read-request edge (ramh_rd && !ramh_rd_old). ramh_rd is a clk_sys
+# signal, so those edges are the clk_ram edges that follow a clk_sys edge, and two of them are at least four clk_ram
+# apart (ramh_rd has to fall and rise again). The tags reach ramh_tag, ramh_plru, ramh_curr and ramh_read_busy only
+# through the hit test of that same edge, so a tag written at one request edge has two clk_ram periods before it can
+# be used. ramh_dirty is not in the set: a write (ramh_wr, registered on clk_ram in saturn_pocket) can invalidate a
+# line at the edge after its allocation.
+set ramh_tag [get_registers "*|ddram|ramh_tag*"]
+set ramh_rd_dst [get_registers "*|ddram|ramh_tag* *|ddram|ramh_plru* *|ddram|ramh_curr* *|ddram|ramh_read_busy*"]
+set_multicycle_path -setup -from $ramh_tag -to $ramh_rd_dst 2
+set_multicycle_path -hold  -from $ramh_tag -to $ramh_rd_dst 1
+
 # ---------------------------------------------------------------------------------- SRAM (asynchronous)
 # No clock at the chip. Outputs are registered on clk_ram; read data returns within tAA plus board (12 ns here) and
 # is sampled RD_CYC - 1 = 3 clk_ram cycles after the address (sram_pocket.sv).
