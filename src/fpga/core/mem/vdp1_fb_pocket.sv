@@ -175,12 +175,24 @@ reg  [2:0] es = 3'd0;
 reg        e_b, trk;
 wire       need0 = sr_ready && (!have0 || i0r != last0);
 wire       need1 = sr_ready && t1r && (!have1 || i1r != last1);
-wire [8:0] occ0e = wptr0_d - rptr0, occ1e = wptr1_d - rptr1;   // the engine's own view (wptr is a clk_sys register)
-wire       pick1 = ne1 && (!ne0 || occ1e > occ0e);
+// The fuller FIFO is drained first. The engine's occupancy difference (wptr1_d - rptr1) - (wptr0_d - rptr0) is a running
+// register, dlt, instead of two subtractions and a compare in front of the pointer update: wptr*_d follows wptr* by at
+// most one (one write per clk_sys, seen by its low bit), a pop moves a pointer by one. Under rst the pointers are 0 and
+// wptr*_d take wptr*. rst must be high for two clk_sys or more (ram_reset: 256): a single one clears wptr* at the last
+// reset edge, after which the engine pops entries that were never written in either form of the logic.
+reg  [9:0] dlt = 10'd0;                      // two's complement, |dlt| <= 255
+wire       gt    = !dlt[9] && (|dlt[8:0]);  // occ1e > occ0e
+wire       pick1 = ne1 && (!ne0 || gt);
 wire [34:0] wq = pick1 ? wf1_q : wf0_q;
+wire       psh0 = wptr0[0] != wptr0_d[0], psh1 = wptr1[0] != wptr1_d[0];
+wire       go   = !rst && es == 3'd0 && (ne0 || ne1) && sr_ready;   // the pop below
+wire       pop0 = go && !pick1, pop1 = go && pick1;
+wire [1:0] dlt_up = {1'b0, psh1} + {1'b0, pop0}, dlt_dn = {1'b0, psh0} + {1'b0, pop1};
+wire [2:0] dlt_stp = {1'b0, dlt_up} - {1'b0, dlt_dn};
 
 always @(posedge clk_ram) begin
 	sr_req <= 1'b0;
+	dlt <= rst ? {1'b0, wptr1} - {1'b0, wptr0} : dlt + {{7{dlt_stp[2]}}, dlt_stp};
 	if (rst) begin rptr0 <= 9'd0; rptr1 <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; end
 	else case (es)
 	3'd0: begin

@@ -72,9 +72,11 @@ memory that sustains VBlank erase; the M10K part is the only on-chip place for t
 this memory plan: both buffers need 180,224 words and the SRAM has 131,072 (the CD ring lives in PSRAM1, section 5).
 
 The SRAM tail makes two SRAM streams possible at once (FB0 draw with FB1 tail erase, and the reverse). They have one FIFO
-each (256 entries, one M10K each, FB0 and FB1 can write in the same clk_sys); the engine drains the fuller one first and
-FB_RDY goes low while either holds 192 entries or more, so a draw is held back and the erase (which cannot stall) keeps
-room. A draw read of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read
+each (256 entries, one M10K each, FB0 and FB1 can write in the same clk_sys); the engine drains the fuller one first (the
+occupancy difference is a running register, `dlt`, moved by the push and the pop of each edge: the two subtractions and
+the compare it replaces in front of the pointer update were the longest clk_ram path inside the module; it needs `rst`
+high for two clk_sys or more, which `ram_reset` gives) and FB_RDY goes low while either holds 192 entries or more, so a
+draw is held back and the erase (which cannot stall) keeps room. A draw read of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read
 tracks `FB1_A` in the tail like `FB0_A`. The cost is the second tracker and FIFO in `vdp1_fb_pocket` (+50 ALMs).
 
 Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
