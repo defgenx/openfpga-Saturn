@@ -1393,6 +1393,7 @@ module VDP1P (
 	bit  [ 8: 0] ERASE_Y;
 	bit          ERASE_HIT;
 	bit  [15: 0] HTIM_PIPE;
+	bit          HTIM_PIPE_ANY;   // |HTIM_PIPE, kept as a register with it (the erase-address select feeds the clk_ram framebuffer engine)
 	always @(posedge CLK or negedge RST_N) begin
 		bit          HTIM_N_OLD;
 		bit          VTIM_N_OLD;
@@ -1409,6 +1410,7 @@ module VDP1P (
 			
 			if (DCE_R) begin
 				HTIM_PIPE <= {HTIM_PIPE[14:0],HTIM_N};
+				HTIM_PIPE_ANY <= |HTIM_PIPE[14:0] | HTIM_N;
 			end
 			
 			if (DCE_R) begin
@@ -1472,7 +1474,7 @@ module VDP1P (
 				end
 			end
 			
-			if ((HTIM_N || |HTIM_PIPE) && VBLANK_ERASE && CE_R) begin
+			if ((HTIM_N || HTIM_PIPE_ANY) && VBLANK_ERASE && CE_R) begin
 				OUT_X <= OUT_X + 9'd1;
 				if ({1'b0,OUT_X} + 10'd1 == (!EWRR.X3[9] ? {EWRR.X3,3'b000} : 10'h200)) begin
 					OUT_X <= {EWLR.X1,3'b000};
@@ -1493,7 +1495,7 @@ module VDP1P (
 	end
 	
 	assign FRAME_ERASE_EN = ERASE_HIT && FRAME_ERASE && VTIM_N;
-	assign VBLANK_ERASE_EN = ERASE_HIT && VBLANK_ERASE && (HTIM_N || |HTIM_PIPE);
+	assign VBLANK_ERASE_EN = ERASE_HIT && VBLANK_ERASE && (HTIM_N || HTIM_PIPE_ANY);
 	
 	assign FB_ERASE_A = {OUT_Y[7:0],OUT_X[8:0]};
 	assign FB_DISP_A = TVMR.TVM[1:0] == 2'b10 ? {OUT_RY.INT[7:0],OUT_RX.INT[8:0]} : 
