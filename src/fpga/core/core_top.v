@@ -542,7 +542,7 @@ wire [31:0] bk_rd_data = 32'h0;
 //   0x0C SDRAM read capture (sdram_pocket cap_sel), applies at the next Reset
 reg [1:0] cfg_region   = 2'd0;
 reg [2:0] cfg_cart     = 3'd0;
-reg [2:0] cfg_sdcap    = 3'd1;
+reg [2:0] cfg_sdcap    = 3'd0;
 reg [3:0] reset_stretch = 4'd0;
 
 always @(posedge clk_74a) begin

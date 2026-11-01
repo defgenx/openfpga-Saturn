@@ -9,8 +9,9 @@ all: elab sdram psram ddram fb load boot
 build:
 	mkdir -p build
 
-build/tb_sdram: tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv | build
-	$(IVL) $(FLAGS) -o $@ tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv
+SDSRC := $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv $(SRC)/sdram_dq_in.sv
+build/tb_sdram: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
+	$(IVL) $(FLAGS) -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
 
 build/tb_psram: tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv | build
 	$(IVL) $(FLAGS) -o $@ tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv
@@ -58,7 +59,7 @@ clean:
 
 # the whole subsystem elaborates (no stimulus)
 elab:
-	$(IVL) $(FLAGS) -o /dev/null $(SRC)/mem_pocket.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv $(SRC)/psram_sync.sv \
+	$(IVL) $(FLAGS) -o /dev/null $(SRC)/mem_pocket.sv $(SDSRC) $(SRC)/psram_sync.sv \
 	  $(SRC)/ddram_pocket.sv $(SRC)/load_pocket.sv $(SRC)/ram_reset.sv $(SRC)/sram_pocket.sv $(SRC)/vdp1_fb_pocket.sv 2>&1 | grep -v sorry; test $${PIPESTATUS[0]} -eq 0
 
 # 64 ms of VDP2/SCSP traffic against the 64 ms retention limit (about 10 minutes)
@@ -73,8 +74,8 @@ negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 .PHONY: all elab long negative sdram psram ddram fb load boot clean
 
 # data-eye sweep: extra delay on the SDRAM clock path (ps), rising-edge capture and falling-edge capture
-build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv | build
-	$(IVL) $(FLAGS) -DCAPNEG -o $@ tb_sdram.sv models/sdram_model.sv $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv
+build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
+	$(IVL) $(FLAGS) -DCAPNEG -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
 
 skew: build/tb_sdram build/tb_sdram_neg
 	@for sk in -4000 -3000 -2000 -1500 -1000 -500 0 500 1000 2000 3000 3500 4000; do \

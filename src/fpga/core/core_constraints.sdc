@@ -60,10 +60,16 @@ set_output_delay -clock dram_clk_pin -max 1.5  -add_delay $sdram_out
 set_output_delay -clock dram_clk_pin -min -1.0 -add_delay $sdram_out
 set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
 set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
-# read data is captured at READ+5 / READ+6 clk_ram edges (sdram_pocket cap_sel = 1, the default), not at the next edge;
-# the other cap_sel values are runtime experiments (docs/memory.md section 3) and are not constrained
-set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 5
-set_multicycle_path -hold  -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 4
+# Read data (CL3): the SDRAM launches word 0 at its 2nd clock edge after the READ edge and word 1 at the 3rd. The
+# default capture (cap_sel 0, sdram_pocket) samples word 0 in the I/O cell register at READ + 4 clk_ram edges, which
+# is 1.5 clk_ram after the launch edge: the 2nd clk_ram edge after it. The hold check stays at the default edge (the
+# 1st after the launch): word 1, launched one SDRAM clock later, must not reach the register before that capture.
+# The quarter-phase register (cap_sel 3, clk_ram_cap at READ + 4.25) is the 2nd clk_ram_cap edge after the launch.
+# cap_sel 4..6 (falling-edge register, READ + 3.5 / 4.5 / 5.5) are runtime experiments: +4.5 is outside the
+# datasheet window at the slow corner (docs/memory.md section 3), so the falling-edge capture is not timed.
+set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 2
+set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ramc] 2
+set_false_path -from [get_clocks dram_clk_pin] -fall_to [get_clocks $clk_ram]
 
 # ---------------------------------------------------------------------------------- PSRAM
 # The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,

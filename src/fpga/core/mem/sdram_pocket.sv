@@ -23,10 +23,11 @@
 // restores that row. VDP2 stops fetching for several dots per line (REFRESH/NOACCESS windows).
 //
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
-// cycle after it is registered. With CL3 the first word reaches the FPGA register about 4.7 to 5.7
-// cycles after the command register edge (half cycle + clock-out delay + 3 cycles + tAC + input
-// delay). The capture edge and offset (cap_sel) is a runtime setting latched at init, from the
-// Core Settings menu; see docs/memory.md section 3.
+// cycle after it is registered and, with CL3, launches word 0 two of its clocks later (2.5 clk after
+// the command edge) and word 1 one clock after that. DQ is captured in I/O cell registers (sdram_dq_in,
+// rising or falling edge) or a clk_cap register (quarter phase); the capture edge (cap_sel) is a
+// runtime setting latched at init, from the Core Settings menu, default READ + 4 (docs/memory.md
+// section 3). A capture register lands one clk after its sample edge.
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -42,7 +43,7 @@ module sdram_pocket #(
 	input  wire        clk_cap,         // clk + 90 degrees (quarter-cycle read capture, cap_sel 3 / 7)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
-	input  wire  [2:0] cap_sel,         // read capture, latched while init is high: 0..2 +4..+6 rising, 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
+	input  wire  [2:0] cap_sel,         // read capture sample edge, latched while init is high: 0..2 +4..+6 rising (0 default), 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -97,17 +98,22 @@ localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
 assign dram_cke = 1'b1;
 
 // capture setting takes effect at the next init (core Reset)
-reg [2:0] cs = 3'd1;
+reg [2:0] cs = 3'd0;
 always @(posedge clk) if (init) cs <= cap_sel;
 
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-reg [15:0] cap_n, cap_q;
-always @(negedge clk) cap_n <= dram_dq_i;
-always @(posedge clk_cap) cap_q <= dram_dq_i;   // sampled 0.75 clk before the landing edge
-wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_q : cs[2] ? cap_n : dram_dq_i;
-// landing stage index: cap_sel 3 lands like 1 (+5, sample +4.25), 7 like 0 (+4, sample +3.25)
+// Rising- and falling-edge samples are I/O cell registers (every bit the same pad-to-register delay); the
+// quarter-phase sample (cap_sel 3 / 7) is a fabric register on clk_cap handed to clk by cap_h. Each capture
+// register lands one clk after its sample edge: landing edge = ceil(sample edge) + 1.
+wire [15:0] cap_p, cap_nq;                       // after edge k: DQ at k / DQ at k - 0.5
+sdram_dq_in u_in (.clk(clk), .dq(dram_dq_i), .q_h(cap_p), .q_l(cap_nq));
+reg [15:0] cap_q, cap_h;
+always @(posedge clk_cap) cap_q <= dram_dq_i;   // at k + 0.25
+always @(posedge clk) cap_h <= cap_q;            // at k + 1 (0.75 clk path)
+wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_h : cs[2] ? cap_nq : cap_p;
+// landing stage index: cap_sel 3 lands like 1 (sample +4.25, landing +6), 7 like 0 (+3.25, +5)
 wire [1:0] cs_st = cs == 3'd3 ? 2'd1 : cs == 3'd7 ? 2'd0 : cs[1:0];
 
 // ------------------------------------------------------------------ frame counter
@@ -229,9 +235,9 @@ reg        dl_ld[0:1];
 reg        dl_wi;            // next entry to allocate
 
 // ------------------------------------------------------------------ read tag pipeline
-reg        t_v [0:6];
-reg  [2:0] t_k [0:6];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
-reg        t_i [0:6];        // SCSP delivery entry
+reg        t_v [0:7];
+reg  [2:0] t_k [0:7];        // 0 A0, 1 B0, 2 A1, 3 B1, 4 SCSP, 7 dummy
+reg        t_i [0:7];        // SCSP delivery entry
 
 reg  [2:0] c_cmd;
 reg [12:0] c_a;
@@ -250,15 +256,15 @@ reg        q_oe, q_tv, q_ti;
 reg  [2:0] q_tk;
 
 integer k;
-// tag stage of word 0 (cs[1:0] + 3, at most 5) and of word 1 (+ 1), written as 4:1 selects
+// tag stage of word 0 (cs_st + 4, at most 6) and of word 1 (+ 1), written as 4:1 selects
 reg        w0_v, w1_v, w0_i;
 reg  [2:0] w0_k, w1_k;
 always @* begin
 	case (cs_st)
-	2'd0: begin w0_v = t_v[3]; w0_k = t_k[3]; w0_i = t_i[3]; w1_v = t_v[4]; w1_k = t_k[4]; end
-	2'd1: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
-	2'd2: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
-	default: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end   // unused (cs_st is 0..2)
+	2'd0: begin w0_v = t_v[4]; w0_k = t_k[4]; w0_i = t_i[4]; w1_v = t_v[5]; w1_k = t_k[5]; end
+	2'd1: begin w0_v = t_v[5]; w0_k = t_k[5]; w0_i = t_i[5]; w1_v = t_v[6]; w1_k = t_k[6]; end
+	2'd2: begin w0_v = t_v[6]; w0_k = t_k[6]; w0_i = t_i[6]; w1_v = t_v[7]; w1_k = t_k[7]; end
+	default: begin w0_v = t_v[6]; w0_k = t_k[6]; w0_i = t_i[6]; w1_v = t_v[7]; w1_k = t_k[7]; end   // unused (cs_st is 0..2)
 	endcase
 end
 reg [7:0] scr_q [0:3];
@@ -425,11 +431,11 @@ always @(posedge clk) begin
 	// ---- tag pipeline
 	q_cmd <= c_cmd; q_a <= c_a; q_ba <= c_ba; q_dqm <= c_dqm; q_dq <= c_dq; q_oe <= c_oe; q_tv <= c_tv; q_tk <= c_tk; q_ti <= c_ti;
 	t_v[0] <= q_tv; t_k[0] <= q_tk; t_i[0] <= q_ti;
-	for (k = 1; k <= 6; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
+	for (k = 1; k <= 7; k = k + 1) begin t_v[k] <= t_v[k-1]; t_k[k] <= t_k[k-1]; t_i[k] <= t_i[k-1]; end
 
 	// ---- read data landing
-	// word 0 lands at tag stage cs[1:0] + 3, word 1 one cycle later (default stages 4 and 5); the VDP2 sets land
-	// after the previous set was sampled (F + 8) for every stage
+	// word 0 lands at tag stage cs_st + 4 (= READ + cs_st + 5), word 1 one cycle later; the VDP2 sets land after
+	// the previous set was sampled (F + 8) and before F + 24 for every stage
 	if (w0_v) begin
 		case (w0_k)
 			3'd0: dout_a0[31:16] <= dq_cap;
@@ -470,7 +476,7 @@ always @(posedge clk) begin
 		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;
-		for (k = 0; k <= 6; k = k + 1) t_v[k] <= 1'b0;
+		for (k = 0; k <= 7; k = k + 1) t_v[k] <= 1'b0;
 	end
 end
 

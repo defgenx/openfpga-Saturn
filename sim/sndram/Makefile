@@ -17,7 +17,7 @@ SCSPF := $(SRC)/Saturn/SCSP/SCSP_pkg.sv $(SRC)/Saturn/SCSP/SCSP.sv
 else
 SCSPF := $(SRC)/Saturn/SCSPP/SCSPP_pkg.sv $(SRC)/Saturn/SCSPP/SCSPP.sv
 endif
-FILES := ../scsp/altsyncram.v $(ROOT)/src/fpga/core/ce_gen.sv $(SRC)/Saturn/DCC.sv $(foreach f,$(SHF),$(SH)/$(f).sv) $(SCUF) $(SCSPF) $(MEM)/sdram_pocket.sv $(MEM)/sdram_clk_out.sv ../mem/models/sdram_model.sv tb_sndram.sv
+FILES := ../scsp/altsyncram.v $(ROOT)/src/fpga/core/ce_gen.sv $(SRC)/Saturn/DCC.sv $(foreach f,$(SHF),$(SH)/$(f).sv) $(SCUF) $(SCSPF) $(MEM)/sdram_pocket.sv $(MEM)/sdram_clk_out.sv $(MEM)/sdram_dq_in.sv ../mem/models/sdram_model.sv tb_sndram.sv
 DEFS := $(if $(NOCHK),,-DPOCKET_DEBUG_OVERLAY) $(if $(NOCHK),-DNOCHK_DEF) -DPOCKET_SH2P -DPOCKET_CUT_SCU_DSP -DPOCKET_CUT_SCSP_DSP $(if $(USE_SCU),,-DPOCKET_SCUP2) $(if $(USE_SCSP),,-DPOCKET_SCSPP) $(if $(USE_SCU),-DUSE_SCU) $(if $(USE_SCSP),-DUSE_SCSP) $(EXTRA)
 .PHONY: run clean
 run:

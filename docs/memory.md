@@ -171,46 +171,70 @@ least 9 times per 63.5 us line, against 64 rows per bank to cover in 64 ms. Resu
 
 ### Clock out and data capture
 
-The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the C64 and SNES cores do. The first word of a
-read reaches the FPGA register 4.7 to 5.7 cycles after the command register edge (half cycle + clock-out delay + 3 cycles
-CL3 + tAC + input delay), so the default samples DQ on rising edges at READ + 5 (word 0) and + 6 (word 1).
+The SDRAM clock is the inverted clk through a DDIO (`sdram_clk_out.sv`), as the C64 and SNES cores do, so the SDRAM
+samples a command half a clk_ram after the command register edge (READ + 0.5 plus the clock-out delay). With CL3 it
+launches word 0 at its second clock edge after that (READ + 2.5 plus the clock-out delay) and word 1 at the third; a word
+is valid at the pad from tAC (5.5 ns max) after its launch edge to tOH (2.5 ns min) after the next one: 5.7 ns per word.
+
+DQ is captured in the I/O cells (`sdram_dq_in.sv`, `altddio_in`): `cap_p` is the sample on the rising clk_ram edge and
+`cap_nq` the sample on the falling edge, both presented after the rising edge, so every bit has the same pad-to-register
+delay. The quarter-phase sample is a fabric register on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) handed to clk_ram
+by `cap_h`. Each capture register puts the landing one clk_ram after the sample edge: landing edge = ceil(sample) + 1,
+word 0 at tag stage `cs_st` + 4.
 
 **Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
-while `init` is high, so they apply at the next menu Reset without reloading the core):
+while `init` is high, so it applies at the next menu Reset without reloading the core):
 
-| Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + |
-|---|---|---|---|
-| SDRAM read capture | +4 / +5 / +6 (rising edge) | 0 / 1 / 2 | 4,5 / 5,6 / 6,7 |
-| | +3.5 / +4.5 / +5.5 (falling edge) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 |
-| | +4.25 (default) / +3.25 (quarter) | **3** / 7 | 4.25,5.25 / 3.25,4.25 |
+| Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + | Word 0 lands at READ + |
+|---|---|---|---|---|
+| SDRAM read capture | **+4 (default)** / +5 / +6 (rising edge, I/O cell) | **0** / 1 / 2 | 4,5 / 5,6 / 6,7 | 5 / 6 / 7 |
+| | +3.5 / +4.5 / +5.5 (falling edge, I/O cell) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 | 5 / 6 / 7 |
+| | +4.25 / +3.25 (quarter, fabric register on `clk_ram_cap`) | 3 / 7 | 4.25,5.25 / 3.25,4.25 | 6 / 5 |
 
-The quarter settings sample on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) and land like +5 / +4. On the
-Pocket (debug7 sweep) only +4 rising and +4.5 falling reached the BIOS logo, both with corrupt graphics, and +3.5,
-+5, +5.5 and +6 did not, so the data window sits about +4.25; the model's window is about 2 ns later than the hardware's.
+Why +4, from the timing analyser of the v0.2.3 build (slow 1100mV 85C / fast 1100mV 0C): the dram_clk pin follows the
+ideal clk_ram falling edge by 6.59 / 2.63 ns; an I/O cell input register sees clk_ram 4.33 / 0.69 ns after the ideal edge
+and its data 2.84 / 1.29 ns after the pad. Word 0 is at the pad from READ + 2.5 clk + clock-out + 5.5 ns until
+READ + 3.5 clk + clock-out + 2.5 ns, so the I/O cell register holds it when it samples between READ + 3.73 and + 4.35
+(slow) or between + 3.56 and + 4.18 (fast), in clk_ram periods of 8.73 ns. +4 is inside both with 2.4 ns (setup, slow) and
+1.4 ns (hold, fast) to spare; +4.5 is past the end at both corners and +5 misses the word. The fabric register on
+`clk_ram_cap` (core clock 2.2 / -0.06 ns after the ideal edge, pad to register about 3.5 ns where the fitter put it)
+sees the window between 3.96 and 4.59 (slow) / 3.79 and 4.42 (fast): +4.25 is the in-spec alternative, with the
+placement of that register as its uncertainty. The SDC times the default and the quarter capture (`dram_clk_pin` to
+clk_ram and to `clk_ram_cap`, setup multicycle -end 2: the 2nd edge after the launch edge is 1.5 / 1.75 clk_ram later;
+the hold check stays at the default edge because word 1 follows one SDRAM clock later); the falling-edge register is a
+false path (cap_sel 4..6 are experiments).
 
-The setting is an experiment aid: the SDC constrains only the default (rising edge, READ + 5). A dram_clk phase option
-(`dram_clk` = clk) was left out: both working cores use `~clk`, and the clock would then change at the command pins' own
-edge. Later capture (+6) delays the VDP2 results by one clk_ram (VDP2 still samples 24 clk_ram after the request).
+What this replaces. Up to v0.2.3 the rising-edge settings took DQ from the pad straight into the ten landing registers
+(9.5 to 10.5 ns to the register at the slow corner, with 1 ns of spread between bits), the quarter register was packed
+into the I/O cell with the late I/O clock, and the SDC multicycle counted from the READ edge instead of the SDRAM's data
+launch edge (-end 5 instead of 3 for the +5 default it timed): the pass it reported was 17 ns too lenient. The model
+(`sim/mem/models/sdram_model.sv`) launched the data one SDRAM clock late (CL4 behaviour) and cut every word's hold to
+tLZ instead of tOH, which is why "+4 rising reached the BIOS logo" on the Pocket while the bench wanted +4.5 and +5.
+Both are corrected; `tb_sys` and `tb_sdram` now carry pad delays (`+TCO=n`, default 5100 ps = slow-corner clock-out
+less the I/O register's 1.49 ns clock lead over its data path, `+TIN=n` 0) so the default setting is what they exercise.
+
+Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, rows TCO, columns `cap_sel` 0..7, `#` = pass). The
+hardware-equivalent TCO for the I/O cell register is 5.1 ns (slow) and 3.2 ns (fast); for the fabric `clk_ram_cap`
+register about 7.9 (slow) and 5.7 (fast):
+
+| TCO (ns) | pass |
+|---|---|
+| 0.5 to 1.0 | +3.5, +3.25 |
+| 1.5 | +3.5 |
+| 2.0 to 3.0 | +4, +3.5 |
+| 3.5 to 4.0 | +4 |
+| 4.5 to 6.0 | +4, +4.25 |
+| 6.5 to 7.5 | +4, +4.25, +4.5 |
+| 8.0 to 9.0 | +4.25, +4.5 |
+
+The one-clk later landing keeps the VDP2 window (words land from F + 10 to F + 19, the set is sampled at F + 24, the
+previous one at F + 8) and the SCSP delivery at +4 is that of the old +5 default (worst case 26 clk_ram after the request,
+SCSP samples at 29 or later); `tb_sdram` shows the same latency range.
 
 The command, address, data and enable pin registers are I/O cell registers (`FAST_OUTPUT_REGISTER`,
 `FAST_OUTPUT_ENABLE_REGISTER`, `ap_core.qsf`), and the pin command registers power up as NOP (zero is an MRS).
-An I/O cell capture register on `clk_ram_cap` (fixed +4.25) was tried: the sim SDRAM model, whose window is
-about 2 ns late, then corrupts sound RAM reads (the 68K driver never sets CR0.MVOL), so the runtime setting stays.
-Rule of thumb from the model, with T = clock-out delay + input delay (the data valid window is about 4.2 ns):
-
-| T (ns), clock out + pin to register | best setting |
-|---|---|
-| 2.0 to 3.0 | +4.5 falling (`cap_sel` 5) |
-| 3.5 to 7.5 | +5 rising (1, default) |
-| 8.0 to 11.5 | +5.5 falling (6) |
-| 12.5 | +6 rising (2); 12.0 and above 12.5 fail with every setting in the sweep |
-
-Sweep: `make -C sim sndram` then `sh sim/sndram/sweep.sh [TIN_ps]` (SH-2 through SCSP to the SDRAM model), or
-`sh sim/mem/sweep.sh [TIN_ps]` (`tb_sdram`: VDP2 and SCSP traffic, every model timing check). Both give the same
-table for TIN 1 ns and 3 ns; a row is the clock/command-out delay TCO, a column `cap_sel` 0..7, `#` = pass.
-Command and clock share the TCO, as on the device. (An earlier `sim/sndram` sweep looked irregular for TCO above
-4.4 ns: Verilator evaluates the right-hand side of `<= #d` at the end of the delay, which flipped the clock phase;
-the bench now uses explicit delay FIFOs.)
+A dram_clk phase option (`dram_clk` = clk) was left out: both working cores use `~clk`, and the command pins would then
+change 0.8 ns after the clock edge at the chip.
 
 **Comparison with the controllers that run on a Pocket** (openfpga-SNES `rtl/upstream/sdram.sv`, openfpga-C64
 `sdram.v`, both from MiSTer):
@@ -219,19 +243,28 @@ the bench now uses explicit delay FIFOs.)
 |---|---|---|
 | clock | C64 64 MHz (SNES lower than ours), DDIO `~clk`, no PLL phase step | 114.5 MHz, DDIO `~clk`, no PLL phase step (same) |
 | CAS latency | 2 | 3 (a 2-cycle shorter window to hide, more tAC budget) |
-| capture | one register on the rising edge, SDC multicycle 2 from `dram_clk_pin` | rising edge READ + 5 (multicycle 5), or the falling-edge option |
-| pin output registers | C64: `FAST_OUTPUT_REGISTER` on every `dram_*` output and `FAST_OUTPUT_ENABLE_REGISTER` on `dram_dq` | **absent before this build**: command, address and data registers sat in the fabric, with a pad delay several ns above the DDIO clock's; now set in `ap_core.qsf` |
-| DQ input register | fabric register (no `FAST_INPUT_REGISTER`) | fabric register (same); both edges are captured from the same pad, so it cannot be packed into the I/O cell |
+| capture | one register on the rising edge, SDC multicycle 2 from `dram_clk_pin` | I/O cell DDIO registers, READ + 4 (multicycle 2 from the data launch edge), or the other runtime settings |
+| pin output registers | C64: `FAST_OUTPUT_REGISTER` on every `dram_*` output and `FAST_OUTPUT_ENABLE_REGISTER` on `dram_dq` | same, `ap_core.qsf` |
+| DQ input register | fabric register (no `FAST_INPUT_REGISTER`) | I/O cell (`altddio_in`), plus the fabric `clk_ram_cap` register |
 | SDC | `dram_clk_pin` generated clock, input delay 6.4 / 3.2 ns (C64), output delay 1.5 / -0.8 | `dram_clk_pin`, input delay 5.5 / 2.5, output 1.5 / -1.0 |
 
-The likeliest breaking difference is the output register placement: with fabric output registers the command pins
-lag the DDIO clock pin by an unknown, per-pin amount, so a command can be sampled a cycle late. Neither working core
-runs CL3 at 114 MHz, so the data window (about 4 ns) is tighter than theirs. Not yet confirmed on hardware.
+Neither working core runs CL3 at 114 MHz, so the data window (5.7 ns at the pad, 4.2 ns after the FPGA's own corner
+spread) is tighter than theirs. Not yet confirmed on hardware.
 
-DQ turnaround: a write that follows read data by 2 cycles overlaps the SDRAM's output disable (tHZ) by up to 1.04 ns at
-the datasheet maximum tHZ of 5.4 ns; the overlap is 0 with the clock path 1 ns early. Byte writes (partial DQM) also
-mask word 1 of the read two cycles later in the neighbouring slot: a CPU byte write into VDP2 VRAM while the other group
-reads can corrupt the second word of one fetch. Word and long writes are not affected.
+DQ turnaround. A WRITE two pin cycles after a READ on another bank puts the FPGA's write data on the bus while the SDRAM
+starts driving that read's word 0: the write data is driven from W + 7.4 ns (slow; 3.1 fast) to W + 1 clk + the same,
+the SDRAM drives from W + 0.5 clk + clock-out + 2 clk + tLZ (1 ns), about 4 ns of contention at both corners. The schedule
+has three such pairs: the group A write at 9 against the B0 read at 7, the group B write at 11 against the A1 read at 9,
+and the SCSP bank 3 write at 3 against the bank 2 slot's read (request or scrub) at 1, so most VDP2 writes and every SCSP
+write to the upper 256 KB fight the bus. The SDRAM latches the write data at the edge where it starts driving (hold 1.0 ns
+against tLZ 1.0 ns min) and the FPGA captures the read word 1.5 clk after that edge, 2.8 ns (slow) to 5 ns (fast) after the
+fight ends, so neither datum is disturbed; it is a datasheet violation all the same, which the old model's late data hid.
+`tb_sdram` measures the overlap against the model and fails above `+OVERLAP_PS` (1100 ps default); when every slot reads,
+the bus carries read data from cycle 3.5 to 15.5 and no write cycle is free of it, so a fix needs a schedule change (for
+example dropping the other group's read in a write dot). A write that follows read data also overlaps the previous word's
+output disable (tHZ 5.4 ns max) by up to 1.0 ns. Byte writes (partial DQM) mask word 1 of the read two cycles later in the
+neighbouring slot: a CPU byte write into VDP2 VRAM while the other group reads can corrupt the second word of one fetch.
+Word and long writes are not affected.
 
 ## 4. PSRAM (`psram_sync.sv`)
 
@@ -359,7 +392,9 @@ registers, about 50 ALMs, but WRAM-L read lines die on every write), a shared PS
 concurrency of section 6), moving the CD ring off the SRAM (16,384 words = 32 blocks of tail, needs the `cd_stream` ring
 interface changed).
 
-Timing closure at 114.5 MHz (clk_ram) is unknown.
+Timing at 114.5 MHz (clk_ram): the half-rate `psram_sync` pin and segment registers and the `ddram_pocket` WRAM-H tags
+carry two-clk_ram multicycle exceptions (`core_constraints.sdc`, with the proof in its comments); see `docs/fit-status.md`
+for the measured slack.
 
 ## 9. Simulation (`make -C sim mem`, iverilog, about 25 s; `make -C sim mem-long` 10 min; `negative`, `skew`)
 
@@ -379,9 +414,11 @@ misreading with the controllers.
 
 ## 10. Untested on hardware, and risks
 
-1. SDRAM data capture edge and clock phase (section 3): menu settings SDRAM read capture / SDRAM clock; the debug overlay
-   square 15 is a write/read-back self-check of the SDRAM. Window is 4 ns wide in the model.
-2. SDRAM DQ turnaround at worst-case tHZ: 1 ns overlap; byte writes disturb word 1 of a neighbouring read.
+1. SDRAM data capture edge (section 3): menu setting SDRAM read capture, default +4 in the I/O cell register with 2.4 /
+   1.4 ns of margin at the slow / fast corner against the datasheet window; the debug overlay square 15 is a
+   write/read-back self-check of the SDRAM.
+2. SDRAM DQ contention: a write two cycles after a read on another bank fights the bus for about 4 ns (section 3); byte
+   writes disturb word 1 of a neighbouring read.
 3. No AUTO REFRESH: retention depends on VDP2's real no-access windows. A game that disables them (it cannot: they are
    `H_CNT` based) or a pause state with VDP2 reading continuously would lose banks 0/1 after 64 ms.
 4. SCSP deadline margin 27 ns; an SCSP clock that runs faster than the NCO in `tb_sdram` shortens it.
@@ -396,5 +433,5 @@ misreading with the controllers.
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
 10. Cartridge ROM loading and backup save-out are not implemented; the 64 KB backup image conversion assumes `{FF, byte}`.
-11. SDC constraints for the pin paths, the `sync` and `fb` crossings between `clk_sys` and `clk_ram`, and the `cd_stream`
-    signals into the shared SRAM are not written.
+11. SDC: the pin paths are constrained (section 3 and `core_constraints.sdc`); the `clk_sys` to `clk_ram` crossings are
+    ordinary single-cycle paths of one clock family, timed as such.
