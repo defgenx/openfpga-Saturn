@@ -67,29 +67,6 @@
             "name": "Backup RAM"
           }
         ]
-      },
-      {
-        "name": "SDRAM read capture",
-        "id": 4,
-        "type": "list",
-        "enabled": true,
-        "persist": true,
-        "address": "0x8000000C",
-        "defaultval": 0,
-        "options": [
-          {
-            "value": 0,
-            "name": "+4 (default)"
-          },
-          {
-            "value": 1,
-            "name": "+5"
-          },
-          {
-            "value": 2,
-            "name": "+6"
-          }
-        ]
       }
     ],
     "messages": []

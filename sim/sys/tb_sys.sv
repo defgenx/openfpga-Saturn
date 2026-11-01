@@ -218,7 +218,6 @@ initial begin : host
 	wait (dut.status_setup_done === 1'b1);
 	repeat (20) @(posedge clk_74a);
 	$fdisplay(ftrace, "%0t HOST setup done, Reset Enter", $time);
-	bridge_write(32'h8000000C, 32'd0);                     // SDRAM read capture: rising edge +4 (the hardware default; pad delays above)
 	host_cmd(16'h0010, 0, 0);                              // Reset Enter
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin

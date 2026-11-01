@@ -14,7 +14,6 @@
 //   +TREF_US=n  retention limit used by the model (default 64000)
 //   +NOSCSP     disable the SCSP traffic
 //   +CAPPS=n    extra delay (ps) on the SDRAM clock path, to probe the data eye
-//   +CAP=n      read capture setting (cap_sel: 0 = READ + 4, the default; 1 = + 5; 2 = + 6; see docs/memory.md)
 //   +TCO=n +TIN=n  pad delays in ps (default 5100 / 0: the slow-corner clock-out delay less the I/O cell register's
 //               clock lead over its data path, docs/memory.md section 3)
 //   +OVERLAP_PS=n  DQ contention limit in ps (default 1100)
@@ -26,11 +25,8 @@ module tb_sdram;
 localparam integer T_RAM = 8730;               // 114.55 MHz
 integer TCO = 5100;                       // FPGA clock/pin output delay (ps)
 integer TIN = 0;                          // pin to register input delay (ps)
-reg [2:0] cap_sel = 3'd0;
-integer capv = 0;
 initial begin
 	void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN));
-	if ($value$plusargs("CAP=%d", capv)) cap_sel = capv[2:0];
 end
 
 reg clk_ram = 0, clk_sys = 0;
@@ -71,7 +67,7 @@ wire dot_ce_r = (dot_div == 2'd3) & ce_r;
 wire dot_ce_f = (dot_div == 2'd1) & ce_r;
 
 sdram_pocket #(.INIT_CLKS(2000)) dut (
-	.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(cap_sel),
+	.clk(clk_ram), .init(init), .sync(dot_ce_r),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n),
 	.dram_clk(dram_clk),

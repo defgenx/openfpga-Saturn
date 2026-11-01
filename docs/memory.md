@@ -184,12 +184,8 @@ registers take the READ one clock after `state[0]`, `rbuf0 <= SDRAM_DQ` samples 
 moves `{rbuf1, rbuf0}` into `dout`, so each word is the sample taken 4 clocks after its READ reached the pins and lands
 5 clocks after it. The Pocket default is the same READ + 4.
 
-**Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
-while `init` is high, so it applies at the next menu Reset without reloading the core):
-
-| Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + | Word 0 lands at READ + |
-|---|---|---|---|---|
-| SDRAM read capture | **+4 (default)** / +5 / +6 | **0** / 1 / 2 | 4,5 / 5,6 / 6,7 | 5 / 6 / 7 |
+The capture edge is fixed (word 0 sampled at READ + 4, word 1 at + 5, both landing one clk later); the former
+"SDRAM read capture" menu entry and core_top register 0x0C are gone.
 
 Why +4, from the timing analyser of the v0.2.3 build (slow 1100mV 85C / fast 1100mV 0C): the dram_clk pin follows the
 ideal clk_ram falling edge by 6.59 / 2.63 ns; an I/O cell input register sees clk_ram 4.33 / 0.69 ns after the ideal edge
@@ -197,9 +193,9 @@ and its data 2.84 / 1.29 ns after the pad. Word 0 is at the pad from READ + 2.5 
 READ + 3.5 clk + clock-out + 2.5 ns, so the I/O cell register holds it when it samples between READ + 3.73 and + 4.35
 (slow) or between + 3.56 and + 4.18 (fast), in clk_ram periods of 8.73 ns. +4 is inside both with 2.4 ns (setup, slow) and
 1.4 ns (hold, fast) to spare; +3 (0.7 clk before the word at the slow corner) and +5 (past it) miss the word at both
-corners, as does any half-step of either edge. The SDC times the default (`dram_clk_pin` to clk_ram, setup multicycle
--end 2: word 0 at READ + 4 is the 2nd clk_ram edge after its launch edge, 1.5 clk_ram later; the hold check stays at the
-default edge because word 1 follows one SDRAM clock later); +5 / +6 are experiments and are not timed.
+corners, as does any half-step of either edge. The SDC times it (`dram_clk_pin` to clk_ram, setup multicycle -end 2:
+word 0 at READ + 4 is the 2nd clk_ram edge after its launch edge, 1.5 clk_ram later; the hold check stays at the default
+edge because word 1 follows one SDRAM clock later).
 
 What this replaces. Up to v0.2.3 the rising-edge settings took DQ from the pad straight into the ten landing registers
 (9.5 to 10.5 ns to the register at the slow corner, with 1 ns of spread between bits), falling-edge and quarter-phase
@@ -212,14 +208,14 @@ AS4C32M16 are within them); `tb_sys`, `tb_sdram` and `tb_sndram` carry pad delay
 slow-corner clock-out less the I/O register's 1.49 ns clock lead over its data path, `+TIN=n` 0) so the default setting
 is what they exercise.
 
-Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, rows TCO, columns `cap_sel` 0..2, `#` = pass): +4 passes
-for TCO 2.0 to 7.5 ns, +5 and +6 nowhere. The hardware-equivalent TCO for the I/O cell register is 5.1 ns (slow) and
-3.2 ns (fast), so the margins are 2.4 ns at the slow end and 1.2 ns at the fast end. `sim/sndram` (SH-2 through SCSP to the
-model, `NOCHK=1`: the self-check it gates on is compiled out) gives the same range.
+Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, one line per TCO): READ + 4 passes for TCO 2.0 to 7.5 ns
+(READ + 5 and + 6, tried while the setting existed, nowhere). The hardware-equivalent TCO for the I/O cell register is 5.1 ns
+(slow) and 3.2 ns (fast), so the margins are 2.4 ns at the slow end and 1.2 ns at the fast end. `sim/sndram` (SH-2 through
+SCSP to the model, `NOCHK=1`: the self-check it gates on is compiled out) gives the same range.
 
-The one-clk later landing keeps the VDP2 window (words land from F + 10 to F + 19, the set is sampled at F + 24, the
-previous one at F + 8) and the SCSP delivery at +4 is that of the old +5 default (worst case 26 clk_ram after the request,
-SCSP samples at 29 or later); `tb_sdram` shows the same latency range.
+The one-clk later landing keeps the VDP2 window (words land from F + 10 to F + 17, the set is sampled at F + 24, the
+previous one at F + 8) and the SCSP delivery is that of the old +5 default (worst case 26 clk_ram after the request, SCSP
+samples at 29 or later); `tb_sdram` shows the same latency range.
 
 The command, address, data and enable pin registers are I/O cell registers (`FAST_OUTPUT_REGISTER`,
 `FAST_OUTPUT_ENABLE_REGISTER`, `ap_core.qsf`), and the pin command registers power up as NOP (zero is an MRS).
@@ -409,9 +405,9 @@ misreading with the controllers.
 
 ## 10. Untested on hardware, and risks
 
-1. SDRAM data capture edge (section 3): menu setting SDRAM read capture, default +4 in the I/O cell register with 2.4 /
-   1.4 ns of margin at the slow / fast corner against the datasheet window; the debug overlay square 15 is a
-   write/read-back self-check of the SDRAM.
+1. SDRAM data capture edge (section 3): READ + 4 in the I/O cell register, as Saturn_MiSTer, with 2.4 / 1.4 ns of margin
+   at the slow / fast corner against the datasheet window; the debug overlay square 15 is a write/read-back self-check of
+   the SDRAM.
 2. SDRAM DQ contention: a write two cycles after a read on another bank fights the bus for about 4 ns (section 3); byte
    writes disturb word 1 of a neighbouring read.
 3. No AUTO REFRESH: retention depends on VDP2's real no-access windows. A game that disables them (it cannot: they are
