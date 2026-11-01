@@ -14,18 +14,20 @@
 //   +TREF_US=n  retention limit used by the model (default 64000)
 //   +NOSCSP     disable the SCSP traffic
 //   +CAPPS=n    extra delay (ps) on the SDRAM clock path, to probe the data eye
-//   +CAP=n      read capture setting (cap_sel, default 1 = READ+5 rising; 4..7 falling edge, see docs/memory.md)
-//   +TCO=n +TIN=n  pad delays in ps (default 3500 / 1000)
+//   +CAP=n      read capture setting (cap_sel, default 0 = READ+4 rising; 4..6 falling edge, 3 / 7 quarter, see docs/memory.md)
+//   +TCO=n +TIN=n  pad delays in ps (default 5100 / 0: the slow-corner clock-out delay less the I/O cell register's
+//               clock lead over its data path, docs/memory.md section 3)
+//   +OVERLAP_PS=n  DQ contention limit in ps (default 1100)
 
 `timescale 1ps/1ps
 
 module tb_sdram;
 
 localparam integer T_RAM = 8730;               // 114.55 MHz
-integer TCO = 3500;                       // FPGA clock/pin output delay (ps)
-integer TIN = 1000;                       // pin to register input delay (ps)
-reg [2:0] cap_sel = 3'd1;
-integer capv = 1;
+integer TCO = 5100;                       // FPGA clock/pin output delay (ps)
+integer TIN = 0;                          // pin to register input delay (ps)
+reg [2:0] cap_sel = 3'd0;
+integer capv = 0;
 initial begin
 	void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN));
 	if ($value$plusargs("CAP=%d", capv)) cap_sel = capv[2:0];
@@ -115,7 +117,8 @@ sdram_model model (
 // worst-case tHZ of the model; `overlap_max` is reported and anything above OVERLAP_LIMIT fails.
 integer contention = 0, overlap_max = 0, overlap_n = 0;
 longint ov_t0 = 0;
-localparam integer OVERLAP_LIMIT = 1100;
+integer OVERLAP_LIMIT = 1100;             // +OVERLAP_PS=n overrides (a write two pin cycles after a READ meets that read's tLZ: docs/memory.md section 3)
+initial void'($value$plusargs("OVERLAP_PS=%d", OVERLAP_LIMIT));
 wire both = oe_d & m_drive;
 always @(posedge both) ov_t0 = $time;
 always @(negedge both) if (ov_t0 != 0) begin

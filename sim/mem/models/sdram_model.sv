@@ -2,6 +2,9 @@
 // Simulation only. Memory is the used part of each bank: rows 0-255, 1024 columns.
 // Timing values are the -6 speed grade as used by the other Pocket cores (tRCD/tRP 18 ns, tRC 60 ns,
 // tRAS 42 ns, tRRD 12 ns, tAC 5.5 ns at CL3); the datasheet was not re-read for this model.
+// CAS latency: a READ registered at edge n has its first word valid (tAC after edge n + CL - 1) by edge n + CL,
+// as the datasheet defines it; an earlier version of this model drove it one clock later and cut every word's
+// hold to tLZ instead of tOH.
 
 `timescale 1ps/1ps
 
@@ -157,7 +160,7 @@ always @(posedge clk) begin
 				if (tnow - bank_t_act[bk] < T_RCD) begin err("READ before tRCD"); $display("   dt %0d", tnow - bank_t_act[bk]); end
 				if (cl == 0) err("READ before mode register");
 				for (k = 0; k < bl; k = k + 1) begin
-					ei = (edge_n + cl + k) % 16;
+					ei = (edge_n + cl - 1 + k) % 16;   // word k is driven tAC after edge n + CL - 1 + k
 					if (sl_v[ei]) err("read data collision");
 					sl_v[ei] = 1;
 					// sequential burst, wrap inside the aligned block
@@ -218,7 +221,9 @@ always @(posedge clk) begin
 		sl_v[ei] = 0;
 		dq_drive = 1;
 		dq_en = 1;
-		dq_out <= #(T_LZ) 16'hxxxx;
+		// tLZ: the bus is driven (undefined) from T_LZ after the edge; inside a burst the previous word stays valid
+		// until T_OH after this edge (below), so only the first word of a burst starts with the undefined phase
+		if (!drove_prev) dq_out <= #(T_LZ) 16'hxxxx;
 		dq_out <= #(T_AC) {dqm_h[(edge_n + 14) % 16][1] ? 8'hzz : sl_d[ei][15:8], dqm_h[(edge_n + 14) % 16][0] ? 8'hzz : sl_d[ei][7:0]};
 		drove_prev = 1;
 		// the data of this word is held until T_OH after the next edge

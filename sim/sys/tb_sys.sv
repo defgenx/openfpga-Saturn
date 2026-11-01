@@ -63,7 +63,13 @@ core_top dut (
 	.cont1_trig(16'd0), .cont2_trig(16'd0), .cont3_trig(16'd0), .cont4_trig(16'd0)
 );
 
-// ------------------------------------------------------------------ memory chips (pin-level models, no pad delays)
+// ------------------------------------------------------------------ memory chips (pin-level models)
+// The SDRAM pins carry pad delays: TCO on everything out of the FPGA (clock, command, address, write data and enable)
+// and TIN on the read data into it, +TCO=n +TIN=n in ps. The default TCO is the slow-corner clock-out delay less the
+// I/O cell capture register's clock lead over its data path (docs/memory.md section 3), so the default capture
+// setting (+4) sees the hardware's window. The PSRAM and SRAM models have no pad delays.
+integer TCO = 5100, TIN = 0;
+initial begin void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN)); end
 `define PSRAM_PINS(N) \
 	wire [31:0] m``N``_err, m``N``_rd, m``N``_wr, m``N``_bursts, m``N``_cel, m``N``_xrow; \
 	psram_model #(.T_POWER(1000000)) model``N ( \
@@ -76,8 +82,21 @@ core_top dut (
 
 wire [31:0] sd_err, sd_act, sd_rd, sd_wr; wire sd_drive;
 wire [63:0] t_ref = 64'd64000000000;                      // 64 ms retention limit
-sdram_model sdmodel (.t_ref(t_ref), .clk(dram_clk), .cke(dram_cke), .ras_n(dram_ras_n), .cas_n(dram_cas_n), .we_n(dram_we_n),
-	.ba(dram_ba), .a(dram_a), .dqm(dram_dqm), .dq(dram_dq), .errors(sd_err), .dq_drive(sd_drive), .n_act(sd_act), .n_rd(sd_rd), .n_wr(sd_wr));
+wire [12:0] sd_a;  wire [1:0] sd_ba, sd_dqm;  wire sd_ras_n, sd_cas_n, sd_we_n, sd_clk, sd_oe;  wire [15:0] sd_o, sd_dq, sd_in;
+tdel #(13) d_a   (.d(TCO), .i(dram_a),     .o(sd_a));
+tdel #(2)  d_ba  (.d(TCO), .i(dram_ba),    .o(sd_ba));
+tdel #(2)  d_dqm (.d(TCO), .i(dram_dqm),   .o(sd_dqm));
+tdel #(1, 1'b1) d_ras (.d(TCO), .i(dram_ras_n), .o(sd_ras_n));
+tdel #(1, 1'b1) d_cas (.d(TCO), .i(dram_cas_n), .o(sd_cas_n));
+tdel #(1, 1'b1) d_we  (.d(TCO), .i(dram_we_n),  .o(sd_we_n));
+tdel #(1, 1'b1) d_clk (.d(TCO), .i(dram_clk),   .o(sd_clk));
+tdel #(1)  d_oe  (.d(TCO), .i(dut.sdram_dq_oe), .o(sd_oe));
+tdel #(16) d_o   (.d(TCO), .i(dut.sdram_dq_o),  .o(sd_o));
+assign sd_dq = sd_oe ? sd_o : 16'hzzzz;                   // the bus at the SDRAM
+tdel #(16, 16'hzzzz) d_in (.d(TIN), .i(sd_dq), .o(sd_in));
+assign dram_dq = dut.sdram_dq_oe ? 16'hzzzz : sd_in;      // into the FPGA while it is not driving
+sdram_model sdmodel (.t_ref(t_ref), .clk(sd_clk), .cke(dram_cke), .ras_n(sd_ras_n), .cas_n(sd_cas_n), .we_n(sd_we_n),
+	.ba(sd_ba), .a(sd_a), .dqm(sd_dqm), .dq(sd_dq), .errors(sd_err), .dq_drive(sd_drive), .n_act(sd_act), .n_rd(sd_rd), .n_wr(sd_wr));
 
 wire [31:0] sr_err, sr_rd, sr_wr;
 sram_model #(.T_AA(0)) srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_n(sram_we_n), .ub_n(sram_ub_n), .lb_n(sram_lb_n), .errors(sr_err), .n_rd(sr_rd), .n_wr(sr_wr));
@@ -199,7 +218,7 @@ initial begin : host
 	wait (dut.status_setup_done === 1'b1);
 	repeat (20) @(posedge clk_74a);
 	$fdisplay(ftrace, "%0t HOST setup done, Reset Enter", $time);
-	bridge_write(32'h8000000C, 32'd5);                     // SDRAM read capture: falling edge +4.5 (no pad delays in the sim)
+	bridge_write(32'h8000000C, 32'd0);                     // SDRAM read capture: rising edge +4 (the hardware default; pad delays above)
 	host_cmd(16'h0010, 0, 0);                              // Reset Enter
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin
@@ -810,4 +829,18 @@ always @(posedge clk_sys) begin
 	end
 end
 
+endmodule
+
+// transport delay for the pin models: a FIFO with a due time per change (constant d keeps the order); Verilator
+// evaluates the right-hand side of `<= #d` at the end of the delay, which an inertial assign would also get wrong
+module tdel #(parameter W = 1, parameter [W-1:0] INIT = '0) (input integer d, input [W-1:0] i, output reg [W-1:0] o);
+	initial o = INIT;
+	logic [W-1:0] vq [$];
+	longint tq [$];
+	always @(i) begin vq.push_back(i); tq.push_back($time + d); end
+	always begin
+		wait (tq.size() > 0);
+		#(tq[0] - $time);
+		o = vq.pop_front(); void'(tq.pop_front());
+	end
 endmodule
