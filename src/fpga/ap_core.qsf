@@ -320,7 +320,7 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name ROUTER_LCELL_INSERTION_AND_LOGIC_DUPLICATION OFF
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT HIGH
-set_global_assignment -name SEED 3
+set_global_assignment -name SEED 7
 
 # Assembler Assignments
 # =====================
