@@ -234,7 +234,8 @@ Fits of the final RTL (`memfix`, `AGGRESSIVE AREA`, one processor; `openfpga-Sat
 | 1 | I/O cell DDIO pair + quarter register + cap_sel | 7 2 8 9 10 11 | 18,318 to 18,346 | 1,852 to 1,857 | no fit |
 | 2 | one I/O cell register, fixed READ + 4 | 7 2 8 9 10 11 14 | 18,282 (14) to 18,345 | 1,848 (14), 1,852 to 1,857 | **seed 14 fits** |
 | 2 | same | 16 1 3 4 5 13 | 18,316 to 18,355 | 1,852 to 1,857 | no fit |
-| 3 | + psram pin registers without synchronous control (`4da6f29`, map estimate 18,089) | 14 2, then 7 8, 9 10, 16 11 | pending (two fitter containers at a time) | | fill in |
+| 3 | + psram pin registers without synchronous control (`4da6f29`, map estimate 18,089) | 14 2 | | 1,861 | no fit: the register attribute applies to the entity and costs 13 LABs; reverted in round 4 |
+| 4 | round 2 RTL + the four changes below (`e93c65f` `4d745d5` `6fb79ed` `5c9a520`) | | | | to fit |
 
 Slow 1100mV 85C slack of the round 2 seed 14 build (`memfix2-s14`, RTL `aaf7818`), setup / hold in ns:
 
@@ -258,3 +259,37 @@ Full-system simulation (`sim/sys`, Hyper Duel, 120 M clk_sys, `+SCUPROBE`, the w
 non-zero, 8 key-on events). A first run from the main checkout's old bench (capture +4.5 written at boot, old model) with the
 round 1 RTL landed the words one clk_ram later than the release and returned every SCSP sample fetch one request stale: the SCSP
 has no clk_ram to spare past READ + 5 (docs/memory.md).
+
+## Timing round 4 (branch `memfix`, 2026-11-01)
+
+Round 3 (`4da6f29`) did not fit: the `ALLOW_SYNCH_CTRL_USAGE OFF` attribute on `p_dq` / `p_oe` applies to the psram_sync entity
+and cost 13 LABs (1,861 needed on seeds 14 and 2). It is reverted; the round 4 RTL is the round 2 netlist plus the four
+cycle-exact changes below. Each has a HEAD-vs-new equivalence bench (Verilator, every output compared at every clock, random
+stimulus in the shape of the real traffic; a deliberately broken copy of the new module fails the same bench), and `make -C sim
+mem` and `make -C sim/vdp1` (golden VDP1 against VDP1P, 40 scenarios) pass.
+
+| Path (round 2 slack) | Change | Expected | Commit |
+|---|---|---|---|
+| cram0/1 pins -0.46 (p_oe -> cram_dq) | `psram_sync`: p_dq and p_oe written at every F edge from a function of the segment state, no constant in any branch. Round 2's `ap_core.fit.rpt`: the eight p_dq bits whose configuration value depends on `cop[0]` had their own clock enable (`p_dq[0]~7`, fanout 8), the eight constant bits and p_oe had `ph`, so p_oe packed into 8 of the 16 I/O cells per chip and failed the others with "clock enable signal violation". The configuration value is staged in `act_adr[15:0]`; p_dq is don't-care while p_oe is low (pins high impedance) | p_oe in all 32 I/O cells, cram pins positive as in round 3, no entity-wide option | `e93c65f` |
+| VDP1 HTIM_PIPE -> fb i1r -0.79 (44 paths, 5 levels, 8.9 ns) | `VDP1P`: `\|HTIM_PIPE` kept as a register (HTIM_PIPE_ANY, updated with the pipe at DCE_R); the erase-address select is one LUT of four register outputs | 5 -> 3 logic levels on a routing-dominated clk_sys -> clk_ram path: +0.8 to +1.5 ns | `5c9a520` |
+| fb rptr0 -> rptr1 -0.33 (8 levels, two carry chains) | `vdp1_fb_pocket`: the FIFO choice reads a running occupancy difference `dlt` (moved by each edge's push and pop) instead of two subtractions and a compare | rptr* see two levels of != and the enable; the dlt loop is two levels, the pick, the step and one 10 bit chain: about +1.5 ns | `4d745d5` |
+| MSH / SSH BUS_RLS -> ddram ramh_tag -0.29 (97 paths), A -> ramh_tag -0.12 | `ddram_pocket`: a missed line's tag is written at the edge after the request edge (`ramh_alloc`) from `ramh_addr`, and the fill address is `ramh_addr` (the master holds it under WAIT); SDC setup 2 from clk_sys into `ramh_tag` and `a_addr` | those paths get two clk_ram. The 15 bit compare into `ramh_curr` / `ramh_plru` / `ramh_read_busy` (-0.13 / +0.09 / positive) keeps its logic (compare, way, the BUS_RLS mux: four levels, 5.5 ns of routing from the BSC): this group is not closed by RTL and is left to the fitter with the tag enable fanout (60 registers) and the data paths out of its way | `6fb79ed` |
+
+Assumptions the benches enforce: `rst` of the framebuffer module is high for two clk_sys or more (`ram_reset`: 256; a single
+clk_sys clears `wptr*` at the last reset edge and either form of the logic then pops entries that were never written), the
+WRAM-H master holds the address while `ramh_busy` (the bus does), p_dq is compared only while p_oe is high. The ddram bench
+runs both clk_sys phases against the PSRAM half-rate slots (`psram_sync` `ph` free-runs from power-up): the broken copy that
+keeps `ramh_tag[ramh_curr]` as the fill address fails only in the phase where the fill can issue at the tag-write edge.
+
+Area (yosys, LUT6 and flip-flops of the module alone, HEAD -> new): psram_sync 317 -> 322 per chip (flip-flop count unchanged, the
+17 pin registers lose their synchronous clear), vdp1_fb_pocket 571 -> 578 and +10, ddram_pocket 1,065 -> 1,011 and +4 (the tag
+read mux of the fill address and the victim-indexed tag write are gone), VDP1P +1 flip-flop. About -15 ALMs net.
+
+Full-system simulation of the round 4 RTL (`sim/sys/build_memfix4`, the round 3 command: Hyper Duel image and TOC, 120 M
+clk_sys, `+SCUPROBE`, 106 minutes): `i2s.raw`, `scsp.raw`, `pocket.raw` and `trace.log` byte-identical to `build_fit/run4`,
+`audio:` line identical.
+
+First fits of `5c9a520` (seeds 14 and 7): 18,320 / 18,324 ALMs needed, 1,854 / 1,852 LABs, no fit; p_oe packed in all 32 I/O
+cells. Per entity against round 2 seed 14: mem_pocket 1,241 -> 1,210 / 1,217 (ddram -4 / -9, psram1 -14 / -11, psram0 -2, fb -4 /
++3), VDP1P -1 / +5; the +38 is in untouched blocks (MSH +32, SSH +49, SCU +12, SMPC +16, VDP2P -28), the seed noise of the
+area-hunt section. Round 2 had fit on one seed of thirteen.
