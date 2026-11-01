@@ -78,16 +78,16 @@
         "defaultval": 0,
         "options": [
           {
+            "value": 0,
+            "name": "+4 (rising edge)"
+          },
+          {
             "value": 7,
             "name": "+3.25 (quarter)"
           },
           {
             "value": 4,
             "name": "+3.5 (falling edge)"
-          },
-          {
-            "value": 0,
-            "name": "+4 (rising edge)"
           },
           {
             "value": 3,
