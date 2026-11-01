@@ -262,10 +262,15 @@ writes and the half-rate F/R-edge structure are those of `psx_vram_psram.sv` fro
 (MIT); it was re-targeted from 2 ganged chips at
 33.9 MHz to one chip at 57.3 MHz. The async configuration write is stretched (WE# 70 ns) for the shorter slots. The pin
 registers are I/O cell output registers as in the PSX core (`FAST_OUTPUT_REGISTER` / `FAST_OUTPUT_ENABLE_REGISTER`,
-`ap_core.qsf`); `p_dq` and `p_oe` are written in the same branches so they share the one clock enable an I/O cell has
-for its output and output-enable registers (otherwise the fitter leaves `p_oe` in the fabric: v0.2.3 cram0/1 pins
--0.39 / -0.46 ns). Read data is a fabric register at the R edge, as in the PSX core (the chip gives 9 ns of tACLK plus
-two clk_ram, slack +2 ns).
+`ap_core.qsf`). `p_dq` and `p_oe` are written at every F edge from a function of the segment state, with no constant in
+any branch: an I/O cell has one clock enable for its output and output-enable registers and no synchronous control, and
+the fitter packs `p_oe` next to a `p_dq` bit only when both registers end up with the same enable. With per-branch
+assignments the synthesis gave the eight `p_dq` bits whose configuration value depends on `cop[0]` their own enable and
+the eight constant bits (and `p_oe`) `ph`, so half the pins kept `p_oe` in the fabric (cram0/1 pins -0.46 ns, round 2 in
+docs/fit-status.md); `ALLOW_SYNCH_CTRL_USAGE OFF` on the registers packed them but applied to the entity and cost 13
+LABs. While `p_oe` is low the DQ pins are high impedance and `p_dq` holds `act_adr[15:0]`, which also carries a
+configuration value one slot ahead of its write. Read data is a fabric register at the R edge, as in the PSX core (the
+chip gives 9 ns of tACLK plus two clk_ram, slack +2 ns).
 
 Client port, 16 bit words (`ddram_pocket` forms the halfword address and the word count; the controller keeps no lane or
 beat logic): `addr` halfword address (bit 22 = die), `cnt` words (reads 1-1023, writes 1 or 2), `din` = {word 0, word 1}

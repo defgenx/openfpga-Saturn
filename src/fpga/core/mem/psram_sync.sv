@@ -80,13 +80,14 @@ localparam logic [15:0] RCR_ALL   = 16'h0010;         // power-on value: full ar
 localparam logic [2:0] ST_INIT = 3'd0, ST_CFG = 3'd1, ST_IDLE = 3'd2,
                        ST_LAT  = 3'd3, ST_DATA = 3'd4, ST_SCFG = 3'd7;
 
-// ---- pin registers (I/O cell output registers, ap_core.qsf). p_dq and p_oe are written in the same branches (p_dq
-// gets 0 where the bus is released, p_oe 1 with every write word) so they share one clock enable: the I/O cell has a
-// single enable for its output and output-enable registers, and p_oe cannot be packed next to p_dq otherwise. No
-// synchronous clear / load may be inferred for them either (the 0 of a release would become one): same reason.
+// ---- pin registers (I/O cell output registers, ap_core.qsf). p_dq and p_oe are written at every F edge from a function
+// of the segment state (dq_next / oe_next below): the I/O cell has one clock enable for its output and output-enable
+// registers and no synchronous control, so the fitter packs p_oe next to p_dq only when both are "ph-enabled, D = logic".
+// Any constant in a p_dq branch (a 0 at a release, a configuration bit) becomes a synchronous clear or a per-bit enable
+// (docs/memory.md section 4). While p_oe is 0 the DQ pins are high impedance, so p_dq is don't-care then.
 reg  [5:0]  p_a = 6'd0;
-(* altera_attribute = "-name ALLOW_SYNCH_CTRL_USAGE OFF" *) reg [15:0] p_dq = 16'd0;
-(* altera_attribute = "-name ALLOW_SYNCH_CTRL_USAGE OFF" *) reg p_oe = 1'b0;
+reg  [15:0] p_dq = 16'd0;
+reg         p_oe = 1'b0;
 reg         p_adv_n = 1'b1, p_cre = 1'b0, p_oe_n = 1'b1, p_we_n = 1'b1;
 reg  [1:0]  p_ce_n = 2'b11;                           // {die 1, die 0}
 reg  [1:0]  p_bm_n = 2'b11;                           // {ub, lb}
@@ -127,10 +128,21 @@ wire        req_f   = !rst_pend && (rd || we);
 
 wire [15:0] cfg_val = cop[0] ? BCR_SYNC : RCR_ALL;
 
+// p_dq / p_oe next values (every F edge). The address phase takes the port address for a new request and act_adr for the
+// rest of a split read; a configuration value is staged in act_adr[15:0] one slot ahead (act_adr is idle then); the write
+// latency keeps the address on DQ (act_adr[15:0] == the launched address); everything else is don't-care (p_oe low).
+wire        launching = (st == ST_IDLE) && (act_busy || req_f) && !(act_busy && rst_pend && !cur_we_req);
+wire        dq_new    = launching && !act_busy;
+wire        dq_data   = (st == ST_DATA) && cur_we && (w_rem != 2'd0);
+wire [15:0] dq_next   = dq_new ? addr[15:0] : dq_data ? (w_cur ? din[15:0] : din[31:16]) : act_adr[15:0];
+wire        oe_next   = launching || (st == ST_LAT && cur_we) || dq_data
+                     || (st == ST_CFG  && tmr >= 4'd1 && tmr <= 4'd7)
+                     || (st == ST_SCFG && tmr >= 4'd1 && tmr <= 4'd10);
+
 task automatic pins_idle;
 	begin
 		p_ce_n <= 2'b11; p_adv_n <= 1'b1; p_we_n <= 1'b1; p_oe_n <= 1'b1;
-		p_oe <= 1'b0; p_dq <= 16'd0; p_bm_n <= 2'b11;
+		p_bm_n <= 2'b11;
 	end
 endtask
 
@@ -151,8 +163,8 @@ task automatic launch;
 		cur_we <= w;
 		st <= ST_LAT; tmr <= 4'd1; last <= 1'b0;
 		p_ce_n <= adr[22] ? 2'b01 : 2'b10;
-		p_adv_n <= 1'b0; p_we_n <= !w; p_oe_n <= 1'b1; p_oe <= 1'b1;
-		p_a <= adr[21:16]; p_dq <= adr[15:0];
+		p_adv_n <= 1'b0; p_we_n <= !w; p_oe_n <= 1'b1;
+		p_a <= adr[21:16];
 		p_bm_n <= w ? 2'b11 : 2'b00;
 	end
 endtask
@@ -188,6 +200,7 @@ always @(posedge clk) begin
 	end else begin
 		// ---- F edge: the chip clock falls; every other pin changes here
 		p_clk <= 1'b0;
+		p_dq <= dq_next; p_oe <= oe_next;
 
 		case (st)
 		ST_INIT: begin
@@ -204,16 +217,15 @@ always @(posedge clk) begin
 		ST_CFG: begin
 			tmr <= tmr + 4'd1;
 			case (tmr[3:0])
-			4'd0: p_cre <= 1'b1;
+			4'd0: begin p_cre <= 1'b1; act_adr[15:0] <= cfg_val; end
 			4'd1: begin
 				p_ce_n <= cop[1] ? 2'b01 : 2'b10; p_adv_n <= 1'b0;
 				p_a <= cop[0] ? 6'b001000 : 6'b000000;       // A[19:18]: 10 BCR, 00 RCR
-				p_dq <= cfg_val; p_oe <= 1'b1;
 			end
 			4'd2: begin p_adv_n <= 1'b1; p_we_n <= 1'b0; end
 			4'd6: p_we_n <= 1'b1;
 			4'd7: p_ce_n <= 2'b11;
-			4'd8: begin p_cre <= 1'b0; p_oe <= 1'b0; p_dq <= 16'd0; cfg_next(); end
+			4'd8: begin p_cre <= 1'b0; cfg_next(); end
 			default: ;
 			endcase
 		end
@@ -223,15 +235,14 @@ always @(posedge clk) begin
 		ST_SCFG: begin
 			tmr <= tmr + 4'd1;
 			case (tmr[3:0])
-			4'd0: p_cre <= 1'b1;
+			4'd0: begin p_cre <= 1'b1; act_adr[15:0] <= cfg_val; end
 			4'd1: begin
 				p_ce_n <= cop[1] ? 2'b01 : 2'b10; p_adv_n <= 1'b0; p_we_n <= 1'b0;
 				p_a <= cop[0] ? 6'b001000 : 6'b000000;
-				p_dq <= cfg_val; p_oe <= 1'b1;
 			end
 			4'd2: begin p_adv_n <= 1'b1; p_we_n <= 1'b1; end
 			4'd10: p_ce_n <= 2'b11;
-			4'd11: begin p_cre <= 1'b0; p_oe <= 1'b0; p_dq <= 16'd0; cfg_next(); end
+			4'd11: begin p_cre <= 1'b0; cfg_next(); end
 			default: ;
 			endcase
 		end
@@ -244,7 +255,7 @@ always @(posedge clk) begin
 
 		ST_LAT: begin
 			p_adv_n <= 1'b1; p_we_n <= 1'b1;
-			if (!cur_we) begin p_oe <= 1'b0; p_dq <= 16'd0; if (tmr >= 4'(OE_SLOT)) p_oe_n <= 1'b0; end
+			if (!cur_we && tmr >= 4'(OE_SLOT)) p_oe_n <= 1'b0;
 			tmr <= tmr + 4'd1;
 			if (tmr == 4'((cur_we ? WR_FIRST : RD_FIRST) - 1)) st <= ST_DATA;
 		end
@@ -263,7 +274,6 @@ always @(posedge clk) begin
 				if (w_rem == 2'd0) begin
 					pins_idle(); act_busy <= 1'b0; st <= ST_IDLE;
 				end else begin
-					p_dq <= w_cur ? din[15:0] : din[31:16]; p_oe <= 1'b1;
 					p_bm_n <= ~(w_cur ? be[1:0] : be[3:2]);
 					w_cur <= 1'b1; w_rem <= w_rem - 2'd1;
 				end
