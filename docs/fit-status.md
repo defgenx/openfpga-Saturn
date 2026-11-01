@@ -189,7 +189,7 @@ counters are row-limited already; DIVU is a serial single-adder unit.
 
 Not done (estimates):
 - VDP1P MLABs (CLT, GSTEP, PAT_FIFO, ACCS x2: five LABs, -50 ALMs) with `VDP1P_MLAB FE=1`: the read becomes a half-cycle path
-  (the reason `timing2` put them back). Done in timing round 4 with the FE=2 read (address one clock ahead).
+  (the reason `timing2` put them back).
 - VDP2P `nmp` / `rmp` (two LABs): the read address comes from another falling-edge RAM.
 - Write-data holds of `ddram_pocket` shared between `raml` and `cart` (about -25 ALMs): a write on one channel stalls the other.
 - The 763 VDP2 register-file flip-flops (`REGS.*`, about 380 ALMs) as RAM need sequential readers in the dot pipeline
@@ -274,7 +274,6 @@ mem` and `make -C sim/vdp1` (golden VDP1 against VDP1P, 40 scenarios) pass.
 | VDP1 HTIM_PIPE -> fb i1r -0.79 (44 paths, 5 levels, 8.9 ns) | `VDP1P`: `\|HTIM_PIPE` kept as a register (HTIM_PIPE_ANY, updated with the pipe at DCE_R); the erase-address select is one LUT of four register outputs | 5 -> 3 logic levels on a routing-dominated clk_sys -> clk_ram path: +0.8 to +1.5 ns | `5c9a520` |
 | fb rptr0 -> rptr1 -0.33 (8 levels, two carry chains) | `vdp1_fb_pocket`: the FIFO choice reads a running occupancy difference `dlt` (moved by each edge's push and pop) instead of two subtractions and a compare | rptr* see two levels of != and the enable; the dlt loop is two levels, the pick, the step and one 10 bit chain: about +1.5 ns | `4d745d5` |
 | MSH / SSH BUS_RLS -> ddram ramh_tag -0.29 (97 paths), A -> ramh_tag -0.12 | `ddram_pocket`: a missed line's tag is written at the edge after the request edge (`ramh_alloc`) from `ramh_addr`, and the fill address is `ramh_addr` (the master holds it under WAIT); SDC setup 2 from clk_sys into `ramh_tag` and `a_addr` | those paths get two clk_ram. The 15 bit compare into `ramh_curr` / `ramh_plru` / `ramh_read_busy` (-0.13 / +0.09 / positive) keeps its logic (compare, way, the BUS_RLS mux: four levels, 5.5 ns of routing from the BSC): this group is not closed by RTL and is left to the fitter with the tag enable fanout (60 registers) and the data paths out of its way | `6fb79ed` |
-| area: 4 of the 7 memory LABs (first round 4 fits: 1,854 / 1,852 LABs) | `VDP1P`: GSTEP, CLT and the two edge-stepper ACCS RAMs in M10K with the FE=2 read of PAT_FIFO (the address of the next clock, a same-edge write bypassed), which gives the consumer the whole clock where the half-cycle FE=1 read of `fit-dsp` lost 3 to 3.5 ns. ACCS: `K_NXT` from the step counter; CLT: the `DRAW_PAT <= PAT` condition repeated; GSTEP: two M10Ks, one per side, read at the channel of `GSEQ_NXT`, the side chosen after the read (pass 2 takes DIR[0], not predicted). VDP2P's `cdpa` stays (its address depends on DOT_CE_R, an input) | -4 LABs, +5 M10K (301 -> 306 of 308); the M10K clock-to-output replaces the MLAB read on the GS_Q multiplier, ColorCalc and edge-stepper paths of clk_sys (+0.15 in round 2). Golden VDP1 regression (40 scenarios, all colour modes) and tb_eq_vdp1p pass; a current-address read of any of the three fails one of them | see below |
 
 Assumptions the benches enforce: `rst` of the framebuffer module is high for two clk_sys or more (`ram_reset`: 256; a single
 clk_sys clears `wptr*` at the last reset edge and either form of the logic then pops entries that were never written), the
