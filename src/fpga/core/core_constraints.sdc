@@ -85,6 +85,20 @@ foreach n {0 1} {
 	# read words are shifted in on the following clk_ram edges
 	set_multicycle_path -setup -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 2
 	set_multicycle_path -hold  -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 1
+
+	# psram_sync is a half-rate machine: `ph` toggles every clk_ram and the pin registers and the segment state (the
+	# F-edge registers below) are written only at edges where ph is 1, from registers that are themselves written
+	# only at those edges, so a path between two of them has two clk_ram periods. The ddram_pocket request registers
+	# are written only when busy is low, which is also only at F edges (busy_i needs ph, rlast follows an R edge).
+	# Not in the set: ph, rst_pend (set at any edge), reset, init_go, and the R-edge registers p_clk, smp, rdata,
+	# rvalid, rlast; paths from those stay single-cycle.
+	set pf [get_registers "*|psram${n}|p_a* *|psram${n}|p_dq* *|psram${n}|p_oe* *|psram${n}|p_adv_n* *|psram${n}|p_cre* *|psram${n}|p_we_n* *|psram${n}|p_ce_n* *|psram${n}|p_bm_n* *|psram${n}|st* *|psram${n}|tmr* *|psram${n}|cop* *|psram${n}|cpass* *|psram${n}|clk_run* *|psram${n}|last* *|psram${n}|cur_we* *|psram${n}|act_* *|psram${n}|w_cur* *|psram${n}|w_rem* *|psram${n}|smp_last*"]
+	set_multicycle_path -setup -from $pf -to $pf 2
+	set_multicycle_path -hold  -from $pf -to $pf 1
+	set ab [lindex {a b} $n]
+	set rq [get_registers "*|ddram|${ab}_addr* *|ddram|${ab}_wd* *|ddram|${ab}_be* *|ddram|${ab}_read* *|ddram|${ab}_write* *|ddram|${ab}_chan*"]
+	set_multicycle_path -setup -from $rq -to $pf 2
+	set_multicycle_path -hold  -from $rq -to $pf 1
 }
 
 # ---------------------------------------------------------------------------------- SRAM (asynchronous)

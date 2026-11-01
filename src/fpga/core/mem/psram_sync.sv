@@ -95,7 +95,7 @@ assign cram_oe_n = p_oe_n;     assign cram_we_n = p_we_n;
 assign {cram_ub_n, cram_lb_n} = p_bm_n;
 
 // ---- control
-reg         ph = 1'b0;            // 1: the coming edge is an F edge
+(* dont_merge *) reg ph = 1'b0;   // 1: the coming edge is an F edge (not merged with the other chip's: it feeds every pin register here)
 reg  [2:0]  st = ST_INIT;
 reg   [3:0] tmr = 4'd0;           // slot within a segment or config write
 reg  [12:0] itmr = 13'd0;         // power-up wait (INIT_US > 0)
@@ -117,7 +117,9 @@ wire        row_end = &act_adr[ROW_LOG2-1:0];
 wire        busy_i  = rst_pend || !(st == ST_IDLE && ph && !act_busy);
 assign busy = busy_i && !rlast;
 assign idle = (st == ST_IDLE) && !act_busy;
-wire        take_bus = !busy_i && (rd || we);
+// the request test of the ST_IDLE F-edge branch: there ph = 1, st = ST_IDLE and the act_busy case is taken first,
+// so this is !busy_i && (rd || we) without the ph and st terms (keeps ph out of the pin-register cones)
+wire        req_f   = !rst_pend && (rd || we);
 
 wire [15:0] cfg_val = cop[0] ? BCR_SYNC : RCR_ALL;
 
@@ -232,7 +234,7 @@ always @(posedge clk) begin
 
 		ST_IDLE: begin
 			if (act_busy && rst_pend && !cur_we_req) act_busy <= 1'b0;   // drop reads under reset
-			else if (act_busy || take_bus) launch();
+			else if (act_busy || req_f) launch();
 			else if (rst_pend) begin st <= ST_INIT; tmr <= 4'd0; clk_run <= 1'b0; end
 		end
 
