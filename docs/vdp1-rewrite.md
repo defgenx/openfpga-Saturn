@@ -44,7 +44,8 @@ What this allows and forbids:
 ### 2.1 Gouraud edge colours (`GRD`)
 - The golden core steps left/right colour accumulators (6 x 17 bit) and keeps 6 step registers per row. The colour of row k is
   `table colour + k * step (mod 2^17)`; k is `COL_HEIGHT - COL_D`.
-- The six steps are stored as signed words `(q ^ dir) + dir` in a 6-word MLAB. One 12 x 17 multiplier (DSP, +1 block), one 17-bit
+- The six steps are stored as signed words `(q ^ dir) + dir` in a 6-word RAM (two 3-word M10Ks, one per side, read one clock
+  ahead at the channel of GSEQ's next value; `VDP1P_MLAB` FE = 2). One 12 x 17 multiplier (DSP, +1 block), one 17-bit
   adder and one read port compute the six edge colours per row in the 6 cycles after LINE_NEXT (the divider operands, 30 flops)
   and the start colour of the row (3 cycles after GRD_CALC_ROW, once `DIR[0]` is known). Polylines and lines use the table colours with
   k forced to 0 through the same path.
@@ -53,7 +54,8 @@ What this allows and forbids:
 - Three serial dividers stay: the 21-cycle row window needs three channels in parallel.
 
 ### 2.2 Edge error accumulators (`EDGE`)
-- Left and right edge lanes, each with D, X, Y accumulators (3 x 14 bit) in a 3-word MLAB; both lanes step in parallel,
+- Left and right edge lanes, each with D, X, Y accumulators (3 x 14 bit) in a 3-word M10K read one clock ahead at the step
+  counter's next value (`VDP1P_MLAB` FE = 2, as the colour table); both lanes step in parallel,
   D then X then Y (X and Y only when D hit), 3 cycles after each row's CALCX, so the next row's positions are ready by its CALCX in
   every skipped-row loop, `FAST` included. Position steps leave as strobes into `LEFT_VERT`/`RIGHT_VERT`.
 - The accumulators are initialised in the 3 cycles after CALCTY. An engine-busy hold on CALCX exists but never triggers in
