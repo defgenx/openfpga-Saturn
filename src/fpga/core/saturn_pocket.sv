@@ -283,10 +283,22 @@ always @(posedge clk_sys) tog_s <= {tog_s[0], rtc_tog};
 wire [64:0] RTC = {tog_s[1], 16'h0000, rtc_pl};
 
 // ---------------------------------------------------------------------------------- clock enables
-reg [25:0] in_clk;
-always @(posedge clk_sys)
-	in_clk <= !PAL ? (!SMPC_DOTSEL ? 53748200 : 57272800) :
-	                 (!SMPC_DOTSEL ? 53375000 : 56875000);
+// in_clk = clk_sys in Hz for the PLL mode, one clock after PAL / SMPC_DOTSEL, 0 in the first clock (it was a register
+// without reset). The accumulators take in_clk - k (threshold) and k - in_clk (negative step) for their step k as constants
+// of the registered mode; in the first clock the threshold is 0 and the step k, which is what in_clk = 0 gave.
+reg [2:0] clk_mode = 3'd0;     // {in_clk loaded, PAL, SMPC_DOTSEL}
+always @(posedge clk_sys) clk_mode <= {1'b1, PAL, SMPC_DOTSEL};
+function automatic [26:0] mode_sub(input [2:0] m, input [26:0] k, input neg);
+	casez (m)
+		3'b0??:  mode_sub = neg ? k : 27'd0;
+		3'b100:  mode_sub = neg ? k - 27'd53748200 : 27'd53748200 - k;
+		3'b101:  mode_sub = neg ? k - 27'd57272800 : 27'd57272800 - k;
+		3'b110:  mode_sub = neg ? k - 27'd53375000 : 27'd53375000 - k;
+		default: mode_sub = neg ? k - 27'd56875000 : 27'd56875000 - k;
+	endcase
+endfunction
+wire [26:0] scsp_thr  = mode_sub(clk_mode, 27'd45158400, 1'b0), scsp_nstp  = mode_sub(clk_mode, 27'd45158400, 1'b1);
+wire [26:0] audio_thr = mode_sub(clk_mode, 27'd48000, 1'b0),    audio_nstp = mode_sub(clk_mode, 27'd48000, 1'b1);
 
 bit MCLK_DIV;
 always @(posedge clk_sys) MCLK_DIV <= ~MCLK_DIV;
@@ -294,7 +306,7 @@ wire SYS_CE_R =  MCLK_DIV;
 wire SYS_CE_F = ~MCLK_DIV;
 
 wire SCSP_2X_CE;
-ce_gen #(26) SCSP_CEGen (.clk(clk_sys), .in_clk(in_clk), .out_clk(26'd45158400), .in_ce(1'b1), .ce(SCSP_2X_CE), .ev());
+ce_gent #(26) SCSP_CEGen (.clk(clk_sys), .thr(scsp_thr[25:0]), .nstep(scsp_nstp[25:0]), .out_clk(26'd45158400), .in_ce(1'b1), .ce(SCSP_2X_CE), .ev());
 
 bit SCSP_DIV;
 always @(posedge clk_sys) if (SCSP_2X_CE) SCSP_DIV <= ~SCSP_DIV;
@@ -305,7 +317,7 @@ wire CD_EV;   // SMPC (4 MHz) and CD (40 MHz) are 1/10 and 1 of the same ratio: 
 ce_div #(10) SMPC_CEGen (.clk(clk_sys), .ev(CD_EV), .ce(SMPC_CE));
 
 wire CD_CE;
-ce_gen #(12) CD_CEGen (.clk(clk_sys), .in_clk(12'd3528), .out_clk(12'd3125), .in_ce(SCSP_2X_CE), .ce(CD_CE), .ev(CD_EV));   // 40 MHz / 45.1584 MHz = 3125 / 3528
+ce_gent #(12) CD_CEGen (.clk(clk_sys), .thr(12'd403), .nstep(12'd3125 - 12'd3528), .out_clk(12'd3125), .in_ce(SCSP_2X_CE), .ce(CD_CE), .ev(CD_EV));   // 40 MHz / 45.1584 MHz = 3125 / 3528
 
 wire CDD_2X_CE;
 ce_div #(256) CDD_CEGen (.clk(clk_sys), .ev(SCSP_2X_CE), .ce(CDD_2X_CE));   // 176.4 kHz = 45.1584 MHz / 256
@@ -798,7 +810,7 @@ pocket_video video (
 );
 
 pocket_audio audio (
-	.clk(clk_sys), .rst(rst_sys), .scsp_ce(SCSP_CE), .in_clk(in_clk),
+	.clk(clk_sys), .rst(rst_sys), .scsp_ce(SCSP_CE), .out_thr(audio_thr), .out_nstep(audio_nstp),
 	.in_l($signed(SOUND_L)), .in_r($signed(SOUND_R)),
 	.out_l(audio_l), .out_r(audio_r), .out_stb(audio_stb)
 );

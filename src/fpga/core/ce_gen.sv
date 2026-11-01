@@ -23,6 +23,28 @@ always @(posedge clk) begin
 end
 endmodule
 
+// ce_gent - ce_gen with the test taken against thr = in_clk - out_clk (so the compare does not wait for the sum) and one
+// adder whose operand is out_clk or nstep = out_clk - in_clk (mod 2^W). thr / nstep must change in the clock in_clk would.
+module ce_gent #(
+	parameter W = 26
+) (
+	input  wire         clk,
+	input  wire [W-1:0] thr,
+	input  wire [W-1:0] nstep,
+	input  wire [W-1:0] out_clk,
+	input  wire         in_ce,
+	output reg          ce = 1'b0,
+	output wire         ev
+);
+reg  [W-1:0] sum = '0;
+wire         ge = sum >= thr;
+assign ev = in_ce & ge;
+always @(posedge clk) begin
+	ce <= ev;
+	if (in_ce) sum <= sum + (ge ? nstep : out_clk);
+end
+endmodule
+
 // ce_div - registered enable on every N-th pulse of ev
 module ce_div #(
 	parameter N = 10

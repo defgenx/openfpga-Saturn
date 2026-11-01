@@ -1,7 +1,7 @@
 // SCSP output (44.1 kHz, signed 16 bit stereo) to 48 kHz, linear interpolation.
 //
 // The 44.1 kHz strobe counts SCSP_CE (22.5792 MHz / 512). The 48 kHz strobe is a phase accumulator on
-// in_clk, so both follow the PLL mode. `ph` is the output position inside [prev, cur] in 1/65536
+// in_clk (clk Hz), given as out_thr = in_clk - 48000 and out_nstep = 48000 - in_clk, so both follow the PLL mode. `ph` is the output position inside [prev, cur] in 1/65536
 // input samples; each output advances it by 44100/48000, each input sample shifts the window by one.
 // Output = prev + (cur - prev) * ph, one multiply-add (DSP block) per channel.
 
@@ -11,7 +11,8 @@ module pocket_audio (
 	input  wire               clk,
 	input  wire               rst,
 	input  wire               scsp_ce,
-	input  wire        [25:0] in_clk,
+	input  wire        [26:0] out_thr,
+	input  wire        [26:0] out_nstep,
 	input  wire signed [15:0] in_l,
 	input  wire signed [15:0] in_r,
 	output reg  signed [15:0] out_l,
@@ -27,8 +28,7 @@ reg signed [15:0] prev_l, prev_r, cur_l, cur_r;
 reg [16:0] ph;
 reg        in_ev, out_ev, out_pend;
 
-wire [27:0] acc_nxt = {1'b0, acc} + 28'd48000;
-wire [28:0] acc_dif = {1'b0, acc_nxt} - {3'b0, in_clk};   // acc_nxt >= in_clk is "no borrow"
+wire        acc_ge = acc >= out_thr;                      // acc + 48000 >= in_clk
 
 always @(posedge clk) begin
 	in_ev  <= 1'b0;
@@ -39,11 +39,8 @@ always @(posedge clk) begin
 		if (&scsp_cnt) in_ev <= 1'b1;
 	end
 
-	acc <= acc_nxt[26:0];
-	if (!acc_dif[28]) begin
-		acc    <= acc_dif[26:0];
-		out_ev <= 1'b1;
-	end
+	acc <= acc + (acc_ge ? out_nstep : 27'd48000);
+	if (acc_ge) out_ev <= 1'b1;
 
 	if (rst) begin
 		scsp_cnt <= 9'd0;
