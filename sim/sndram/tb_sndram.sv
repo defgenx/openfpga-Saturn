@@ -4,8 +4,8 @@
 `timescale 1ps/1ps
 module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   // NEXP: lines of exp.hex (Makefile)
 	integer T_RAM = 8730;                   // clk_ram period (ps); +T_RAM=9303 +IN_CLK=53748200 is the 320 pixel mode (DOTSEL = 0)
-	integer TCO = 3500, TIN = 1000;   // pad delays (ps); +TCO=n +TIN=n sweep them
-	integer CAPV = 1;
+	integer TCO = 5100, TIN = 0;      // pad delays (ps); +TCO=n +TIN=n sweep them (defaults as tb_sdram: the slow-corner clock-out delay less the I/O register's clock lead, docs/memory.md section 3)
+	integer CAPV = 0;
 	initial begin void'($value$plusargs("TCO=%d", TCO)); void'($value$plusargs("TIN=%d", TIN)); void'($value$plusargs("CAP=%d", CAPV)); end   // +CAP=n: sdram_pocket cap_sel
 	wire chk_done, chk_ok;
 `ifdef NOCHK_DEF
@@ -17,8 +17,8 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	wire init_done;
 	reg clk_run = 0;
 	always begin wait (clk_run); #(T_RAM/2) clk_ram = ~clk_ram; end
-	reg clk_cap = 0;   // clk_ram + 90 degrees (PLL counter 4)
-	always @(clk_ram) clk_cap <= #(T_RAM/4) clk_ram;
+	wire clk_cap;      // clk_ram + 90 degrees (PLL counter 4); a transport FIFO, like the pins: `<= #d` would evaluate clk_ram at the end of the delay
+	tdel #(1) d_cap (.d(T_RAM / 4), .i(clk_ram), .o(clk_cap));
 	always begin wait (clk_run); #(T_RAM)   CLK = ~CLK; end
 	reg MCLK_DIV = 0;
 	always @(posedge CLK) MCLK_DIV <= ~MCLK_DIV;
