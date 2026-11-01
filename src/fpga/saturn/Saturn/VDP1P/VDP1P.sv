@@ -410,10 +410,19 @@ module VDP1P (
 	bit          GS_WE;
 	bit  [ 2: 0] GS_WI;
 	bit  [16: 0] GS_WD;
-	VDP1P_MLAB #(.W(17),.AW(3),.FE(0)) GSTEP(CLK, GS_WE, GS_WI, GS_WD, GIDX, GS_Q);
 	wire [ 1: 0] GL_CH = GSEQ - 4'd7;
 	wire         GL_WE = GSEQ >= 4'd7;
 	wire         GE_TRIG = GRD_ON && ((CMD_ST == CMDS_LINE_NEXT && COMM_ACC) || (CMD_ST == CMDS_GRD_CALC_RIGHT && GRD_CALC_STATE == 5'd20));
+	// GSTEP in two M10Ks, one per side, read one clock ahead (VDP1P_MLAB FE = 2) at the channel of GSEQ's next value; the
+	// side is chosen after the read (GSIDE: in pass 2 DIR[0], written by the row set-up and not predicted here). GSEQ_NXT
+	// repeats the GSEQ update of the command block below, which runs under EN after the FRAME_START and DRAW_TERMINATE branches.
+	wire [ 3: 0] GSEQ_NXT = (FRAME_START || DRAW_TERMINATE || !EN) ? GSEQ : GE_TRIG ? 4'd1 :
+	                        GSEQ == 4'd6 ? (GP2_ANY ? 4'd7 : 4'd0) : GSEQ == 4'd9 ? 4'd0 : GSEQ != 4'd0 ? GSEQ + 4'd1 : GP2_ANY ? 4'd7 : 4'd0;
+	wire [ 1: 0] GCH_NXT = GSEQ_NXT < 4'd7 ? GSEQ_NXT[2:1] - {1'b0,!GSEQ_NXT[0]} : GSEQ_NXT[1:0] - 2'd3;
+	wire [16: 0] GS_QL,GS_QR;
+	VDP1P_MLAB #(.W(17),.AW(2),.FE(2)) GSTEP_L(CLK, GS_WE && GS_WI < 3'd3,  GS_WI[1:0],         GS_WD, GCH_NXT, GS_QL);
+	VDP1P_MLAB #(.W(17),.AW(2),.FE(2)) GSTEP_R(CLK, GS_WE && GS_WI >= 3'd3, GS_WI[1:0] - 2'd3, GS_WD, GCH_NXT, GS_QR);
+	assign GS_Q = GSIDE ? GS_QR : GS_QL;
 	// COMM 5-7 take the left/right colours of the segment straight from the table (POLY_S, POLY_S+1)
 	RGB_t        GRD_TBL_L,GRD_TBL_R;
 	assign GRD_TBL_L = GRD_TBL[POLY_S][14:0];
@@ -2244,8 +2253,13 @@ module VDP1P (
 	end
 	assign CMD_READ_DONE = (VRAM_ST == VS_CMD_READ) && VRAM_RDY && (VRAM_READ_POS == 4'd15);
 	
-	wire [ 3: 0] CLT_RA = DRAW_PAT.C[3:0];
-	VDP1P_COL_TBL CLT(.CLK(CLK), .WRADDR(CMD_POS), .DATA(CMD_DAT), .WREN(CLT_WE), .RDADDR(CLT_RA), .Q(CLT_Q));
+	// the colour table (M10K, VDP1P_MLAB FE = 2) is read one clock ahead: the address of the next clock is PAT's when the
+	// frame buffer draw block is about to load DRAW_PAT (its FBDS_IDLE condition, repeated here), DRAW_PAT's otherwise
+	wire         DRAW_PAT_LOAD = RST_N && FBD_ST == FBDS_IDLE && !CPU_VRAM_BUSY && (SPR_DATA_READY || CMD.CMDCTRL.COMM >= 4'h4)
+	                          && (CMD_ST == CMDS_NSPR_DRAW || CMD_ST == CMDS_SSPR_DRAW || CMD_ST == CMDS_LINE_DRAW)
+	                          && !(TEXT_X_READ_STEP && EC_FIND && IS_PAT_EC);
+	wire [ 3: 0] CLT_RA_NXT = DRAW_PAT_LOAD ? PAT.C[3:0] : DRAW_PAT.C[3:0];
+	VDP1P_COL_TBL CLT(.CLK(CLK), .WRADDR(CMD_POS), .DATA(CMD_DAT), .WREN(CLT_WE), .RDADDR_NXT(CLT_RA_NXT), .Q(CLT_Q));
 	assign CLT_READ_DONE = (VRAM_ST == VS_CLT_READ) && VRAM_RDY && (VRAM_READ_POS == 4'd15);
 	
 	assign GRD_READ_DONE = (VRAM_ST == VS_GRD_READ) && VRAM_RDY && (VRAM_READ_POS == 4'd3);
@@ -2484,13 +2498,13 @@ module VDP1P_COL_TBL (
 	input	  [3:0] WRADDR,
 	input	 [15:0] DATA,
 	input	        WREN,
-	input	  [3:0] RDADDR,
+	input	  [3:0] RDADDR_NXT,     // the read address of the next clock
 	output [15:0] Q
 );
 
 	wire [15:0] sub_wire0;
 
-	VDP1P_MLAB #(.W(16),.AW(4),.FE(0)) ram(CLK, WREN, WRADDR, DATA, RDADDR, sub_wire0);
+	VDP1P_MLAB #(.W(16),.AW(4),.FE(2)) ram(CLK, WREN, WRADDR, DATA, RDADDR_NXT, sub_wire0);
 
 	assign Q =  sub_wire0;
 
@@ -2535,7 +2549,9 @@ endmodule
 
 // Simple dual port RAM in M10K with the read address registered on the falling edge: for a register-sourced RA the
 // value is what an asynchronous MLAB read gives before the next rising edge. RA must not come from another such RAM.
-// FE = 0: asynchronous MLAB read (the half-cycle falling-edge read of FE = 1 is too slow for the consumer)
+// FE = 2: M10K read on the rising edge with RA = the address of the next clock, a same-edge write to it bypassed: the
+// value is again that of an asynchronous read, with the whole clock for the consumer (the half-cycle read of FE = 1 was too
+// slow for GSTEP, CLT and ACCS). FE = 0: asynchronous MLAB read, one memory LAB per instance (no instance left).
 module VDP1P_MLAB #(parameter W = 16, parameter AW = 4, parameter FE = 1) (
 	input          CLK,
 	input          WE,
@@ -2637,8 +2653,9 @@ module VDP1P_EDGE (
 		end
 	end
 	wire         ACT = RUN && EN;
-	VDP1P_EDGE_LANE LANE_L(CLK, ACT, MODE_INIT, K, LH, CH, LSX, LSY, LDX, LDY, LPS);
-	VDP1P_EDGE_LANE LANE_R(CLK, ACT, MODE_INIT, K, RH, CH, RSX, RSY, RDX, RDY, RPS);
+	wire [ 1: 0] K_NXT = !EN ? K : (INIT || START) ? 2'd0 : RUN ? K + 2'd1 : K;   // K after this clock (the accumulator RAMs read one clock ahead)
+	VDP1P_EDGE_LANE LANE_L(CLK, ACT, MODE_INIT, K, K_NXT, LH, CH, LSX, LSY, LDX, LDY, LPS);
+	VDP1P_EDGE_LANE LANE_R(CLK, ACT, MODE_INIT, K, K_NXT, RH, CH, RSX, RSY, RDX, RDY, RPS);
 endmodule
 
 module VDP1P_EDGE_LANE (
@@ -2646,6 +2663,7 @@ module VDP1P_EDGE_LANE (
 	input         ACT,
 	input         MODE_INIT,
 	input  [ 1: 0] K,
+	input  [ 1: 0] K_NXT,
 	input  [11:0] H,
 	input  [11:0] CH,
 	input  [11:0] SX,
@@ -2666,7 +2684,7 @@ module VDP1P_EDGE_LANE (
 	wire         WE = ACT && (MODE_INIT || K == 2'd0 || DHIT);
 	always @(posedge CLK) if (ACT && !MODE_INIT && K == 2'd0) DHIT <= HIT;
 	assign PS = {ACT && !MODE_INIT && DHIT && K == 2'd2 && HIT, ACT && !MODE_INIT && DHIT && K == 2'd1 && HIT};
-	VDP1P_MLAB #(.W(14),.AW(2),.FE(0)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K, ACC);
+	VDP1P_MLAB #(.W(14),.AW(2),.FE(2)) ACCS(CLK, WE, K, MODE_INIT ? INIT_V : NXT, K_NXT, ACC);
 endmodule
 
 
