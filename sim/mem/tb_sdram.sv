@@ -14,7 +14,7 @@
 //   +TREF_US=n  retention limit used by the model (default 64000)
 //   +NOSCSP     disable the SCSP traffic
 //   +CAPPS=n    extra delay (ps) on the SDRAM clock path, to probe the data eye
-//   +CAP=n      read capture setting (cap_sel, default 0 = READ+4 rising; 4..6 falling edge, 3 / 7 quarter, see docs/memory.md)
+//   +CAP=n      read capture setting (cap_sel: 0 = READ + 4, the default; 1 = + 5; 2 = + 6; see docs/memory.md)
 //   +TCO=n +TIN=n  pad delays in ps (default 5100 / 0: the slow-corner clock-out delay less the I/O cell register's
 //               clock lead over its data path, docs/memory.md section 3)
 //   +OVERLAP_PS=n  DQ contention limit in ps (default 1100)
@@ -36,8 +36,6 @@ end
 reg clk_ram = 0, clk_sys = 0;
 always #(T_RAM/2) clk_ram = ~clk_ram;
 always #(T_RAM)   clk_sys = ~clk_sys;
-reg clk_cap = 0;   // clk_ram + 90 degrees (PLL counter 4)
-always @(clk_ram) clk_cap <= #(T_RAM/4) clk_ram;
 
 integer profile = 0, run_us = 200, tref_us = 64000, scsp_en = 1, clk_skew = 0;
 integer seed = 1;
@@ -73,7 +71,7 @@ wire dot_ce_r = (dot_div == 2'd3) & ce_r;
 wire dot_ce_f = (dot_div == 2'd1) & ce_r;
 
 sdram_pocket #(.INIT_CLKS(2000)) dut (
-	.clk(clk_ram), .clk_cap(clk_cap), .init(init), .sync(dot_ce_r), .cap_sel(cap_sel),
+	.clk(clk_ram), .init(init), .sync(dot_ce_r), .cap_sel(cap_sel),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_cke(dram_cke), .dram_ras_n(dram_ras_n), .dram_cas_n(dram_cas_n), .dram_we_n(dram_we_n),
 	.dram_clk(dram_clk),

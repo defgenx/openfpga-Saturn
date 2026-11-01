@@ -176,56 +176,46 @@ samples a command half a clk_ram after the command register edge (READ + 0.5 plu
 launches word 0 at its second clock edge after that (READ + 2.5 plus the clock-out delay) and word 1 at the third; a word
 is valid at the pad from tAC (5.5 ns max) after its launch edge to tOH (2.5 ns min) after the next one: 5.7 ns per word.
 
-DQ is captured in the I/O cells (`sdram_dq_in.sv`, `altddio_in`): `cap_p` is the sample on the rising clk_ram edge and
-`cap_nq` the sample on the falling edge, both presented after the rising edge, so every bit has the same pad-to-register
-delay. The quarter-phase sample is a fabric register on `clk_ram_cap` (PLL counter 4, clk_ram + 90 degrees) handed to clk_ram
-by `cap_h`. Each capture register puts the landing one clk_ram after the sample edge: landing edge = ceil(sample) + 1,
-word 0 at tag stage `cs_st` + 4.
+DQ is captured in the I/O cell input register (`cap_p`, `FAST_INPUT_REGISTER` on the register and on the `dram_dq` pins
+in `ap_core.qsf`), so every bit has the same pad-to-register delay, and the word is taken from that register one clk_ram
+after its sample edge: word 0 at tag stage `cs_st` + 4. This is the structure of Saturn_MiSTer's `sdram1.sv`, which runs the
+same 114.5 MHz clk_ram with CL3, `SDRAM_CLK = ~clk` through a DDIO and `FAST_INPUT_REGISTER` on `SDRAM_DQ`: there the pin
+registers take the READ one clock after `state[0]`, `rbuf0 <= SDRAM_DQ` samples every clock and `out_read = state[5].RD`
+moves `{rbuf1, rbuf0}` into `dout`, so each word is the sample taken 4 clocks after its READ reached the pins and lands
+5 clocks after it. The Pocket default is the same READ + 4.
 
 **Runtime setting** (Core Settings menu, `interact.json`; core_top register 0x0C, latched by `sdram_pocket`
 while `init` is high, so it applies at the next menu Reset without reloading the core):
 
 | Menu entry | Values | `cap_sel` | Word 0 / word 1 sampled at READ + | Word 0 lands at READ + |
 |---|---|---|---|---|
-| SDRAM read capture | **+4 (default)** / +5 / +6 (rising edge, I/O cell) | **0** / 1 / 2 | 4,5 / 5,6 / 6,7 | 5 / 6 / 7 |
-| | +3.5 / +4.5 / +5.5 (falling edge, I/O cell) | 4 / 5 / 6 | 3.5,4.5 / 4.5,5.5 / 5.5,6.5 | 5 / 6 / 7 |
-| | +4.25 / +3.25 (quarter, fabric register on `clk_ram_cap`) | 3 / 7 | 4.25,5.25 / 3.25,4.25 | 6 / 5 |
+| SDRAM read capture | **+4 (default)** / +5 / +6 | **0** / 1 / 2 | 4,5 / 5,6 / 6,7 | 5 / 6 / 7 |
 
 Why +4, from the timing analyser of the v0.2.3 build (slow 1100mV 85C / fast 1100mV 0C): the dram_clk pin follows the
 ideal clk_ram falling edge by 6.59 / 2.63 ns; an I/O cell input register sees clk_ram 4.33 / 0.69 ns after the ideal edge
 and its data 2.84 / 1.29 ns after the pad. Word 0 is at the pad from READ + 2.5 clk + clock-out + 5.5 ns until
 READ + 3.5 clk + clock-out + 2.5 ns, so the I/O cell register holds it when it samples between READ + 3.73 and + 4.35
 (slow) or between + 3.56 and + 4.18 (fast), in clk_ram periods of 8.73 ns. +4 is inside both with 2.4 ns (setup, slow) and
-1.4 ns (hold, fast) to spare; +4.5 is past the end at both corners and +5 misses the word. The fabric register on
-`clk_ram_cap` (core clock 2.2 / -0.06 ns after the ideal edge, pad to register about 3.5 ns where the fitter put it)
-sees the window between 3.96 and 4.59 (slow) / 3.79 and 4.42 (fast): +4.25 is the in-spec alternative, with the
-placement of that register as its uncertainty. The SDC times the default and the quarter capture (`dram_clk_pin` to
-clk_ram and to `clk_ram_cap`, setup multicycle -end 2: the 2nd edge after the launch edge is 1.5 / 1.75 clk_ram later;
-the hold check stays at the default edge because word 1 follows one SDRAM clock later); the falling-edge register is a
-false path (cap_sel 4..6 are experiments).
+1.4 ns (hold, fast) to spare; +3 (0.7 clk before the word at the slow corner) and +5 (past it) miss the word at both
+corners, as does any half-step of either edge. The SDC times the default (`dram_clk_pin` to clk_ram, setup multicycle
+-end 2: word 0 at READ + 4 is the 2nd clk_ram edge after its launch edge, 1.5 clk_ram later; the hold check stays at the
+default edge because word 1 follows one SDRAM clock later); +5 / +6 are experiments and are not timed.
 
 What this replaces. Up to v0.2.3 the rising-edge settings took DQ from the pad straight into the ten landing registers
-(9.5 to 10.5 ns to the register at the slow corner, with 1 ns of spread between bits), the quarter register was packed
-into the I/O cell with the late I/O clock, and the SDC multicycle counted from the READ edge instead of the SDRAM's data
-launch edge (-end 5 instead of 3 for the +5 default it timed): the pass it reported was 17 ns too lenient. The model
-(`sim/mem/models/sdram_model.sv`) launched the data one SDRAM clock late (CL4 behaviour) and cut every word's hold to
-tLZ instead of tOH, which is why "+4 rising reached the BIOS logo" on the Pocket while the bench wanted +4.5 and +5.
-Both are corrected; `tb_sys` and `tb_sdram` now carry pad delays (`+TCO=n`, default 5100 ps = slow-corner clock-out
-less the I/O register's 1.49 ns clock lead over its data path, `+TIN=n` 0) so the default setting is what they exercise.
+(9.5 to 10.5 ns to the register at the slow corner, with 1 ns of spread between bits), falling-edge and quarter-phase
+(`clk_ram_cap`, PLL counter 4, now unused) registers were the other settings, and the SDC multicycle counted from the
+READ edge instead of the SDRAM's data launch edge (-end 5 instead of 3 for the +5 default it timed): the pass it reported
+was 17 ns too lenient. The model (`sim/mem/models/sdram_model.sv`) launched the data one SDRAM clock late (CL4
+behaviour) and cut every word's hold to tLZ instead of tOH, which is why "+4 rising reached the BIOS logo" on the Pocket
+while the bench wanted +4.5 and +5. Both are corrected (tAC 5.5 / tOH 2.5 ns are kept: the -6 and -7 grades of the
+AS4C32M16 are within them); `tb_sys`, `tb_sdram` and `tb_sndram` carry pad delays (`+TCO=n`, default 5100 ps =
+slow-corner clock-out less the I/O register's 1.49 ns clock lead over its data path, `+TIN=n` 0) so the default setting
+is what they exercise.
 
-Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, rows TCO, columns `cap_sel` 0..7, `#` = pass). The
-hardware-equivalent TCO for the I/O cell register is 5.1 ns (slow) and 3.2 ns (fast); for the fabric `clk_ram_cap`
-register about 7.9 (slow) and 5.7 (fast):
-
-| TCO (ns) | pass |
-|---|---|
-| 0.5 to 1.0 | +3.5, +3.25 |
-| 1.5 | +3.5 |
-| 2.0 to 3.0 | +4, +3.5 |
-| 3.5 to 4.0 | +4 |
-| 4.5 to 6.0 | +4, +4.25 |
-| 6.5 to 7.5 | +4, +4.25, +4.5 |
-| 8.0 to 9.0 | +4.25, +4.5 |
+Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, rows TCO, columns `cap_sel` 0..2, `#` = pass): +4 passes
+for TCO 2.0 to 7.5 ns, +5 and +6 nowhere. The hardware-equivalent TCO for the I/O cell register is 5.1 ns (slow) and
+3.2 ns (fast), so the margins are 2.4 ns at the slow end and 1.2 ns at the fast end. `sim/sndram` (SH-2 through SCSP to the
+model, `NOCHK=1`: the self-check it gates on is compiled out) gives the same range.
 
 The one-clk later landing keeps the VDP2 window (words land from F + 10 to F + 19, the set is sampled at F + 24, the
 previous one at F + 8) and the SCSP delivery at +4 is that of the old +5 default (worst case 26 clk_ram after the request,
@@ -243,9 +233,9 @@ change 0.8 ns after the clock edge at the chip.
 |---|---|---|
 | clock | C64 64 MHz (SNES lower than ours), DDIO `~clk`, no PLL phase step | 114.5 MHz, DDIO `~clk`, no PLL phase step (same) |
 | CAS latency | 2 | 3 (a 2-cycle shorter window to hide, more tAC budget) |
-| capture | one register on the rising edge, SDC multicycle 2 from `dram_clk_pin` | I/O cell DDIO registers, READ + 4 (multicycle 2 from the data launch edge), or the other runtime settings |
+| capture | one register on the rising edge, SDC multicycle 2 from `dram_clk_pin` | one I/O cell register on the rising edge, READ + 4 (setup multicycle 2 from the data launch edge) |
 | pin output registers | C64: `FAST_OUTPUT_REGISTER` on every `dram_*` output and `FAST_OUTPUT_ENABLE_REGISTER` on `dram_dq` | same, `ap_core.qsf` |
-| DQ input register | fabric register (no `FAST_INPUT_REGISTER`) | I/O cell (`altddio_in`), plus the fabric `clk_ram_cap` register |
+| DQ input register | fabric register (no `FAST_INPUT_REGISTER`) | I/O cell (`FAST_INPUT_REGISTER`), as Saturn_MiSTer's `sdram1.sv` |
 | SDC | `dram_clk_pin` generated clock, input delay 6.4 / 3.2 ns (C64), output delay 1.5 / -0.8 | `dram_clk_pin`, input delay 5.5 / 2.5, output 1.5 / -1.0 |
 
 Neither working core runs CL3 at 114 MHz, so the data window (5.7 ns at the pad, 4.2 ns after the FPGA's own corner
@@ -272,7 +262,12 @@ One instance per chip, synchronous fixed latency, chip clock = clk_ram / 2 = 57.
 = 70 ns, minimum 60 ns), `BCR` = sync / fixed / LC4 / no wrap / continuous. The pin protocol, the two-form register
 writes and the half-rate F/R-edge structure are those of `psx_vram_psram.sv` from GuardianSoul/openfpga-PlayStation
 (MIT); it was re-targeted from 2 ganged chips at
-33.9 MHz to one chip at 57.3 MHz. The async configuration write is stretched (WE# 70 ns) for the shorter slots.
+33.9 MHz to one chip at 57.3 MHz. The async configuration write is stretched (WE# 70 ns) for the shorter slots. The pin
+registers are I/O cell output registers as in the PSX core (`FAST_OUTPUT_REGISTER` / `FAST_OUTPUT_ENABLE_REGISTER`,
+`ap_core.qsf`); `p_dq` and `p_oe` are written in the same branches so they share the one clock enable an I/O cell has
+for its output and output-enable registers (otherwise the fitter leaves `p_oe` in the fabric: v0.2.3 cram0/1 pins
+-0.39 / -0.46 ns). Read data is a fabric register at the R edge, as in the PSX core (the chip gives 9 ns of tACLK plus
+two clk_ram, slack +2 ns).
 
 Client port, 16 bit words (`ddram_pocket` forms the halfword address and the word count; the controller keeps no lane or
 beat logic): `addr` halfword address (bit 22 = die), `cnt` words (reads 1-1023, writes 1 or 2), `din` = {word 0, word 1}

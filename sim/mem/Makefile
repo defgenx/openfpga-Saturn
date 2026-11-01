@@ -9,7 +9,7 @@ all: elab sdram psram ddram fb load boot
 build:
 	mkdir -p build
 
-SDSRC := $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv $(SRC)/sdram_dq_in.sv
+SDSRC := $(SRC)/sdram_pocket.sv $(SRC)/sdram_clk_out.sv
 build/tb_sdram: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
 	$(IVL) $(FLAGS) -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
 

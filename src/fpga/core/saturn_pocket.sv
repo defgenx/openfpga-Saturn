@@ -670,7 +670,7 @@ wire [31:0] ramh_do;
 wire        cdram_busy, raml_busy, ramh_busy, vdp1vram_busy, cart_busy;
 
 mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
-	.clk_ram(clk_ram), .clk_ram_cap(clk_ram_cap), .clk_sys(clk_sys), .rst_ram(rst_ram), .cap_sel(sdcap_s2),
+	.clk_ram(clk_ram), .clk_sys(clk_sys), .rst_ram(rst_ram), .cap_sel(sdcap_s2),
 
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i),
 	.dram_dqm(dram_dqm), .dram_clk(dram_clk), .dram_cke(dram_cke),

@@ -7,7 +7,7 @@
 #   counter[1] clk_ram    2 x clk_sys, phase aligned
 #   counter[2] clk_vid    clk_sys / 4 (APF pixel clock)
 #   counter[3] clk_vid_90 clk_vid + 90 degrees
-#   counter[4] clk_ram_cap clk_ram + 90 degrees (SDRAM read capture, sdram_pocket cap_sel 3 / 7)
+#   counter[4] clk_ram_cap clk_ram + 90 degrees (unused since the SDRAM read capture moved into the I/O cell register)
 # Analysis runs at the fastest mode (NTSC, 352 wide); every other mode is slower.
 #
 
@@ -61,15 +61,12 @@ set_output_delay -clock dram_clk_pin -min -1.0 -add_delay $sdram_out
 set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
 set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
 # Read data (CL3): the SDRAM launches word 0 at its 2nd clock edge after the READ edge and word 1 at the 3rd. The
-# default capture (cap_sel 0, sdram_pocket) samples word 0 in the I/O cell register at READ + 4 clk_ram edges, which
-# is 1.5 clk_ram after the launch edge: the 2nd clk_ram edge after it. The hold check stays at the default edge (the
-# 1st after the launch): word 1, launched one SDRAM clock later, must not reach the register before that capture.
-# The quarter-phase register (cap_sel 3, clk_ram_cap at READ + 4.25) is the 2nd clk_ram_cap edge after the launch.
-# cap_sel 4..6 (falling-edge register, READ + 3.5 / 4.5 / 5.5) are runtime experiments: +4.5 is outside the
-# datasheet window at the slow corner (docs/memory.md section 3), so the falling-edge capture is not timed.
+# I/O cell input register (sdram_pocket cap_p) takes word 0 at READ + 4 clk_ram edges (cap_sel 0, the default; as
+# Saturn_MiSTer's sdram1.sv at the same clk_ram), which is 1.5 clk_ram after the launch edge: the 2nd clk_ram edge
+# after it. The hold check stays at the default edge (the 1st after the launch): word 1, launched one SDRAM clock
+# later, must not reach the register before that capture. cap_sel 1 / 2 (READ + 5 / + 6) are runtime experiments
+# outside the datasheet window (docs/memory.md section 3) and are not timed.
 set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 2
-set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ramc] 2
-set_false_path -from [get_clocks dram_clk_pin] -fall_to [get_clocks $clk_ram]
 
 # ---------------------------------------------------------------------------------- PSRAM
 # The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,

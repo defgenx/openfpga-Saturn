@@ -24,10 +24,9 @@
 //
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
 // cycle after it is registered and, with CL3, launches word 0 two of its clocks later (2.5 clk after
-// the command edge) and word 1 one clock after that. DQ is captured in I/O cell registers (sdram_dq_in,
-// rising or falling edge) or a clk_cap register (quarter phase); the capture edge (cap_sel) is a
-// runtime setting latched at init, from the Core Settings menu, default READ + 4 (docs/memory.md
-// section 3). A capture register lands one clk after its sample edge.
+// the command edge) and word 1 one clock after that. DQ is captured in the I/O cell input register
+// (cap_p, FAST_INPUT_REGISTER) at READ + 4 and lands one clk later, as Saturn_MiSTer's sdram1.sv does
+// at the same clk_ram; cap_sel 1 / 2 sample at READ + 5 / + 6 instead (docs/memory.md section 3).
 //
 // Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
 // cycles later in the neighbouring slot (docs/memory.md, known limits).
@@ -40,10 +39,9 @@ module sdram_pocket #(
 	parameter int SCSP_MIN_AGE = 14     // earliest SCSP read delivery, clk_ram cycles after the request
 ) (
 	input  wire        clk,             // clk_ram (2x clk_sys, phase aligned)
-	input  wire        clk_cap,         // clk + 90 degrees (quarter-cycle read capture, cap_sel 3 / 7)
 	input  wire        init,            // hold the init sequence while high
 	input  wire        sync,            // VDP2 DCE_R: one clk_sys wide pulse per dot
-	input  wire  [2:0] cap_sel,         // read capture sample edge, latched while init is high: 0..2 +4..+6 rising (0 default), 4..6 +3.5..+5.5 falling, 3 +4.25, 7 +3.25 (docs/memory.md)
+	input  wire  [2:0] cap_sel,         // read capture sample edge, latched while init is high: 0 READ + 4 (default), 1 + 5, 2 + 6; other values act as 0
 
 	// SDRAM pins (the top level wraps dq in a tri-state)
 	output reg  [12:0] dram_a,
@@ -104,17 +102,12 @@ always @(posedge clk) if (init) cs <= cap_sel;
 sdram_clk_out u_clk (.clk(clk), .dram_clk(dram_clk));
 
 // ------------------------------------------------------------------ DQ capture
-// Rising- and falling-edge samples are I/O cell registers (every bit the same pad-to-register delay); the
-// quarter-phase sample (cap_sel 3 / 7) is a fabric register on clk_cap handed to clk by cap_h. Each capture
-// register lands one clk after its sample edge: landing edge = ceil(sample edge) + 1.
-wire [15:0] cap_p, cap_nq;                       // after edge k: DQ at k / DQ at k - 0.5
-sdram_dq_in u_in (.clk(clk), .dq(dram_dq_i), .q_h(cap_p), .q_l(cap_nq));
-reg [15:0] cap_q, cap_h;
-always @(posedge clk_cap) cap_q <= dram_dq_i;   // at k + 0.25
-always @(posedge clk) cap_h <= cap_q;            // at k + 1 (0.75 clk path)
-wire [15:0] dq_cap = cs[1:0] == 2'd3 ? cap_h : cs[2] ? cap_nq : cap_p;
-// landing stage index: cap_sel 3 lands like 1 (sample +4.25, landing +6), 7 like 0 (+3.25, +5)
-wire [1:0] cs_st = cs == 3'd3 ? 2'd1 : cs == 3'd7 ? 2'd0 : cs[1:0];
+// The I/O cell input register (FAST_INPUT_REGISTER here and in ap_core.qsf, so every bit has the same pad-to-register
+// delay) samples DQ at every edge; the word is taken from it one clk after its sample edge.
+(* altera_attribute = "-name FAST_INPUT_REGISTER ON" *) reg [15:0] cap_p;
+always @(posedge clk) cap_p <= dram_dq_i;
+wire [15:0] dq_cap = cap_p;
+wire [1:0] cs_st = cs[1:0] == 2'd3 ? 2'd0 : cs[1:0];   // landing stage offset: sample edge READ + 4 + cs_st
 
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
