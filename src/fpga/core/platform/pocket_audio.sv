@@ -54,8 +54,12 @@ reg signed [16:0] dl, dr;
 reg [15:0] phn;
 wire [15:0] mac_l, mac_r;
 
-pocket_audio_mac mac_lane_l (.clk(clk), .d(dl), .ph(phn), .base(prev_l), .q(mac_l));
-pocket_audio_mac mac_lane_r (.clk(clk), .d(dr), .ph(phn), .base(prev_r), .q(mac_r));
+// base is gated by st[1] (mac_* is only read at st 2 and 3) so that prev_* stays a fabric register:
+// packed into the DSP input register, cur_*->prev_* fails hold on the DSP clock skew.
+wire signed [15:0] base_l = st[1] ? prev_l : 16'sd0;
+wire signed [15:0] base_r = st[1] ? prev_r : 16'sd0;
+pocket_audio_mac mac_lane_l (.clk(clk), .d(dl), .ph(phn), .base(base_l), .q(mac_l));
+pocket_audio_mac mac_lane_r (.clk(clk), .d(dr), .ph(phn), .base(base_r), .q(mac_r));
 
 always @(posedge clk) begin
 	if (in_ev) begin
