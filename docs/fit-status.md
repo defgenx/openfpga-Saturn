@@ -427,7 +427,7 @@ On Y0..Y3 (global clocks G8..G11) the counter cell plus the route to the clock c
 
 The qsf locks counter[0] to Y0 and counter[1] to Y2 (seed 3's placement); counter[2] / counter[3] (clk_vid, +12 ns) stay
 free. `pll_lite` reconfigures M and K only, so the counter index does not matter to it. A location assignment is only
-checked by a fit (`quartus_fit --check_ios` does not place the counters): see the fit at the end of this section.
+checked by a fit (`quartus_fit --check_ios` does not place the counters): see the seed 3 fit under Result.
 
 ### SCSP multicycles
 
@@ -498,6 +498,12 @@ s3, s8 and s9 close with the SDC alone: every clock, setup / hold / recovery / r
 s9 clk_ram setup; cram0/1 hold +0.074). Those three have both counters on Y0..Y3; the lock gives every seed that.
 
 Map (`memfix-map`, `quartus_map`): 17,927 ALMs needed before and after (no RTL change).
+
+One fit of `12295c9` with seed 3 (`openfpga-Saturn-worktrees/memfix10-lock-s3`): 18,255 ALMs needed, 1,848 / 1,848 LABs,
+0 "Can't pack"; counter[0] / [1] / [2] / [3] on Y0 / Y2 / Y1 / Y3 (the lock applied, the free two also went low).
+**Timing closed**: every clock and check at the four corners is positive. Lowest: clk_ram setup +0.003 (slow 0C) / +0.021
+(slow 85C), VDP1P `VRAM_A` -> ddram `vdp1vram_rcache_addr` (the VDP1 read-cache hit test, one clk_ram after the clk_sys
+launch: round 5's group); clk_sys setup +0.148; hold +0.051 (clk_ram), cram0/1 +0.067 / +0.078.
 
 Left to the fitter (in the seeds with both counters low; RTL changes that would move them shift a cycle):
 - clk_ram -> clk_sys read data, ddram cache M10K (`cache0` / `cache2` / `ramh_ram`) -> MSH / SSH `DAT_BUF` / `VEC_BUF`,
