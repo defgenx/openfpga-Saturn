@@ -735,6 +735,7 @@ int main(int argc, char **argv) {
 	snprintf(fn, sizeof fn, "%s_new.wav", wavp); wav_n.save(fn);
 	bool same = wav_r.s == wav_n.s;
 	size_t nz = 0; for (auto x : wav_r.s) if (x) nz++;
+	top->final();   // final blocks of tb_top (MC_CHECK)
 	printf("seed=%u clks=%llu samples=%zu nonzero_samples=%zu wav_equal=%d\n", seed,
 	       (unsigned long long)clk_count, wav_r.s.size() / 2, nz, same);
 	printf("coverage: irq_clks=%llu ram_wr_clks=%llu ram_rd_clks=%llu avec_clks=%llu 68k_ops=%llu scu_ops=%llu\n",

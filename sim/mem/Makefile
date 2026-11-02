@@ -74,7 +74,7 @@ negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(OVL) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3
 
-.PHONY: all elab long negative sdram psram ddram fb load boot clean
+.PHONY: all elab long negative sdram psram ddram fb load boot clean mc-check
 
 # data-eye sweep: extra delay on the SDRAM clock path (ps), rising-edge capture and falling-edge capture
 build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
@@ -85,3 +85,11 @@ skew: build/tb_sdram build/tb_sdram_neg
 	  printf "rising-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done
 	@for sk in -4000 -3000 -2000 -1000 0 1000 2000 3000 4000; do \
 	  printf "falling-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram_neg +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done
+
+# Hold exceptions of core_constraints.sdc (SDRAM request registers capture at odd clk_ram edges only): make mc-check
+build/tb_sdram_mc: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
+	$(IVL) $(FLAGS) -DMC_CHECK -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
+mc-check: build/tb_sdram_mc
+	$(VVP) build/tb_sdram_mc +PROFILE=0 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=1 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=2 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'

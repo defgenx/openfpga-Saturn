@@ -87,3 +87,14 @@ compact: $(B)/objc/Vtb_top $(B)/objcm/Vtb_top
 # Used by mutate.sh: build only, into $(B).
 .PHONY: build_mut_exe
 build_mut_exe: $(B)/obj/Vtb_top
+
+# SDC multicycle claims (core_constraints.sdc, SCSP): the compact build with the MC_CHECK monitor of tb_top.sv. Prints
+# MC_CHECK counters per seed; acc_viol, op5_viol and wr_viol must be 0, ctl_viol (a single-cycle control set) above 0.
+# Run: make mc-check
+$(B)/objk/Vtb_top: $(B)/REF_SCSP_nm.sv $(B)/REF_SCSP_pkg.sv $(B)/NEW_SCSPP.sv $(B)/NEW_SCSPP_pkg.sv altsyncram.v tb_top.sv tb.cpp
+	verilator $(VFLAGS) -DPOCKET_SCSP_DSP_COMPACT -DMC_CHECK -Mdir $(B)/objk \
+	  $(B)/NEW_SCSPP_pkg.sv $(B)/REF_SCSP_pkg.sv altsyncram.v $(B)/REF_SCSP_nm.sv $(B)/NEW_SCSPP.sv tb_top.sv tb.cpp
+	@test -x $@
+.PHONY: mc-check
+mc-check: $(B)/objk/Vtb_top
+	@set -e; for s in $(SEEDS); do $(B)/objk/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedk$$s | grep -E 'MC_CHECK|FAIL|mismatch' ; done

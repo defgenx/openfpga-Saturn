@@ -59,16 +59,20 @@ set_multicycle_path -hold  -from [get_registers "*|VDP2|*"] -to [get_registers "
 # OP6 is written at SLOT1_CE (CYCLE1_CE & CYCLE_NUM[2:1] == 3) only; OP7.SD is written at SLOT1_CE only, from
 # SCR_SCR3 (TL, SDIR) and OP6 (LEVEL, WD) through LevelAddTL and VolCalc (two DSP multiplies, 17.6 ns). Every launch is
 # at least four clk_sys before the capture edge: two periods are claimed. The enable path (CE, CLK_DIV, CYCLE_NUM)
-# stays single-cycle. Same schedule for EVOL_RAM_4 (read enable CYCLE0_CE & CYCLE_NUM[2:1] == 2) into OP5.EVOL and
-# EVOL_RAM_D, both written at SLOT1_CE only.
+# stays single-cycle. Same argument for the OP4 stage into OP5 and for OP7 / EFREG into ACC_L/ACC_R (also written at
+# DSEL); DSEL and SCR_G7's output stay single-cycle. Schedule per register: docs/fit-status.md, SCSP multicycles.
 set scsp_sd [get_registers {*|SCSP|OP7.SD[*]}]
 set_multicycle_path -setup -from [get_registers {*|SCSP|SCR_SCR3|*|q_b[*]}] -to $scsp_sd 2
 set_multicycle_path -hold  -from [get_registers {*|SCSP|SCR_SCR3|*|q_b[*]}] -to $scsp_sd 1
 set_multicycle_path -setup -from [get_registers {*|SCSP|OP6.LEVEL[*] *|SCSP|OP6.WD[*]}] -to $scsp_sd 2
 set_multicycle_path -hold  -from [get_registers {*|SCSP|OP6.LEVEL[*] *|SCSP|OP6.WD[*]}] -to $scsp_sd 1
-set scsp_evol [get_registers {*|SCSP|OP5.EVOL[*] *|SCSP|EVOL_RAM_D[*]}]
-set_multicycle_path -setup -from [get_registers {*|SCSP|EVOL_RAM_4|*|q_b[*]}] -to $scsp_evol 2
-set_multicycle_path -hold  -from [get_registers {*|SCSP|EVOL_RAM_4|*|q_b[*]}] -to $scsp_evol 1
+set scsp_op4 [get_registers {*|SCSP|OP4.* *|SCSP|OP4_SCR2.* *|SCSP|OP4_SCR5.* *|SCSP|OP4_SCR6.* *|SCSP|SCNT[*] *|SCSP|OP4_WD0[*] *|SCSP|OP4_WD1[*] *|SCSP|SCR_SCR1|*|q_b[*] *|SCSP|LFO_RAM_4|*|q_b[*] *|SCSP|EVOL_RAM_4|*|q_b[*]}]
+set scsp_op5 [get_registers {*|SCSP|OP5.* *|SCSP|EVOL_RAM_D[*] *|SCSP|MONITOR_EG[*] *|SCSP|MONITOR_SGC[*]}]
+set_multicycle_path -setup -from $scsp_op4 -to $scsp_op5 2
+set_multicycle_path -hold  -from $scsp_op4 -to $scsp_op5 1
+set scsp_acc [get_registers {*|SCSP|ACC_L[*] *|SCSP|ACC_R[*]}]
+set_multicycle_path -setup -from [get_registers {*|SCSP|OP7.* *|SCSP|EFREG_RAM|*|q_b[*]}] -to $scsp_acc 2
+set_multicycle_path -hold  -from [get_registers {*|SCSP|OP7.* *|SCSP|EFREG_RAM|*|q_b[*]}] -to $scsp_acc 1
 
 # ---------------------------------------------------------------------------------- SDRAM
 # dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). Datasheet values as quoted in docs/memory.md:
@@ -134,6 +138,15 @@ set_multicycle_path -setup -from [get_clocks $clk_sys] -to $ramh_tag 2
 set_multicycle_path -hold  -from [get_clocks $clk_sys] -to $ramh_tag 1
 set_multicycle_path -setup -from [get_clocks $clk_sys] -to [get_registers "*|ddram|a_addr*"] 2
 set_multicycle_path -hold  -from [get_clocks $clk_sys] -to [get_registers "*|ddram|a_addr*"] 1
+
+# Request registers that capture clk_sys data only at odd clk_ram edges (the edge after a clk_sys edge): the hold check at
+# the coincident edge is moved one clk_ram back. Strobe registers stay out of every -from, so their hold is still timed
+# and no capture can happen at a coincident edge. Proof per group: docs/fit-status.md, odd-edge request registers.
+set_multicycle_path -hold -end -rise_from [get_clocks $clk_sys] -to [get_registers {*|sdram|v_wd[*] *|sdram|v_wbe[*] *|sdram|v_row[*] *|sdram|v_col[*] *|sdram|v_wsel[*]}] 1
+set_multicycle_path -hold -end -from [get_registers {*|SCSP|MEM_A[*] *|SCSP|MEM_D[*]}] -to [get_registers {*|sdram|sc_addr[*] *|sdram|sc_din[*]}] 1
+set cdb_data [remove_from_collection [get_registers {*|cdb|*}] [get_registers {*|cdb|dram|RAM_WE[*] *|cdb|dram|RAM_RD *|cdb|dram|RAM_CS}]]
+set_multicycle_path -hold -end -from $cdb_data -to [get_registers {*|ddram|cdram_write_data[*] *|ddram|cdram_write_addr[*] *|ddram|cdram_rcache_addr[*]}] 1
+set_multicycle_path -hold -end -from [get_registers {*|cart|MEM_A[*] *|cart|MEM_DO[*]}] -to [get_registers {*|ddram|cart_rcache_addr[*] *|ddram|cart_write_addr[*] *|ddram|cart_write_data[*]}] 1
 
 # ---------------------------------------------------------------------------------- SRAM (asynchronous)
 # No clock at the chip. Outputs are registered on clk_ram; read data returns within tAA plus board (12 ns here) and

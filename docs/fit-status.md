@@ -396,3 +396,121 @@ clk_ram): select two edges late 4,747 mismatches, `raml_be` from `raml_wr_old` 3
 
 To fit: the round 6 seeds (18, 16 first). The remaining crossing paths of the group are the 15 bit compare behind the bus mux
 (`ramh_plru` / `ramh_curr`, 6 levels) and `raml_read_busy` / `raml_rcache_dirty` (s18 +0.27 / s16 +0.48; the read-edge decode).
+
+## Timing round 9 (branch `memfix`, 2026-11-02)
+
+Round 8 (the round 7 RTL and the `pocket_audio` gate, `994bb34`) fitted 16 of 18 seeds (`memfix9-s<seed>`; s6 / s18
+need 1,849 / 1,854 LABs) and closed none. The paths of all 16 fits were listed with `quartus_sta -t` at the four corners
+(`openfpga-Saturn-worktrees/pipe10`: `corners.tcl`; `groups.py` groups them by source / destination name with the bit
+index dropped). Three causes, none of them inside one block:
+
+| Group (round 8 slack) | Finding | Change |
+|---|---|---|
+| every clk_sys <-> clk_ram crossing, both ways (s1 -0.88 hold, s7 -1.32, s4 -1.17, s14 -0.81, s10 -0.60, s12 -0.54, s5 -0.16, s19 -0.09) | PLL output counter placement: below | qsf: counter[0] / counter[1] locked to `PLLOUTPUTCOUNTER_X54_Y0_N1` / `_Y2_N1` |
+| SCSPP `OP7.SLOT` -> `ACC_L` / `ACC_R` (s3 -0.098 slow 0C, 7 levels, 17.3 ns: the slot compare, `MX_W`, a DSP multiply, two adders); `OP4.KON` / `KOFF` / `OP4_SCR2.KRS` / `OP4_SCR5.OCT` -> `OP5.EVOL` / `EVOL_RAM_D` (s8 -0.143, s19 +0.009, s5 +0.100, 12 levels) | slot-pipeline registers: two clk_sys or more by the CE schedule | SDC multicycles (below) |
+| fast-corner hold into clk_ram request registers (s9 `SCSP MEM_D` -> sdram `sc_din` -0.071, `VDP2 VRAMA_D` -> `v_wd` -0.032; s13 `cdb dr_d` -> ddram `cdram_write_data` -0.206; s7 `cart MEM_A` -> `cart_rcache_addr` -0.200) | registers that take clk_sys data only at the clk_ram edge after a clk_sys edge; the hold check at the coincident edge has no capture behind it | SDC hold exceptions (below) |
+
+No RTL change, so no cycle shifts and no new equivalence bench; the SDC claims have simulation checks (below).
+
+### PLL output counters
+
+The fitter puts the four used counters of the system PLL (`FRACTIONALPLL_X54_Y1_N0`) on any of `PLLOUTPUTCOUNTER_X54_Y0..Y8`.
+On Y0..Y3 (global clocks G8..G11) the counter cell plus the route to the clock control block is 2.53 ns (min) / 2.90 ns
+(max); on Y4..Y8 (G4..G7) 3.07 / 3.52 ns. A crossing path sees the difference as skew: clk_ram on an upper counter loses
+0.55 ns on every clk_ram -> clk_sys setup and every clk_sys -> clk_ram hold, clk_sys on one loses it the other way.
+
+| Seeds | counter[0] / counter[1] | Worst crossing paths |
+|---|---|---|
+| s3, s8, s9, s13, s15 | both Y0..Y3 | -0.57 (s15) .. +0.24 (s3) |
+| s1, s4, s7, s10, s11, s14, s16, s17 | clk_ram on Y5..Y8 | clk_ram -> clk_sys setup -0.15 .. -1.32, clk_sys -> clk_ram hold to -0.88 |
+| s5, s12, s19 | clk_sys on Y5..Y7 | clk_sys -> clk_ram setup -0.09 .. -0.54, clk_ram -> clk_sys hold -0.004 |
+
+The qsf locks counter[0] to Y0 and counter[1] to Y2 (seed 3's placement); counter[2] / counter[3] (clk_vid, +12 ns) stay
+free. `pll_lite` reconfigures M and K only, so the counter index does not matter to it. A location assignment is only
+checked by a fit (`quartus_fit --check_ios` does not place the counters): see the fit at the end of this section.
+
+### SCSP multicycles
+
+`CE` (SCSP_CE) pulses are two clk_sys apart or more (the round 6 argument above); CLK_DIV toggles at each CE, CYCLE_NUM
+steps at CE & CLK_DIV. When each register changes (all also at RES_N = SYSRES_N, which the SMPC holds low for many clocks):
+
+| Register | Written at |
+|---|---|
+| `OP4.*`, `SCNT`, `OP4_WD0`, `OP5.*`, `EVOL_RAM_D`, `MONITOR_EG/SGC`, `OP7.*` | SLOT1_CE (CYCLE1_CE, CYCLE_NUM 7) |
+| `OP4_WD1` | SLOT0_CE (CYCLE1_CE, CYCLE_NUM 3) |
+| `OP4_SCR2/5/6`, `LFO_RAM_4` / `EVOL_RAM_4` output registers | CYCLE0_CE with CYCLE_NUM 4 |
+| `SCR_SCR1` output register (`OP4_SCR1`) | every CYCLE0_CE |
+| `EFREG_RAM` output register (`EFREG_Q`, SCSPP_DSPC) | CYCLE0_CE with CYCLE_NUM 2 |
+| `ACC_L` / `ACC_R` | SLOT1_CE and DSEL, the clk_sys after the CYCLE_NUM 6 CYCLE0_CE |
+| `DSEL` | every clk_sys; `SCR_G7` output (`OP7_SCR8`): every CYCLE0_CE |
+
+Every register in the first five rows changes only at CE edges and the OP5 set captures only at CE edges, so two CE edges
+apart is two clk_sys or more: `-from` the OP4 set `-to` the OP5 set, setup 2 / hold 1 (this replaces the EVOL_RAM_4 pair
+of round 6). For ACC: OP7 (CYCLE_NUM 7) and EFREG_Q (CYCLE_NUM 2) are at least 6 CE steps before the next DSEL edge and
+a full slot before the next SLOT1_CE; DSEL and `OP7_SCR8` (reloaded at the CYCLE_NUM 6 CYCLE0_CE, one clk_sys before the
+DSEL capture) are single-cycle and stay out of the set. Re-timed on the round 8 fits: worst path into ACC is DSEL or
+SCR_G7 q_b, +0.997 (s3) / +1.205 (s8) at slow 0C; into the OP5 set +6.4 (the CE enable path).
+
+Simulation check (`make -C sim/scsp mc-check`, `MC_CHECK` in `tb_top.sv`; the compact build): at every clock it counts
+captures of each `-to` set where a register of its `-from` set changed at the clock before, and `-to` changes outside
+their enable. 6 seeds, 400 rounds each (4.5 M clocks, 210 k ACC and 105 k OP5 captures per seed, with reset pulses and
+hard resets): 0 / 0 / 0. The control set {DSEL, OP7_SCR8}, single-cycle on purpose, is flagged at every DSEL capture
+(104 k to 112 k per seed). The golden SCSP for `GOLD` is the main checkout's `ref/Saturn_MiSTer` (the worktree's
+submodule is empty).
+
+### Odd-edge request registers
+
+A clk_ram request edge is `x && !x_old` with x a clk_sys signal and x_old its clk_ram copy, so it can only be the clk_ram
+edge right after a clk_sys edge ("odd"); at the coincident ("even") edge x_old already equals x. A register written only
+at such edges never captures at the even edge, so the default hold check there (launch and latch at the same instant)
+has no capture behind it; `-hold -end 1` moves it to the even edge before, which a clk_sys launch cannot reach. The
+strobe registers (x itself) stay out of every `-from`, so their hold is still timed and no early capture can happen:
+
+| `-to` | written at | `-from` |
+|---|---|---|
+| sdram `v_wd`, `v_wbe`, `v_row`, `v_col`, `v_wsel` | `fc == 0`; `fc` is set to 7 at the odd edge of each sync (`sync && !sync_old`) and counts every edge, so `fc == 0` is seen at odd edges only (from the first sync on) | every clk_sys rising launch (`-rise_from`: a falling launch is at an odd edge) |
+| sdram `sc_addr`, `sc_din` | SCSP read / write request edge | SCSPP `MEM_A`, `MEM_D` (strobes `MEM_RD`, `MEM_WE`, `MEM_CS` excluded) |
+| ddram `cdram_write_data`, `cdram_write_addr`, `cdram_rcache_addr` | cdram write / read request edge | every `cdb` register but `cdb_dram` `RAM_WE`, `RAM_RD`, `RAM_CS` |
+| ddram `cart_rcache_addr`, `cart_write_addr`, `cart_write_data` | cart read / write request edge | CART `MEM_A`, `MEM_DO` (strobes `MEM_RD`, `MEM_WE` excluded) |
+
+Simulation check (`make -C sim/mem mc-check`, `MC_CHECK` in `tb_sdram.sv`, profiles 0 / 1 / 2, 300 us each): 2,300 `fc == 0`
+edges and about 1,500 SCSP request edges per run, none at an even edge; `fc == 1` is seen at even edges (2,300), so both
+kinds are sampled. tb_sdram still PASSes. The ddram rows follow from the request-edge form alone.
+
+Re-timed on the round 8 fits, the remaining hold paths into these registers are from the x_old registers (+1.9 ns slow,
++0.64 fast 0C on s3 / s8).
+
+### Result
+
+The SDC changes re-timed on the round 8 placements (`sta_r10f` in each fit directory), worst over the four corners,
+setup / hold, clk_sys and clk_ram:
+
+| Seed | round 8 | with the SDC |
+|---|---|---|
+| s3 | -0.098 / +0.112 | **+0.084 / +0.112** |
+| s8 | -0.143 / +0.115 | **+0.058 / +0.115** |
+| s9 | +0.016 / -0.071 | **+0.016 / +0.105** |
+| s13 | -0.045 / -0.206 | -0.045 / +0.023 |
+| s5, s19 | -0.164 / +0.055, -0.085 / -0.004 | unchanged (clk_sys counter on Y5..Y7) |
+| s1, s7, s14 | -0.54 / -0.88, -1.32 / -0.39, -0.81 / -0.75 | setup unchanged, hold +0.051 / +0.024 / +0.046 |
+
+s3, s8 and s9 close with the SDC alone: every clock, setup / hold / recovery / removal, four corners (lowest +0.016,
+s9 clk_ram setup; cram0/1 hold +0.074). Those three have both counters on Y0..Y3; the lock gives every seed that.
+
+Map (`memfix-map`, `quartus_map`): 17,927 ALMs needed before and after (no RTL change).
+
+Left to the fitter (in the seeds with both counters low; RTL changes that would move them shift a cycle):
+- clk_ram -> clk_sys read data, ddram cache M10K (`cache0` / `cache2` / `ramh_ram`) -> MSH / SSH `DAT_BUF` / `VEC_BUF`,
+  SCU `DMA_*`: s15 -0.571, s8 +0.058. M10K clock-to-out 3.1 ns, then the MEM_DI / CDO / IDI muxes and 4 ns of routing in
+  one clk_ram; an output register would land the word one clk_ram later.
+- clk_sys -> clk_ram WRAM-H lookup, bus mux -> `ramh_plru` / `ramh_read_busy` / `ramh_alloc`: s13 -0.045, s9 +0.016, s15
+  +0.042 (round 7's group).
+- clk_ram busy flags -> SCU `DMA_ST` (one LUT for MEM_WAIT_N, then 7 levels of the SCUP2 DMA state logic): s13 +0.061,
+  s15 -0.135.
+- SH2P `bsc.VEC_BUF` -> `core.PIPE.ID.IR` (clk_sys, 17 levels through the ALU zero flag and the decoder): s3 +0.084,
+  s17 -0.161.
+
+`pocket_audio` (`994bb34`): the st[1] gate of the DSP base input costs 31 ALUTs in the entity (139 -> 170) and 25 map ALMs
+(17,902 -> 17,927). The packing it prevents is a fitter netlist optimization ("Packed Register / Register Packing / Timing
+optimization", `prev_l` duplicated into the DSP AY input); an instance-level `QII_AUTO_PACKED_REGISTERS` would be the
+zero-area way, but it is untested (only a fit shows it), so the gate stays.

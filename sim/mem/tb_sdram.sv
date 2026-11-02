@@ -77,6 +77,26 @@ sdram_pocket #(.INIT_CLKS(2000)) dut (
 	.init_done(init_done), .chk_done(), .chk_ok(), .dbg_scrub_wrap(dbg_scrub_wrap), .dbg_scsp_drop(dbg_scsp_drop)
 );
 
+`ifdef MC_CHECK
+// Hold exceptions of core_constraints.sdc: the VDP2 plan registers (fc == 0) and the SCSP request registers take
+// clk_sys data only at the first clk_ram edge after a clk_sys edge ("odd"). Counted from the first sync. ctl_even
+// (fc == 1 at the other edge) must be above 0: both edge kinds are seen.
+reg mc_sys = 1'b0, mc_on = 1'b0;
+integer mc_plan = 0, mc_sc = 0, mc_plan_even = 0, mc_sc_even = 0, mc_ctl_even = 0;
+always @(posedge clk_sys) mc_sys <= 1'b1;
+always @(posedge clk_ram) begin
+	if (dut.sync && !dut.sync_old) mc_on <= 1'b1;
+	if (mc_on) begin
+		if (dut.fc == 4'd0) begin mc_plan = mc_plan + 1; if (!mc_sys) mc_plan_even = mc_plan_even + 1; end
+		if (dut.fc == 4'd1 && !mc_sys) mc_ctl_even = mc_ctl_even + 1;
+		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr)) begin
+			mc_sc = mc_sc + 1; if (!mc_sys) mc_sc_even = mc_sc_even + 1;
+		end
+	end
+	mc_sys <= 1'b0;
+end
+`endif
+
 // ---------------------------------------------------------------- pins and model
 // transport delays (inertial `assign #` would swallow the clock pulses once the delay exceeds half a period)
 reg  [12:0] a_d;  reg [1:0] ba_d, dqm_d;  reg ras_d, cas_d, we_d, sdr_clk, oe_d;  reg [15:0] o_d;
@@ -352,6 +372,11 @@ initial begin
 	         m_act, m_rd, m_wr, dbg_scrub_wrap, dbg_scsp_drop, contention);
 	$display("tb_sdram: DQ overlap with worst-case tHZ: %0d events, max %0d ps", overlap_n, overlap_max);
 	$display("tb_sdram: SCSP read latency %0d..%0d clk_ram cycles (%0d changes)", lat_min, lat_max, lat_n);
+`ifdef MC_CHECK
+	$display("MC_CHECK plan_caps=%0d sc_caps=%0d plan_even=%0d sc_even=%0d ctl_even=%0d",
+	         mc_plan, mc_sc, mc_plan_even, mc_sc_even, mc_ctl_even);
+	if (mc_plan == 0 || mc_sc == 0 || mc_plan_even || mc_sc_even || mc_ctl_even == 0) errs = errs + 1;
+`endif
 	$display("tb_sdram: data errors %0d, final memory mismatches %0d, SDRAM model errors %0d", errs, bad, m_err);
 	if (errs == 0 && bad == 0 && m_err == 0 && contention == 0 && dbg_scsp_drop == 0 && checks_v > 0)
 		$display("tb_sdram: PASS");
