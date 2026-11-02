@@ -325,3 +325,36 @@ the external-vector path of round 2), VDP1 `VRAM_A` / ddram `vdp1vram_rcache_bus
 
 Full-system simulation of `4d05570` (`sim/sys/build_memfix6`, the round 4 command): `i2s.raw`, `scsp.raw`, `pocket.raw`,
 `trace.log` byte-identical to `build_memfix5/run`, `audio:` line identical.
+
+## Timing round 6 (branch `memfix`, 2026-11-02)
+
+Round 5 fitted 13 of 14 seeds and closed none: slow 85C counter[0] -0.50 to -1.62, counter[1] -0.02 to -1.79, fast 0C hold
+-0.008 to -0.11 on some seeds. The paths were listed with `quartus_sta -t` on the fitted builds (`memfix6-s<seed>/src/fpga/sta_q2`,
+scratchpad `paths_fit3.tcl` / `paths_fit4.tcl`: 3,000 clk_sys and 1,500 clk_ram paths, fast-model hold, full detail of the worst).
+Each RTL change has a Verilator HEAD-vs-new bench (every output, every clock, random stimulus; a deliberately broken copy fails),
+scratchpad `eq7`; none shifts a cycle, so the full-system simulation was not rerun. The SH-2 golden differential (`sim/sh2`,
+`DUT=sh2p GOLD=<Saturn_MiSTer>/rtl`, 76 runs) and the VDP1 golden scenarios (`sim/vdp1`, 40 scenarios) pass on the new RTL.
+
+| Group (round 5 slack) | Finding | Change | Expected | Commit |
+|---|---|---|---|---|
+| MSH / SSH `bsc.VEC_BUF` -> `core.PIPE.ID.IR` / `PIPE.ID.PC` (every seed, -0.4 to -1.15, 18 levels, 18.3 ns); SMPC `PINS` (NMI_N) -> the same (-0.53) | the external vector (VEC_BUF, written at the CE_F edge) and NMI_N enter the EX operand mux as `vec`, then the IMMT case, the IMM_VAL shift, the RSC mux and the SA mux: six LUTs before the adder, whose result feeds T, the decoder class and the IR enable. One clk_sys path by the schedule (VECT_WAIT drops at the same CE_F edge) | `SH2P_core`: `VEC_VAL = {vec, 2'b00}` joins at the ALU A input through `VEC_A` (IMMT VECT & RSC & SA); REG_C no longer carries the vector. The three VECT decode states have SA, RSC_IMM, no SB, SZ long, no BI (SH2P_pkg) | 6 -> 2 LUTs from VEC_BUF or NMI_N to the adder: +2.5 to +3 ns on the leg; the next core paths are unknown (hidden under the flood: > -0.48 on s14, > +0.11 on s16) | `a0d0fea` `ab66928` |
+| ddram `vdp1vram_rcache_busy` / `read_busy` / `vdp1vram_fifo.AMOUNT` -> VDP1P `CMD_ST` (clk_ram -> clk_sys, s7 -1.62, s16 -0.26, 10 levels in 8.7 ns) | `vdp1vram_busy` is an OR of three clk_ram registers; in VDP1P, `CMD_READ_DONE` (VRAM_RDY) sits under nine LUTs of the CMDS_READ decision tree (JP, END, COMM, CCB) | `ddram_pocket`: the OR is a register written from the next values (blocking temporaries, `ddp_infifo` FULLN). `VDP1P`: RD_NEXT (state, delay, GRD_READ, CMD_READ) is an always_comb of the CMD registers and CMD_READ_DONE only selects it | 10 -> about 4 levels: +3 ns | `210f48d` `59e7872` |
+| SCSPP `SCR_SCR3` q_b / `OP6.LEVEL` -> `OP7.SD` (s16 -0.50 / -0.22, two DSP multiplies in series, 17.6 ns); `EVOL_RAM_4` q_b -> `OP5.EVOL` (+0.03) | slot pipeline: SCSP_CE pulses are two clk_sys apart at least, CLK_DIV halves them, so CYCLE0_CE and CYCLE1_CE edges are four clk_sys apart at least; the RAM output registers change at CYCLE0_CE edges only, OP6 / OP7 / OP5 at SLOT1_CE (a CYCLE1_CE) only | SDC `set_multicycle_path -setup 2 / -hold 1` from those registers to OP7.SD / OP5.EVOL / EVOL_RAM_D, proof in the SDC comment; checked with quartus_sta on the s16 build: OP7.SD worst -0.503 -> +4.82 (the CE path), hold +0.57 | closed | `33edf28` |
+| `vdp1_fb_pocket` `rptr0` / `wptr1_d` -> `rptr1` / `dlt` (s16 -0.44, 6 to 8 levels) | `ne0` / `ne1` = (wptr_d != rptr), 9 bit compares in front of the pick and the pops | `ne0` / `ne1` are registers, `ne <= rst ? \|wptr : (wptr != rptr)`: wrong only for the edge after a pop, when the engine is in es 4 and reads neither | two levels off every path of the group | `8966fa5` `20a61a0` |
+| fast 0C hold: MSH `bsc.A` -> ddram `ramh_tag` (one LUT, clk_sys -> clk_ram, -0.11), pocket_audio `cur_r` -> `prev_r` (DSP-packed register, -0.11) | clock network skew on short paths; not an RTL matter (a clk_ram copy of the address moves the same skew to its own D input) | qsf `OPTIMIZE_HOLD_TIMING "ALL PATHS"` (the default covers I/O and minimum-tPD paths only) | hold padded by the fitter | `e62f708` |
+| SCU `CBUS_A`, MSH / SSH `BUS_RLS` / `A` -> ddram `ramh_read_busy` / `ramh_plru` / `ramh_dirty` / `raml_read_busy` / `ramh_din` (clk_sys -> clk_ram, s11 -1.79 at 10.4 ns data delay, s14 -0.33, s7 -0.09; 5 to 8 levels) | the request edge is the clk_ram edge after the clk_sys launch and the hit test runs at it: one clk_ram by the schedule, 6 to 7 ns of it routing on the bad seeds (the Saturn bus mux, the tag compare and the way select) | none: a later hit test or a clk_sys register of the address would move the fill or the busy flag by one clk_ram | left to the fitter, as round 3 | |
+| ddram `ramh_ram` (M10K, clk_ram) -> SCU `DMA_WTN` (s16 -0.13, 5 levels, 7.1 ns) | the fast WRAM-H word is read at the clk_ram edge after the address and used at the next clk_sys edge; an output register would land it one clk_ram later | none | left to the fitter | |
+
+Map (`memfix-map`, `quartus_map`, ALMs needed): 17,932 -> 17,888 (-44). Entities (ALUTs): SH2P_core 1,774 / 1,766 -> 1,766 / 1,755,
+VDP1P 3,191 -> 3,116 (the shared CMDS_READ decision), ddram_pocket 556 -> 558, vdp1_fb_pocket 377 -> 381. The first form of the
+vector mux (one-hot shift, VEC_A and VEC_B) mapped at 18,045: +80 ALUTs per core, the 32 bit ALU operand muxes losing their
+two-per-ALM packing; the second form (`ab66928`) is what is committed.
+
+Benches (scratchpad `eq7`): `tb_eq_sh2core` (SH2P_core, random instruction words with TRAPA / NOP / SLEEP, interrupts whose vector
+changes under the request, VECT_WAIT / BUS_WAIT / EN stalls, NMI_N toggles, RES_N pulses: 3 seeds x 3 M clocks, 54 k vector
+fetches), `tb_eq_ddram` (round 4, both clk_sys phases, 3 M clk_ram), `tb_eq_vdp1p` (round 4, 2 seeds x 2 M clocks), `tb_eq_fb`
+(round 4, 2 seeds x 3 M clk_ram). Broken copies: a vector bit wrong in VEC_VAL (fails at clock 10), FULLN without the all-ones
+term (8,956 mismatches), CMD_DELAY 22 for 23 (1,788), a non-empty flag one clk_ram late (1.36 M).
+
+To fit: the round 5 seeds; look at the next clk_sys paths of the SH2P cores once the VEC_BUF group is gone, and at the
+`BUS_RLS` / `A` -> ddram group per seed.
