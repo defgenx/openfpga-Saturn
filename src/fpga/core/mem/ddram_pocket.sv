@@ -190,6 +190,7 @@ wire           vdp1vram_in_burst = !vdp1vram_off[18] && !(|vdp1vram_off[17:9]) &
 reg            vdp1vram_rcache_dirty;
 reg            vdp1vram_rcache_busy;
 reg            vdp1vram_read_busy;
+reg            vdp1vram_busy_r;                 // fifo_full | read_busy | rcache_busy, registered with them (VDP1P samples it on clk_sys)
 
 reg  [ 18:  1] cdram_rcache_addr,cdram_write_addr;
 reg            cdram_rcache_dirty;
@@ -265,12 +266,12 @@ assign vdp1vram_fifo_wrreq = (|vdp1vram_wr && !vdp1vram_wr_old);
 assign vdp1vram_fifo_rdreq = (b_state == 2'd1 && !p1_busy && b_chan == 3'd1);
 
 wire [ 53:  0] ramh_fifo_dout;
-wire           ramh_fifo_empty,ramh_fifo_full;
+wire           ramh_fifo_empty,ramh_fifo_full,ramh_fifo_fulln;
 wire [ 35:  0] vdp1vram_fifo_dout;
-wire           vdp1vram_fifo_empty,vdp1vram_fifo_full;
+wire           vdp1vram_fifo_empty,vdp1vram_fifo_full,vdp1vram_fifo_fulln;
 
-ddp_infifo #(3, 54) ramh_fifo (clk, rst_pulse, {ramh_addr,ramh_wr,ramh_din}, ramh_fifo_wrreq, ramh_fifo_rdreq, ramh_fifo_dout, ramh_fifo_empty, ramh_fifo_full);
-ddp_infifo #(3, 36) vdp1vram_fifo (clk, rst_pulse, {vdp1vram_addr,vdp1vram_wr,vdp1vram_din}, vdp1vram_fifo_wrreq, vdp1vram_fifo_rdreq, vdp1vram_fifo_dout, vdp1vram_fifo_empty, vdp1vram_fifo_full);
+ddp_infifo #(3, 54) ramh_fifo (clk, rst_pulse, {ramh_addr,ramh_wr,ramh_din}, ramh_fifo_wrreq, ramh_fifo_rdreq, ramh_fifo_dout, ramh_fifo_empty, ramh_fifo_full, ramh_fifo_fulln);
+ddp_infifo #(3, 36) vdp1vram_fifo (clk, rst_pulse, {vdp1vram_addr,vdp1vram_wr,vdp1vram_din}, vdp1vram_fifo_wrreq, vdp1vram_fifo_rdreq, vdp1vram_fifo_dout, vdp1vram_fifo_empty, vdp1vram_fifo_full, vdp1vram_fifo_fulln);
 
 wire [ 19:  2] ramh_write_addr;
 wire [ 31:  0] ramh_write_data;
@@ -494,10 +495,15 @@ end
 
 // ================================================================ chip B: cdram vdp1vram cdbuf (+ write)
 always @(posedge clk) begin
-	{cdram_rcache_busy,vdp1vram_rcache_busy,cdbuf_rcache_busy,ring_rcache_busy} <= '0;
+	// next values of vdp1vram_read_busy / vdp1vram_rcache_busy (last assignment wins, as the registers would), so
+	// vdp1vram_busy_r is written from them in the same edge
+	bit v_rb, v_rc;
+	v_rb = vdp1vram_read_busy; v_rc = 1'b0;
+	{cdram_rcache_busy,cdbuf_rcache_busy,ring_rcache_busy} <= '0;
 	if (rst_pulse) begin
 		{cdram_rcache_dirty,vdp1vram_rcache_dirty,cdbuf_rcache_dirty,ring_rcache_dirty} <= '1;
-		{cdram_read_busy,vdp1vram_read_busy,cdbuf_read_busy,ring_read_busy} <= '0;
+		{cdram_read_busy,cdbuf_read_busy,ring_read_busy} <= '0;
+		v_rb = 1'b0;
 		vdp1vram_rcache_blen <= '0;
 	end
 	else begin
@@ -512,19 +518,19 @@ always @(posedge clk) begin
 		if (vdp1vram_rd && !vdp1vram_rd_old) begin
 			if (vdp1vram_blen) begin
 				if (vdp1vram_addr != vdp1vram_rcache_addr || vdp1vram_rcache_dirty) begin
-					vdp1vram_read_busy <= 1;
+					v_rb = 1'b1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
 					vdp1vram_rcache_blen <= vdp1vram_blen;
 				end
 			end else if (vdp1vram_rcache_blen) begin
 				if (!vdp1vram_in_burst || vdp1vram_rcache_dirty) begin
-					vdp1vram_read_busy <= 1;
+					v_rb = 1'b1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
 					vdp1vram_rcache_blen <= '0;
 				end
 			end else begin
 				if (vdp1vram_addr[18:5] != vdp1vram_rcache_addr[18:5] || vdp1vram_rcache_dirty) begin
-					vdp1vram_read_busy <= 1;
+					v_rb = 1'b1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
 				end
 			end
@@ -674,13 +680,16 @@ always @(posedge clk) begin
 			if (p1_rvalid) b_cw <= b_cw + 9'd1;
 			if (p1_rlast) begin
 				if (b_chan == 3'd0) begin cdram_read_busy <= 0; cdram_rcache_busy <= 1; end
-				if (b_chan == 3'd1) begin vdp1vram_read_busy <= 0; vdp1vram_rcache_busy <= 1; end
+				if (b_chan == 3'd1) begin v_rb = 1'b0; v_rc = 1'b1; end
 				if (b_chan == 3'd2) begin cdbuf_read_busy <= 0; cdbuf_rcache_busy <= 1; end
 				if (b_chan == 3'd4) begin ring_read_busy <= 0; ring_rcache_busy <= 1; end
 				b_state <= 0;
 			end
 		end
 	end
+	vdp1vram_read_busy <= v_rb;
+	vdp1vram_rcache_busy <= v_rc;
+	vdp1vram_busy_r <= vdp1vram_fifo_fulln | v_rb | v_rc;
 end
 
 // ================================================================ read caches
@@ -706,7 +715,7 @@ assign cdram_busy = cdram_write_busy | cdram_read_busy | cdram_rcache_busy;
 assign raml_dout = raml_cache_q;
 assign raml_busy = raml_write_busy | raml_read_busy | raml_rcache_busy;
 assign vdp1vram_dout = vdp1vram_cache_q;
-assign vdp1vram_busy = vdp1vram_fifo_full | vdp1vram_read_busy | vdp1vram_rcache_busy;
+assign vdp1vram_busy = vdp1vram_busy_r;
 assign cdbuf_dout = cdbuf_cache_q;
 assign ring_dout = ring_cache_q;
 assign ring_busy = ring_read_busy | ring_rcache_busy;
@@ -791,7 +800,8 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	input  wire          RDREQ,
 	output wire [W-1: 0] Q,
 	output wire          EMPTY,
-	output wire          FULL
+	output wire          FULL,
+	output wire          FULLN               // FULL at the next edge
 );
 	reg [l-1:0] RADDR = '0, WADDR = '0;
 	reg [l:0]   AMOUNT = '0;
@@ -812,6 +822,8 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	ddp_fifo_ram #(.W(W), .AW(l)) ram (.clk(CLK), .we(WRREQ && !AMOUNT[l] && !RST), .wa(WADDR), .wd(DATA), .ra(rnext), .q(Q));
 	assign EMPTY = ~(|AMOUNT && !stale);
 	assign FULL = AMOUNT[l];
+	// AMOUNT is 2^l at most: the top bit stays unless a pop alone comes, and is set by a push alone from 2^l - 1
+	assign FULLN = !RST && (AMOUNT[l] ? !(RDREQ && !WRREQ) : (&AMOUNT[l-1:0] && WRREQ && !RDREQ));
 endmodule
 
 // simple dual port M10K, registered read address, no read-during-write behaviour
