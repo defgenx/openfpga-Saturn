@@ -283,6 +283,8 @@ set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
 # Compiler Assignments (area profile: see sizing/area_profile.qsf)
 # ====================
 set_global_assignment -name OPTIMIZATION_MODE "AGGRESSIVE AREA"
+# fast-corner hold on clk_sys <-> clk_ram crossings (ramh_tag) and DSP-packed registers (pocket_audio prev_*): -0.2 ns without it
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
 
 # Analysis & Synthesis Assignments
 # ================================
