@@ -293,3 +293,35 @@ First fits of `5c9a520` (seeds 14 and 7): 18,320 / 18,324 ALMs needed, 1,854 / 1
 cells. Per entity against round 2 seed 14: mem_pocket 1,241 -> 1,210 / 1,217 (ddram -4 / -9, psram1 -14 / -11, psram0 -2, fb -4 /
 +3), VDP1P -1 / +5; the +38 is in untouched blocks (MSH +32, SSH +49, SCU +12, SMPC +16, VDP2P -28), the seed noise of the
 area-hunt section. Round 2 had fit on one seed of thirteen.
+
+## Area round 5 (branch `memfix`, 2026-11-02)
+
+`700ec89` (VDP1P GSTEP / CLT / ACCS in M10K) is reverted (`c6275f6`): +7 ALMs and +67 registers, no LAB saved over 20
+seeds. Then four exact rewrites, each with a Verilator old-vs-new bench (every output, every clock, random stimulus;
+a deliberately broken copy fails):
+
+| Commit | Change | map ALUT (entity) | fit ALMs (entity, s14 round 4 -> s14 / s7) |
+|---|---|---|---|
+| `6003560` | `pocket_audio`: prev * 65536 + d * ph per channel in one `altmult_add` block (two DSP blocks, was one) | 182 -> 161 | |
+| `ef9663d` | `io_pad_controller`: command bit picked from the two constant words by `tr_bit`; no `rx_word` copy; heartbeat count on `auto_poll_cnt` | 141 -> 120 | 93.7 -> 71.7 / 68.3 |
+| `e9f8605` | `sound_i2s`: MCLK accumulator with one adder | 78 -> 62 | 64.7 -> 62.2 / 61.8 |
+| `4d05570` | `ce_gent`: test against in_clk - step, one adder with a step or step - in_clk operand (SCSP and CD enables, 48 kHz accumulator); 3-bit registered mode instead of the 26-bit `in_clk` | CD 40 -> 14, SCSP 55 -> 46, audio 161 -> 138 | audio 106.7 -> 79.5 / 78.9, CD 19.2 -> 7.3 / 7.5, SCSP 20.5 -> 24.7 / 23.9 |
+
+Design map estimate 18,026 -> 17,932 (-94). `POCKET_CUT_SH2_DIVU_SHARED` mapped on `e9f8605`: 18,083 against 17,995
+without it (+88: the shared unit of the golden SH7604 is larger than the two serial `SH7604P_DIVU`s). Not a candidate.
+
+Fits (`openfpga-Saturn-worktrees/memfix6-s<seed>`), ALMs needed / LABs: 14: 18,228 / 1,847, 7: 18,197 / 1,846, 2: 18,290 / 1,849
+(no fit), 3: 18,226 / 1,848, 8: 18,223 / 1,848, 9: 18,246 / 1,848, 10: 18,238 / 1,848, 11: 18,222 / 1,847, 16: 18,217 /
+1,848, 1: 18,251 / 1,848, 4: 18,211 / 1,848, 5: 18,247 / 1,848, 13: 18,239 / 1,846, 6: 18,254 / 1,847. 13 of 14 seeds fit
+(round 4: none of 20). Every fit: 0 "Can't pack", the 16 `cap_p` as Fast Input Register, 16 + 16 `p_oe` copies as Fast Output
+Enable Register, 302 / 308 M10K, 46 / 66 DSP.
+
+Timing is not closed on any seed. Slow 85C setup counter[0] / counter[1]: s16 -0.503 / -0.441, s8 -0.590 / -0.474,
+s9 -0.604 / -0.083, s4 -0.649 / -0.274, s5 -0.681 / -0.336, s14 -1.143 / -0.333, s7 -1.618 / -0.088, s11 -1.182 / -1.791;
+fast 0C hold on counter[0] or counter[1] slightly negative on s3, s7, s9, s10, s11, s16, s1, s4 (-0.008 to -0.214); every other
+clock positive. The failing groups: MSH `bsc.VEC_BUF` -> `SH2P_core` `PIPE.ID.IR` / `PIPE.ID.PC` (every seed, 18 levels,
+the external-vector path of round 2), VDP1 `VRAM_A` / ddram `vdp1vram_rcache_busy` crossings, MSH / SSH `BUS_RLS` and `A`
+-> ddram `ramh_*`, and on some seeds SCSPP `OP7.SD` and `vdp1_fb_pocket` `rptr*` / `dlt`.
+
+Full-system simulation of `4d05570` (`sim/sys/build_memfix6`, the round 4 command): `i2s.raw`, `scsp.raw`, `pocket.raw`,
+`trace.log` byte-identical to `build_memfix5/run`, `audio:` line identical.
