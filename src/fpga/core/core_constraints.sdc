@@ -92,26 +92,33 @@ set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}
 set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks $clk_ram] 2
 
 # ---------------------------------------------------------------------------------- PSRAM
-# The chip clock is clk_ram / 2 from a register (psram_sync.sv). Values from docs/memory.md section 4: setup 3 ns,
-# hold 2 ns at the chip, tACLK 9 ns, tKOH 2 ns.
+# Chip clock = clk_ram / 2 from the p_clk register (psram_sync.sv), forwarded on cram*_clk. The pin clock is a
+# generated clock on the port, so its route and output buffer are in every check. AS1C8M16PL at <= 83 MHz, plus 0.5 ns
+# per board trace (docs/memory.md section 4): tSP 3, tCSP 4 (CE#), tHD 2, tACLK 9, tKOH 2 ns.
 foreach n {0 1} {
-	# on the toggling register, so the pin clock carries the same insertion delay as the pin data registers
-	create_generated_clock -name cram${n}_clk_pin -source [get_pins $clk_ram] -divide_by 2 [get_registers "*|psram${n}|p_clk"]
-	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_ce0_n cram${n}_ce1_n cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
-	set_output_delay -clock cram${n}_clk_pin -max 3.0 -add_delay $cram_out
-	set_output_delay -clock cram${n}_clk_pin -min -2.0 -add_delay $cram_out
-	set_input_delay  -clock cram${n}_clk_pin -max 9.0 -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
-	set_input_delay  -clock cram${n}_clk_pin -min 2.0 -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
-	# read words are shifted in on the following clk_ram edges
-	set_multicycle_path -setup -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 2
-	set_multicycle_path -hold  -end -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram] 1
+	set pclk [get_registers "*|psram${n}|p_clk"]
+	create_generated_clock -name cram${n}_clk_reg -source [get_pins $clk_ram] -divide_by 2 $pclk
+	create_generated_clock -name cram${n}_clk_pin -source $pclk [get_ports cram${n}_clk]
+	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
+	set cram_ce  [get_ports "cram${n}_ce0_n cram${n}_ce1_n"]
+	set_output_delay -clock cram${n}_clk_pin -max 3.5  -add_delay $cram_out
+	set_output_delay -clock cram${n}_clk_pin -max 4.5  -add_delay $cram_ce
+	set_output_delay -clock cram${n}_clk_pin -min -2.5 -add_delay [add_to_collection $cram_out $cram_ce]
+	set_input_delay  -clock cram${n}_clk_pin -max 10.0 -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	set_input_delay  -clock cram${n}_clk_pin -min 2.0  -add_delay [get_ports "cram${n}_dq\[*\] cram${n}_wait"]
+	# a read word is taken at the clk_ram edge where the next chip clock rises (one chip cycle after its launch edge)
+	set_multicycle_path -setup -end 2 -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram]
+	set_multicycle_path -hold  -end 1 -from [get_clocks cram${n}_clk_pin] -to [get_clocks $clk_ram]
+	# every pin register changes only at F edges (half a clk_ram before a chip clock edge): the hold check is against
+	# the chip edge before, not one at the launch instant
+	set_multicycle_path -hold  -start 1 -from [get_clocks $clk_ram] -to [get_clocks cram${n}_clk_pin]
 
 	# psram_sync is a half-rate machine: `ph` toggles every clk_ram and the pin registers and the segment state (the
 	# F-edge registers below) are written only at edges where ph is 1, from registers that are themselves written
 	# only at those edges, so a path between two of them has two clk_ram periods. The ddram_pocket request registers
 	# are written only when busy is low, which is also only at F edges (busy_i needs ph, rlast follows an R edge).
-	# Not in the set: ph, rst_pend (set at any edge), reset, init_go, and the R-edge registers p_clk, smp, rdata,
-	# rvalid, rlast; paths from those stay single-cycle.
+	# Not in the set: ph, rst_pend (set at any edge), reset, init_go, the R-edge registers p_clk, smp, rvalid, rlast
+	# and the input register dq_r; paths from those stay single-cycle.
 	set pf [get_registers "*|psram${n}|p_a* *|psram${n}|p_dq* *|psram${n}|p_oe* *|psram${n}|p_adv_n* *|psram${n}|p_cre* *|psram${n}|p_we_n* *|psram${n}|p_ce_n* *|psram${n}|p_bm_n* *|psram${n}|st* *|psram${n}|tmr* *|psram${n}|cop* *|psram${n}|cpass* *|psram${n}|clk_run* *|psram${n}|last* *|psram${n}|cur_we* *|psram${n}|act_* *|psram${n}|w_cur* *|psram${n}|w_rem* *|psram${n}|smp_last*"]
 	set_multicycle_path -setup -from $pf -to $pf 2
 	set_multicycle_path -hold  -from $pf -to $pf 1
@@ -149,19 +156,18 @@ set_multicycle_path -hold -end -from $cdb_data -to [get_registers {*|ddram|cdram
 set_multicycle_path -hold -end -from [get_registers {*|cart|MEM_A[*] *|cart|MEM_DO[*]}] -to [get_registers {*|ddram|cart_rcache_addr[*] *|ddram|cart_write_addr[*] *|ddram|cart_write_data[*]}] 1
 
 # ---------------------------------------------------------------------------------- SRAM (asynchronous)
-# No clock at the chip. Outputs are registered on clk_ram; read data returns within tAA plus board (12 ns here) and
-# is sampled RD_CYC - 1 = 3 clk_ram cycles after the address (sram_pocket.sv).
-set sram_out [get_ports {sram_a[*] sram_dq[*] sram_oe_n sram_we_n sram_ub_n sram_lb_n}]
-# The reference clock is the one the pin registers see (sram_ref on e_oe_n: same insertion delay and pad delay), so the
-# check is relative to the chip pins and not to an ideal clk_ram edge.
+# No clock at the chip. The reference is the OE# pin (sram_ref_pin, a generated clock on the port, sourced from the
+# e_oe_n register), so pad and route delays are counted. Every other pin is held within SRAM_SKEW of it, and read data
+# is valid SRAM_SKEW + tAA (10 ns) + 1 ns of board after it. The I/O cell input register takes it RD_CYC = 4 clk_ram
+# after the address edge, where the next access changes the pins (sram_pocket.sv). 8.73 = clk_ram period of the
+# analysed mode. docs/memory.md section 5.
+set SRAM_SKEW 2.0
 create_generated_clock -name sram_ref -source [get_pins $clk_ram] -divide_by 1 [get_registers "*|sram|e_oe_n"]
-set_output_delay -clock sram_ref -max 2.0  -add_delay $sram_out
-set_output_delay -clock sram_ref -min -1.0 -add_delay $sram_out
-set_input_delay  -clock sram_ref -max 12.0 -add_delay [get_ports {sram_dq[*]}]
-set_input_delay  -clock sram_ref -min 0.0 -add_delay [get_ports {sram_dq[*]}]
-# sram_ref is the e_oe_n register itself: that pin is the reference, its own skew check is empty
-set_false_path -to [get_ports sram_oe_n]
-set_multicycle_path -setup -end -from [get_clocks sram_ref] -to [get_clocks $clk_ram] 3
-set_multicycle_path -hold  -end -from [get_clocks sram_ref] -to [get_clocks $clk_ram] 2
-# the CD ring FSM (cd_stream) runs on clk_sys and drives the same pins through sram_pocket: clk_sys and clk_ram are
-# phase aligned, so those paths are ordinary single-cycle paths of the clk_ram family.
+create_generated_clock -name sram_ref_pin -source [get_registers "*|sram|e_oe_n"] [get_ports sram_oe_n]
+set sram_out [get_ports {sram_a[*] sram_dq[*] sram_we_n sram_ub_n sram_lb_n}]
+set_output_delay -clock sram_ref_pin -max [expr {8.73 - $SRAM_SKEW}] -add_delay $sram_out
+set_output_delay -clock sram_ref_pin -min $SRAM_SKEW -add_delay $sram_out
+set_input_delay  -clock sram_ref_pin -max [expr {$SRAM_SKEW + 11.0}] -add_delay [get_ports {sram_dq[*]}]
+set_input_delay  -clock sram_ref_pin -min [expr {-$SRAM_SKEW}] -add_delay [get_ports {sram_dq[*]}]
+set_multicycle_path -setup -end -from [get_clocks sram_ref_pin] -to [get_clocks $clk_ram] 4
+set_multicycle_path -hold  -end -from [get_clocks sram_ref_pin] -to [get_clocks $clk_ram] 3

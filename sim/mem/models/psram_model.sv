@@ -3,7 +3,8 @@
 //
 // Rules follow the model in GuardianSoul/openfpga-PlayStation sim/pocket/psx_cram_model.sv (MIT,
 // Copyright (c) 2026 PSX Pocket contributors), which was written from the Alliance datasheet figures
-// (tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, tSP 3 ns, tHD 2 ns, tCEM 4 us, 150 us power-up) and checked on
+// (tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, tSP 3 ns, tHD 2 ns, tCEM 4 us, 150 us power-up; tCSP 4 ns added here, the
+// <= 83 MHz column of the AS1C4M16PL burst tables, docs/memory.md section 4) and checked on
 // hardware: fixed latency, first read data driven after edge LC, first write data taken at edge
 // LC+1, edge 0 = the clock edge that sees ADV# low. This is an independent, smaller implementation
 // of those rules; it was not validated against a chip.
@@ -16,6 +17,7 @@ module psram_model #(
 	parameter integer T_HZ   = 7000,
 	parameter integer T_SU   = 3000,
 	parameter integer T_HD   = 2000,
+	parameter integer T_CSP  = 4000,      // CE# setup to the clock (<= 83 MHz column)
 	parameter integer T_CEM  = 4000000,
 	parameter integer T_LAT_MIN = 60000,
 	parameter longint T_POWER = 150000000,
@@ -122,6 +124,7 @@ always @(posedge clk) begin
 	t_rise = $time;
 	if (t_prev != 0) period = t_rise - t_prev;
 	if (!ce_n) begin
+		if (t_ce_fall > t_prev && $time - t_ce_fall < T_CSP) fail("CE# setup");
 		if (cfg && !sync_cfg) fail("clock edge during asynchronous register write");
 		// setup checks of the sampled controls
 		if (!adv_n && $time - t_adv_ch < T_SU && !active) fail("ADV# setup");

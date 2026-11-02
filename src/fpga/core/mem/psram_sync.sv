@@ -50,7 +50,7 @@ module psram_sync #(
 	input  wire        we,
 	input  wire [31:0] din,
 	input  wire  [3:0] be,
-	output reg  [15:0] rdata,          // read word, valid in the cycle rvalid is high
+	output wire [15:0] rdata,          // read word, valid in the cycle rvalid is high (don't-care otherwise)
 	output reg         rvalid,
 	output reg         rlast,          // with the last word of a read; busy is low in that cycle
 	output wire        idle,           // no segment running (for tests)
@@ -98,6 +98,13 @@ assign cram_clk = p_clk;       assign cram_adv_n = p_adv_n; assign cram_cre = p_
 assign cram_ce0_n = p_ce_n[0]; assign cram_ce1_n = p_ce_n[1];
 assign cram_oe_n = p_oe_n;     assign cram_we_n = p_we_n;
 assign {cram_ub_n, cram_lb_n} = p_bm_n;
+
+// read data: the I/O cell input register (FAST_INPUT_REGISTER, ap_core.qsf) samples DQ at every clk edge, with no
+// enable and no logic in front of it. A word is sampled at the R edge where rvalid is set, so in the rvalid cycle the
+// register holds it; rdata is that register.
+reg  [15:0] dq_r = 16'd0;
+always @(posedge clk) dq_r <= cram_dq_in;
+assign rdata = dq_r;
 
 // ---- control
 (* dont_merge *) reg ph = 1'b0;   // 1: the coming edge is an F edge (not merged with the other chip's: it feeds every pin register here)
@@ -193,10 +200,7 @@ always @(posedge clk) begin
 		// ---- R edge: the chip clock rises; read capture
 		p_clk <= clk_run;
 		smp <= 1'b0;
-		if (smp) begin
-			rdata <= cram_dq_in;
-			if (!rst_pend && !reset) begin rvalid <= 1'b1; rlast <= smp_last; end
-		end
+		if (smp && !rst_pend && !reset) begin rvalid <= 1'b1; rlast <= smp_last; end
 	end else begin
 		// ---- F edge: the chip clock falls; every other pin changes here
 		p_clk <= 1'b0;

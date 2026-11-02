@@ -30,7 +30,7 @@ build/tb_fb: tb_fb.sv $(FBSRC) | build
 	$(IVL) $(FLAGS) -o $@ tb_fb.sv $(FBSRC)
 
 build/tb_fb_slow: tb_fb.sv $(FBSRC) | build
-	$(IVL) $(FLAGS) -DSRAMAA_PS=30000 -o $@ tb_fb.sv $(FBSRC)
+	$(IVL) $(FLAGS) -DSRAMAA_PS=35000 -o $@ tb_fb.sv $(FBSRC)
 
 fb: build/tb_fb
 	$(VVP) build/tb_fb
@@ -69,7 +69,7 @@ elab:
 long: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000 $(OVL)
 
-# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 30 ns SRAM
+# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 35 ns SRAM (read sampled 34.9 ns after the address)
 negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(OVL) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3

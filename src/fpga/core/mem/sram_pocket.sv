@@ -1,15 +1,15 @@
 // sram_pocket.sv - owner of the Pocket's 128K x 16 asynchronous SRAM pins, for the framebuffer engine
-// (vdp1_fb_pocket): one 16 bit access at a time on clk_ram. Reads take RD_CYC = 4 cycles (35 ns, needs tAA below
-// about 25 ns), writes WR_CYC = 3 (26 ns, WE# low 8.7 ns, needs tWP <= 8 ns). A VBlank erase pushes one write per
-// 4 cycles, so writes must be faster than that (docs/memory.md). The whole SRAM holds framebuffer pixels
-// (FB1 tail words 0x0000-0x9FFF, FB0 words 0xA000-0x1FFFF).
+// (vdp1_fb_pocket): one 16 bit access at a time on clk_ram. Reads take RD_CYC = 4 cycles (35 ns; the data is sampled
+// at the edge that sets fb_done, RD_CYC cycles after the address), writes WR_CYC = 3 (26 ns, WE# low 8.7 ns, needs
+// tWP <= 8 ns). A VBlank erase pushes one write per 4 cycles, so writes must be faster than that (docs/memory.md).
+// The whole SRAM holds framebuffer pixels (FB1 tail words 0x0000-0x9FFF, FB0 words 0xA000-0x1FFFF).
 //
 // The top level wraps dq in a tri-state: sram_dq = sram_dq_oe ? sram_dq_o : 16'bz.
 
 `default_nettype none
 
 module sram_pocket #(
-	parameter int RD_CYC = 4,            // clk_ram cycles per read: data sampled RD_CYC-1 cycles after the address
+	parameter int RD_CYC = 4,            // clk_ram cycles per read
 	parameter int WR_CYC = 3             // per write: WE# low for WR_CYC-2 cycles
 ) (
 	input  wire        clk,                 // clk_ram
@@ -31,8 +31,8 @@ module sram_pocket #(
 	input  wire [15:0] fb_d,
 	input  wire  [1:0] fb_be,
 	output wire        fb_ready,
-	output reg  [15:0] fb_q,
-	output reg         fb_done              // pulse at the end of a read, fb_q valid (writes are posted: no pulse)
+	output wire [15:0] fb_q,                // valid in the cycle fb_done is high (don't-care otherwise)
+	output reg         fb_done              // pulse at the end of a read (writes are posted: no pulse)
 );
 
 localparam int CW = $clog2((RD_CYC > WR_CYC ? RD_CYC : WR_CYC) + 1);
@@ -59,7 +59,6 @@ always @(posedge clk) begin
 			if (cnt == WR_CYC - 2) e_we_n <= 1'b1;
 			if (cnt == WR_CYC - 1) begin busy <= 1'b0; e_dq_oe <= 1'b0; end
 		end else begin
-			if (cnt == RD_CYC - 2) fb_q <= sram_dq_i;
 			if (cnt == RD_CYC - 1) begin busy <= 1'b0; e_oe_n <= 1'b1; fb_done <= 1'b1; end
 		end
 	end
@@ -69,7 +68,13 @@ always @(posedge clk) begin
 		e_oe_n <= fb_we; e_we_n <= 1'b1; e_dq_oe <= fb_we;
 	end
 end
-initial begin fb_q = 16'd0; fb_done = 1'b0; end
+initial fb_done = 1'b0;
+
+// read data: the I/O cell input register (FAST_INPUT_REGISTER, ap_core.qsf) samples DQ at every edge; at the edge
+// that sets fb_done it takes the word, OE# and the address still unchanged at the pins
+reg [15:0] dq_r = 16'd0;
+always @(posedge clk) dq_r <= sram_dq_i;
+assign fb_q = dq_r;
 
 assign sram_a     = e_a;
 assign sram_dq_o  = e_d;

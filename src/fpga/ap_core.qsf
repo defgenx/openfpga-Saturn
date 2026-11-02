@@ -779,7 +779,21 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_spimiso
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to bridge_spimosi
 # SDRAM pins: command, address and data output registers in the I/O cells, as in the SDRAM controllers of openfpga-C64 and
 # openfpga-SNES (docs/memory.md section 3)
-# PSRAM pins: output registers packed into the I/O cells (docs/fit-status.md)
+# PSRAM pins: output registers (the chip clock p_clk too) and the read data input register in the I/O cells
+# (docs/memory.md section 4)
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram0_clk
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to cram0_dq[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram1_clk
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to cram1_dq[*]
+# SRAM pins: output registers and the read data input register in the I/O cells (docs/memory.md section 5)
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[*]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[*]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to sram_dq[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_oe_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_we_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_ub_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_lb_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram0_dq[*]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to cram0_dq[*]
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to cram0_a[*]
