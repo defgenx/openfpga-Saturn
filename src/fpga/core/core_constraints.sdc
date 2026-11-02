@@ -51,6 +51,25 @@ foreach cpu {MSH SSH} {
 set_multicycle_path -setup -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 2
 set_multicycle_path -hold  -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 1
 
+# SCSPP slot pipeline. SCSP_CE (saturn_pocket) is SCSP_2X_CE & SCSP_DIV: SCSP_2X_CE is a ce_gent pulse at 45.1584 MHz
+# out of clk_sys (53.4 .. 57.3 MHz, so never two clk_sys in a row) and SCSP_DIV halves it, so two SCSP_CE pulses are
+# at least two clk_sys apart. In SCSPP, CLK_DIV toggles on every CE and CYCLE_NUM advances on CE & CLK_DIV: CYCLE0_CE
+# (CYCLE_NUM even) and CYCLE1_CE (odd) alternate, two CE apart, at least four clk_sys between one and the next.
+# SCR_SCR3's read output register (altsyncram outdata_reg_b, clocken3 = CYCLE0_CE) changes at CYCLE0_CE edges only;
+# OP6 is written at SLOT1_CE (CYCLE1_CE & CYCLE_NUM[2:1] == 3) only; OP7.SD is written at SLOT1_CE only, from
+# SCR_SCR3 (TL, SDIR) and OP6 (LEVEL, WD) through LevelAddTL and VolCalc (two DSP multiplies, 17.6 ns). Every launch is
+# at least four clk_sys before the capture edge: two periods are claimed. The enable path (CE, CLK_DIV, CYCLE_NUM)
+# stays single-cycle. Same schedule for EVOL_RAM_4 (read enable CYCLE0_CE & CYCLE_NUM[2:1] == 2) into OP5.EVOL and
+# EVOL_RAM_D, both written at SLOT1_CE only.
+set scsp_sd [get_registers {*|SCSP|OP7.SD[*]}]
+set_multicycle_path -setup -from [get_registers {*|SCSP|SCR_SCR3|*|q_b[*]}] -to $scsp_sd 2
+set_multicycle_path -hold  -from [get_registers {*|SCSP|SCR_SCR3|*|q_b[*]}] -to $scsp_sd 1
+set_multicycle_path -setup -from [get_registers {*|SCSP|OP6.LEVEL[*] *|SCSP|OP6.WD[*]}] -to $scsp_sd 2
+set_multicycle_path -hold  -from [get_registers {*|SCSP|OP6.LEVEL[*] *|SCSP|OP6.WD[*]}] -to $scsp_sd 1
+set scsp_evol [get_registers {*|SCSP|OP5.EVOL[*] *|SCSP|EVOL_RAM_D[*]}]
+set_multicycle_path -setup -from [get_registers {*|SCSP|EVOL_RAM_4|*|q_b[*]}] -to $scsp_evol 2
+set_multicycle_path -hold  -from [get_registers {*|SCSP|EVOL_RAM_4|*|q_b[*]}] -to $scsp_evol 1
+
 # ---------------------------------------------------------------------------------- SDRAM
 # dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). Datasheet values as quoted in docs/memory.md:
 # input setup 1.5 ns, hold 1.0 ns, output valid 5.5 ns max, hold 2.5 ns min.
