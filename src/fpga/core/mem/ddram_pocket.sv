@@ -284,12 +284,21 @@ assign {ramh_write_addr,ramh_write_be,ramh_write_data} = ramh_fifo_dout;
 assign {vdp1vram_write_addr,vdp1vram_write_be,vdp1vram_write_data} = vdp1vram_fifo_dout;
 
 wire           ramh_ram_sel = !ramh_addr[19:12];
+// Mirror write enable: ramh_wr (clk_ram registered in saturn_pocket) and the select registered at the same edge. A master
+// changes the address only at an edge where its write strobes have been low for a clk_sys (SH7604P_BSC T2 CE_F before the
+// next CE_R; SCUP2 CBUS_WR is a one clk_sys pulse), so the select is the same at both edges while ramh_wr is set.
+reg            ramh_ram_sel_q = 1'b0;
+always @(posedge clk) ramh_ram_sel_q <= ramh_ram_sel;
 wire [ 31:  0] ramh_ram_q;
-ddp_ram #(10) ramh_ram (clk, ramh_addr[11:2], ramh_din, ramh_wr & {4{ramh_ram_sel}}, ramh_addr[11:2], ramh_ram_q);
+ddp_ram #(10) ramh_ram (clk, ramh_addr[11:2], ramh_din, ramh_wr & {4{ramh_ram_sel_q}}, ramh_addr[11:2], ramh_ram_q);
 
-// WRAM-H line lookup (shared by the read hit test and the write invalidation)
-wire [3:0]     ramh_match = {ramh_addr[19:5] == ramh_tag[3], ramh_addr[19:5] == ramh_tag[2], ramh_addr[19:5] == ramh_tag[1], ramh_addr[19:5] == ramh_tag[0]};
-wire [3:0]     ramh_hit   = ramh_match & ~{ramh_dirty[3], ramh_dirty[2], ramh_dirty[1], ramh_dirty[0]};
+// WRAM-H line lookup. The valid bit is folded into the tag compare (ramh_hit) and the write invalidation uses it too: a
+// matching dirty line is dirty already, and a read request edge (the clk_ram edge after a clk_sys edge) never meets a
+// write request edge (ramh_wr is registered one clk_ram after the bus). ramh_miss is one LUT: the request and four hits.
+wire [3:0]     ramh_hit   = {ramh_addr[19:5] == ramh_tag[3] && !ramh_dirty[3], ramh_addr[19:5] == ramh_tag[2] && !ramh_dirty[2],
+                             ramh_addr[19:5] == ramh_tag[1] && !ramh_dirty[1], ramh_addr[19:5] == ramh_tag[0] && !ramh_dirty[0]};
+wire           ramh_rreq  = ramh_rd & ~ramh_rd_old & ~ramh_ram_sel;   // read request edge, line region
+(* keep *) wire ramh_miss = ramh_rreq & ~|ramh_hit;
 wire [1:0]     ramh_victim = {ramh_plru[0], ramh_plru[0] ? ramh_plru[2] : ramh_plru[1]};
 wire [1:0]     ramh_hway  = ramh_hit[0] ? 2'd0 : ramh_hit[1] ? 2'd1 : ramh_hit[2] ? 2'd2 : 2'd3;
 wire [1:0]     ramh_way   = |ramh_hit ? ramh_hway : ramh_victim;
@@ -298,7 +307,7 @@ wire [1:0]     ramh_way   = |ramh_hit ? ramh_hway : ramh_victim;
 // follows a clk_sys edge, so both take the address two clk_ram after it was launched (core_constraints.sdc). A write
 // edge at the tag-write edge treats the pending line as matching, as it would with the tag already written.
 reg  [3:0]     ramh_alloc = 4'd0;
-wire [3:0]     ramh_wmatch = ramh_match | ramh_alloc;
+wire [3:0]     ramh_wmatch = ramh_hit | ramh_alloc;
 integer        wi;
 
 // ================================================================ chip A: ramh raml cart bsram loader
@@ -314,11 +323,11 @@ always @(posedge clk) begin
 		ramh_plru <= 3'd0;
 	end
 	else begin
-		if (ramh_rd && !ramh_rd_old && !ramh_ram_sel) begin
+		if (ramh_rreq) begin
 			ramh_curr <= ramh_way;
 			ramh_plru[0] <= !ramh_way[1];
 			if (ramh_way[1]) ramh_plru[2] <= !ramh_way[0]; else ramh_plru[1] <= !ramh_way[0];
-			if (!(|ramh_hit)) begin
+			if (ramh_miss) begin
 				ramh_alloc[ramh_victim] <= 1'b1;
 				ramh_dirty[ramh_victim] <= 0;
 				ramh_read_busy <= 1;
@@ -361,10 +370,14 @@ always @(posedge clk) begin
 			if (raml_addr[21:5] == raml_rcache_addr[21:5]) begin
 				raml_rcache_dirty <= 1;
 			end
+			raml_write_busy <= 1;
+		end
+		// Address, data and enables follow the bus while no write is pending: the request edge takes them (it sets the flag
+		// from 0), the pending write holds them. The master waits on raml_busy before its next write (SH7604P_BSC TW).
+		if (!raml_write_busy) begin
 			raml_write_addr <= raml_addr;
 			raml_write_data <= raml_din;
 			raml_be <= raml_wr;
-			raml_write_busy <= 1;
 		end
 		if (|cart_wr && !cart_wr_old) begin
 			if (cart_addr[22:5] == cart_rcache_addr[22:5]) begin
