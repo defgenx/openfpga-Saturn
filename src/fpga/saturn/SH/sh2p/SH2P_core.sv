@@ -354,21 +354,35 @@ module SH2P_core
 	wire BP_B_WBLD = (EX_DI.RB.N == PIPE.WB.DI.RA.N) & EX_DI.RB.R & PIPE.WB.DI.RA.W & WB_LD;
 	wire BP_C_WBLD = (5'd0            == PIPE.WB.DI.RA.N) & EX_DI.R0R  & PIPE.WB.DI.RA.W & WB_LD;
 	
+	// The vector immediate (IMMT VECT) is the late operand of the EX stage: INT_VEC carries the external vector
+	// (SH7604P_BSC VEC_BUF, written at the CE_F edge before the CE_R edge that uses it) and the reset vector takes
+	// NMI_N, a pin. It reaches ALU_A / ALU_B through one mux at the ALU input (VEC_VAL, VEC_A, VEC_B); REG_C is
+	// formed from CE_R registers only.
 	bit [31: 0] REG_A;
 	bit [31: 0] REG_B;
 	bit [31: 0] REG_C;
+	bit [31: 0] VEC_VAL;
+	bit         VEC_A, VEC_B;
 	always_comb begin
 		bit [11: 0] ir_imm;
 		bit [ 7: 0] vec;
+		bit [ 2: 0] vsh;
+		bit         vsel;
 		bit [31: 0] temp, IMM_VAL, SCR_VAL;
 		bit [31: 0] BP_A, BP_B, BP_C;
-		
+
 		ir_imm = PIPE.EX.IR[11:0];
-		vec = RES_EXP       ? {6'b000000,~NMI_N,1'b0} : 
-		      INT_REQ_LATCH ? INT_VEC : 
-				ILI_EXP       ? 8'h04 | {6'b000000,ILSI,1'b0} : 
+		vec = RES_EXP       ? {6'b000000,~NMI_N,1'b0} :
+		      INT_REQ_LATCH ? INT_VEC :
+				ILI_EXP       ? 8'h04 | {6'b000000,ILSI,1'b0} :
 				                PIPE.EX.IR[7:0];
-		
+		// IMM_VAL shift of the vector, one-hot: {<<2, <<1, <<0}
+		vsh = EX_DI.BR.BI ? 3'b010 : EX_DI.MEM.SZ == 2'b00 ? 3'b001 : EX_DI.MEM.SZ == 2'b01 ? 3'b010 : 3'b100;
+		VEC_VAL = ({22'b0, vec, 2'b00} & {32{vsh[2]}}) | ({23'b0, vec, 1'b0} & {32{vsh[1]}}) | ({24'b0, vec} & {32{vsh[0]}});
+		vsel = (EX_DI.IMMT == VECT) & EX_DI.DP.RSC;
+		VEC_A = EX_DI.ALU.SA & vsel;
+		VEC_B = EX_DI.ALU.SB & vsel;
+
 		case (EX_DI.IMMT)
 			ZIMM4:  temp = {{28{1'b0}},      ir_imm[ 3:0]};
 			SIMM8:  temp = {{24{ir_imm[ 7]}},ir_imm[ 7:0]};
@@ -376,10 +390,9 @@ module SH2P_core
 			SIMM12: temp = {{20{ir_imm[11]}},ir_imm[11:0]};
 			ZERO:   temp = 32'h00000000;
 			ONE:    temp = 32'h00000001;
-			VECT:   temp = {{24{1'b0}},      vec};
-			default: temp = 32'h00000000;
+			default: temp = 32'h00000000;   // VECT: REG_C is not used, VEC_VAL is
 		endcase
-		
+
 		if (EX_DI.BR.BI) begin
 			IMM_VAL = {temp[30:0],1'b0};
 		end else begin
@@ -450,8 +463,8 @@ module SH2P_core
 		endcase
 	end
 	
-	wire [31:0] ALU_A = EX_DI.ALU.SA ? REG_C : REG_A;
-	wire [31:0] ALU_B = EX_DI.ALU.SB ? REG_C : REG_B;
+	wire [31:0] ALU_A = VEC_A ? VEC_VAL : EX_DI.ALU.SA ? REG_C : REG_A;
+	wire [31:0] ALU_B = VEC_B ? VEC_VAL : EX_DI.ALU.SB ? REG_C : REG_B;
 	SH2P_alu alu (.A(ALU_A), .B(ALU_B), .OP(EX_DI.ALU.OP), .CD(EX_DI.ALU.CD), .CMP(EX_DI.ALU.CMP), .TAS(EX_DI.TAS),
 	              .T(SR.T), .M(SR.M), .Q(SR.Q), .RES(ALU_RES), .ALU_T(ALU_T));
 	
