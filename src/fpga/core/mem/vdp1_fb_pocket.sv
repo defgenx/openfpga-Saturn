@@ -132,7 +132,10 @@ reg  [8:0] wptr0_d = 9'd0, wptr1_d = 9'd0; // wptr seen one clk_ram late: wf_q h
 wire [8:0] occ0 = wptr0 - rptr0, occ1 = wptr1 - rptr1;
 wire       full0 = occ0 >= 9'd255, full1 = occ1 >= 9'd255;
 wire       stall = occ0 >= STALL || occ1 >= STALL;
-wire       ne0 = (wptr0_d != rptr0), ne1 = (wptr1_d != rptr1);
+// ne0 / ne1 = (wptr*_d != rptr*) as registers, written from the next pointer values (wptr*_d takes wptr*, rptr* moves
+// by the pop): the pick and the pops start from a register instead of a 9 bit compare.
+reg        ne0 = 1'b0, ne1 = 1'b0;
+wire [8:0] rptr0_p1 = rptr0 + 1'd1, rptr1_p1 = rptr1 + 1'd1;
 reg  [7:0] wra0, wra1;           // registered read address: the RAM output is the entry one clock after rptr
 wire [34:0] wf0_q = wf0[wra0], wf1_q = wf1[wra1];
 always @(posedge clk_ram) begin
@@ -193,13 +196,15 @@ wire [2:0] dlt_stp = {1'b0, dlt_up} - {1'b0, dlt_dn};
 always @(posedge clk_ram) begin
 	sr_req <= 1'b0;
 	dlt <= rst ? {1'b0, wptr1} - {1'b0, wptr0} : dlt + {{7{dlt_stp[2]}}, dlt_stp};
+	ne0 <= rst ? |wptr0 : pop0 ? (wptr0 != rptr0_p1) : (wptr0 != rptr0);
+	ne1 <= rst ? |wptr1 : pop1 ? (wptr1 != rptr1_p1) : (wptr1 != rptr1);
 	if (rst) begin rptr0 <= 9'd0; rptr1 <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; end
 	else case (es)
 	3'd0: begin
 		if ((ne0 || ne1) && sr_ready) begin
 			sr_req <= 1'b1; sr_we <= 1'b1;
 			sr_a <= wq[34:18]; sr_be <= wq[17:16]; sr_d <= wq[15:0];
-			if (pick1) rptr1 <= rptr1 + 1'd1; else rptr0 <= rptr0 + 1'd1;
+			if (pick1) rptr1 <= rptr1_p1; else rptr0 <= rptr0_p1;
 			es <= 3'd4;                                // posted: the next write may follow right away
 		end else if (rd_busy && sr_ready) begin
 			if (rd_oor) begin FB0_Q <= 16'h0000; rd_ack <= rd_t; end
