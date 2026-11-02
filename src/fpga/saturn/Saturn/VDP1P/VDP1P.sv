@@ -180,6 +180,15 @@ module VDP1P (
 		CMDS_END
 	} CMDState_t;
 	CMDState_t CMD_ST;
+	// what the CMDS_READ state does with a complete command word (the CMD registers only; see CMDS_READ)
+	typedef struct packed {
+		CMDState_t  ST;
+		bit [ 8: 0] DLY;
+		bit         DLY_WE;
+		bit         GRD;
+		bit         RD;
+	} CmdReadNext_t;
+	CmdReadNext_t RD_NEXT;
 	bit  [18: 5] CMD_ADDR_H;   // command tables are 16-word aligned: address bits [4:1] are always 0
 	wire [18: 1] CMD_ADDR = {CMD_ADDR_H,4'b0000};
 	bit          CMD_READ;
@@ -608,94 +617,17 @@ module VDP1P (
 `endif
 					CMD_READ <= 0;
 					
+					// CMD_READ_DONE carries VRAM_RDY (a clk_ram register of ddram_pocket, one clk_ram before this edge): the
+					// decision on the command word is taken from the CMD registers in RD_NEXT and CMD_READ_DONE only selects it
 					if (CMD_READ_DONE) begin
 `ifdef DEBUG
 						CMD_CURR <= CMD_CURR + 1'd1;
 						DBG_SKIP <= (CMD_CURR == CMD_SKIP);
 `endif
-						if (!CMD.CMDCTRL.JP[2] && !CMD.CMDCTRL.END 
-`ifdef DEBUG
-						    && (CMD_CURR != CMD_SKIP || !CMD_SKIP_EN)
-`endif
-						                                             ) begin
-							case (CMD.CMDCTRL.COMM) 
-								4'h0: begin	//normal sprite
-									if (CMD.CMDPMOD.CCB[2]) begin
-										GRD_READ <= 1;
-										CMD_DELAY <= 8'd10;
-										CMD_ST <= CMDS_GRD_LOAD;
-									end else begin
-										CMD_DELAY <= 8'd23;
-										CMD_ST <= CMDS_EXEC;
-									end
-								end
-							
-								4'h1: begin	//scaled sprite
-									if (CMD.CMDPMOD.CCB[2]) begin
-										GRD_READ <= 1;
-										CMD_DELAY <= 8'd10;
-										CMD_ST <= CMDS_GRD_LOAD;
-									end else begin
-										CMD_DELAY <= 8'd23;
-										CMD_ST <= CMDS_EXEC;
-									end
-								end
-								
-								4'h2,
-								4'h3: begin	//distored sprite
-									if (CMD.CMDPMOD.CCB[2]) begin
-										GRD_READ <= 1;
-										CMD_DELAY <= 8'd10;
-										CMD_ST <= CMDS_GRD_LOAD;
-									end else begin
-										CMD_DELAY <= 8'd23;
-										CMD_ST <= CMDS_EXEC;
-									end
-								end
-								
-								4'h4,			//polygon
-								4'h5,
-								4'h7: begin	//polyline
-									if (CMD.CMDPMOD.CCB[2]) begin
-										GRD_READ <= 1;
-										CMD_DELAY <= 8'd0;
-										CMD_ST <= CMDS_GRD_LOAD;
-									end else begin
-										CMD_DELAY <= 8'd0;
-										CMD_ST <= CMDS_EXEC;
-									end
-								end
-								
-								4'h6: begin	//line
-									if (CMD.CMDPMOD.CCB[2]) begin
-										GRD_READ <= 1;
-										CMD_DELAY <= 8'd0;
-										CMD_ST <= CMDS_GRD_LOAD;
-									end else begin
-										CMD_DELAY <= 8'd0;
-										CMD_ST <= CMDS_EXEC;
-									end
-								end
-							
-								4'h8,
-								4'hB,
-								4'h9,
-								4'hA,
-								4'hB: begin	
-									CMD_DELAY <= 8'd0;
-									CMD_ST <= CMDS_EXEC;
-								end
-							
-								default: begin	
-									CMD_READ <= 1;
-									CMD_ST <= CMDS_READ;
-								end
-							endcase
-						end
-						else begin
-							CMD_ST <= CMDS_END;
-						end
-						
+						CMD_ST <= RD_NEXT.ST;
+						if (RD_NEXT.DLY_WE) CMD_DELAY <= RD_NEXT.DLY;
+						if (RD_NEXT.GRD) GRD_READ <= 1;
+						if (RD_NEXT.RD) CMD_READ <= 1;
 						COPR <= CMD_ADDR[18:3];
 `ifdef DEBUG
 						DBG_CMD_WAIT_CNT <= '0;
@@ -2243,6 +2175,44 @@ module VDP1P (
 		end
 	end
 	assign CMD_READ_DONE = (VRAM_ST == VS_CMD_READ) && VRAM_RDY && (VRAM_READ_POS == 4'd15);
+	always_comb begin
+		RD_NEXT = '{CMDS_END, 9'd0, 1'b0, 1'b0, 1'b0};
+		if (!CMD.CMDCTRL.JP[2] && !CMD.CMDCTRL.END
+`ifdef DEBUG
+		    && (CMD_CURR != CMD_SKIP || !CMD_SKIP_EN)
+`endif
+		                                             ) begin
+			case (CMD.CMDCTRL.COMM)
+				4'h0,			//normal sprite
+				4'h1,			//scaled sprite
+				4'h2,
+				4'h3: begin	//distored sprite
+					RD_NEXT.DLY_WE = 1;
+					if (CMD.CMDPMOD.CCB[2]) begin RD_NEXT.GRD = 1; RD_NEXT.DLY = 9'd10; RD_NEXT.ST = CMDS_GRD_LOAD; end
+					else                    begin                  RD_NEXT.DLY = 9'd23; RD_NEXT.ST = CMDS_EXEC;     end
+				end
+				4'h4,			//polygon
+				4'h5,
+				4'h7,			//polyline
+				4'h6: begin	//line
+					RD_NEXT.DLY_WE = 1;
+					if (CMD.CMDPMOD.CCB[2]) begin RD_NEXT.GRD = 1; RD_NEXT.ST = CMDS_GRD_LOAD; end
+					else                    begin                  RD_NEXT.ST = CMDS_EXEC;     end
+				end
+				4'h8,
+				4'h9,
+				4'hA,
+				4'hB: begin
+					RD_NEXT.DLY_WE = 1;
+					RD_NEXT.ST = CMDS_EXEC;
+				end
+				default: begin
+					RD_NEXT.RD = 1;
+					RD_NEXT.ST = CMDS_READ;
+				end
+			endcase
+		end
+	end
 	
 	wire [ 3: 0] CLT_RA = DRAW_PAT.C[3:0];
 	VDP1P_COL_TBL CLT(.CLK(CLK), .WRADDR(CMD_POS), .DATA(CMD_DAT), .WREN(CLT_WE), .RDADDR(CLT_RA), .Q(CLT_Q));
