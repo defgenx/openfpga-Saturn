@@ -358,3 +358,41 @@ term (8,956 mismatches), CMD_DELAY 22 for 23 (1,788), a non-empty flag one clk_r
 
 To fit: the round 5 seeds; look at the next clk_sys paths of the SH2P cores once the VEC_BUF group is gone, and at the
 `BUS_RLS` / `A` -> ddram group per seed.
+
+## Timing round 7 (branch `memfix`, 2026-11-02)
+
+Round 6 fitted 18 seeds (`memfix7-s<seed>`) and closed none. One group is left on clk_ram: MSH / SSH `BUS_RLS` / `A` (and SCU
+`CBUS_A`) -> `ddram_pocket`, clk_sys -> clk_ram, 8.73 ns: s18 -0.060 into the mirror M10K `ramh_ram` `porta_we_reg` (4 levels,
+8.46 ns, 1.78 ns of it the M10K input setup, 5.2 ns routing), +0.036 / +0.044 into `ramh_dirty` (8 levels), s16 -0.013 into
+`raml_write_data[*]` (5 levels; the write-edge enable of 39 registers, fanout 39, 2.0 ns to the far registers). The path lists
+are `memfix7-s16` / `memfix7-s18` `src/fpga/sta_q`.
+
+Source side: nothing to take off. `BUS_RLS` is a register already (`MST_BUS_RLS` / `SLV_BUS_RLS`, `MASTER` is the constant
+`MD[5]`), so are the BSC's `A`, `CS3_N`, `RD_N`, `WE_N` and the SCU's `CBUS_A` / `CBUS_WR`; the first LUT of every path is the
+Saturn bus mux (`SH7604P` `{A,DO} = !BUS_RLS ? ... : ...`, MSH behind SSH behind SCU), 1.1 to 1.3 ns of routing from a
+fanout-114 register. The changes are on the ddram side (`eb91a44`), each exact under the bus protocol the design already
+relies on, each with the bench below:
+
+| Path (round 6 slack) | Change | Why exact | Expected |
+|---|---|---|---|
+| `BUS_RLS` / `A` -> `ramh_ram` `porta_we_reg` (s18 -0.060, s16 +0.445; 4 levels + M10K setup) | the mirror write enable is `ramh_wr & ramh_ram_sel_q`: the 4 KB select registered on clk_ram at the same edge as `ramh_wr` (saturn_pocket) | every master changes the address only at an edge where its write strobes have been low for a clk_sys (`SH7604P_BSC`: `WE_N` high at the T2 CE_F, the next `A` at a CE_R; `SCUP2`: `CBUS_WR` is a one clk_sys pulse, `CBUS_A` moves at CE_R in the next `CBUS_WRITE`), so while `ramh_wr` is set the select is the same at both edges | 2 levels into a LAB register, no M10K setup: about +2.5 ns; the M10K enable is clk_ram -> clk_ram |
+| `BUS_RLS` / `A` -> `raml_write_data` / `raml_write_addr` / `raml_be` (s16 -0.013 / +0.177 / +0.177; 5 levels, fanout 39) | the three are written while `raml_write_busy` is low (the request edge sets it from 0, so it takes them) and hold while it is set | a master waits on `raml_busy` before its next write (BSC TW samples `WAIT_N`; SCU `CBUS_WRITE_WAIT`), so no request edge finds the flag set and the a_state machine reads what the request edge took | bus mux into a register with a register enable: about +2 ns; the decode keeps `raml_write_busy` and `raml_rcache_dirty` only (fanout 2) |
+| `BUS_RLS` / `A` -> `ramh_dirty` / `ramh_plru` / `ramh_curr` / `ramh_alloc` / `ramh_read_busy` (s18 +0.036 / +0.35 / +0.52 / +0.44 / +0.45; 8 levels) | the valid bit is folded into the tag compare (`ramh_hit`), the write invalidation uses `ramh_hit \| ramh_alloc`, `ramh_miss` (request and the four hits) is one kept LUT | a matching dirty line is dirty already; a read request edge is the clk_ram edge after a clk_sys edge and a write request edge the other one (`ramh_wr` is one clk_ram later), so a write never sets what the same edge clears | the separate hit LUT and the OR of the hits leave the chain: 8 -> 6 levels, about +0.8 ns |
+
+Map (`memfix-map`, baseline re-mapped, deterministic): `ddram_pocket` 558 -> 558 ALUTs, 524 -> 525 registers; design 17,888 ->
+17,902 ALMs needed with the +20 ALUTs in untouched entities (SH2P_core +6, SH2P_dec +5, VDP2P +5, SCSPP +4, VDP1P +3, M68K -4,
+SH2P_alu -4, ...), the synthesis noise of the area-hunt section. A first form with the compare as 20 kept 3 bit slices (a two
+level compare) mapped at 17,905 with ddram 552 ALUTs: each slice is a 6 input LUT, one ALM; not kept.
+
+Bench (scratchpad `eq8`, model of `eq7` `tb_eq_ddram`): HEAD `ddram_pocket` against the new one, two psram_bench per side, every
+client output, PSRAM request and chip-model counter compared at every clk_ram edge, both clocks from one process. The clients
+change on clk_sys and follow the bus: a read is held until busy is low, a write is issued when busy is low with a strobe of 1
+(SCU) to 3 (SH-2) clk_sys, the address moves one clk_sys after a strobe at the earliest, read bursts re-assert RD after one
+clk_sys with the next word, addresses mix the mirror window, its neighbour page and a 16 line working set. 3 runs x 3 M clk_ram
+(phase 0 seed 1, phase 1 seed 2, phase 0 seed 3): 0 mismatches; per run about 56 k WRAM-H reads (27 k misses, 21.5 k hits, 4 k in
+the mirror, 8 k bursts), 8 k writes (1 k to the mirror), 20 k back-to-back accesses, 6 k WRAM-L writes. Broken copies (1 M
+clk_ram): select two edges late 4,747 mismatches, `raml_be` from `raml_wr_old` 396,445, tag bit 5 dropped from one way's compare
+981,946. `sim/sh2` `DUT=sh2p GOLD=<Saturn_MiSTer>/rtl`: ALL PASS. No cycle shifts, so the full-system simulation was not rerun.
+
+To fit: the round 6 seeds (18, 16 first). The remaining crossing paths of the group are the 15 bit compare behind the bus mux
+(`ramh_plru` / `ramh_curr`, 6 levels) and `raml_read_busy` / `raml_rcache_dirty` (s18 +0.27 / s16 +0.48; the read-edge decode).
