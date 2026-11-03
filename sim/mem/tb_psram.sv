@@ -6,6 +6,7 @@
 // both die boundaries, and compares against a byte-accurate shadow. Reports latency and throughput.
 //
 //   +N=count   number of random operations (default 3000)
+//   -DSTART_BCR=16'hXXXX   the dies start in that mode (another core left them configured)
 
 `timescale 1ps/1ps
 
@@ -64,7 +65,11 @@ always @(dq) dq_in_r <= #(TIN) dq;
 assign cram_dq_in = dq_in_r;
 
 wire [31:0] m_err, m_rd, m_wr, m_bursts, m_cel, m_xrow;
-psram_model #(.T_POWER(INIT_US * 1000000)) model (
+// START_BCR / START_RCR: the registers another core left in the chip (default: power-on values)
+`ifndef START_BCR
+`define START_BCR 16'h9D1F
+`endif
+psram_model #(.T_POWER(INIT_US * 1000000), .START_BCR(`START_BCR)) model (
 	.clk(clk_d), .host_oe(oe_d), .a(a_d), .dq(dq), .ce0_n(ce0_d), .ce1_n(ce1_d), .adv_n(adv_d), .oe_n(oen_d),
 	.we_n(wen_d), .ub_n(ub_d), .lb_n(lb_d), .cre(cre_d),
 	.errors(m_err), .n_rd(m_rd), .n_wr(m_wr), .n_bursts(m_bursts), .max_ce_low(m_cel), .n_xrow(m_xrow)

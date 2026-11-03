@@ -19,6 +19,12 @@ build/tb_psram: tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv | build
 psram: build/tb_psram
 	$(VVP) build/tb_psram +N=1500
 
+# the dies start in the mode another core left: our own BCR, sync variable LC3, sync fixed LC6
+psram-modes: | build
+	@for b in 651F 1D1F 751F; do \
+	  $(IVL) $(FLAGS) -DSTART_BCR=16\'h$$b -o build/tb_psram_$$b tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv && \
+	  printf "start BCR %s: " $$b && $(VVP) build/tb_psram_$$b +N=300 | grep -E 'PASS|FAIL'; done
+
 build/tb_ddram: tb_ddram.sv models/psram_bench.sv models/psram_model.sv $(SRC)/ddram_pocket.sv $(SRC)/psram_sync.sv | build
 	$(IVL) $(FLAGS) -o $@ tb_ddram.sv models/psram_bench.sv models/psram_model.sv $(SRC)/ddram_pocket.sv $(SRC)/psram_sync.sv
 
@@ -74,7 +80,7 @@ negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(OVL) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3
 
-.PHONY: all elab long negative sdram psram ddram fb load boot clean mc-check
+.PHONY: all elab long negative sdram psram psram-modes ddram fb load boot clean mc-check
 
 # data-eye sweep: extra delay on the SDRAM clock path (ps), rising-edge capture and falling-edge capture
 build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
