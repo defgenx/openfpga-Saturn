@@ -1,9 +1,10 @@
 // tb_sys: full-system simulation of core_top (the real Pocket top) in the build configuration of
 // src/fpga/ap_core.qsf, with the Pocket memory models of sim/mem on the SDRAM, PSRAM and SRAM pins.
 //
-// Host side (the Pocket's bridge, as core_top sees it): wait for setup done, Reset Enter, push the BIOS slot
-// (0x2xxxxxxx writes) through bridge_loader / load_pocket, dataslot_allcomplete, Reset Exit. All commands go
-// through the real core_bridge_cmd at 0xF8000000.
+// Host side (the Pocket's bridge, as core_top sees it): poll Request Status until the core leaves "booting", Reset
+// Enter, RTC, Data slot request write, push the BIOS slot (0x2xxxxxxx writes) through bridge_loader / load_pocket,
+// dataslot_allcomplete, Reset Exit. All commands go through the real core_bridge_cmd at 0xF8000000. Ready to Run is
+// answered once (+RTR_ALWAYS: every time); the PLL model relocks on every mode change.
 //
 // Plusargs: +BIOS=<file> (image for slot 0), +CYCLES=<clk_sys cycles>, +GAP=<clk_74a per bridge word>,
 //           +TRACE (every MSH bus cycle in the trace file), +FRAMES=<dir for PPM dumps>
@@ -137,7 +138,7 @@ endtask
 string    toc_path = "";
 string    disc_path [0:3];
 integer   disc_fd [0:3];
-integer   n_ds_reads = 0, n_ds_err = 0;
+integer   n_ds_reads = 0, n_ds_err = 0, n_rtr = 0, rtr_late = 0, rtr_always = 0;
 reg [7:0] sec [0:4095];
 
 task automatic bridge_read(input [31:0] a, output [31:0] d);
@@ -181,7 +182,11 @@ task automatic poll_target();
 		forever begin
 			bridge_read(32'hF8001000, t0);
 			if (t0[31:16] == 16'h636D) begin
-				if (t0[15:0] == 16'h0140) bridge_write(32'hF8001000, 32'h6F6B0000);       // ready to run
+				if (t0[15:0] == 16'h0140) begin                                             // ready to run
+					n_rtr++;
+					if (n_rtr == 1 || rtr_always) bridge_write(32'hF8001000, 32'h6F6B0000);
+					else if (!rtr_late) begin rtr_late = 1; $fdisplay(ftrace, "%0t HOST Ready to Run #%0d after start, not answered", $time, n_rtr); end
+				end
 				else if (t0[15:0] == 16'h0180) begin
 					bridge_read(32'hF8001020, p0); bridge_read(32'hF8001024, p1);
 					bridge_read(32'hF8001028, p2); bridge_read(32'hF800102C, p3);
@@ -199,6 +204,7 @@ initial begin : host
 	if (!$value$plusargs("BIOS=%s", bios_path)) bios_path = "";
 	if (!$value$plusargs("GAP=%d", gap)) gap = 32;
 	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";
+	rtr_always = $test$plusargs("RTR_ALWAYS");
 	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
 	if ($value$plusargs("DISC0=%s", disc_path[0])) disc_fd[0] = $fopen(disc_path[0], "rb");
 	if ($value$plusargs("DISC1=%s", disc_path[1])) disc_fd[1] = $fopen(disc_path[1], "rb");
@@ -214,12 +220,23 @@ initial begin : host
 	end else begin
 		$display("tb_sys: no +BIOS given"); $finish;
 	end
-	// the host waits for "setup done" (status request answers 3), then resets the core and loads the slots
-	wait (dut.status_setup_done === 1'b1);
-	repeat (20) @(posedge clk_74a);
-	$fdisplay(ftrace, "%0t HOST setup done, Reset Enter", $time);
-	repeat (2) @(posedge clk_74a);                         // keeps the host timing of the earlier runs (a settings write stood here)
+	// the host polls Request Status until the core has left "booting" (1); it does not wait for "idle" (3) before
+	// loading (the APF docs give no order; the PSX core's APF model loads while the status is 2)
+	begin : boot_poll
+		reg [31:0] st;
+		st = 32'd1;
+		while (st[15:0] == 16'd1) begin
+			repeat (100) @(posedge clk_74a);
+			bridge_write(32'hF8000000, {16'h434D, 16'h0000});
+			repeat (20) @(posedge clk_74a);
+			bridge_read(32'hF8000000, st);
+		end
+		$fdisplay(ftrace, "%0t HOST status %0d, Reset Enter", $time, st[15:0]);
+	end
 	host_cmd(16'h0010, 0, 0);                              // Reset Enter
+	bridge_write(32'hF8000028, 32'h02153000);              // RTC time (parameter 2), then the command with epoch and date
+	host_cmd(16'h0090, 32'd1762128000, 32'h20261103);      // sent once during boot
+	host_cmd(16'h0082, 32'd1, bios_len);                   // Data slot request write: slot 1 (BIOS), size in 0x24
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin
 		bridge_write(32'h20000000 + i, {bios[i], bios[i+1], bios[i+2], bios[i+3]});
@@ -806,7 +823,7 @@ task automatic summary();
 	$display("audio: SCSP samples %0d (%0d non-zero), pocket_audio %0d (%0d), I2S %0d (%0d); SCSP key-on events %0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
 	$fflush();
 	if (pb_en) $display("SCUPROBE-FINAL dmaRD=%0d(nz %0d) dmaWR=%0d(nz %0d) bbusWR_scsp=%0d(nz %0d) sndram50000WR=%0d(nz %0d)", pb_dma_rd, pb_dma_rd_nz, pb_dma_wr, pb_dma_wr_nz, pb_bw_snd, pb_bw_snd_nz, pb_ram, pb_ram_nz);
-	$display("disc: %0d dataslot reads, %0d short", n_ds_reads, n_ds_err);
+	$display("disc: %0d dataslot reads, %0d short; Ready to Run commands %0d; SMPC RTC date %08h", n_ds_reads, n_ds_err, n_rtr, dut.rtc_date_bcd);
 	$display("VDP2 VRAM write groups %0d, multi-lane %0d", wg_total, wg_multi);
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);

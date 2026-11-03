@@ -67,6 +67,12 @@ controllers accept writes (`setup_ready_74a`: `mem_ready`, or the 1.77 ms timeou
 
 `sim/platform/tb_bridge_status.sv` runs the real `core_bridge_cmd` through such a relock: `make -C sim platform`.
 
+The PLL outputs toggle while it acquires lock, and `pll_lite` rewrites M and K about 7 us after configuration, so
+`saturn_pocket` waits for the lock to hold for 2^13 clk_74a (110 us, `pll_stable`). Only then does it give `ram_reset`
+the rising reset that starts the SDRAM/PSRAM initialisation. `setup_ready_74a` ignores any `mem_ready` from before
+that `rst_ram` pulse. The full-system model (`sim/sys/models/pll_sim.sv`) drops the lock for 20 us on every mode
+change, and `tb_sys` polls Request Status as described above and answers Ready to Run once.
+
 ### Switches for the other branches
 
 `saturn_pocket.sv` has two compile switches, `POCKET_CUT_CD` (compiles out `cdd_pocket`, the `CD_*` ports of `Saturn` and

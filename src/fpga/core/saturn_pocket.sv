@@ -126,24 +126,34 @@ pll_sys_cfg pll_cfg (
 
 assign clk_audio = clk_sys;
 
-reg [1:0] lock_s;
-reg       ever_locked = 1'b0;
+wire       rst_ram, download;                // ram_reset (clk_sys)
+reg [1:0]  lock_s;
+reg        ever_locked = 1'b0;
+reg [13:0] stab = 14'd0;
+reg        pll_stable = 1'b0;               // lock held for 2^13 clk_74a (110 us), past pll_lite's power-up mode write
 always @(posedge clk_74a) begin
 	lock_s <= {lock_s[0], pll_locked};
 	if (lock_s[1]) ever_locked <= 1'b1;
+	if (!lock_s[1]) stab <= 14'd0;
+	else if (!stab[13]) stab <= stab + 1'b1;
+	if (stab[13]) pll_stable <= 1'b1;
 end
 assign pll_locked_74a = lock_s[1];
 
-// The host pushes the BIOS right after setup is reported and the bridge has no back-pressure, so setup is
-// reported only once the PSRAM accepts writes (the load FIFO holds 256 words); the timeout keeps a dead
-// RAM from hanging the host.
-reg [1:0]  rdy_s;
+// Setup is reported once the RAM accepts writes after its post-lock initialisation (the load FIFO holds 256
+// words and the bridge has no back-pressure); the timeout keeps a dead RAM from hanging the host. The clocks run
+// before the PLL locks and while pll_lite rewrites it, so the RAM controllers are (re)initialised by a rst_ram
+// pulse only once the lock is stable, and a mem_ready from before that pulse does not count (docs/integration.md).
+reg [1:0]  rdy_s, rr_s;
+reg        rr_seen = 1'b0;
 reg        ever_ready = 1'b0;
 reg [17:0] rdy_to = 18'd0;
 always @(posedge clk_74a) begin
 	rdy_s <= {rdy_s[0], mem_ready};
-	if (lock_s[1] && !rdy_to[17]) rdy_to <= rdy_to + 1'b1;
-	if (rdy_s[1] || rdy_to[17]) ever_ready <= 1'b1;
+	rr_s  <= {rr_s[0], rst_ram};
+	if (rr_s[1]) rr_seen <= 1'b1;
+	if (pll_stable && !rdy_to[17]) rdy_to <= rdy_to + 1'b1;
+	if ((rdy_s[1] && rr_seen && !rr_s[1]) || rdy_to[17]) ever_ready <= 1'b1;
 end
 assign setup_ready_74a = lock_s[1] & ever_ready;
 
@@ -211,10 +221,11 @@ end
 wire reset = rst_s[2];
 
 // ---------------------------------------------------------------------------------- reset
-wire rst_ram, download;
 wire loading, mem_ready;
 wire dbg_sdram_ready, dbg_psram_ready, dbg_ld_ovf, dbg_chk_done, dbg_chk_ok;
-ram_reset ramrst (.clk(clk_sys), .reset(reset), .loading(loading), .rst_ram(rst_ram), .download(download));
+reg  [2:0] stab_s = 3'd0;
+always @(posedge clk_sys) stab_s <= {stab_s[1:0], pll_stable};
+ram_reset ramrst (.clk(clk_sys), .reset(reset & stab_s[2]), .loading(loading), .rst_ram(rst_ram), .download(download));
 
 wire boot_busy;
 wire rst_sys = reset | download | rst_ram | boot_busy;
