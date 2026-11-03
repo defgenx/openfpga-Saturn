@@ -45,6 +45,8 @@ one row of 8 hex digits: the master SH-2 program counter.
 ```
 
 - The default row. `POCKET_DEBUG_SNDROW=1` shows the debug6 row instead (below).
+- `POCKET_DEBUG_NOROW=1` leaves the row out (squares only). That is the shipped debug build: with the row the fit needs
+  1,852 of 1,848 LABs.
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
   shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
 - Digits live in a two-word 16 bit M10K buffer, both words rewritten alternately every clk_sys by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
