@@ -217,13 +217,13 @@ if [ ${#kept[@]} -gt 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 3b. Discs: mktoc writes each .cue's .toc next to its tracks in common/ and its
-#     instance .json in Assets/saturn/defgenx.Saturn/ (docs/cd.md, section 4)
+# 3b. Discs: mktoc writes each .cue's .toc and instance .json next to its tracks
+#     in Assets/saturn/common/ (docs/cd.md, section 4)
 # ---------------------------------------------------------------------------
 
 prepare_discs() {
 	local common="$SD/Assets/saturn/common" mktoc="" py="" c
-	[ -d "$common" ] && [ -n "$(find "$common" -iname '*.cue' -print -quit 2>/dev/null)$(find "$common" -iname '*.json' -print -quit 2>/dev/null)" ] || return 0
+	[ -d "$common" ] && [ -n "$(find "$common" "$SD/Assets/saturn/$CORE" \( -iname '*.cue' -o -iname '*.json' \) -print -quit 2>/dev/null)" ] || return 0
 	# the mktoc next to this script first: a downloaded release may carry an older one
 	for c in "$HERE/tools/mktoc.py" "$HERE/Saturn-mktoc.py" "$SRC/Saturn-mktoc.py"; do
 		if [ -f "$c" ] && grep -q -- '"--card"' "$c"; then mktoc="$c"; break; fi

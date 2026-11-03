@@ -204,8 +204,8 @@ try {
     }
 
     # -----------------------------------------------------------------------
-    # 3b. Discs: mktoc writes each .cue's .toc next to its tracks in common\ and its
-    #     instance .json in Assets\saturn\defgenx.Saturn\ (docs/cd.md, section 4)
+    # 3b. Discs: mktoc writes each .cue's .toc and instance .json next to its tracks
+    #     in Assets\saturn\common\ (docs/cd.md, section 4)
     # -----------------------------------------------------------------------
 
     # Python 3 as a command line ("py -3", "python3" or "python"), or $null
@@ -223,8 +223,9 @@ try {
     }
 
     $common = Join-Path $SD "Assets/saturn/common"
+    $coreAssets = Join-Path $SD "Assets/saturn/$Core"
     $hasDiscs = (Test-Path -LiteralPath $common -PathType Container) -and
-        (@(Get-ChildItem -LiteralPath $common -Recurse -File -Force -ErrorAction SilentlyContinue |
+        (@(Get-ChildItem -LiteralPath $common, $coreAssets -Recurse -File -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.Extension -in ".cue", ".json" } | Select-Object -First 1).Count -gt 0)
     if ($hasDiscs) {
         Write-Host ""

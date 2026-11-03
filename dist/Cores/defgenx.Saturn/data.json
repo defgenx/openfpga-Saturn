@@ -3,22 +3,22 @@
     "magic": "APF_VER_1",
     "data_slots": [
       {
-        "name": "Disc",
-        "id": 0,
-        "required": true,
-        "parameters": "0x13",
-        "extensions": [
-          "json"
-        ]
-      },
-      {
         "name": "BIOS",
-        "id": 1,
+        "id": 0,
         "required": true,
         "parameters": "0x2",
         "filename": "sega_101.bin",
         "size_maximum": 524288,
         "address": "0x20000000"
+      },
+      {
+        "name": "Disc",
+        "id": 1,
+        "required": true,
+        "parameters": "0x11",
+        "extensions": [
+          "json"
+        ]
       },
       {
         "name": "CD TOC",

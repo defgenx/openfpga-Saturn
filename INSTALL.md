@@ -29,8 +29,8 @@ the **root** of the card, merging with the folders already there:
 SD card root
 ├── Assets/
 │   └── saturn/
-│       ├── common/              <- disc files: .bin tracks plus the .toc from mktoc.py
-│       └── defgenx.Saturn/      <- the BIOS and the .json from mktoc.py
+│       ├── common/              <- discs: .bin tracks, .toc and .json side by side
+│       └── defgenx.Saturn/      <- the BIOS (sega_101.bin)
 ├── Cores/
 │   └── defgenx.Saturn/
 │       ├── saturn.rbf_r         <- the core bitstream
@@ -54,18 +54,18 @@ then run the installer again. The core does not read `.cue` sheets itself: for e
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
 - `Game (USA).toc` (and a merged `Game (USA).img` when the disc has more than 24 track files) next to the tracks;
-- `Game (USA).json` into `Assets/saturn/defgenx.Saturn/`: on the Pocket, pick it as the disc.
+- `Game (USA).json` in the same folder: on the Pocket, pick it as the disc.
 
-It does this on every run, so the files always match the core. When two discs in different subfolders have
-the same name, their `.json` names start with the subfolder (`USA - Game.json`). A `.json` left in `common/` by
-v0.2.4 is moved to `defgenx.Saturn/` and the old copy is renamed `.json.old`. A WWF / Road Rash flag or RAM cart
-recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
+This is the v0.2.4 layout, the one that runs on the Pocket. It does this on every run, so the files always
+match the core; a `.json` already next to the tracks is rewritten in place. The `.json` files v0.2.5 and v0.2.6
+put in `Assets/saturn/defgenx.Saturn/` do not start a disc: each is renamed `.json.old` once its disc has its
+`.json` next to the tracks. A WWF / Road Rash flag or RAM cart recorded in an existing `.toc` is kept. Without
+Python the installer says how to install it and carries on.
 
 To do the same by hand: `python3 Saturn-mktoc.py --card /Volumes/POCKET` (add `--dry-run` to only see what it
-would change), or for one disc `python3 Saturn-mktoc.py "Game (USA).cue" -o out/ --data-path "Game (USA)/"`,
-where `--data-path` is the tracks' folder relative to `Assets/saturn/common/` (leave it out for `common/`
-itself). `Saturn-mktoc.py` is at the root of the card; in this repository it is `tools/mktoc.py`. CHD is not
-supported.
+would change), or for one disc `python3 Saturn-mktoc.py "Game (USA).cue" -o "Game (USA)/"` with `-o` the
+folder of the `.cue` and its tracks, so the `.toc` and `.json` land next to them. `Saturn-mktoc.py` is at the
+root of the card; in this repository it is `tools/mktoc.py`. CHD is not supported.
 
 Backup RAM is not saved to the card yet: saves last until the core is closed.
 

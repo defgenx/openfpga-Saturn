@@ -364,17 +364,58 @@ def free_old_name(path):
     return cand
 
 
+def bad_part(path):
+    """Why path cannot go in an instance JSON (data_path or a slot filename), or None."""
+    if "\\" in path or ":" in path:
+        return "has a '\\' or ':'"
+    if path.startswith("/"):
+        return "starts with '/'"
+    if any(x in (".", "..") for x in path.split("/")):
+        return "has a '.' or '..' component"
+    return None
+
+
+def check_paths(json_dir, inst, pending=()):
+    """Raise CueError unless every slot file resolves from the JSON's own folder + data_path.
+    pending: paths this run writes before the JSON (a .toc or merged .img not on the card yet in a dry run)."""
+    dp = inst["instance"]["data_path"]
+    why = dp and (bad_part(dp.rstrip("/")) or (None if dp.endswith("/") else "does not end with '/'"))
+    if why:
+        raise CueError(f"data_path {dp!r} {why}")
+    pend = {os.path.normcase(os.path.abspath(p)) for p in pending}
+    for s in inst["instance"]["data_slots"]:
+        fn = s["filename"]
+        why = bad_part(fn)
+        if why:
+            raise CueError(f"slot {s['id']} filename {fn!r} {why}")
+        p = os.path.join(json_dir, dp, fn)
+        if not os.path.isfile(p) and os.path.normcase(os.path.abspath(p)) not in pend:
+            raise CueError(f"slot {s['id']}: {dp}{fn} does not resolve from the JSON's folder")
+
+
 class Game:
-    def __init__(self, folder, stem, cue=None, inst=None, src=None):
+    def __init__(self, folder, stem, json_folder, cue=None, inst=None, src=None):
+        """folder: the tracks' folder, json_folder: the JSON's, both relative to common/ ("." for common/)."""
         self.folder, self.stem, self.cue, self.inst, self.src = folder, stem, cue, inst, src
-        self.olds = []      # v0.2.4 instance JSONs in common/ that this game replaces
-        parts = [] if folder == "." else folder.replace(os.sep, "/").split("/")
+        self.json_folder = json_folder
+        self.olds = []      # v0.2.5/v0.2.6 JSONs of this disc in the core folder, renamed once its JSON is written
+        r = rel_folder(folder, json_folder)
+        parts = [x for x in (folder if r is None else r).split("/") if x not in ("", ".")]
         if parts and parts[-1].lower() == stem.lower():
-            parts.pop()     # common/<Game>/<Game>.cue: the folder adds nothing to the name
+            parts.pop()     # <Game>/<Game>.cue: the folder adds nothing to the name
         self.prefixed = " - ".join(parts + [stem])
         self.json = None
         toc = stem + ".toc" if cue else inst["data_slots"][0]["filename"]
         self.key = disc_key(data_path_for(folder), toc)
+
+
+def rel_folder(folder, json_folder):
+    """data_path of the tracks' folder seen from the JSON's folder ("" when they are the same), or None if
+    the tracks are not in the JSON's folder or below it (an instance JSON takes no '../')."""
+    r = os.path.relpath(os.path.join("c", folder), os.path.join("c", json_folder)).replace(os.sep, "/")
+    if r == ".":
+        return ""
+    return None if r.split("/")[0] == ".." else r + "/"
 
 
 def disc_key(data_path, toc):
@@ -382,49 +423,73 @@ def disc_key(data_path, toc):
     return data_path_for(data_path).lower(), toc.lower()
 
 
+def folder_of(data_path):
+    """The track folder a data_path names, relative to common/ ("." for common/ itself), or None if it leaves common/."""
+    p = data_path.rstrip("/")
+    if p and bad_part(p):
+        return None
+    return p or "."
+
+
 def name_games(games):
-    """Instance JSON names: the disc's own name, prefixed by its subfolders when that name is used twice."""
+    """JSON names: the disc's own name, prefixed by its subfolders when two JSONs of one folder would share it
+    (only with --json-dir: next to the tracks, two cues of one folder cannot share a name)."""
     count = {}
     for g in games:
-        count[g.stem.lower()] = count.get(g.stem.lower(), 0) + 1
+        k = (g.json_folder.lower(), g.stem.lower())
+        count[k] = count.get(k, 0) + 1
     taken = set()
     for g in games:
-        base = g.stem if count[g.stem.lower()] == 1 else g.prefixed
+        base = g.stem if count[(g.json_folder.lower(), g.stem.lower())] == 1 else g.prefixed
         n, k = base, 2
-        while n.lower() in taken:   # FAT and exFAT ignore case
+        while (g.json_folder.lower(), n.lower()) in taken:   # FAT and exFAT ignore case
             n, k = f"{base} ({k})", k + 1
-        taken.add(n.lower())
+        taken.add((g.json_folder.lower(), n.lower()))
         g.json = n + ".json"
 
 
-def card(root, dry=False, ramcart_db=None):
-    common = os.path.join(root, "Assets", "saturn", "common")
-    core = os.path.join(root, "Assets", "saturn", CORE)
+def card(root, dry=False, ramcart_db=None, json_dir=None):
+    """json_dir: one folder (relative to common/) for every JSON; None puts each next to its tracks."""
+    saturn = os.path.join(root, "Assets", "saturn")
+    common = os.path.join(saturn, "common")
+    core = os.path.join(saturn, CORE)
     if not os.path.isdir(common):
         print("No Assets/saturn/common folder on the card: no discs to prepare.")
         return 0
-    rel = lambda p: os.path.relpath(p, common).replace(os.sep, "/")
+    if json_dir is not None:
+        json_dir = json_dir.replace(os.sep, "/").strip("/")
+        json_dir = "." if json_dir in ("", ".") else folder_of(json_dir)
+        if json_dir is None:
+            print("--json-dir must be a folder inside Assets/saturn/common")
+            return 1
+    jf = lambda folder: folder if json_dir is None else json_dir
+    rel = lambda p: os.path.relpath(p, saturn).replace(os.sep, "/")
 
-    games, olds = [], []
+    games, moved = [], []
     for d, dirs, fs in os.walk(common):
         dirs[:] = sorted(x for x in dirs if not x.startswith("."))
         for f in sorted(fs):
             if f.startswith("."):       # hidden files and macOS ._ AppleDouble files
                 continue
-            p = os.path.join(d, f)
             stem, ext = os.path.splitext(f)
             if ext.lower() == ".cue":
-                games.append(Game(os.path.relpath(d, common), stem, cue=p))
-            elif ext.lower() == ".json":
-                inst = read_instance(p)
-                if inst:
-                    olds.append((p, inst))
+                folder = os.path.relpath(d, common).replace(os.sep, "/")
+                games.append(Game(folder, stem, jf(folder), cue=os.path.join(d, f)))
+    if os.path.isdir(core):             # v0.2.5 and v0.2.6 wrote the JSONs here (docs/cd.md, section 3)
+        for f in sorted(os.listdir(core)):
+            p = os.path.join(core, f)
+            inst = f.lower().endswith(".json") and not f.startswith(".") and os.path.isfile(p) and read_instance(p)
+            if inst:
+                moved.append((p, inst))
     by_key = {g.key: g for g in games}
-    for p, inst in olds:
-        folder = os.path.relpath(os.path.dirname(p), common)
+    for p, inst in moved:
+        folder = folder_of(inst.get("data_path", ""))
+        if folder is None:
+            continue
         g = by_key.get(disc_key(data_path_for(folder), inst["data_slots"][0]["filename"]))
-        if g is None:           # no .cue left: carry the JSON over as it is, with the data_path of its folder
-            g = Game(folder, os.path.splitext(os.path.basename(p))[0], inst=inst, src=p)
+        if g is None:           # no .cue left: carry the JSON over to its tracks, named after its .toc
+            toc_stem = os.path.splitext(inst["data_slots"][0]["filename"])[0]
+            g = Game(folder, toc_stem, jf(folder), inst=inst, src=p)
             games.append(g)
             by_key[g.key] = g
         g.olds.append(p)
@@ -434,48 +499,49 @@ def card(root, dry=False, ramcart_db=None):
     name_games(games)
 
     print(f"Discs in Assets/saturn/common: {len(games)}{' (dry run, nothing is written)' if dry else ''}")
-    if not dry:
-        try:
-            os.makedirs(core, exist_ok=True)
-        except OSError as e:
-            print(f"Cannot create Assets/saturn/{CORE}: {e}")
-        if not (os.access(common, os.W_OK) and os.access(core, os.W_OK)):
-            print("The card is read-only (check the lock switch on the SD card): no disc prepared.")
-            return 1
-    failed = renamed = written = 0
-    done = []
+    if not dry and not os.access(common, os.W_OK):
+        print("The card is read-only (check the lock switch on the SD card): no disc prepared.")
+        return 1
+    failed = renamed = written = done = 0
     for g in games:
         src = g.cue or g.src
-        dst = os.path.join(core, g.json)
+        jdir = os.path.join(common, g.json_folder)
+        dst = os.path.join(jdir, g.json)
+        jrel = rel(dst)
         folder = os.path.join(common, g.folder)
         try:
+            dp = rel_folder(g.folder, g.json_folder)
+            if dp is None:
+                raise CueError(f"tracks in common/{g.folder} are not below the JSON folder common/{g.json_folder}")
             if os.path.exists(dst) and read_instance(dst) is None:
-                raise CueError(f"{CORE}/{g.json} exists and was not written by mktoc; left alone")
+                raise CueError(f"{jrel} exists and was not written by mktoc; left alone")
+            pending = []
             if g.cue:
-                wwf, rr, cart = toc_options(os.path.join(folder, g.stem + ".toc"))
-                toc, inst, merged, summary = build(g.cue, folder, data_path_for(g.folder), ramcart_db,
-                                                   wwf=wwf, rr=rr, cart=cart)
+                tocp = os.path.join(folder, g.stem + ".toc")
+                wwf, rr, cart = toc_options(tocp)
+                toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, wwf=wwf, rr=rr, cart=cart)
                 states = []
                 if merged:
                     states.append(f"{g.stem}.img {write_merged(*merged, dry=dry)}")
-                states.append(f"{g.stem}.toc {put(os.path.join(folder, g.stem + '.toc'), toc, dry)}")
+                    pending.append(merged[0])
+                states.append(f"{g.stem}.toc {put(tocp, toc, dry)}")
+                pending.append(tocp)
             else:
-                slots = g.inst["data_slots"]
-                missing = [s["filename"] for s in slots if not os.path.isfile(os.path.join(folder, s["filename"]))]
-                if missing:
-                    raise CueError(f"no .cue next to it and {', '.join(missing)} missing; left alone")
-                inst = {"instance": {"magic": "APF_VER_1", "data_path": data_path_for(g.folder), "data_slots": slots}}
-                summary, states = "moved from common/ (no .cue)", []
+                inst = {"instance": {"magic": "APF_VER_1", "data_path": dp, "data_slots": g.inst["data_slots"]}}
+                summary, states = "no .cue, JSON carried over as it is", []
+            check_paths(jdir, inst, pending)
+            if not dry and not os.path.isdir(jdir):     # only with --json-dir
+                os.makedirs(jdir)
             js = put(dst, instance_json(inst), dry)
-            written += js in ("created", "updated")
-            states.insert(0, f"{CORE}/{g.json} {js}")
+            written += js != "unchanged"
+            states.insert(0, f"{jrel} {js}")
             print(f"  {rel(src)}: {summary}\n      {', '.join(states)}")
-            done.append(g)
+            done += 1
         except (CueError, OSError) as e:
             failed += 1
-            print(f"  {rel(src)}: NOT prepared: {str(e).replace(common + os.sep, '').replace(root + os.sep, '')}")
+            print(f"  {rel(src)}: NOT prepared: {str(e).replace(saturn + os.sep, '').replace(root + os.sep, '')}")
             continue
-        for p in g.olds:        # v0.2.4 put the JSON next to the tracks; the Pocket now ignores it there
+        for p in g.olds:
             new = free_old_name(p)
             if dry:
                 print(f"      would rename {rel(p)} to {os.path.basename(new)}")
@@ -483,31 +549,11 @@ def card(root, dry=False, ramcart_db=None):
                 try:
                     os.rename(p, new)
                     renamed += 1
-                    print(f"      renamed {rel(p)} to {os.path.basename(new)} (old location)")
+                    print(f"      renamed {rel(p)} to {os.path.basename(new)} (now {jrel})")
                 except OSError as e:
                     print(f"      could not rename {rel(p)}: {e}")
 
-    # a JSON an earlier run named differently (a same-name disc appeared or went away) is a duplicate
-    if os.path.isdir(core):
-        current = {g.json.lower() for g in games}
-        for f in sorted(os.listdir(core)):
-            p = os.path.join(core, f)
-            if not f.lower().endswith(".json") or f.lower() in current or f.startswith("."):
-                continue
-            inst = read_instance(p)
-            key = inst and disc_key(inst.get("data_path", ""), inst["data_slots"][0]["filename"])
-            g = inst and next((g for g in done if g.key == key), None)
-            if not g or os.path.splitext(f)[0].lower() not in (g.stem.lower(), g.prefixed.lower()):
-                continue
-            new = free_old_name(p)
-            if dry:
-                print(f"  would rename {CORE}/{f} to {os.path.basename(new)} (now {g.json})")
-            else:
-                os.rename(p, new)
-                renamed += 1
-                print(f"  renamed {CORE}/{f} to {os.path.basename(new)} (now {g.json})")
-
-    print(f"{len(done)} disc(s) ready, {written} JSON file(s) {'to write' if dry else 'written'}, "
+    print(f"{done} disc(s) ready, {written} JSON file(s) {'to write' if dry else 'written'}, "
           f"{renamed} old file(s) renamed, {failed} failed")
     return 1 if failed else 0
 
@@ -517,15 +563,18 @@ def main():
     ap.add_argument("cue", nargs="?")
     ap.add_argument("-o", "--outdir", default=".")
     ap.add_argument("--data-path", default="",
-                    help="folder of the track files relative to Assets/<platform>/common/ (e.g. 'Game (USA)/')")
+                    help="folder of the track files seen from the JSON's folder (default '': the JSON goes next to them)")
     ap.add_argument("--ramcart-db", help="MiSTer saturn_ramcart.txt for the RAM cartridge request")
     ap.add_argument("--merge", choices=["auto", "always", "never"], default="auto",
                     help="concatenate the track files into one image (auto: only above %d files)" % TRACK_SLOTS)
     ap.add_argument("--wwf", action="store_true", help="WWF TOC hack (reports INDEX 01 start)")
     ap.add_argument("--road-rash", action="store_true", help="Road Rash hack (no seek delay on read)")
     ap.add_argument("--card", metavar="SD_ROOT",
-                    help="prepare every .cue under SD_ROOT/Assets/saturn/common: the .toc next to the tracks, "
-                         f"the .json in Assets/saturn/{CORE}/ (v0.2.4 JSONs in common/ become .json.old)")
+                    help="prepare every .cue under SD_ROOT/Assets/saturn/common: the .toc and .json next to the "
+                         f"tracks (JSONs v0.2.5/v0.2.6 put in Assets/saturn/{CORE}/ become .json.old)")
+    ap.add_argument("--json-dir", metavar="DIR",
+                    help="with --card: write every .json into common/DIR instead (data_path then names the tracks' "
+                         "folder relative to it; '.' is common/ itself)")
     ap.add_argument("--dry-run", action="store_true", help="with --card: show what would change, write nothing")
     a = ap.parse_args()
 
@@ -534,7 +583,7 @@ def main():
             ap.error("give either a .cue or --card")
         if hasattr(sys.stdout, "reconfigure"):     # a Windows console cannot print every disc name
             sys.stdout.reconfigure(errors="replace")
-        sys.exit(card(a.card, a.dry_run, a.ramcart_db))
+        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
 
@@ -551,6 +600,10 @@ def main():
     with open(os.path.join(a.outdir, name + ".json"), "wb") as f:
         f.write(instance_json(inst))
     print(f"{name}: {summary}")
+    try:
+        check_paths(a.outdir, inst)
+    except CueError as e:
+        print(f"note: {e}; the Pocket resolves the files from the .json's folder plus data_path")
 
 
 if __name__ == "__main__":
