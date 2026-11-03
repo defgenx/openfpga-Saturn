@@ -78,16 +78,16 @@ module VDP2P_WRITE_FIFO (
 	input	        CLK,
 	input         RST_N,
 	
-	input	 [35:0] DATA,
+	input	 [39:0] DATA,
 	input	        WRREQ,
 	input	        RDREQ,
-	output [35:0] Q,
+	output [39:0] Q,
 	output	     EMPTY,
 	output	     FULL,
 	output	     LAST
 );
 
-	wire [35: 0] sub_wire0;
+	wire [39: 0] sub_wire0;
 	bit  [ 2: 0] RADDR;
 	bit  [ 2: 0] WADDR;
 	bit  [ 3: 0] AMOUNT;
@@ -117,7 +117,7 @@ module VDP2P_WRITE_FIFO (
 	assign FULL = AMOUNT[3];
 	assign LAST = (AMOUNT == 4'd1);
 	
-	VDP2P_FERAM #(3,36) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
+	VDP2P_FERAM #(3,40) ram(CLK, WRREQ, WADDR, DATA, RADDR, sub_wire0);
 	
 	assign Q = sub_wire0;
 
@@ -169,7 +169,8 @@ endmodule
 
 // K-clock-enable delay of D (K >= 2): Q equals the output of a K-stage shift register that shifts when EN is
 // high and takes D as stage 0 input. 2**AW must exceed K. The M10K read address is the post-edge write
-// pointer, so the registered output never reads the word written on the same edge.
+// pointer, so the registered output never reads the word written on the same edge. The M10K reads only at EN,
+// so its output changes at EN edges only (core_constraints.sdc, vdp2_ce_r_ram).
 module VDP2P_DTAP #(
 	parameter W  = 8,
 	parameter K  = 2,
@@ -194,7 +195,7 @@ module VDP2P_DTAP #(
 		reg [W-1:0] q = '0;
 		always @(posedge CLK) begin
 			if (EN) mem[wp] <= D;
-			q <= mem[wpn - KK];
+			if (EN) q <= mem[wpn - KK];
 		end
 		assign Q = q;
 	end endgenerate
@@ -274,6 +275,33 @@ module VDP2P_SDP #(
 		end
 		assign Q = q;
 	end endgenerate
+endmodule
+
+// 2**AW x DW M10K simple dual port RAM whose registered read happens only when RE is high (the output changes at
+// RE edges only). A read of the word written on the same edge returns undefined data on hardware.
+module VDP2P_SDPR #(
+	parameter AW = 1,
+	parameter DW = 32
+) (
+	input           CLK,
+	input           WE,
+	input  [AW-1:0] WA,
+	input  [DW-1:0] WD,
+	input           RE,
+	input  [AW-1:0] RA,
+	output [DW-1:0] Q
+);
+	(* ramstyle = "M10K, no_rw_check" *) reg [DW-1:0] mem [0:(1<<AW)-1];
+	reg [DW-1:0] q = '0;
+	always @(posedge CLK) begin
+		if (WE) mem[WA] <= WD;
+`ifdef ALTERA_RESERVED_QIS
+		if (RE) q <= mem[RA];
+`else
+		if (RE) q <= (WE && WA == RA) ? ~mem[RA] : mem[RA];   //simulation: garbage for the undefined case
+`endif
+	end
+	assign Q = q;
 endmodule
 
 // Register words held in RAM: 2**AW words of DW bits written by the CPU register decode. The registers

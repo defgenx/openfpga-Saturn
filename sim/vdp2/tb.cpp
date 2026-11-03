@@ -427,7 +427,9 @@ int main(int argc, char** argv) {
 			for (int a = 0; a < 0x120; a += 2) if (a != 0x00 && a != 0x04 && a != 0x08 && a != 0x0A && a != 0x0C && (g_legal || rng.chance(50))) pend_cfg.push_back({0, (uint32_t)(0x180000 + a), {cfg.r[a / 2]}, 0, (int)rng.below(3)});
 			pend_cfg.push_back({0, 0x180000u, {cfg.r[0]}, 0, 0});
 		}
-		if (!pend_cfg.empty() && bus.idle() && vbl_age > 64 && vbl_age < 20000) { if (getenv("VDP2_LOGW") && pend_cfg.front().kind == 0 && pend_cfg.front().addr >= 0x180000) printf("W t=%ld reg=%03x v=%04x\n", t, pend_cfg.front().addr & 0x1FF, pend_cfg.front().data[0]); bus.q.push_back(pend_cfg.front()); pend_cfg.pop_front(); }
+		// CT_FETCH survives a soft reset (both copies), so the coefficient decode runs in the blanking of the first line
+		// after one; VDP2P samples the decode registers once per dot (docs/vdp2.md, deviation 2): wait one line
+		if (!pend_cfg.empty() && bus.idle() && vbl_age > 64 && vbl_age < 20000 && !(t > 700000 && t < 700030 + 4000 && (seed & 7) == 5 && !g_legal)) { if (getenv("VDP2_LOGW") && pend_cfg.front().kind == 0 && pend_cfg.front().addr >= 0x180000) printf("W t=%ld reg=%03x v=%04x\n", t, pend_cfg.front().addr & 0x1FF, pend_cfg.front().data[0]); bus.q.push_back(pend_cfg.front()); pend_cfg.pop_front(); }
 		// CPU traffic once the initial programming is done
 		if (bus.idle() && t > 100000 && rng.chance(8) && !g_nowr) {
 			int k = rng.below(100);

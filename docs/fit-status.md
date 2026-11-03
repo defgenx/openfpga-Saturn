@@ -650,3 +650,122 @@ What the RTL needs:
   from `CELLX`/`HRES`/BG3 to `UO` and the lane network.
 Provable relaxations left out on purpose (each needs its own exception and check): DTAP read ports -> CE_R registers,
 `-fall_from` the `rp_*` FERAMs to CE_R registers, `ONE` as a false path; they would clear D (except `NBG_CDC`), A2 and E.
+The RTL changes and the proved relaxations are in the next section.
+
+## VDP2P timing fixed in RTL (branch `vdp2fix`, 2026-11-03)
+
+The groups of the STA table above, fixed in the VDP2P sources; the SDC exception stays the CE_R-only one, widened only by
+registers that now change at CE_R edges and by two read-port classes proved below. Current register classes:
+
+| Registers | Change at |
+|---|---|
+| everything of the old first row, plus `REGS.*` (all fields), `SCYN_UPD`, the register-RAM `vld` flags, `VAD`, `VCPN`, `VCPQ`, `CYA_N2`, `NYOFS`, `RPPQ`, `ONE`, `CRCT_Q`, `HM3` (`vdp2_ce_r`) | CE_R edges only |
+| M10K reads `tap2`, `tap3`, `tap4`, `whit33` (`VDP2P_DTAP`, read only at its EN) and `r_dx`, `r_dy`, `r_xp`, `r_yp`, `r_spx`, `r_spy` (`VDP2P_SDPR`, read at CE_R) (`vdp2_ce_r_ram`) | CE_R edges only |
+| falling-edge reads `rp_a`, `rp_b`, `rp_m`, `rp_n`, `rp_k`, `rp_d0`, `rp_d1`, `rp_fr`, `rp_ff` (`vdp2_fe_ce_r`) | the falling edge after a CE_R edge |
+| `RW_P`, `RW_A`, `RW_D` (CPU register write strobe), `REG_RA`, `REG_RRDY`, `PAL_DO`, `REG_RD`, `PAL_RD` | CE_F edges |
+| CPU VRAM port, `USL`, `USEL`, `HA`, `HM`, `CSEQ`, `P_*` (cell capture selection), `NBG_CH`, `NBG_CDC`, `CPN`, `C`, `DCOL`, other RAM ports | every clock |
+
+SDC (core_constraints.sdc): setup 2 / hold 1 from `vdp2_ce_r` and `vdp2_ce_r_ram` to `vdp2_ce_r`; setup 2 / hold 1 from
+`vdp2_fe_ce_r` (falling launch, so 1.5 clk_sys) to `vdp2_ce_r`. Nothing else in VDP2 has an exception.
+
+What changed, per group:
+
+- **A1** (cycle-pattern FERAM -> address unit, half a clk_sys). The bank access decode of a dot (`VA_PIPE[0]` access
+  flags, 57 bits, `VADec_t`) is a register `VAD`, loaded at DOT_CE_R from the next dot's inputs: the next cycle-pattern
+  nibbles `VCPN` (word address `CYA_N2 = CYTN[2]` loaded at DOT_CE_F, nibbles read from the falling-edge RAM at the
+  CE_R edge before DOT_CE_R, a half-clk_sys path of two LUT levels), the next values of the fetch windows
+  (`NPN_FETCH_N` ... `NOACCESS_N`, the D inputs of those registers) and the registers. `VCPQ` (the current dot's
+  nibbles, for `NxPN_CYC_BY_T`) is `VCPN` at DOT_CE_R. The address unit now starts from flip-flops.
+- **C** (CE_R registers -> `HA`/`HM` in one clk_sys). The decode (`CELLX`, `HRES`, `RDBS*`, `BGON`, `SCRCTL`, fetch
+  windows) is out of the path with `VAD`; `NYOFS` (NMOSY + NVCSY of layers 0/1, a DSP adder on the path) is a register
+  loaded at DOT_CE_R with the sum of both next values (`NMOSY_D`, `NVCSY_D`, which also feed the two registers).
+  The bank select `USEL` is a register (its value one clock ahead: CE_R and CE_F alternate and DOTCLK_DIV changes at
+  CE_R edges), so `MCLK_DIV`/`DOTCLK_DIV` no longer reach the unit. The DOT_CE_R users of the bank matches (fetch
+  counters, `NBG_PN_EN`, the tap and RBG pipeline selects) take bank 3 from `HM3`, the bank 3 result of DOT_CE_F (same
+  inputs), instead of the unit's live output; `E_PNEN_F` (live) remains for `NBG_PN_FETCH` at DOT_CE_F.
+- **B** (CPU registers, CE_F -> CE_R). A register write is registered at its request (`RW_P`, `RW_A`, `RW_D`, at the
+  CE_F edge) and applied at the next CE_R edge (`RW_E = RW_P & CE_R`); the cycle-pattern and map RAM writes and
+  `SCYN_UPD` use the same strobe. `REGS` joins `vdp2_ce_r`. Deviation: the write is seen one clk_sys later than in the
+  golden (docs/vdp2.md, deviation 7); the harness gives the golden copy the same timing (`sim/vdp2/regwr_patch.py`).
+- **D** (`tap3 -> NBG_CDC`). A capture visit takes two clocks: the selection (array, layer, count, flips, write kinds)
+  is registered in `P_*` at CSEQ 1-4, the lanes are written from it at CSEQ 2-5; the character words `NBG_CH` load one
+  clock later than before (CSEQ 3-6), still after their last reader; the cell boundary copy at the next DOT_CE_R reads
+  the finished arrays.
+- **A3** (`tap2 -> rp_a/rp_m/rp_n` read address, half a clk_sys). The tables' falling-edge read addresses come from
+  `RPPQ`, RP_POS delayed two events in flip-flops (equal to `VA2.RP_POS`), not from the tap RAM.
+- **E** (`ONE`). `ONE` is set at the first CE_R edge after reset (`if (CE_R) ONE <= 1`), so it is a CE_R register;
+  with `NYOFS` registered every DADD output feeds a CE_R register only.
+- **D, DTAP / SDPR -> CE_R registers.** `VDP2P_DTAP` reads its M10K only at EN (same value: the read address
+  `wpn - K` is constant between EN edges and that word is not written until it is read), so the M10K output changes at
+  EN edges only (EN is DOT_CE_R or DOT_CE_R | DOT_CE_F). The rotation per-table words (`r_dx` ... `r_spy`, word
+  `DOTCLK_DIV[1]`) used to be read every clock from an address that changes at CE_R edges, so their output changed
+  one clock later, at a CE_F edge, and fed `RES_LATCH` in one clk_sys (-1.0 ns, a real path the multicycle table missed).
+  `VDP2P_SDPR` reads at CE_R with the address of the next slot (`DIV_N[1]`), so the word is there from the CE_R edge
+  that starts the slot; the value a slot consumes is unchanged except where the read and a write of the same word
+  share an edge (the ACC write at the end of slots 0 and 2, the RPST_W write at DOT_CE_R): the first is read only in
+  slots 1 and 3, where the multiplier takes the other RAM, the second only in dots without RBG_CALC, where `RES_LATCH`
+  is not used. The simulation model returns the complement of the word in that case (M10K mixed-port
+  read-during-write is undefined) and the differential sim still matches.
+- **A2, `rp_*` -> CE_R registers.** Read addresses `RPPQ` (DOT_CE_R), `DOTCLK_DIV` (CE_R), `HPOS_PIPE` (CE_R) or
+  constant, writes at DOT_CE_R: the falling-edge read output changes only at the falling edge after a CE_R edge and is
+  captured at a CE_R edge, 1.5 clk_sys later or more. Same rule as the SH-2 FERAMs.
+- **Write FIFO -> `VRAM_WE` / `VRAM_D`** (half a clk_sys, -0.36, not listed in the table): the FIFO stores the lane
+  one-hot (`FIFO_L`, 40 bits) instead of `A[2:1]`, and the four lanes are written in parallel.
+- **`CT_CRAM_A` race** (simulation only): `CT_CRAM_A` read `RBG_PIPE[0].RxCRCT`, a blocking variable of another block.
+  Quartus gives it the registered value (the previous DOT_CE_R); Verilator gave the rewritten copy the new one, the golden
+  the old one, so seeds 6, 11 and 36 mismatched on CRAM colours. `CRCT_Q` holds the previous DOT_CE_R value
+  explicitly (no hardware change).
+
+Simulation (`make -C sim/vdp2`, golden = main checkout `ref/Saturn_MiSTer`):
+- differential: 60 seeds match; 300 seeds: 297 match, 61 / 149 / 165 fail the VRAM-contents check against unpatched
+  upstream (1-3 halfwords of a CPU write missing in REF and DUT alike, both with the lane drain); they fail the same way
+  at fcbf72d, so they are not from this branch (open)
+- `mc-check` (monitor generated from all three SDC lists by `mc_gen.py`; the falling-edge reads are sampled at the
+  rising edge and must have changed after a CE_R edge): 8 seeds x 1.5 M clocks, 337 signals, about 10 M changes per
+  seed, 0 outside a CE_R edge; the control set (`CSEQ`, `CPN`, `USL`, `HA[0]`, `RW_D`, `A`) changes off CE_R on half its
+  changes
+- the build's cut set (`CUT="EXTCC SHADOW BACKLINE SPECIAL LNCOL ZOOM RPARAMB MOSAIC SPRWIN LINEWIN"`): 40 seeds match
+- sdram_pocket (`slot` register, below): `make -C sim/mem all` passes; `sim/sndram` passes with `NOCHK=1` (the default
+  run expects the sdram self-check, which is compiled out under `POCKET_NEVER`, so it reports FAIL at fcbf72d too)
+- seeds 6, 11, 36, 45 (failed before this branch): 6, 11, 36 were the `CT_CRAM_A` race above, from 03d04ab on (the lane
+  drain changed the stimulus), 36 from earlier; not a hardware bug. 45 is the soft-reset seed: `CT_FETCH` survives
+  RES_N in both copies, so the coefficient decode runs in the blanking of the first line after a soft reset, and the
+  reprogramming writes RAMCTL there; with `VAD` that write is seen at the next dot (deviation 2), so the harness waits one
+  line after the soft reset before those writes.
+
+Also in this branch, clk_ram: `sdram_pocket` decoded `slot = fc + 1` through an adder before the command muxes
+(`fc -> q_a` -1.566, `fc -> sc_addr / sc_rd_p`, seed 3); `slot` is now its own register (same value, the frame counter
+sync sets it to 8), so the decode starts from flip-flops.
+
+Map (`quartus_map`, area estimate): 17,871 ALMs needed (integ2 17,925). Fit, seed 3 (`openfpga-Saturn-worktrees/vdp2fix-s3b`):
+18,244 / 18,480 ALMs, 1,848 / 1,848 LABs, 303 / 308 M10K (+1: the write FIFO is 40 bits wide), 46 DSP (integ2-s3:
+18,203 ALMs, 302 M10K). **Timing closed at all four corners**, every clock, setup / hold / recovery / removal:
+
+| | slow 85C | slow 0C | fast 85C | fast 0C |
+|---|---|---|---|---|
+| clk_sys setup (old SDC / fcbf72d SDC on the integ2-s3 netlist) | +0.025 / -13.488 | +0.189 / -13.444 | +4.507 / -1.553 | +4.791 / -0.544 |
+| clk_sys setup, this branch | **+0.466** | **+0.352** | **+4.381** | **+4.672** |
+| clk_sys hold | +0.286 | +0.275 | +0.086 | +0.023 |
+| clk_ram setup (integ2-s3: -1.566 / -1.430 slow) | **+0.153** | **+0.264** | +4.054 | +4.258 |
+| clk_ram hold | +0.334 | +0.318 | +0.102 | +0.032 |
+
+Worst VDP2 -> VDP2 setup (slow 85C) per group, before (fcbf72d SDC, integ2-s3) and after:
+
+| Group | before | after (worst path of the group) |
+|---|---|---|
+| A1 cycle pattern -> unit | -13.488 | +3.501 (`cy_b0` -> `VCPN`); unit from `VAD`: +1.826 (`VAD` -> `HM[0]`) |
+| B CPU registers -> CE_R logic | -3.705 | +14.274 (`REGS` -> `DOT_SEC`); `REGS` -> every-clock: +3.827 |
+| C CE_R registers -> `HA`/`HM` | -3.594 | +2.718 (`NYOFS` -> `HA`); any -> `HA`/`HM` +1.826 |
+| D `tap3` -> `NBG_CDC` | -4.626 | +6.764 (`tap3` -> `P_E4L`); any -> `NBG_CDC` +5.647 |
+| D DTAP -> CE_R registers | -4.387 | +13.989 (`whit33` -> `DOT_SEC`) |
+| A3 `tap2` -> `rp_a` address | -1.850 | +4.109 (`RPPQ` -> `rp_n` address) |
+| A2 `rp_*` -> CE_R | -9.115 | +1.767 (`rp_a` -> `r_xyst` write data, single cycle) |
+| E `ONE` | -4.216 | +14.389 |
+| rotation words, write FIFO | -1.003, -0.355 | +8.383, +2.321 |
+| VDP2 overall | -13.488 | **+1.767** |
+
+A first fit of the same branch without the registered `USEL` / `HM3` (`vdp2fix-s3a`, 18,146 ALMs) failed: VDP2 -0.353
+(`USL`/`MCLK_DIV` -> `NBG_CH_CNT` through the unit's live bank 3 match) and -0.05 (`DOTCLK_DIV` -> `HA`), and the
+placement left SH-2 paths at -3.07 (SSH `cache.IBADDR` -> `core.RD_SAVE`, +1.23 in integ2-s3), -2.05 (MSH `bsc.VEC_BUF`
+-> `core.PIPE.ID.IR`), VDP1 -0.66, SCU -0.57, ddram -0.21. Those non-VDP2 groups pass in `vdp2fix-s3b` with no change
+to them: they are placement-dependent at this utilization.

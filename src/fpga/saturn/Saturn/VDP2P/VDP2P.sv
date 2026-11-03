@@ -502,6 +502,15 @@ module VDP2P import VDP2P_PKG::*; (
 	bit          NOACCESS;		//VRAM no access time
 	bit          DOT_FETCH;
 	bit  [ 4: 0] NFETCH_PIPE;
+	//next values of the fetch windows (loaded at DOT_CE_R); the bank access decode of the next dot is formed from them
+	wire         NPN_FETCH_N  = NBG_FETCH_START_EN && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == NBG_FETCH_END ? 1'b0 : NPN_FETCH;
+	wire         NCH_FETCH_N  = H_CNT == NBG_FETCH_START + 4 - 1 && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == NBG_FETCH_END + 4 ? 1'b0 : NCH_FETCH;
+	wire         NVCS_FETCH_N = H_CNT == NBG_FETCH_START - 1 - 8 && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == NBG_FETCH_END ? 1'b0 : NVCS_FETCH;
+	wire         CT_FETCH_N   = H_CNT == RBG_FETCH_START - 1 - 4 && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == RBG_FETCH_END - 4 ? 1'b0 : CT_FETCH;
+	wire         RBG_FETCH_N  = H_CNT == RBG_FETCH_START - 1 && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == RBG_FETCH_END ? 1'b0 : RBG_FETCH;
+	wire         RCH_FETCH_N  = H_CNT == RBG_FETCH_START + 4 - 1 && IS_RENDER_LINES && DISP_INT ? 1'b1 : H_CNT == RBG_FETCH_END ? 1'b0 : RCH_FETCH;
+	wire         REFRESH_N    = H_CNT == REFRESH_START - 1 || H_CNT == NOACCESS2_START - 1 ? 1'b1 : H_CNT == REFRESH_END || H_CNT == NOACCESS2_END ? 1'b0 : REFRESH;
+	wire         NOACCESS_N   = H_CNT == NOACCESS2_START - 1 || H_CNT == NOACCESS3_START - 1 ? 1'b1 : H_CNT == NOACCESS2_END || H_CNT == NOACCESS3_END ? 1'b0 : NOACCESS;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			CELLX <= '0;
@@ -541,42 +550,17 @@ module VDP2P import VDP2P_PKG::*; (
 				CELLX <= '0;
 			end
 			
-			if (NBG_FETCH_START_EN && IS_RENDER_LINES && DISP_INT) begin
-				NPN_FETCH <= 1;
-			end else if (H_CNT == NBG_FETCH_END) begin
-				NPN_FETCH <= 0;
-			end
-			if (H_CNT == NBG_FETCH_START + 4 - 1 && IS_RENDER_LINES && DISP_INT) begin
-				NCH_FETCH <= 1;
-			end else if (H_CNT == NBG_FETCH_END + 4) begin
-				NCH_FETCH <= 0;
-			end
-			if (H_CNT == NBG_FETCH_START - 1 - 8 && IS_RENDER_LINES && DISP_INT) begin
-				NVCS_FETCH <= 1;
-			end else if (H_CNT == NBG_FETCH_END) begin
-				NVCS_FETCH <= 0;
-			end
-			
-			if (H_CNT == RBG_FETCH_START - 1 - 4 && IS_RENDER_LINES && DISP_INT) begin
-				CT_FETCH <= 1;
-			end else if (H_CNT == RBG_FETCH_END - 4) begin
-				CT_FETCH <= 0;
-			end
+			NPN_FETCH <= NPN_FETCH_N;
+			NCH_FETCH <= NCH_FETCH_N;
+			NVCS_FETCH <= NVCS_FETCH_N;
+			CT_FETCH <= CT_FETCH_N;
 			if (H_CNT == RBG_FETCH_START - 1 - 1 && IS_RENDER_LINES) begin
 				RBG_CALC <= 1;
 			end else if (H_CNT == RBG_FETCH_END - 1) begin
 				RBG_CALC <= 0;
 			end
-			if (H_CNT == RBG_FETCH_START - 1 && IS_RENDER_LINES && DISP_INT) begin
-				RBG_FETCH <= 1;
-			end else if (H_CNT == RBG_FETCH_END) begin
-				RBG_FETCH <= 0;
-			end
-			if (H_CNT == RBG_FETCH_START + 4 - 1 && IS_RENDER_LINES && DISP_INT) begin
-				RCH_FETCH <= 1;
-			end else if (H_CNT == RBG_FETCH_END /*+ 4*/) begin
-				RCH_FETCH <= 0;
-			end
+			RBG_FETCH <= RBG_FETCH_N;
+			RCH_FETCH <= RCH_FETCH_N;
 			
 			if (H_CNT == RPA_FETCH_START - 1 && IS_RENDER_LINES && DISP_INT) begin
 				RPA_FETCH <= 1;
@@ -630,17 +614,8 @@ module VDP2P import VDP2P_PKG::*; (
 				DOT_FETCH <= 0;
 			end
 			
-			if (H_CNT == REFRESH_START - 1 || H_CNT == NOACCESS2_START - 1) begin
-				REFRESH <= 1;
-			end else if (H_CNT == REFRESH_END || H_CNT == NOACCESS2_END) begin
-				REFRESH <= 0;
-			end
-			
-			if (/*H_CNT == NOACCESS_START - 1 ||*/ H_CNT == NOACCESS2_START - 1 || H_CNT == NOACCESS3_START - 1) begin
-				NOACCESS <= 1;
-			end else if (/*H_CNT == NOACCESS_END ||*/ H_CNT == NOACCESS2_END || H_CNT == NOACCESS3_END) begin
-				NOACCESS <= 0;
-			end
+			REFRESH <= REFRESH_N;
+			NOACCESS <= NOACCESS_N;
 		end
 	end
 			
@@ -676,15 +651,20 @@ module VDP2P import VDP2P_PKG::*; (
 	assign RSxREG = RSxRegs(REGS);
 	assign RPxREG = RPxRegs(REGS);
 	
-		//Cycle pattern registers: block RAM, one 2-word table per bank (words: T0-T3, T4-T7)
-	wire [ 2: 0] CYT = CELLX[2:0] & {~HRES[1],2'b11};
-	wire         CY_WR = REG_SEL && !WE_N && !DTEN_N && !REQ_N;
-	wire [ 8: 0] CY_A = {A[8:1],1'b0};
+	//Cycle pattern registers: block RAM, one 2-word table per bank (words: T0-T3, T4-T7). The nibbles of the next dot are
+	//read during the dot before (word address CYA_N2 at DOT_CE_F, nibbles VCPN at the CE_R edge before DOT_CE_R), and the
+	//bank access decode of the next dot is registered at DOT_CE_R (VAD), so the address unit starts from flip-flops.
+	wire         CY_WR = RW_E;
+	wire [ 8: 0] CY_A = {RW_A,1'b0};
+	wire [ 2: 0] CELLX_N = (H_CNT == NBG_CELLX_START - 1 && IS_RENDER_LINES) ? 3'd0 : CELLX + 3'd1;
+	wire [ 2: 0] CYTN = CELLX_N & {~REGS.TVMD.HRESO[1],2'b11};
+	bit          CYA_N2;
+	always @(posedge CLK) if (DOT_CE_F) CYA_N2 <= CYTN[2];
 	wire [15: 0] CYA0, CYA1, CYB0, CYB1;
-	VDP2P_REGRAM #(1,16) cy_a0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h010 || CY_A == 9'h012), A[1], DI, CYT[2], CYA0);
-	VDP2P_REGRAM #(1,16) cy_a1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h014 || CY_A == 9'h016), A[1], DI, CYT[2], CYA1);
-	VDP2P_REGRAM #(1,16) cy_b0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h018 || CY_A == 9'h01A), A[1], DI, CYT[2], CYB0);
-	VDP2P_REGRAM #(1,16) cy_b1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h01C || CY_A == 9'h01E), A[1], DI, CYT[2], CYB1);
+	VDP2P_REGRAM #(1,16) cy_a0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h010 || CY_A == 9'h012), RW_A[1], RW_D, CYA_N2, CYA0);
+	VDP2P_REGRAM #(1,16) cy_a1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h014 || CY_A == 9'h016), RW_A[1], RW_D, CYA_N2, CYA1);
+	VDP2P_REGRAM #(1,16) cy_b0(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h018 || CY_A == 9'h01A), RW_A[1], RW_D, CYA_N2, CYB0);
+	VDP2P_REGRAM #(1,16) cy_b1(CLK, RST_N, RES_N, CY_WR && (CY_A == 9'h01C || CY_A == 9'h01E), RW_A[1], RW_D, CYA_N2, CYB1);
 	function bit [3:0] CyNib(input bit [15:0] W, input bit [2:0] T);
 		case (T[1:0])
 			2'd0: return W[15:12];
@@ -693,109 +673,151 @@ module VDP2P import VDP2P_PKG::*; (
 			default: return W[ 3: 0];
 		endcase
 	endfunction
-	bit [3:0] VCPA0; 
-		bit [3:0] VCPA1; 
-		bit [3:0] VCPB0; 
-		bit [3:0] VCPB1;
+	bit  [ 3: 0] VCPN[4], VCPQ[4];   //next dot, current dot (banks A0, A1, B0, B1)
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			VCPN <= '{4{'0}}; VCPQ <= '{4{'0}};
+		end else if (!RES_N) begin
+			VCPN <= '{4{'0}}; VCPQ <= '{4{'0}};
+		end else begin
+			if (CE_R && DOTCLK_DIV == 2'd2) begin
+				VCPN[0] <= CyNib(CYA0, CYTN);
+				VCPN[1] <= REGS.RAMCTL.VRAMD ? CyNib(CYA1, CYTN) : CyNib(CYA0, CYTN);
+				VCPN[2] <= CyNib(CYB0, CYTN);
+				VCPN[3] <= REGS.RAMCTL.VRBMD ? CyNib(CYB1, CYTN) : CyNib(CYB0, CYTN);
+			end
+			if (DOT_CE_R) VCPQ <= VCPN;
+		end
+	end
+	wire [ 3: 0] VCPA0 = VCPQ[0], VCPA1 = VCPQ[1], VCPB0 = VCPQ[2], VCPB1 = VCPQ[3];
 	bit [1:0] RDBSA0; 
 	bit [1:0] RDBSA1; 
 	bit [1:0] RDBSB0; 
 	bit [1:0] RDBSB1;
+	VADec_t      VAD, VAD_N;
 	always_comb begin
+		VAD_N = '0;
+		VAD_N.NxA0PN[0] = VCPN[0] == VCP_N0PN                  & NPN_FETCH_N  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1PN[0] = VCPN[1] == VCP_N0PN                  & NPN_FETCH_N  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0PN[0] = VCPN[2] == VCP_N0PN                  & NPN_FETCH_N  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1PN[0] = VCPN[3] == VCP_N0PN                  & NPN_FETCH_N  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0PN[1] = VCPN[0] == VCP_N1PN                  & NPN_FETCH_N  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1PN[1] = VCPN[1] == VCP_N1PN                  & NPN_FETCH_N  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0PN[1] = VCPN[2] == VCP_N1PN                  & NPN_FETCH_N  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1PN[1] = VCPN[3] == VCP_N1PN                  & NPN_FETCH_N  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0PN[2] = VCPN[0] == VCP_N2PN                  & NPN_FETCH_N  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1PN[2] = VCPN[1] == VCP_N2PN                  & NPN_FETCH_N  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0PN[2] = VCPN[2] == VCP_N2PN                  & NPN_FETCH_N  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1PN[2] = VCPN[3] == VCP_N2PN                  & NPN_FETCH_N  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0PN[3] = VCPN[0] == VCP_N3PN                  & NPN_FETCH_N  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1PN[3] = VCPN[1] == VCP_N3PN                  & NPN_FETCH_N  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0PN[3] = VCPN[2] == VCP_N3PN                  & NPN_FETCH_N  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1PN[3] = VCPN[3] == VCP_N3PN                  & NPN_FETCH_N  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
 		
-		VCPA0 = CyNib(CYA0, CYT);
-		VCPA1 = REGS.RAMCTL.VRAMD ? CyNib(CYA1, CYT) : CyNib(CYA0, CYT);
-		VCPB0 = CyNib(CYB0, CYT);
-		VCPB1 = REGS.RAMCTL.VRBMD ? CyNib(CYB1, CYT) : CyNib(CYB0, CYT);
+		VAD_N.NxA0CH[0] = VCPN[0] == VCP_N0CH                  & NCH_FETCH_N  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1CH[0] = VCPN[1] == VCP_N0CH                  & NCH_FETCH_N  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0CH[0] = VCPN[2] == VCP_N0CH                  & NCH_FETCH_N  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1CH[0] = VCPN[3] == VCP_N0CH                  & NCH_FETCH_N  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0CH[1] = VCPN[0] == VCP_N1CH                  & NCH_FETCH_N  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1CH[1] = VCPN[1] == VCP_N1CH                  & NCH_FETCH_N  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0CH[1] = VCPN[2] == VCP_N1CH                  & NCH_FETCH_N  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1CH[1] = VCPN[3] == VCP_N1CH                  & NCH_FETCH_N  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0CH[2] = VCPN[0] == VCP_N2CH                  & NCH_FETCH_N  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1CH[2] = VCPN[1] == VCP_N2CH                  & NCH_FETCH_N  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0CH[2] = VCPN[2] == VCP_N2CH                  & NCH_FETCH_N  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1CH[2] = VCPN[3] == VCP_N2CH                  & NCH_FETCH_N  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxA0CH[3] = VCPN[0] == VCP_N3CH                  & NCH_FETCH_N  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxA1CH[3] = VCPN[1] == VCP_N3CH                  & NCH_FETCH_N  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
+		VAD_N.NxB0CH[3] = VCPN[2] == VCP_N3CH                  & NCH_FETCH_N  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
+		VAD_N.NxB1CH[3] = VCPN[3] == VCP_N3CH                  & NCH_FETCH_N  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
 		
+		VAD_N.NxA0VS[0] = VCPN[0] == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH_N & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH_N;
+		VAD_N.NxA1VS[0] = VCPN[1] == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH_N & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH_N;
+		VAD_N.NxB0VS[0] = VCPN[2] == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH_N & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH_N;
+		VAD_N.NxB1VS[0] = VCPN[3] == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH_N & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH_N;
+		VAD_N.NxA0VS[1] = VCPN[0] == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH_N & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH_N;
+		VAD_N.NxA1VS[1] = VCPN[1] == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH_N & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH_N;
+		VAD_N.NxB0VS[1] = VCPN[2] == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH_N & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH_N;
+		VAD_N.NxB1VS[1] = VCPN[3] == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH_N & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH_N;
+				
+		VAD_N.RxA0PN[0] = RDBSA0 == 2'b10 & RBG_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxA1PN[0] = RDBSA1 == 2'b10 & RBG_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxB0PN[0] = RDBSB0 == 2'b10 & RBG_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxB1PN[0] = RDBSB1 == 2'b10 & RBG_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxA0PN[1] = 0;
+		VAD_N.RxA1PN[1] = 0;
+		VAD_N.RxB0PN[1] = 0;
+		VAD_N.RxB1PN[1] =                   RBG_FETCH_N & RSxREG[1].ON;
+		
+		VAD_N.RxA0CH[0] = RDBSA0 == 2'b11 & RCH_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxA1CH[0] = RDBSA1 == 2'b11 & RCH_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxB0CH[0] = RDBSB0 == 2'b11 & RCH_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxB1CH[0] = RDBSB1 == 2'b11 & RCH_FETCH_N & RSxREG[0].ON;
+		VAD_N.RxA0CH[1] = 0;
+		VAD_N.RxA1CH[1] = 0;
+		VAD_N.RxB0CH[1] =                   RCH_FETCH_N & RSxREG[1].ON;
+		VAD_N.RxB1CH[1] = 0;
+		
+		VAD_N.RxA0CT[0] = RDBSA0 == 2'b01 & CT_FETCH_N  & RSxREG[0].ON & EN_COEF;
+		VAD_N.RxA1CT[0] = RDBSA1 == 2'b01 & CT_FETCH_N  & RSxREG[0].ON & EN_COEF;
+		VAD_N.RxB0CT[0] = RDBSB0 == 2'b01 & CT_FETCH_N  & RSxREG[0].ON & EN_COEF;
+		VAD_N.RxB1CT[0] = RDBSB1 == 2'b01 & CT_FETCH_N  & RSxREG[0].ON & EN_COEF;
+		VAD_N.RxA0CT[1] = 0;
+		VAD_N.RxA1CT[1] = 0;
+		VAD_N.RxB0CT[1] = 0;
+		VAD_N.RxB1CT[1] = 0;
+		
+		VAD_N.RxCRCT[0] = REGS.RAMCTL.CRKTE & CT_FETCH_N & RSxREG[0].ON & EN_COEF;
+		VAD_N.RxCRCT[1] = 0;
+		
+		VAD_N.AxNA = ((VCPN[0] == VCP_NA | VCPN[1] == VCP_NA) & REGS.RAMCTL.VRAMD) || NOACCESS_N;
+		VAD_N.BxNA = ((VCPN[2] == VCP_NA | VCPN[3] == VCP_NA) & REGS.RAMCTL.VRBMD) || NOACCESS_N;
+		
+	end
+	always @(posedge CLK) begin
+		if (!RES_N) begin VAD <= '0; VAD.AxNA <= NOACCESS; VAD.BxNA <= NOACCESS; end
+		else if (DOT_CE_R) VAD <= VAD_N;
+	end
+	always_comb begin
 		RDBSA0 = REGS.RAMCTL.RDBSA0;
 		RDBSA1 = REGS.RAMCTL.VRAMD ? REGS.RAMCTL.RDBSA1 : REGS.RAMCTL.RDBSA0;
 		RDBSB0 = REGS.RAMCTL.RDBSB0;
 		RDBSB1 = REGS.RAMCTL.VRBMD ? REGS.RAMCTL.RDBSB1 : REGS.RAMCTL.RDBSB0;
 		
-		VA_PIPE[0].NxA0PN[0] = VCPA0 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[0] = VCPA1 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[0] = VCPB0 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[0] = VCPB1 == VCP_N0PN                  & NPN_FETCH  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[1] = VCPA0 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[1] = VCPA1 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[1] = VCPB0 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[1] = VCPB1 == VCP_N1PN                  & NPN_FETCH  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[2] = VCPA0 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[2] = VCPA1 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[2] = VCPB0 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[2] = VCPB1 == VCP_N2PN                  & NPN_FETCH  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0PN[3] = VCPA0 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1PN[3] = VCPA1 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0PN[3] = VCPB0 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1PN[3] = VCPB1 == VCP_N3PN                  & NPN_FETCH  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		
-		VA_PIPE[0].NxA0CH[0] = VCPA0 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[0] = VCPA1 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[0] = VCPB0 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[0] = VCPB1 == VCP_N0CH                  & NCH_FETCH  & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[1] = VCPA0 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[1] = VCPA1 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[1] = VCPB0 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[1] = VCPB1 == VCP_N1CH                  & NCH_FETCH  & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[2] = VCPA0 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[2] = VCPA1 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[2] = VCPB0 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[2] = VCPB1 == VCP_N2CH                  & NCH_FETCH  & NSxREG[2].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxA0CH[3] = VCPA0 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxA1CH[3] = VCPA1 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                ;
-		VA_PIPE[0].NxB0CH[3] = VCPB0 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		VA_PIPE[0].NxB1CH[3] = VCPB1 == VCP_N3CH                  & NCH_FETCH  & NSxREG[3].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON;
-		
-		VA_PIPE[0].NxA0VS[0] = VCPA0 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxA1VS[0] = VCPA1 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxB0VS[0] = VCPB0 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxB1VS[0] = VCPB1 == VCP_N0VS & NSxREG[0].VCSC & NVCS_FETCH & NSxREG[0].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxA0VS[1] = VCPA0 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSA0 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxA1VS[1] = VCPA1 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSA1 == 2'b00 | !RSxREG[0].ON)                 & !REFRESH;
-		VA_PIPE[0].NxB0VS[1] = VCPB0 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSB0 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-		VA_PIPE[0].NxB1VS[1] = VCPB1 == VCP_N1VS & NSxREG[1].VCSC & NVCS_FETCH & NSxREG[1].ON & (RDBSB1 == 2'b00 | !RSxREG[0].ON) & !RSxREG[1].ON & !REFRESH;
-				
+		VA_PIPE[0].AxNA = VAD.AxNA;
+		VA_PIPE[0].BxNA = VAD.BxNA;
+		VA_PIPE[0].NxA0CH = VAD.NxA0CH;
+		VA_PIPE[0].NxA0PN = VAD.NxA0PN;
+		VA_PIPE[0].NxA0VS = VAD.NxA0VS;
+		VA_PIPE[0].NxA1CH = VAD.NxA1CH;
+		VA_PIPE[0].NxA1PN = VAD.NxA1PN;
+		VA_PIPE[0].NxA1VS = VAD.NxA1VS;
+		VA_PIPE[0].NxB0CH = VAD.NxB0CH;
+		VA_PIPE[0].NxB0PN = VAD.NxB0PN;
+		VA_PIPE[0].NxB0VS = VAD.NxB0VS;
+		VA_PIPE[0].NxB1CH = VAD.NxB1CH;
+		VA_PIPE[0].NxB1PN = VAD.NxB1PN;
+		VA_PIPE[0].NxB1VS = VAD.NxB1VS;
+		VA_PIPE[0].RxA0CH = VAD.RxA0CH;
+		VA_PIPE[0].RxA0CT = VAD.RxA0CT;
+		VA_PIPE[0].RxA0PN = VAD.RxA0PN;
+		VA_PIPE[0].RxA1CH = VAD.RxA1CH;
+		VA_PIPE[0].RxA1CT = VAD.RxA1CT;
+		VA_PIPE[0].RxA1PN = VAD.RxA1PN;
+		VA_PIPE[0].RxB0CH = VAD.RxB0CH;
+		VA_PIPE[0].RxB0CT = VAD.RxB0CT;
+		VA_PIPE[0].RxB0PN = VAD.RxB0PN;
+		VA_PIPE[0].RxB1CH = VAD.RxB1CH;
+		VA_PIPE[0].RxB1CT = VAD.RxB1CT;
+		VA_PIPE[0].RxB1PN = VAD.RxB1PN;
+		VA_PIPE[0].RxCRCT = VAD.RxCRCT;
 		VA_PIPE[0].NxPN_FETCH[0] = NBG_PN_FETCH[0];
 		VA_PIPE[0].NxPN_FETCH[1] = NBG_PN_FETCH[1];
 		VA_PIPE[0].NxPN_FETCH[2] = NBG_PN_FETCH[2];
 		VA_PIPE[0].NxPN_FETCH[3] = NBG_PN_FETCH[3];
 		
-		VA_PIPE[0].RxA0PN[0] = RDBSA0 == 2'b10 & RBG_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxA1PN[0] = RDBSA1 == 2'b10 & RBG_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxB0PN[0] = RDBSB0 == 2'b10 & RBG_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxB1PN[0] = RDBSB1 == 2'b10 & RBG_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxA0PN[1] = 0;
-		VA_PIPE[0].RxA1PN[1] = 0;
-		VA_PIPE[0].RxB0PN[1] = 0;
-		VA_PIPE[0].RxB1PN[1] =                   RBG_FETCH & RSxREG[1].ON;
-		
-		VA_PIPE[0].RxA0CH[0] = RDBSA0 == 2'b11 & RCH_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxA1CH[0] = RDBSA1 == 2'b11 & RCH_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxB0CH[0] = RDBSB0 == 2'b11 & RCH_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxB1CH[0] = RDBSB1 == 2'b11 & RCH_FETCH & RSxREG[0].ON;
-		VA_PIPE[0].RxA0CH[1] = 0;
-		VA_PIPE[0].RxA1CH[1] = 0;
-		VA_PIPE[0].RxB0CH[1] =                   RCH_FETCH & RSxREG[1].ON;
-		VA_PIPE[0].RxB1CH[1] = 0;
-		
-		VA_PIPE[0].RxA0CT[0] = RDBSA0 == 2'b01 & CT_FETCH  & RSxREG[0].ON & EN_COEF;
-		VA_PIPE[0].RxA1CT[0] = RDBSA1 == 2'b01 & CT_FETCH  & RSxREG[0].ON & EN_COEF;
-		VA_PIPE[0].RxB0CT[0] = RDBSB0 == 2'b01 & CT_FETCH  & RSxREG[0].ON & EN_COEF;
-		VA_PIPE[0].RxB1CT[0] = RDBSB1 == 2'b01 & CT_FETCH  & RSxREG[0].ON & EN_COEF;
-		VA_PIPE[0].RxA0CT[1] = 0;
-		VA_PIPE[0].RxA1CT[1] = 0;
-		VA_PIPE[0].RxB0CT[1] = 0;
-		VA_PIPE[0].RxB1CT[1] = 0;
-		
-		VA_PIPE[0].RxCRCT[0] = REGS.RAMCTL.CRKTE & CT_FETCH & RSxREG[0].ON & EN_COEF;
-		VA_PIPE[0].RxCRCT[1] = 0;
-		
 		VA_PIPE[0].RxCTTP[0] = RxCTTP[0];
 		VA_PIPE[0].RxCTTP[1] = RxCTTP[1];
-		
-		VA_PIPE[0].AxNA = ((VCPA0 == VCP_NA | VCPA1 == VCP_NA) & REGS.RAMCTL.VRAMD) || NOACCESS;
-		VA_PIPE[0].BxNA = ((VCPB0 == VCP_NA | VCPB1 == VCP_NA) & REGS.RAMCTL.VRBMD) || NOACCESS;
 		
 		VA_PIPE[0].LS = LS_FETCH;
 		VA_PIPE[0].LS_POS = LS_POS;
@@ -962,7 +984,7 @@ module VDP2P import VDP2P_PKG::*; (
 	bit          RxSCRN_OVER[2];
 	//VRAM access unit: the layer fetch address of a bank is computed once per clock for one bank (USEL: banks 0-2
 	//in turn, bank 3 at the DOT_CE_F/DOT_CE_R clocks) and held per bank (HA/HM). The inputs only change at DOT_CE_R.
-	wire         MP_WR = REG_SEL && !WE_N && !DTEN_N && !REQ_N;
+	wire         MP_WR = RW_E;
 	NVRAMAccess_t NBV[4];
 	RVRAMAccess_t RBV[4];
 	always_comb begin
@@ -971,7 +993,9 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	bit  [ 1: 0] USL;
 	always @(posedge CLK) USL <= DOT_CE_R ? 2'd0 : (USL == 2'd2 ? 2'd0 : USL + 2'd1);
-	wire [ 1: 0] USEL = (DOT_CE_R || DOT_CE_F) ? 2'd3 : USL;
+	//USEL = (DOT_CE_R || DOT_CE_F) ? 3 : USL, one clock ahead: CE_R and CE_F alternate, DOTCLK_DIV changes at CE_R edges
+	bit  [ 1: 0] USEL;
+	always @(posedge CLK) USEL <= (CE_F && RES_N && DOTCLK_DIV[0]) ? 2'd3 : DOT_CE_R ? 2'd0 : (USL == 2'd2 ? 2'd0 : USL + 2'd1);
 	NVRAMAccess_t UN;
 	RVRAMAccess_t UR;
 	assign UN = NBV[USEL];
@@ -984,7 +1008,7 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [10: 0] N_Y = VA_PIPE[0].NxY[UL];
 	wire [ 1: 0] N_MPI = NxPNMapIdx(N_PCNT, N_X, N_Y, NSxREG[UL].PLSZ, NSxREG[UL].ZMHF, NSxREG[UL].ZMQT);
 	wire [15: 0] N_MPW;
-	VDP2P_REGRAM #(3,16,1) nmp(CLK, RST_N, RES_N, MP_WR && A[8:4] == 5'b00100, A[3:1], DI & 16'h3F3F, {UL, N_MPI[1]}, N_MPW);
+	VDP2P_REGRAM #(3,16,1) nmp(CLK, RST_N, RES_N, MP_WR && RW_A[8:4] == 5'b00100, RW_A[3:1], RW_D & 16'h3F3F, {UL, N_MPI[1]}, N_MPW);
 	wire [ 5: 0] N_MPE = N_MPI[0] ? N_MPW[13:8] : N_MPW[5:0];
 	wire [19: 1] N_PNA = NxPNAddr2(N_PCNT, N_X, N_Y, NSxREG[UL].MP, N_MPE, NSxREG[UL].PLSZ, NSxREG[UL].CHSZ, NSxREG[UL].PNC.NxPNB, NSxREG[UL].ZMHF, NSxREG[UL].ZMQT);
 	wire         R_PSET = UR1 ? 1'b1 : VA_PIPE[0].R0RP;
@@ -992,7 +1016,7 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [11: 0] R_PY = VA_PIPE[0].RxY[R_PSET][11:0];
 	wire [ 3: 0] R_MPI = RxPNMapIdx(R_PX, R_PY, RPxREG[R_PSET].PLSZ);
 	wire [15: 0] R_MPW;
-	VDP2P_REGRAM #(4,16,1) rmp(CLK, RST_N, RES_N, MP_WR && (A[8:4] == 5'b00101 || A[8:4] == 5'b00110), {A[5],A[3:1]}, DI & 16'h3F3F, {R_PSET,R_MPI[3:1]}, R_MPW);
+	VDP2P_REGRAM #(4,16,1) rmp(CLK, RST_N, RES_N, MP_WR && (RW_A[8:4] == 5'b00101 || RW_A[8:4] == 5'b00110), {RW_A[5],RW_A[3:1]}, RW_D & 16'h3F3F, {R_PSET,R_MPI[3:1]}, R_MPW);
 	wire [ 5: 0] R_MPE = R_MPI[0] ? R_MPW[13:8] : R_MPW[5:0];
 	wire [19: 1] R_PNA = RxPNAddr2(R_PX, R_PY, RPxREG[R_PSET].MP, R_MPE, RPxREG[R_PSET].PLSZ, RSxREG[UR1].CHSZ, RSxREG[UR1].PNC.NxPNB);
 	//character addresses
@@ -1038,6 +1062,10 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	wire [ 3: 0][16:1] AD = {UO[16:1], HA[2], HA[1], HA[0]};
 	wire [ 3: 0]       MT = {UMATCH, HM[2], HM[1], HM[0]};
+	//bank 3 at DOT_CE_R is the bank 3 result of DOT_CE_F (same inputs): the DOT_CE_R users start from flip-flops
+	bit                HM3;
+	always @(posedge CLK) if (DOT_CE_F) HM3 <= UMATCH;
+	wire [ 3: 0]       MTR = {HM3, HM[2], HM[1], HM[0]};
 	
 	bit  [19: 1] NxVS_ADDR;
 	bit  [19: 1] NxLS_ADDR[2];
@@ -1116,22 +1144,23 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [ 1: 0] BKVS[4];
 	assign BKPN[0] = VA_PIPE[0].NxA0PN; assign BKPN[1] = VA_PIPE[0].NxA1PN; assign BKPN[2] = VA_PIPE[0].NxB0PN; assign BKPN[3] = VA_PIPE[0].NxB1PN;
 	assign BKCH[0] = VA_PIPE[0].NxA0CH; assign BKCH[1] = VA_PIPE[0].NxA1CH; assign BKCH[2] = VA_PIPE[0].NxB0CH; assign BKCH[3] = VA_PIPE[0].NxB1CH;
-	reg  [ 3: 0] E_PNEN, E_CHEN, E_BMINC, E_PNINC;
+	reg  [ 3: 0] E_PNEN_F, E_PNEN, E_CHEN, E_BMINC, E_PNINC;
 	reg          E_VSINC;
 	reg  [ 1: 0] E_CTEN;
-	always_comb begin
-		E_PNEN = '0; E_CHEN = '0; E_BMINC = '0; E_PNINC = '0; E_VSINC = 0; E_CTEN = '0;
+	always_comb begin   //E_PNEN_F at DOT_CE_F (MT), the others at DOT_CE_R (MTR)
+		E_PNEN_F = '0; E_PNEN = '0; E_CHEN = '0; E_BMINC = '0; E_PNINC = '0; E_VSINC = 0; E_CTEN = '0;
 		for (int l = 0; l < 4; l++) begin
 			for (int b = 0; b < 4; b++) begin
-				if (BKPN[b][l] && MT[b]) E_PNEN[l] = 1;
+				if (BKPN[b][l] && MT[b]) E_PNEN_F[l] = 1;
+				if (BKPN[b][l] && MTR[b]) E_PNEN[l] = 1;
 				if (BKPN[b][l]) E_PNINC[l] = 1;
-				if (BKCH[b][l] && MT[b] && ((VA2.NxPN_FETCH[l] && NxPN_CYC[l]) || NSxREG[l].BMEN)) E_CHEN[l] = 1;
+				if (BKCH[b][l] && MTR[b] && ((VA2.NxPN_FETCH[l] && NxPN_CYC[l]) || NSxREG[l].BMEN)) E_CHEN[l] = 1;
 				if (BKCH[b][l] && NSxREG[l].BMEN) E_BMINC[l] = 1;
 			end
 		end
 		for (int b = 0; b < 4; b++) begin
-			if (HVS[b]) E_VSINC = 1;
-			if (HCTB[b]) E_CTEN[RBV[b].Rx] = 1;
+			if (NBV[b].VS && MTR[b]) E_VSINC = 1;
+			if (RBV[b].CT && MTR[b]) E_CTEN[RBV[b].Rx] = 1;
 		end
 	end
 
@@ -1232,7 +1261,7 @@ module VDP2P import VDP2P_PKG::*; (
 					end
 				end else begin		
 					for (int l = 0; l < 4; l++) begin
-						if (E_PNEN[l]) NBG_PN_FETCH[l] <= 1;
+						if (E_PNEN_F[l]) NBG_PN_FETCH[l] <= 1;
 					end
 					if (HIT[0]) begin
 						VRAMA0_A <= {1'b0,AD[0]};
@@ -1437,33 +1466,13 @@ module VDP2P import VDP2P_PKG::*; (
 			end
 			
 			//Write burst
-			if (!FIFO_EMPTY && !VRAM_WRITE_PEND) begin
-				case (FIFO_A[2:1])
-					2'b00: begin
-						VRAM_WA <= FIFO_A[18:1];
-						VRAM_D[63:48] <= FIFO_D;
-						VRAM_WE[7:6] <= ~FIFO_DQM;
-						VRAM_WRITE_PEND <= FIFO_LAST;
-					end
-					2'b01: begin
-						VRAM_WA <= FIFO_A[18:1];
-						VRAM_D[47:32] <= FIFO_D;
-						VRAM_WE[5:4] <= ~FIFO_DQM;
-						VRAM_WRITE_PEND <= FIFO_LAST;
-					end
-					2'b10: begin
-						VRAM_WA <= FIFO_A[18:1];
-						VRAM_D[31:16] <= FIFO_D;
-						VRAM_WE[3:2] <= ~FIFO_DQM;
-						VRAM_WRITE_PEND <= FIFO_LAST;
-					end
-					2'b11: begin
-						VRAM_WA <= FIFO_A[18:1];
-						VRAM_D[15:0] <= FIFO_D;
-						VRAM_WE[1:0] <= ~FIFO_DQM;
-						VRAM_WRITE_PEND <= 1;
-					end
-				endcase
+			if (!FIFO_EMPTY && !VRAM_WRITE_PEND) begin   //one lane per entry (FIFO_L one-hot)
+				VRAM_WA <= FIFO_A[18:1];
+				if (FIFO_L[0]) begin VRAM_D[63:48] <= FIFO_D; VRAM_WE[7:6] <= ~FIFO_DQM; end
+				if (FIFO_L[1]) begin VRAM_D[47:32] <= FIFO_D; VRAM_WE[5:4] <= ~FIFO_DQM; end
+				if (FIFO_L[2]) begin VRAM_D[31:16] <= FIFO_D; VRAM_WE[3:2] <= ~FIFO_DQM; end
+				if (FIFO_L[3]) begin VRAM_D[15: 0] <= FIFO_D; VRAM_WE[1:0] <= ~FIFO_DQM; end
+				VRAM_WRITE_PEND <= FIFO_LAST | FIFO_L[3];
 			end
 			
 			CS_N_OLD <= CS_N;
@@ -1492,13 +1501,15 @@ module VDP2P import VDP2P_PKG::*; (
 	
 	bit         FIFO_WRREQ;
 	bit         FIFO_RDREQ;
-	bit [35: 0] FIFO_Q;
+	bit [39: 0] FIFO_Q;
 	bit         FIFO_EMPTY;
 	bit         FIFO_FULL;
 	bit         FIFO_LAST;
-	VDP2P_WRITE_FIFO fifo(CLK, RES_N, {A[18:1],DQM,DI}, FIFO_WRREQ, FIFO_RDREQ, FIFO_Q, FIFO_EMPTY, FIFO_FULL, FIFO_LAST);
+	//the lane is stored decoded (FIFO_L): the falling-edge read leaves half a clk_sys to the lane registers
+	VDP2P_WRITE_FIFO fifo(CLK, RES_N, {4'b0001 << A[2:1],A[18:1],DQM,DI}, FIFO_WRREQ, FIFO_RDREQ, FIFO_Q, FIFO_EMPTY, FIFO_FULL, FIFO_LAST);
 	assign FIFO_WRREQ = VRAM_REQ & ~WE_N & ~DTEN_N & BURST;
 	assign FIFO_RDREQ = ~FIFO_EMPTY & ~VRAM_WRITE_PEND;
+	wire [ 3: 0] FIFO_L = FIFO_Q[39:36];
 	wire [18: 1] FIFO_A = FIFO_Q[35:18];
 	wire [ 1: 0] FIFO_DQM = FIFO_Q[17:16];
 	wire [15: 0] FIFO_D = FIFO_Q[15:0];
@@ -1556,7 +1567,7 @@ module VDP2P import VDP2P_PKG::*; (
 	ScrollData_t NCX[4];
 	//19-bit adders of the scroll counters in DSP blocks (ONE is a registered 1 so the constant operand is kept)
 	bit          ONE;
-	always @(posedge CLK or negedge RST_N) if (!RST_N) ONE <= 1'b0; else ONE <= 1'b1;
+	always @(posedge CLK or negedge RST_N) if (!RST_N) ONE <= 1'b0; else if (CE_R) ONE <= 1'b1;   //changes at a CE_R edge only
 	ScrollData_t CXN[2], XSN[2], NCXN[2], NMOSYN[2];
 	wire         NLS2 = VA2.LS_POS[2];
 	VDP2P_DADD d_cx0(ONE, CX[0],  {8'h00,LZMX[0]}, CXN[0]);
@@ -1567,9 +1578,18 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2P_DADD d_nx1(ONE, NCX[1], {8'h00,LZMX[1]}, NCXN[1]);
 	VDP2P_DADD d_ms0(ONE, NY[{1'b0,NLS2}], NSY[{1'b0,NLS2}], NMOSYN[0]);
 	VDP2P_DADD d_ms1(ONE, NY[{1'b1,NLS2}], NSY[{1'b1,NLS2}], NMOSYN[1]);
-	ScrollData_t NYOFS[2];
-	VDP2P_DADD d_ny0(ONE, NMOSY[0], NVCSY[0], NYOFS[0]);
-	VDP2P_DADD d_ny1(ONE, NMOSY[1], NVCSY[1], NYOFS[1]);
+	//NMOSY + NVCSY of layers 0/1 is held in NYOFS, loaded at DOT_CE_R with the next values of both
+	ScrollData_t NMOSY_D[2], NVCSY_D[2], NYOFS_D[2], NYOFS[2];
+	always_comb begin
+		for (int i = 0; i < 2; i++) begin
+			NMOSY_D[i] = NMOSY[i];
+			NVCSY_D[i] = (NBG_FETCH_START_EN || CELLX == 3'h7) ? VS[i] & {19{NSxREG[i].VCSC&~NSxREG[i].MZE}} : NVCSY[i];
+		end
+		if (VA2.LS && VA2.LS_POS[1:0] == 2'b10 && (!MOSAIC_VCNT || !NSxREG[{1'b0,NLS2}].MZE || IS_LAST_LINE)) NMOSY_D[NLS2] = NMOSYN[0];
+	end
+	VDP2P_DADD d_ny0(ONE, NMOSY_D[0], NVCSY_D[0], NYOFS_D[0]);
+	VDP2P_DADD d_ny1(ONE, NMOSY_D[1], NVCSY_D[1], NYOFS_D[1]);
+	always @(posedge CLK) if (DOT_CE_R) NYOFS <= NYOFS_D;
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [31: 0] LS_WD;
 		bit          LS_RD;
@@ -1607,10 +1627,9 @@ module VDP2P import VDP2P_PKG::*; (
 					XS[3] <= XS[3] + CX[3] + 19'h00100;
 					CX[3] <= '0;
 				end
-				if (NBG_FETCH_START_EN || CELLX == 3'h7) begin
-					NVCSY[0] <= VS[0] & {19{NSxREG[0].VCSC&~NSxREG[0].MZE}};
-					NVCSY[1] <= VS[1] & {19{NSxREG[1].VCSC&~NSxREG[1].MZE}};
-				end
+				NVCSY <= NVCSY_D;
+				NMOSY[0] <= NMOSY_D[0];
+				NMOSY[1] <= NMOSY_D[1];
 				
 				N2 = VA2.LS_POS[2];
 				if (VA2.LS) begin
@@ -1656,9 +1675,6 @@ module VDP2P import VDP2P_PKG::*; (
 							if (!NSxREG[{1'b0,N2}].LZMX)              begin LZMX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].ZMX; end
 							else if (LS_RD)                           begin LZMX[{1'b0,N2}] <= LS_WD[18:8]; end
 							
-							if (!MOSAIC_VCNT || !NSxREG[{1'b0,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b0,N2}] <= NMOSYN[0];
-							end
 							if (!MOSAIC_VCNT || !NSxREG[{1'b1,N2}].MZE || IS_LAST_LINE) begin
 								NMOSY[{1'b1,N2}] <= NMOSYN[1];
 							end
@@ -1667,8 +1683,8 @@ module VDP2P import VDP2P_PKG::*; (
 				end
 			end
 			
-			if (REG_SEL && !WE_N && !DTEN_N && !REQ_N) begin
-				case ({A[8:1],1'b0})
+			if (RW_E) begin
+				case ({RW_A,1'b0})
 //					9'h074: SCYN_UPD[0] <= 1;
 //					9'h076: SCYN_UPD[0] <= 1;
 //					9'h084: SCYN_UPD[1] <= 1;
@@ -1684,8 +1700,11 @@ module VDP2P import VDP2P_PKG::*; (
 	//Rotation parameters
 	//Rotation parameter table words live in block RAM: one word per table entry, written as they are fetched,
 	//read back through one port per consumer (the address follows the microcode step).
-	wire [ 4: 0] RPP = VA2.RP_POS[6:2];
-	wire         RPN = ~VA2.RP_POS[7];
+	//RP_POS two events late (= VA2.RP_POS) in flip-flops: it forms the falling-edge read addresses of the tables below
+	bit  [ 7: 2] RPPQ[2];
+	always @(posedge CLK) if (DOT_CE_R) begin RPPQ[0] <= RP_POS; RPPQ[1] <= RPPQ[0]; end
+	wire [ 4: 0] RPP = RPPQ[1][6:2];
+	wire         RPN = ~RPPQ[1][7];
 	wire [31: 0] RPW_WD = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
 	wire         RPW_WE = DOT_CE_R && (VA2.RPA || VA2.RPB) && RPP <= 5'd23;
 	wire [ 4: 0] RPW_WA = RPP == 5'd19 ? {4'b1100,RPN} : RPP == 5'd20 ? {4'b1101,RPN} : RPP == 5'd23 ? {4'b1110,RPN} : RPP;
@@ -1811,12 +1830,14 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	//start coordinates: word {Y,table}; the microcode reads X at even steps (4, 14) and Y at odd steps (5, 15)
 	VDP2P_SDP #(2,32,0) r_xyst(CLK, XST_WE | YST_WE, {YST_WE,RPN}, XYST_WD, {RPP[0],RPN}, XYST_Q);
-	VDP2P_SDP #(1,32,0) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, DOTCLK_DIV[1], DX_Q);
-	VDP2P_SDP #(1,32,0) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, DOTCLK_DIV[1], DY_Q);
-	VDP2P_SDP #(1,32,0) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, DOTCLK_DIV[1], XP_Q);
-	VDP2P_SDP #(1,32,0) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, DOTCLK_DIV[1], YP_Q);
-	VDP2P_SDP #(1,32,0) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, DOTCLK_DIV[1], SPX_Q);
-	VDP2P_SDP #(1,32,0) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, DOTCLK_DIV[1], SPY_Q);
+	//word DOTCLK_DIV[1] of the next slot, read at the CE_R edge that starts the slot (docs/vdp2.md)
+	wire [ 1: 0] DIV_N = DOTCLK_DIV + 2'd1;
+	VDP2P_SDPR #(1,32) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, CE_R, DIV_N[1], DX_Q);
+	VDP2P_SDPR #(1,32) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, CE_R, DIV_N[1], DY_Q);
+	VDP2P_SDPR #(1,32) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, CE_R, DIV_N[1], XP_Q);
+	VDP2P_SDPR #(1,32) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, CE_R, DIV_N[1], YP_Q);
+	VDP2P_SDPR #(1,32) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, CE_R, DIV_N[1], SPX_Q);
+	VDP2P_SDPR #(1,32) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, CE_R, DIV_N[1], SPY_Q);
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [31: 0] RP_WD,RCT_WD;
 		bit          CT_RP, CT_USE, CT_SEL;
@@ -1833,7 +1854,7 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 		else begin
 			if (DOT_CE_R) begin
-				N = ~VA2.RP_POS[7];
+				N = RPN;
 				case (VRAM_BANK_2)
 					2'b00: RP_WD = RA0_BUF;
 					2'b01: RP_WD = RA1_BUF;
@@ -1870,7 +1891,7 @@ module VDP2P import VDP2P_PKG::*; (
 				ACCX <= SUMX;
 				ACCY <= SUMY;
 				if (VA2.RPA || VA2.RPB) begin
-					case (VA2.RP_POS[6:2])
+					case (RPP)
 						5'd04: begin end
 						5'd05: begin end
 						
@@ -2302,22 +2323,22 @@ module VDP2P import VDP2P_PKG::*; (
 				CH_RP = (i == 0 ? VA4.R0RP : 1'b1);
 				
 				RBG_PIPE[0].RxCT[i] = VA_PIPE[0].RxA0CT[i] | VA_PIPE[0].RxA1CT[i] | VA_PIPE[0].RxB0CT[i] | VA_PIPE[0].RxB1CT[i];
-				RBG_PIPE[0].RxCTS[i] = VA_PIPE[0].RxA0CT[i] && MT[0] ? 2'd0 : 
-									        VA_PIPE[0].RxA1CT[i] && MT[1] ? 2'd1 : 
-									        VA_PIPE[0].RxB0CT[i] && MT[2] ? 2'd2 : 
+				RBG_PIPE[0].RxCTS[i] = VA_PIPE[0].RxA0CT[i] && MTR[0] ? 2'd0 : 
+									        VA_PIPE[0].RxA1CT[i] && MTR[1] ? 2'd1 : 
+									        VA_PIPE[0].RxB0CT[i] && MTR[2] ? 2'd2 : 
 									        2'd3;
 				RBG_PIPE[0].RxCRCT[i] = VA_PIPE[0].RxCRCT[i];
 				RBG_PIPE[0].RxPN[i] = VA_PIPE[0].RxA0PN[i] | VA_PIPE[0].RxA1PN[i] | VA_PIPE[0].RxB0PN[i] | VA_PIPE[0].RxB1PN[i];
-				RBG_PIPE[0].RxPNS[i] = VA_PIPE[0].RxA0PN[i] && MT[0] ? 2'd0 : 
-									        VA_PIPE[0].RxA1PN[i] && MT[1] ? 2'd1 : 
-									        VA_PIPE[0].RxB0PN[i] && MT[2] ? 2'd2 : 
+				RBG_PIPE[0].RxPNS[i] = VA_PIPE[0].RxA0PN[i] && MTR[0] ? 2'd0 : 
+									        VA_PIPE[0].RxA1PN[i] && MTR[1] ? 2'd1 : 
+									        VA_PIPE[0].RxB0PN[i] && MTR[2] ? 2'd2 : 
 									        2'd3;
 				RBG_PIPE[0].RxOVR[i] = RxSCRN_OVER[i];
 				RBG_PIPE[0].RxCTTP[i] = VA_PIPE[0].RxCTTP[i];
 				RBG_PIPE[0].RxCH[i] = VA_PIPE[0].RxA0CH[i] | VA_PIPE[0].RxA1CH[i] | VA_PIPE[0].RxB0CH[i] | VA_PIPE[0].RxB1CH[i];
-				RBG_PIPE[0].RxCHS[i] = VA_PIPE[0].RxA0CH[i] && MT[0] ? 2'd0 : 
-									        VA_PIPE[0].RxA1CH[i] && MT[1] ? 2'd1 : 
-									        VA_PIPE[0].RxB0CH[i] && MT[2] ? 2'd2 : 
+				RBG_PIPE[0].RxCHS[i] = VA_PIPE[0].RxA0CH[i] && MTR[0] ? 2'd0 : 
+									        VA_PIPE[0].RxA1CH[i] && MTR[1] ? 2'd1 : 
+									        VA_PIPE[0].RxB0CH[i] && MTR[2] ? 2'd2 : 
 									        2'd3;
 				RBG_PIPE[0].RxCELLX[i] = VA4.RxX[CH_RP][2:0];
 				RBG_PIPE[0].RxCT_EN[i] = RBG_CT_EN[i];
@@ -2416,19 +2437,20 @@ module VDP2P import VDP2P_PKG::*; (
 	//is the cell boundary copy, which is moved one event earlier (see NDC_WE_E) so that it sees the same state.
 	bit  [ 2: 0] CSEQ;
 	bit          NHF1_HOLD;
+	//A visit is two clocks: the selection (CSEQ 1-4) is registered, the lanes are written in the next clock (2-5).
 	always @(posedge CLK) begin
 		if (DOT_CE_R) CSEQ <= 3'd1;
-		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd5) ? 3'd0 : CSEQ + 3'd1;
+		else if (CSEQ != 3'd0) CSEQ <= (CSEQ == 3'd6) ? 3'd0 : CSEQ + 3'd1;
 	end
-	wire         CVIS = CSEQ != 3'd0 && CSEQ != 3'd5;
+	wire         CVIS = CSEQ != 3'd0 && CSEQ <= 3'd4;
 	wire [ 1: 0] CAI  = 2'd0 - CSEQ[1:0];   //1,2,3,4 -> 3,2,1,0
 	//Fetched character words: the golden loads NBG_CH[l] at DOT_CE_R from the bank buffers. The chains read them in the
 	//window before that event, so each word is loaded after its last reader (layer 3 after the visit of array 3, ...
 	//layer 0 after the visit of array 0) through one bank multiplexer; the bank buffers and BG2 are stable in the window.
-	wire [ 1: 0] CHL = 2'd1 - CSEQ[1:0];   //CSEQ 2,3,4,5 -> layer 3,2,1,0
+	wire [ 1: 0] CHL = 2'd2 - CSEQ[1:0];   //CSEQ 3,4,5,6 -> layer 3,2,1,0
 	wire [ 1: 0] CHS = BG2.NxCHS[CHL];
 	wire [31: 0] CHD = CHS == 2'd0 ? RA0_BUF : CHS == 2'd1 ? RA1_BUF : CHS == 2'd2 ? RB0_BUF : RB1_BUF;
-	always @(posedge CLK) if (CSEQ >= 3'd2 && BG2.NxCH[CHL]) NBG_CH[CHL] <= CHD;
+	always @(posedge CLK) if (CSEQ >= 3'd3 && BG2.NxCH[CHL]) NBG_CH[CHL] <= CHD;
 
 	//Array selection for the visited array CAI (the golden evaluates the four arrays in parallel; the visits are
 	//sequential, so only the selectors are computed): V_SL layer whose character word, count and enable are used,
@@ -2493,7 +2515,6 @@ module VDP2P import VDP2P_PKG::*; (
 	always @(posedge CLK) if (CSEQ == 3'd3) NHF1_HOLD <= S_HFL;
 	wire         S_HF16 = (CAI == 2'd3) ? NHF1_HOLD : S_HFL;
 	wire [ 2: 0] S_CNT = BG3.NxCH_CNT[V_SL][2:0];
-	wire [31: 0] S_CH  = NBG_CH[V_SL];
 	//write enables of the visited array (same conditions as the golden's per-array case statements)
 	wire         S_V   = CVIS & V_NEN & BG2.NxCH_EN[V_SL];
 	VDP2NSRegs_t S_R;
@@ -2510,6 +2531,16 @@ module VDP2P import VDP2P_PKG::*; (
 	//character parameter writes: the same conditions; 16 bits per dot write them for arrays 0 and 1, 32 bits per dot for array 0
 	wire         S_DPH = S_E4H;
 	wire         S_DPL = S_E4L | S_E8 | (S_E16 & ~CAI[1]) | (S_E32 & (CAI == 2'd0));
+	//selection of the visit, registered: array, layer, count, flips, write kinds
+	bit  [ 1: 0] P_CAI, P_SL;
+	bit  [ 2: 0] P_CNT;
+	bit          P_HFL, P_HFH, P_HF16, P_E4H, P_E4L, P_E8, P_E16, P_E32;
+	always @(posedge CLK) begin
+		P_CAI <= CAI; P_SL <= V_SL; P_CNT <= S_CNT;
+		P_HFL <= S_HFL; P_HFH <= S_HFH; P_HF16 <= S_HF16;
+		P_E4H <= S_E4H; P_E4L <= S_E4L; P_E8 <= S_E8; P_E16 <= S_E16; P_E32 <= S_E32;
+	end
+	wire [31: 0] S_CH  = NBG_CH[P_SL];
 	bit  [ 3: 0] IL[8], IH[8];
 	bit  [ 7: 0] EL, EH;
 	always_comb begin
@@ -2519,37 +2550,37 @@ module VDP2P import VDP2P_PKG::*; (
 		EL = '0; EH = '0;
 		for (int l = 0; l < 8; l++) begin
 			IL[l] = 4'h0; IH[l] = 4'h0;
-			if (S_E4H) begin
+			if (P_E4H) begin
 				EH[l] = 1'b1;
-				ni = 3'(l) ^ {3{S_HFH}};
+				ni = 3'(l) ^ {3{P_HFH}};
 				IH[l] = S_CH[31 - 4*ni -: 4];
 			end
-			if (S_E4L) begin
+			if (P_E4L) begin
 				EL[l] = 1'b1;
-				ni = 3'(l) ^ {3{S_HFL}};
+				ni = 3'(l) ^ {3{P_HFL}};
 				IL[l] = S_CH[31 - 4*ni -: 4];
 			end
-			if (S_E8 && l[2] == S_CNT[0]) begin
+			if (P_E8 && l[2] == P_CNT[0]) begin
 				EL[l] = 1'b1; EH[l] = 1'b1;
-				bi = 2'(l) ^ {2{S_HFL}};
+				bi = 2'(l) ^ {2{P_HFL}};
 				{IH[l],IL[l]} = S_CH[31 - 8*bi -: 8];
 			end
-			if (S_E16 && l[2:1] == S_CNT[1:0]) begin
+			if (P_E16 && l[2:1] == P_CNT[1:0]) begin
 				EL[l] = 1'b1; EH[l] = 1'b1;
-				B16 = !CAI[1] ? ((l[0] ^ S_HF16) ? S_CH[7:0] : S_CH[23:16]) : ((l[0] ^ S_HF16) ? S_CH[15:8] : S_CH[31:24]);
+				B16 = !P_CAI[1] ? ((l[0] ^ P_HF16) ? S_CH[7:0] : S_CH[23:16]) : ((l[0] ^ P_HF16) ? S_CH[15:8] : S_CH[31:24]);
 				{IH[l],IL[l]} = B16;
 			end
-			if (S_E32 && l[2:0] == S_CNT) begin
+			if (P_E32 && l[2:0] == P_CNT) begin
 				EL[l] = 1'b1; EH[l] = 1'b1;
-				B32 = CAI == 2'd0 ? S_CH[7:0] : CAI == 2'd1 ? S_CH[23:16] : CAI == 2'd2 ? S_CH[15:8] : S_CH[31:24];
+				B32 = P_CAI == 2'd0 ? S_CH[7:0] : P_CAI == 2'd1 ? S_CH[23:16] : P_CAI == 2'd2 ? S_CH[15:8] : S_CH[31:24];
 				{IH[l],IL[l]} = B32;
 			end
 		end
 	end
-	always @(posedge CLK) if (CVIS) begin
+	always @(posedge CLK) begin
 		for (int l = 0; l < 8; l++) begin
-			if (EL[l]) NBG_CDC[CAI][l][3:0] <= IL[l];
-			if (EH[l]) NBG_CDC[CAI][l][7:4] <= IH[l];
+			if (EL[l]) NBG_CDC[P_CAI][l][3:0] <= IL[l];
+			if (EH[l]) NBG_CDC[P_CAI][l][7:4] <= IH[l];
 		end
 	end
 	//Character parameters (priority, colour calculation flag, palette number) of the cell being assembled: entry n=CAI is the
@@ -2565,20 +2596,20 @@ module VDP2P import VDP2P_PKG::*; (
 	always_comb begin
 		for (int i=0; i<4; i++) begin
 		BG0.NxPN[i] = VA_PIPE[0].NxA0PN[i] | VA_PIPE[0].NxA1PN[i] | VA_PIPE[0].NxB0PN[i] | VA_PIPE[0].NxB1PN[i];
-		BG0.NxPNS[i] = VA_PIPE[0].NxA0PN[i] && MT[0] ? 2'd0 :
-		VA_PIPE[0].NxA1PN[i] && MT[1] ? 2'd1 :
-		VA_PIPE[0].NxB0PN[i] && MT[2] ? 2'd2 :
+		BG0.NxPNS[i] = VA_PIPE[0].NxA0PN[i] && MTR[0] ? 2'd0 :
+		VA_PIPE[0].NxA1PN[i] && MTR[1] ? 2'd1 :
+		VA_PIPE[0].NxB0PN[i] && MTR[2] ? 2'd2 :
 		2'd3;
 		BG0.NxCH[i] = VA_PIPE[0].NxA0CH[i] | VA_PIPE[0].NxA1CH[i] | VA_PIPE[0].NxB0CH[i] | VA_PIPE[0].NxB1CH[i];
-		BG0.NxCHS[i] = VA_PIPE[0].NxA0CH[i] && MT[0] ? 2'd0 :
-		VA_PIPE[0].NxA1CH[i] && MT[1] ? 2'd1 :
-		VA_PIPE[0].NxB0CH[i] && MT[2] ? 2'd2 :
+		BG0.NxCHS[i] = VA_PIPE[0].NxA0CH[i] && MTR[0] ? 2'd0 :
+		VA_PIPE[0].NxA1CH[i] && MTR[1] ? 2'd1 :
+		VA_PIPE[0].NxB0CH[i] && MTR[2] ? 2'd2 :
 		2'd3;
 		if (i < 2) begin
 		BG0.NxVS[i] = VA_PIPE[0].NxA0VS[i] | VA_PIPE[0].NxA1VS[i] | VA_PIPE[0].NxB0VS[i] | VA_PIPE[0].NxB1VS[i];
-		BG0.NxVSS[i] = VA_PIPE[0].NxA0VS[i] && MT[0] ? 2'd0 :
-		VA_PIPE[0].NxA1VS[i] && MT[1] ? 2'd1 :
-		VA_PIPE[0].NxB0VS[i] && MT[2] ? 2'd2 :
+		BG0.NxVSS[i] = VA_PIPE[0].NxA0VS[i] && MTR[0] ? 2'd0 :
+		VA_PIPE[0].NxA1VS[i] && MTR[1] ? 2'd1 :
+		VA_PIPE[0].NxB0VS[i] && MTR[2] ? 2'd2 :
 		2'd3;
 		BG0.NxPN_CNT[i] = NBG_PN_CNT[i];
 		end
@@ -2596,22 +2627,22 @@ module VDP2P import VDP2P_PKG::*; (
 		for (int i=0; i<2; i++) begin
 			CH_RPc = (i == 0 ? VA4.R0RP : 1'b1);
 			RB2_D.RxCT[i] = VA_PIPE[0].RxA0CT[i] | VA_PIPE[0].RxA1CT[i] | VA_PIPE[0].RxB0CT[i] | VA_PIPE[0].RxB1CT[i];
-			RB2_D.RxCTS[i] = VA_PIPE[0].RxA0CT[i] && MT[0] ? 2'd0 :
-			VA_PIPE[0].RxA1CT[i] && MT[1] ? 2'd1 :
-			VA_PIPE[0].RxB0CT[i] && MT[2] ? 2'd2 :
+			RB2_D.RxCTS[i] = VA_PIPE[0].RxA0CT[i] && MTR[0] ? 2'd0 :
+			VA_PIPE[0].RxA1CT[i] && MTR[1] ? 2'd1 :
+			VA_PIPE[0].RxB0CT[i] && MTR[2] ? 2'd2 :
 			2'd3;
 			RB2_D.RxCRCT[i] = VA_PIPE[0].RxCRCT[i];
 			RB2_D.RxPN[i] = VA_PIPE[0].RxA0PN[i] | VA_PIPE[0].RxA1PN[i] | VA_PIPE[0].RxB0PN[i] | VA_PIPE[0].RxB1PN[i];
-			RB2_D.RxPNS[i] = VA_PIPE[0].RxA0PN[i] && MT[0] ? 2'd0 :
-			VA_PIPE[0].RxA1PN[i] && MT[1] ? 2'd1 :
-			VA_PIPE[0].RxB0PN[i] && MT[2] ? 2'd2 :
+			RB2_D.RxPNS[i] = VA_PIPE[0].RxA0PN[i] && MTR[0] ? 2'd0 :
+			VA_PIPE[0].RxA1PN[i] && MTR[1] ? 2'd1 :
+			VA_PIPE[0].RxB0PN[i] && MTR[2] ? 2'd2 :
 			2'd3;
 			RB2_D.RxOVR[i] = RxSCRN_OVER[i];
 			RB2_D.RxCTTP[i] = VA_PIPE[0].RxCTTP[i];
 			RB2_D.RxCH[i] = VA_PIPE[0].RxA0CH[i] | VA_PIPE[0].RxA1CH[i] | VA_PIPE[0].RxB0CH[i] | VA_PIPE[0].RxB1CH[i];
-			RB2_D.RxCHS[i] = VA_PIPE[0].RxA0CH[i] && MT[0] ? 2'd0 :
-			VA_PIPE[0].RxA1CH[i] && MT[1] ? 2'd1 :
-			VA_PIPE[0].RxB0CH[i] && MT[2] ? 2'd2 :
+			RB2_D.RxCHS[i] = VA_PIPE[0].RxA0CH[i] && MTR[0] ? 2'd0 :
+			VA_PIPE[0].RxA1CH[i] && MTR[1] ? 2'd1 :
+			VA_PIPE[0].RxB0CH[i] && MTR[2] ? 2'd2 :
 			2'd3;
 			RB3_D.RxCELLX[i] = VA4.RxX[CH_RPc][2:0];
 			RB3_D.RxCH[i] = RB2_D.RxCH[i];
@@ -2732,7 +2763,6 @@ module VDP2P import VDP2P_PKG::*; (
 	
 	//Cell data double buffer: two 8-byte banks per layer in block RAM, read back by the dot index
 	//early copy: the next event is a cell boundary (same reset rule as the CELLX counter)
-	wire [ 2: 0] CELLX_N = (H_CNT == NBG_CELLX_START - 1 && IS_RENDER_LINES) ? 3'd0 : CELLX + 3'd1;
 	wire         NDC_WE_E = DOT_CE_R && (CELLX_N | {HRES[1],2'b00}) == 3'd7;
 	wire         N0_HF4 = (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMHF);
 	wire         N0_QT4 = !N0_HF4 && (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT);
@@ -3294,6 +3324,9 @@ module VDP2P import VDP2P_PKG::*; (
 	
 	bit  [10:1] CT_CRAM_A;
 	bit  [31:0] CT_CRAM_Q;
+	//RBG_PIPE[0].RxCRCT as this block sees it: the value from the previous DOT_CE_R (a blocking variable of another block)
+	bit  [ 1:0] CRCT_Q;
+	always @(posedge CLK) if (DOT_CE_R) CRCT_Q <= {VA_PIPE[0].RxCRCT[1], VA_PIPE[0].RxCRCT[0]};
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			// synopsys translate_off
@@ -3301,10 +3334,10 @@ module VDP2P import VDP2P_PKG::*; (
 			CT_CRAM_Q <= '0;
 			// synopsys translate_on
 		end else begin
-			if (RBG_PIPE[0].RxCRCT[0] && DOT_CE_R) begin
+			if (CRCT_Q[0] && DOT_CE_R) begin
 				CT_CRAM_A <= RxCT_ADDR[0][10:1];
 			end
-			if (RBG_PIPE[0].RxCRCT[1] && DOT_CE_R) begin
+			if (CRCT_Q[1] && DOT_CE_R) begin
 				CT_CRAM_A <= RxCT_ADDR[1][10:1];
 			end
 			
@@ -3323,6 +3356,18 @@ module VDP2P import VDP2P_PKG::*; (
 	wire VRAM_SEL = ~A[20] & ~CS_N & ~AD_N ;	//000000-0FFFFF
 	wire VRAM_REQ = VRAM_SEL & ~REQ_N;
 	wire REG_SEL = (A[20:18] == 3'b110) & ~CS_N & ~AD_N;
+	//CPU register writes land at the CE_R edge after the request, so the register file changes at CE_R edges only
+	//(docs/fit-status.md, VDP2P multicycle)
+	bit         RW_P;
+	bit [ 8: 1] RW_A;
+	bit [15: 0] RW_D;
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) RW_P <= 0;
+		else if (!RES_N) RW_P <= 0;
+		else if (REG_SEL && !WE_N && !DTEN_N && !REQ_N) begin RW_P <= 1; RW_A <= A[8:1]; RW_D <= DI; end
+		else if (CE_R) RW_P <= 0;
+	end
+	wire        RW_E = RW_P & CE_R;
 	
 	bit [20: 1] A;
 	bit         WE_N;
@@ -3632,149 +3677,149 @@ module VDP2P import VDP2P_PKG::*; (
 			REGS.COBG <= '0;
 			REGS.COBB <= '0;
 		end else begin
-			if (REG_SEL && !WE_N && !DTEN_N && !REQ_N) begin
-				case ({A[8:1],1'b0})
-					9'h000: REGS.TVMD <= DI & TVMD_MASK;
-					9'h002: REGS.EXTEN <= DI & EXTEN_MASK;
-					9'h006: REGS.VRSIZE <= DI & VRSIZE_MASK;
-					9'h00C: REGS.RSRV0 <= DI & RSRV_MASK;
-					9'h00E: REGS.RAMCTL <= DI & RAMCTL_MASK;
-					9'h010: REGS.CYCA0L <= DI & CYCx0L_MASK;
-					9'h012: REGS.CYCA0U <= DI & CYCx0U_MASK;
-					9'h014: REGS.CYCA1L <= DI & CYCx1L_MASK;
-					9'h016: REGS.CYCA1U <= DI & CYCx1U_MASK;
-					9'h018: REGS.CYCB0L <= DI & CYCx0L_MASK;
-					9'h01A: REGS.CYCB0U <= DI & CYCx0U_MASK;
-					9'h01C: REGS.CYCB1L <= DI & CYCx1L_MASK;
-					9'h01E: REGS.CYCB1U <= DI & CYCx1U_MASK;
-					9'h020: REGS.BGON <= DI & BGON_MASK;
-					9'h022: REGS.MZCTL <= DI & MZCTL_MASK;
-					9'h024: REGS.SFSEL <= DI & SFSEL_MASK;
-					9'h026: REGS.SFCODE <= DI & SFCODE_MASK;
-					9'h028: REGS.CHCTLA <= DI & CHCTLA_MASK;
-					9'h02A: REGS.CHCTLB <= DI & CHCTLB_MASK;
-					9'h02C: REGS.BMPNA <= DI & BMPNA_MASK;
-					9'h02E: REGS.BMPNB <= DI & BMPNB_MASK;
-					9'h030: REGS.PNCN0 <= DI & PNCNx_MASK;
-					9'h032: REGS.PNCN1 <= DI & PNCNx_MASK;
-					9'h034: REGS.PNCN2 <= DI & PNCNx_MASK;
-					9'h036: REGS.PNCN3 <= DI & PNCNx_MASK;
-					9'h038: REGS.PNCR <= DI & PNCR_MASK;
-					9'h03A: REGS.PLSZ <= DI & PLSZ_MASK;
-					9'h03C: REGS.MPOFN <= DI & MPOFN_MASK;
-					9'h03E: REGS.MPOFR <= DI & MPOFR_MASK;
-					9'h040: REGS.MPABN0 <= DI & MPABNx_MASK;
-					9'h042: REGS.MPCDN0 <= DI & MPCDNx_MASK;
-					9'h044: REGS.MPABN1 <= DI & MPABNx_MASK;
-					9'h046: REGS.MPCDN1 <= DI & MPCDNx_MASK;
-					9'h048: REGS.MPABN2 <= DI & MPABNx_MASK;
-					9'h04A: REGS.MPCDN2 <= DI & MPCDNx_MASK;
-					9'h04C: REGS.MPABN3 <= DI & MPABNx_MASK;
-					9'h04E: REGS.MPCDN3 <= DI & MPCDNx_MASK;
-					9'h050: REGS.MPABRA <= DI & MPABRx_MASK;
-					9'h052: REGS.MPCDRA <= DI & MPCDRx_MASK;
-					9'h054: REGS.MPEFRA <= DI & MPEFRx_MASK;
-					9'h056: REGS.MPGHRA <= DI & MPGHRx_MASK;
-					9'h058: REGS.MPIJRA <= DI & MPIJRx_MASK;
-					9'h05A: REGS.MPKLRA <= DI & MPKLRx_MASK;
-					9'h05C: REGS.MPMNRA <= DI & MPMNRx_MASK;
-					9'h05E: REGS.MPOPRA <= DI & MPOPRx_MASK;
-					9'h060: REGS.MPABRB <= DI & MPABRx_MASK;
-					9'h062: REGS.MPCDRB <= DI & MPCDRx_MASK;
-					9'h064: REGS.MPEFRB <= DI & MPEFRx_MASK;
-					9'h066: REGS.MPGHRB <= DI & MPGHRx_MASK;
-					9'h068: REGS.MPIJRB <= DI & MPIJRx_MASK;
-					9'h06A: REGS.MPKLRB <= DI & MPKLRx_MASK;
-					9'h06C: REGS.MPMNRB <= DI & MPMNRx_MASK;
-					9'h06E: REGS.MPOPRB <= DI & MPOPRx_MASK;
-					9'h070: REGS.SCXIN0 <= DI & SCXINx_MASK;
-					9'h072: REGS.SCXDN0 <= DI & SCXDNx_MASK;
-					9'h074: REGS.SCYIN0 <= DI & SCYINx_MASK;
-					9'h076: REGS.SCYDN0 <= DI & SCYDNx_MASK;
-					9'h078: REGS.ZMXIN0 <= DI & ZMXINx_MASK;
-					9'h07A: REGS.ZMXDN0 <= DI & ZMXDNx_MASK;
-					9'h07C: REGS.ZMYIN0 <= DI & ZMYINx_MASK;
-					9'h07E: REGS.ZMYDN0 <= DI & ZMYDNx_MASK;
-					9'h080: REGS.SCXIN1 <= DI & SCXINx_MASK;
-					9'h082: REGS.SCXDN1 <= DI & SCXDNx_MASK;
-					9'h084: REGS.SCYIN1 <= DI & SCYINx_MASK;
-					9'h086: REGS.SCYDN1 <= DI & SCYDNx_MASK;
-					9'h088: REGS.ZMXIN1 <= DI & ZMXINx_MASK;
-					9'h08A: REGS.ZMXDN1 <= DI & ZMXDNx_MASK;
-					9'h08C: REGS.ZMYIN1 <= DI & ZMYINx_MASK;
-					9'h08E: REGS.ZMYDN1 <= DI & ZMYDNx_MASK;
-					9'h090: REGS.SCXN2 <= DI & SCXNx_MASK;
-					9'h092: REGS.SCYN2 <= DI & SCYNx_MASK;
-					9'h094: REGS.SCXN3 <= DI & SCXNx_MASK;
-					9'h096: REGS.SCYN3 <= DI & SCYNx_MASK;
-					9'h098: REGS.ZMCTL <= DI & ZMCTL_MASK;
-					9'h09A: REGS.SCRCTL <= DI & SCRCTL_MASK;
-					9'h09C: REGS.VCSTAU <= DI & VCSTAU_MASK;
-					9'h09E: REGS.VCSTAL <= DI & VCSTAL_MASK;
-					9'h0A0: REGS.LSTA0U <= DI & LSTAxU_MASK;
-					9'h0A2: REGS.LSTA0L <= DI & LSTAxL_MASK;
-					9'h0A4: REGS.LSTA1U <= DI & LSTAxU_MASK;
-					9'h0A6: REGS.LSTA1L <= DI & LSTAxL_MASK;
-					9'h0A8: REGS.LCTAU <= DI & LCTAU_MASK;
-					9'h0AA: REGS.LCTAL <= DI & LCTAL_MASK;
-					9'h0AC: REGS.BKTAU <= DI & BKTAU_MASK;
-					9'h0AE: REGS.BKTAL <= DI & BKTAL_MASK;
-					9'h0B0: REGS.RPMD <= DI & RPMD_MASK;
-					9'h0B2: REGS.RPRCTL <= DI & RPRCTL_MASK;
-					9'h0B4: REGS.KTCTL <= DI & KTCTL_MASK;
-					9'h0B6: REGS.KTAOF <= DI & KTAOF_MASK;
-					9'h0B8: REGS.OVPNRA <= DI & OVPNRx_MASK;
-					9'h0BA: REGS.OVPNRB <= DI & OVPNRx_MASK;
-					9'h0BC: REGS.RPTAU <= DI & RPTAU_MASK;
-					9'h0BE: REGS.RPTAL <= DI & RPTAL_MASK;
-					9'h0C0: REGS.WPSX0 <= DI & WPSXx_MASK;
-					9'h0C2: REGS.WPSY0 <= DI & WPSYx_MASK;
-					9'h0C4: REGS.WPEX0 <= DI & WPEXx_MASK;
-					9'h0C6: REGS.WPEY0 <= DI & WPEYx_MASK;
-					9'h0C8: REGS.WPSX1 <= DI & WPSXx_MASK;
-					9'h0CA: REGS.WPSY1 <= DI & WPSYx_MASK;
-					9'h0CC: REGS.WPEX1 <= DI & WPEXx_MASK;
-					9'h0CE: REGS.WPEY1 <= DI & WPEYx_MASK;
-					9'h0D0: REGS.WCTLA <= DI & WCTLA_MASK;
-					9'h0D2: REGS.WCTLB <= DI & WCTLB_MASK;
-					9'h0D4: REGS.WCTLC <= DI & WCTLC_MASK;
-					9'h0D6: REGS.WCTLD <= DI & WCTLD_MASK;
-					9'h0D8: REGS.LWTA0U <= DI & LWTAxU_MASK;
-					9'h0DA: REGS.LWTA0L <= DI & LWTAxL_MASK;
-					9'h0DC: REGS.LWTA1U <= DI & LWTAxU_MASK;
-					9'h0DE: REGS.LWTA1L <= DI & LWTAxL_MASK;
-					9'h0E0: REGS.SPCTL <= DI & SPCTL_MASK;
-					9'h0E2: REGS.SDCTL <= DI & SDCTL_MASK;
-					9'h0E4: REGS.CRAOFA <= DI & CRAOFA_MASK;
-					9'h0E6: REGS.CRAOFB <= DI & CRAOFB_MASK;
-					9'h0E8: REGS.LNCLEN <= DI & LNCLEN_MASK;
-					9'h0EA: REGS.SFPRMD <= DI & SFPRMD_MASK;
-					9'h0EC: REGS.CCCTL <= DI & CCCTL_MASK;
-					9'h0EE: REGS.SFCCMD <= DI & SFCCMD_MASK;
-					9'h0F0: REGS.PRISA <= DI & PRISA_MASK;
-					9'h0F2: REGS.PRISB <= DI & PRISB_MASK;
-					9'h0F4: REGS.PRISC <= DI & PRISC_MASK;
-					9'h0F6: REGS.PRISD <= DI & PRISD_MASK;
-					9'h0F8: REGS.PRINA <= DI & PRINA_MASK;
-					9'h0FA: REGS.PRINB <= DI & PRINB_MASK;
-					9'h0FC: REGS.PRIR <= DI & PRIR_MASK;
-					9'h0FE: REGS.RSRV1 <= DI & RSRV_MASK;
-					9'h100: REGS.CCRSA <= DI & CCRSA_MASK;
-					9'h102: REGS.CCRSB <= DI & CCRSB_MASK;
-					9'h104: REGS.CCRSC <= DI & CCRSC_MASK;
-					9'h106: REGS.CCRSD <= DI & CCRSD_MASK;
-					9'h108: REGS.CCRNA <= DI & CCRNA_MASK;
-					9'h10A: REGS.CCRNB <= DI & CCRNA_MASK;
-					9'h10C: REGS.CCRR <= DI & CCRR_MASK;
-					9'h10E: REGS.CCRLB <= DI & CCRLB_MASK;
-					9'h110: REGS.CLOFEN <= DI & CLOFEN_MASK;
-					9'h112: REGS.CLOFSL <= DI & CLOFSL_MASK;
-					9'h114: REGS.COAR <= DI & COxR_MASK;
-					9'h116: REGS.COAG <= DI & COxG_MASK;
-					9'h118: REGS.COAB <= DI & COxB_MASK;
-					9'h11A: REGS.COBR <= DI & COxR_MASK;
-					9'h11C: REGS.COBG <= DI & COxG_MASK;
-					9'h11E: REGS.COBB <= DI & COxB_MASK; 
+			if (RW_E) begin
+				case ({RW_A,1'b0})
+					9'h000: REGS.TVMD <= RW_D & TVMD_MASK;
+					9'h002: REGS.EXTEN <= RW_D & EXTEN_MASK;
+					9'h006: REGS.VRSIZE <= RW_D & VRSIZE_MASK;
+					9'h00C: REGS.RSRV0 <= RW_D & RSRV_MASK;
+					9'h00E: REGS.RAMCTL <= RW_D & RAMCTL_MASK;
+					9'h010: REGS.CYCA0L <= RW_D & CYCx0L_MASK;
+					9'h012: REGS.CYCA0U <= RW_D & CYCx0U_MASK;
+					9'h014: REGS.CYCA1L <= RW_D & CYCx1L_MASK;
+					9'h016: REGS.CYCA1U <= RW_D & CYCx1U_MASK;
+					9'h018: REGS.CYCB0L <= RW_D & CYCx0L_MASK;
+					9'h01A: REGS.CYCB0U <= RW_D & CYCx0U_MASK;
+					9'h01C: REGS.CYCB1L <= RW_D & CYCx1L_MASK;
+					9'h01E: REGS.CYCB1U <= RW_D & CYCx1U_MASK;
+					9'h020: REGS.BGON <= RW_D & BGON_MASK;
+					9'h022: REGS.MZCTL <= RW_D & MZCTL_MASK;
+					9'h024: REGS.SFSEL <= RW_D & SFSEL_MASK;
+					9'h026: REGS.SFCODE <= RW_D & SFCODE_MASK;
+					9'h028: REGS.CHCTLA <= RW_D & CHCTLA_MASK;
+					9'h02A: REGS.CHCTLB <= RW_D & CHCTLB_MASK;
+					9'h02C: REGS.BMPNA <= RW_D & BMPNA_MASK;
+					9'h02E: REGS.BMPNB <= RW_D & BMPNB_MASK;
+					9'h030: REGS.PNCN0 <= RW_D & PNCNx_MASK;
+					9'h032: REGS.PNCN1 <= RW_D & PNCNx_MASK;
+					9'h034: REGS.PNCN2 <= RW_D & PNCNx_MASK;
+					9'h036: REGS.PNCN3 <= RW_D & PNCNx_MASK;
+					9'h038: REGS.PNCR <= RW_D & PNCR_MASK;
+					9'h03A: REGS.PLSZ <= RW_D & PLSZ_MASK;
+					9'h03C: REGS.MPOFN <= RW_D & MPOFN_MASK;
+					9'h03E: REGS.MPOFR <= RW_D & MPOFR_MASK;
+					9'h040: REGS.MPABN0 <= RW_D & MPABNx_MASK;
+					9'h042: REGS.MPCDN0 <= RW_D & MPCDNx_MASK;
+					9'h044: REGS.MPABN1 <= RW_D & MPABNx_MASK;
+					9'h046: REGS.MPCDN1 <= RW_D & MPCDNx_MASK;
+					9'h048: REGS.MPABN2 <= RW_D & MPABNx_MASK;
+					9'h04A: REGS.MPCDN2 <= RW_D & MPCDNx_MASK;
+					9'h04C: REGS.MPABN3 <= RW_D & MPABNx_MASK;
+					9'h04E: REGS.MPCDN3 <= RW_D & MPCDNx_MASK;
+					9'h050: REGS.MPABRA <= RW_D & MPABRx_MASK;
+					9'h052: REGS.MPCDRA <= RW_D & MPCDRx_MASK;
+					9'h054: REGS.MPEFRA <= RW_D & MPEFRx_MASK;
+					9'h056: REGS.MPGHRA <= RW_D & MPGHRx_MASK;
+					9'h058: REGS.MPIJRA <= RW_D & MPIJRx_MASK;
+					9'h05A: REGS.MPKLRA <= RW_D & MPKLRx_MASK;
+					9'h05C: REGS.MPMNRA <= RW_D & MPMNRx_MASK;
+					9'h05E: REGS.MPOPRA <= RW_D & MPOPRx_MASK;
+					9'h060: REGS.MPABRB <= RW_D & MPABRx_MASK;
+					9'h062: REGS.MPCDRB <= RW_D & MPCDRx_MASK;
+					9'h064: REGS.MPEFRB <= RW_D & MPEFRx_MASK;
+					9'h066: REGS.MPGHRB <= RW_D & MPGHRx_MASK;
+					9'h068: REGS.MPIJRB <= RW_D & MPIJRx_MASK;
+					9'h06A: REGS.MPKLRB <= RW_D & MPKLRx_MASK;
+					9'h06C: REGS.MPMNRB <= RW_D & MPMNRx_MASK;
+					9'h06E: REGS.MPOPRB <= RW_D & MPOPRx_MASK;
+					9'h070: REGS.SCXIN0 <= RW_D & SCXINx_MASK;
+					9'h072: REGS.SCXDN0 <= RW_D & SCXDNx_MASK;
+					9'h074: REGS.SCYIN0 <= RW_D & SCYINx_MASK;
+					9'h076: REGS.SCYDN0 <= RW_D & SCYDNx_MASK;
+					9'h078: REGS.ZMXIN0 <= RW_D & ZMXINx_MASK;
+					9'h07A: REGS.ZMXDN0 <= RW_D & ZMXDNx_MASK;
+					9'h07C: REGS.ZMYIN0 <= RW_D & ZMYINx_MASK;
+					9'h07E: REGS.ZMYDN0 <= RW_D & ZMYDNx_MASK;
+					9'h080: REGS.SCXIN1 <= RW_D & SCXINx_MASK;
+					9'h082: REGS.SCXDN1 <= RW_D & SCXDNx_MASK;
+					9'h084: REGS.SCYIN1 <= RW_D & SCYINx_MASK;
+					9'h086: REGS.SCYDN1 <= RW_D & SCYDNx_MASK;
+					9'h088: REGS.ZMXIN1 <= RW_D & ZMXINx_MASK;
+					9'h08A: REGS.ZMXDN1 <= RW_D & ZMXDNx_MASK;
+					9'h08C: REGS.ZMYIN1 <= RW_D & ZMYINx_MASK;
+					9'h08E: REGS.ZMYDN1 <= RW_D & ZMYDNx_MASK;
+					9'h090: REGS.SCXN2 <= RW_D & SCXNx_MASK;
+					9'h092: REGS.SCYN2 <= RW_D & SCYNx_MASK;
+					9'h094: REGS.SCXN3 <= RW_D & SCXNx_MASK;
+					9'h096: REGS.SCYN3 <= RW_D & SCYNx_MASK;
+					9'h098: REGS.ZMCTL <= RW_D & ZMCTL_MASK;
+					9'h09A: REGS.SCRCTL <= RW_D & SCRCTL_MASK;
+					9'h09C: REGS.VCSTAU <= RW_D & VCSTAU_MASK;
+					9'h09E: REGS.VCSTAL <= RW_D & VCSTAL_MASK;
+					9'h0A0: REGS.LSTA0U <= RW_D & LSTAxU_MASK;
+					9'h0A2: REGS.LSTA0L <= RW_D & LSTAxL_MASK;
+					9'h0A4: REGS.LSTA1U <= RW_D & LSTAxU_MASK;
+					9'h0A6: REGS.LSTA1L <= RW_D & LSTAxL_MASK;
+					9'h0A8: REGS.LCTAU <= RW_D & LCTAU_MASK;
+					9'h0AA: REGS.LCTAL <= RW_D & LCTAL_MASK;
+					9'h0AC: REGS.BKTAU <= RW_D & BKTAU_MASK;
+					9'h0AE: REGS.BKTAL <= RW_D & BKTAL_MASK;
+					9'h0B0: REGS.RPMD <= RW_D & RPMD_MASK;
+					9'h0B2: REGS.RPRCTL <= RW_D & RPRCTL_MASK;
+					9'h0B4: REGS.KTCTL <= RW_D & KTCTL_MASK;
+					9'h0B6: REGS.KTAOF <= RW_D & KTAOF_MASK;
+					9'h0B8: REGS.OVPNRA <= RW_D & OVPNRx_MASK;
+					9'h0BA: REGS.OVPNRB <= RW_D & OVPNRx_MASK;
+					9'h0BC: REGS.RPTAU <= RW_D & RPTAU_MASK;
+					9'h0BE: REGS.RPTAL <= RW_D & RPTAL_MASK;
+					9'h0C0: REGS.WPSX0 <= RW_D & WPSXx_MASK;
+					9'h0C2: REGS.WPSY0 <= RW_D & WPSYx_MASK;
+					9'h0C4: REGS.WPEX0 <= RW_D & WPEXx_MASK;
+					9'h0C6: REGS.WPEY0 <= RW_D & WPEYx_MASK;
+					9'h0C8: REGS.WPSX1 <= RW_D & WPSXx_MASK;
+					9'h0CA: REGS.WPSY1 <= RW_D & WPSYx_MASK;
+					9'h0CC: REGS.WPEX1 <= RW_D & WPEXx_MASK;
+					9'h0CE: REGS.WPEY1 <= RW_D & WPEYx_MASK;
+					9'h0D0: REGS.WCTLA <= RW_D & WCTLA_MASK;
+					9'h0D2: REGS.WCTLB <= RW_D & WCTLB_MASK;
+					9'h0D4: REGS.WCTLC <= RW_D & WCTLC_MASK;
+					9'h0D6: REGS.WCTLD <= RW_D & WCTLD_MASK;
+					9'h0D8: REGS.LWTA0U <= RW_D & LWTAxU_MASK;
+					9'h0DA: REGS.LWTA0L <= RW_D & LWTAxL_MASK;
+					9'h0DC: REGS.LWTA1U <= RW_D & LWTAxU_MASK;
+					9'h0DE: REGS.LWTA1L <= RW_D & LWTAxL_MASK;
+					9'h0E0: REGS.SPCTL <= RW_D & SPCTL_MASK;
+					9'h0E2: REGS.SDCTL <= RW_D & SDCTL_MASK;
+					9'h0E4: REGS.CRAOFA <= RW_D & CRAOFA_MASK;
+					9'h0E6: REGS.CRAOFB <= RW_D & CRAOFB_MASK;
+					9'h0E8: REGS.LNCLEN <= RW_D & LNCLEN_MASK;
+					9'h0EA: REGS.SFPRMD <= RW_D & SFPRMD_MASK;
+					9'h0EC: REGS.CCCTL <= RW_D & CCCTL_MASK;
+					9'h0EE: REGS.SFCCMD <= RW_D & SFCCMD_MASK;
+					9'h0F0: REGS.PRISA <= RW_D & PRISA_MASK;
+					9'h0F2: REGS.PRISB <= RW_D & PRISB_MASK;
+					9'h0F4: REGS.PRISC <= RW_D & PRISC_MASK;
+					9'h0F6: REGS.PRISD <= RW_D & PRISD_MASK;
+					9'h0F8: REGS.PRINA <= RW_D & PRINA_MASK;
+					9'h0FA: REGS.PRINB <= RW_D & PRINB_MASK;
+					9'h0FC: REGS.PRIR <= RW_D & PRIR_MASK;
+					9'h0FE: REGS.RSRV1 <= RW_D & RSRV_MASK;
+					9'h100: REGS.CCRSA <= RW_D & CCRSA_MASK;
+					9'h102: REGS.CCRSB <= RW_D & CCRSB_MASK;
+					9'h104: REGS.CCRSC <= RW_D & CCRSC_MASK;
+					9'h106: REGS.CCRSD <= RW_D & CCRSD_MASK;
+					9'h108: REGS.CCRNA <= RW_D & CCRNA_MASK;
+					9'h10A: REGS.CCRNB <= RW_D & CCRNA_MASK;
+					9'h10C: REGS.CCRR <= RW_D & CCRR_MASK;
+					9'h10E: REGS.CCRLB <= RW_D & CCRLB_MASK;
+					9'h110: REGS.CLOFEN <= RW_D & CLOFEN_MASK;
+					9'h112: REGS.CLOFSL <= RW_D & CLOFSL_MASK;
+					9'h114: REGS.COAR <= RW_D & COxR_MASK;
+					9'h116: REGS.COAG <= RW_D & COxG_MASK;
+					9'h118: REGS.COAB <= RW_D & COxB_MASK;
+					9'h11A: REGS.COBR <= RW_D & COxR_MASK;
+					9'h11C: REGS.COBG <= RW_D & COxG_MASK;
+					9'h11E: REGS.COBB <= RW_D & COxB_MASK; 
 					default:;
 				endcase
 			end

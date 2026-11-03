@@ -102,7 +102,10 @@ Details of each technique:
    counter update at the next dot uses the held value. The effect is a one-dot difference for a register change made
    during a fetch; hardware does not define it either. The simulation issues these writes in vertical blank only; all
    other registers (scroll values, windows, priorities, colour calculation, table addresses) are written at any time and
-   match clock for clock.
+   match clock for clock. In VDP2P the bank access decode of a dot (`VAD`) is registered at DOT_CE_R from the cycle
+   pattern, RAMCTL, BGON, SCRCTL and TVMD.HRESO as they are in the dot before, so a write to one of them is seen from
+   the next dot. After a soft reset `CT_FETCH` (not cleared by RES_N, in the golden either) keeps the coefficient decode
+   running in the blanking of the first line, so the harness waits one line before those writes.
 3. **Reset.** Rotation per-table state, the rotation parameter RAM and the pipeline RAMs are not cleared by RST_N (they
    power up zero). The original reset Xsp/Ysp/Xp/Yp/dX/dY/Xst/Yst; they are rewritten from VRAM before use on every
    line. Map and cycle pattern tables clear on RST_N and RES_N as before (valid flags).
@@ -112,9 +115,18 @@ Details of each technique:
 6. **Timing closure is not examined.** MLAB asynchronous reads and the M10K tap outputs lengthen some paths; the map
    run only measures resources. The tap RAMs are registered (no half-cycle paths); nothing uses the falling edge.
    Since the MLAB to M10K step the `*_FERAM` reads do; the in-system timing of VDP2P and its multicycle set are in
-   docs/fit-status.md, VDP2P multicycle.
+   docs/fit-status.md, VDP2P multicycle and VDP2P timing fixed in RTL.
+7. **Register write timing.** A CPU register write is applied at the CE_R edge after the request, one clk_sys after the
+   golden's CE_F edge, so the register file changes at CE_R edges only. The harness applies the same timing to the
+   golden copy (`sim/vdp2/regwr_patch.py`, as `lane_patch.py` does for the VRAM write drain).
+8. **Rotation per-table words** (`r_dx` ... `r_spy`) are read at the CE_R edge that starts a slot. A word written on
+   that edge (start values at DOT_CE_R, accumulation at the end of slots 0 and 2) reads undefined data in that slot;
+   those slots do not use it (other RAM in slots 1 and 3, RBG_CALC off when the start values are written).
 
 ## Differential simulation
+
+The REF copy gets VDP2P's VRAM lane drain (`lane_patch.py`) and register write timing (`regwr_patch.py`); `GOLD` is
+upstream unchanged and only checks VRAM contents.
 
 `make -C sim vdp2` (Verilator): the golden VDP2 (copied to `sim/vdp2/build`, modules and package renamed `REF_*`,
 `synopsys translate_off` regions removed in both) and the rewritten one run side by side with identical stimulus; all

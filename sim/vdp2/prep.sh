@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-build}; shift || true
-GOLD=../../ref/Saturn_MiSTer/rtl/Saturn/VDP2
+GOLD=${VDP2_GOLD:-../../ref/Saturn_MiSTer/rtl/Saturn/VDP2}
 DUT=${DUT:-VDP2P}
 CUR=${VDP2P_DIR:-../../src/fpga/saturn/Saturn/$DUT}
 rm -rf $OUT/ref $OUT/cur; mkdir -p $OUT/ref $OUT/cur
@@ -42,3 +42,4 @@ fi
 rm -rf $OUT/gold; mkdir -p $OUT/gold
 for f in VDP2.sv VDP2_pkg.sv VDP2_mem.sv; do sed 's/REF_/GOLD_/g' $OUT/ref/$f > $OUT/gold/$f; done
 [ "$LANEPATCH" = 0 ] || python3 lane_patch.py $OUT/ref/VDP2.sv
+[ "$REGWRPATCH" = 0 ] || python3 regwr_patch.py $OUT/ref/VDP2.sv

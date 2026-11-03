@@ -1827,6 +1827,18 @@ package VDP2P_PKG;
 		bit         LN;
 	} VRAMAccessState_t;
 	typedef VRAMAccessState_t VRAMAccessPipeline_t [5];
+	//bank access decode of one dot (the access flags of VRAMAccessState_t), registered at DOT_CE_R
+	typedef struct packed
+	{
+		bit [ 3: 0] NxA0PN, NxA1PN, NxB0PN, NxB1PN;
+		bit [ 3: 0] NxA0CH, NxA1CH, NxB0CH, NxB1CH;
+		bit [ 1: 0] NxA0VS, NxA1VS, NxB0VS, NxB1VS;
+		bit [ 1: 0] RxA0PN, RxA1PN, RxB0PN, RxB1PN;
+		bit [ 1: 0] RxA0CH, RxA1CH, RxB0CH, RxB1CH;
+		bit [ 1: 0] RxA0CT, RxA1CT, RxB0CT, RxB1CT;
+		bit [ 1: 0] RxCRCT;
+		bit         AxNA, BxNA;
+	} VADec_t;
 	
 	typedef struct
 	{
