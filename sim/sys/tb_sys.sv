@@ -835,6 +835,51 @@ always @(posedge clk_74a) begin : stmon
 	if (occ > fifo_max) fifo_max = occ;
 end
 
+// +SMPC_CMD_US=<t> [+SMPC_CMD=<hex>, default 0E CKCHG352]: at t us the SMPC_SERV sees a COMREG write of the command,
+// as if the SH-2 had written it (backdoor: COMREG, the command event and the timestamp, one clk_sys)
+initial begin : smpc_inject
+	longint t;
+	integer c;
+	reg [15:0] ts_v;
+	if ($value$plusargs("SMPC_CMD_US=%d", t)) begin
+		if (!$value$plusargs("SMPC_CMD=%h", c)) c = 'h0E;
+		#(64'd1000000 * t);
+		@(posedge clk_sys);
+		ts_v = `SAT.SMPC.TICKS[15:0];
+		$fdisplay(ftrace, "%0t INJECT SMPC command %02h", $time, c[7:0]);
+		$display("%0t ps  INJECT SMPC command %02h", $time, c[7:0]);
+		force `SAT.SMPC.COMREG = c[7:0]; force `SAT.SMPC.ev_cmd = 1'b1; force `SAT.SMPC.TS = ts_v;
+		@(posedge clk_sys); #1;
+		release `SAT.SMPC.COMREG; release `SAT.SMPC.ev_cmd; release `SAT.SMPC.TS;
+	end
+end
+
+// SMPC output pins, and per 1 ms window: VS_N / DE (HBL_N & VBL_N) / IRL / ACS2_N toggles, as the debug overlay's
+// activity detectors count them (docs/debug-overlay.md), plus the overlay's own dbg_alive
+reg [8:0] pins_q = 9'hx;
+always @(posedge clk_sys) if (`SAT.SMPC.PINS !== pins_q) begin
+	pins_q <= `SAT.SMPC.PINS;
+	$fdisplay(ftrace, "%0t SMPC PINS = %03h (SYSRES_N %b SNDRES_N %b MSHNMI_N %b SSHRES_N %b DOTSEL %b)", $time, `SAT.SMPC.PINS,
+		`SAT.SMPC.PINS[4], `SAT.SMPC.PINS[5], `SAT.SMPC.PINS[1], `SAT.SMPC.PINS[2], `SAT.SMPC.PINS[7]);
+end
+reg  vs_a = 1'b0, de_a = 1'b0, irl_a = 1'b0, cd_a = 1'b0;
+integer n_vs = 0, n_de = 0, n_irl = 0, n_cd = 0, n_kon = 0;
+initial begin : act_win
+	if ($test$plusargs("ACTLOG")) forever begin
+		#(64'd1000000000);
+		$fdisplay(ftrace, "%0t ACT 1ms VS %0d DE %0d IRL %0d ACS2 %0d alive %b pll_locked %b SYSRES_N %b SNDRES_N %b", $time,
+			n_vs, n_de, n_irl, n_cd, dut.saturn.dbg_alive, dut.saturn.pll_locked, `SAT.SYSRES_N, `SAT.SNDRES_N);
+		n_vs = 0; n_de = 0; n_irl = 0; n_cd = 0;
+	end
+end
+always @(posedge clk_sys) begin
+	vs_a <= `SAT.VS_N; de_a <= `SAT.HBL_N & `SAT.VBL_N; irl_a <= &`SAT.MSHIRL_N; cd_a <= `SAT.ACS2_N;
+	if (vs_a != `SAT.VS_N) n_vs++;
+	if (de_a != (`SAT.HBL_N & `SAT.VBL_N)) n_de++;
+	if (irl_a != &`SAT.MSHIRL_N) n_irl++;
+	if (cd_a != `SAT.ACS2_N) n_cd++;
+end
+
 // dot clock / video standard as pll_lite sees them (NTSC: clk_ram 107.5 MHz at 320 wide, 114.5 MHz at 352 wide)
 reg [1:0] mode_q2 = 2'bxx;
 always @(posedge clk_74a) if ({dut.saturn.SMPC_DOTSEL, dut.saturn.PAL} !== mode_q2) begin

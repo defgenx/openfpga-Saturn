@@ -44,6 +44,7 @@ module SH7604P_WDT
 	reg  [2:0] S_CKS;
 	reg        S_WOVF, S_RSTE, S_RSTS;
 	reg        WRES;
+	reg        OVF_Q;
 	
 	wire RUN = EN & CE_R & ~DISABLE;
 	wire CNT_FF = &WTCNT;
@@ -94,13 +95,22 @@ module SH7604P_WDT
 		end
 		else if (RUN) begin
 			if (NMI && !NMI_OLD && SBY) SBY_TME <= 1;
-			if (OVF) SBY_TME <= 0;
+			if (OVF_Q) SBY_TME <= 0;
 		end
 	end
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) NMI_OLD <= 0;
 		else if (RUN && RES_N) NMI_OLD <= NMI;
 	end
+
+	// DISABLE: no settling count, the NMI edge itself ends software standby (else SLEEP with SBYCR.SBY never returns:
+	// the BIOS clock change SYS_CHGSYSCK sleeps in standby until the SMPC's NMI). docs/cuts.md POCKET_CUT_SH2_WDT.
+	reg SBY_WAKE, NMI_D;
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin SBY_WAKE <= 0; NMI_D <= 0; end
+		else if (EN && CE_R) begin NMI_D <= NMI; SBY_WAKE <= DISABLE && SBY && NMI && !NMI_D; end
+	end
+	assign OVF = OVF_Q | SBY_WAKE;
 	
 	//Registers
 	wire REG_SEL = (IBUS_A[31:4] == 28'hFFFFFE8);
@@ -119,7 +129,7 @@ module SH7604P_WDT
 			WTCNT <= 8'h00;
 			S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
 			S_WOVF <= 0; S_RSTE <= 0; S_RSTS <= 0;
-			OVF <= 0;
+			OVF_Q <= 0;
 			TM_EN <= 0;
 			OVF_SET <= 0;
 		end
@@ -127,21 +137,21 @@ module SH7604P_WDT
 			WTCNT <= 8'h00;
 			S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
 			S_WOVF <= 0; S_RSTE <= 0; S_RSTS <= 0;
-			OVF <= 0;
+			OVF_Q <= 0;
 			TM_EN <= 0;
 			OVF_SET <= 0;
 		end
 		else if (RUN) begin
 			if (CLK2_CE) TM_EN <= S_TME | SBY_TME;
 			
-			OVF <= 0;
+			OVF_Q <= 0;
 			if (!TM_EN) begin
 				WTCNT <= 8'h00;
 				S_OVF <= 0;
 			end else if (WT_CE) begin
 				WTCNT <= WTCNT + 8'd1;
 				if (CNT_FF) begin
-					if (SBY_TME) OVF <= 1;
+					if (SBY_TME) OVF_Q <= 1;
 					else if (!S_WTIT) S_OVF <= 1;
 					else begin
 						S_WOVF <= 1;

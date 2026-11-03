@@ -113,8 +113,11 @@ Dracula X, Virtual Hydlide, ...) depend on the timings above.
 ## POCKET_CUT_SH2_WDT
 
 Removes the watchdog timer of both CPUs (macro forces `WDT_DISABLE` for both). WTCSR/WTCNT/RSTCSR read 0, writes are
-ignored, no interval-timer interrupt, no watchdog reset, `WDTOVF_N` stays high. The standby wake-up use of the WDT is
-gone with it.
+ignored, no interval-timer interrupt, no watchdog reset, `WDTOVF_N` stays high. Software standby still ends on NMI:
+without the WDT there is no oscillation-settling count, so `SH7604P_WDT` pulses `OVF` on the NMI request edge while
+`SBY` is set and `SH7604P_MSBY` leaves standby at once. This is needed: the BIOS clock change (`SYS_CHGSYSCK`, BIOS
+0x4C8, also run by the BIOS NMI handler at 0x420) writes SBYCR.SBY = 1, issues CKCHG320/352 and executes SLEEP until the
+SMPC's NMI; without the wake-up the master SH-2 never returns (interrupts are masked while `SBY` is set).
 
 Sim (72 runs, 18 programs x 4 environments): **68 match exactly**; `t_intc` (all 4 environments) differs from clock
 ~24,600 / 24,900 / 40,800 / 28,600, the WDT interval-timer test: the interrupt at vector 0x70 never arrives and
