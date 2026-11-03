@@ -86,6 +86,10 @@ wire [3:0] sq = x[8:5];
 wire [23:0] sq_c = dbg_g[sq] ? 24'h00FF00 : dbg_y[sq] ? 24'hFFFF00 : 24'hFF0000;
 
 
+`ifdef POCKET_DEBUG_NOROW
+// squares only: no hex text row (docs/debug-overlay.md)
+wire       t_on = 1'b0, t_bg = 1'b0;
+`else
 // ---- hex text block: 2 rows x 8 digits at x 32..159, y 16..47, cell 16 x 16, glyph 3 x 5 scaled 4 x 2.
 // Digits come from a 32 x 4 M10K buffer written in clk_sys; the font is a 128 x 3 M10K ROM.
 (* ramstyle = "M10K" *) reg [15:0] tbuf [0:1];
@@ -195,6 +199,8 @@ always @(posedge clk_vid) begin
 	t_bg   <= t_p2[6];
 	t_on   <= t_p2[6] & t_p2[5] & (t_p2[4:3] != 2'd3) & t_bits[2 - t_p2[4:3]];
 end
+
+`endif
 
 always @(posedge clk_vid) begin
 	de_d <= s_de;

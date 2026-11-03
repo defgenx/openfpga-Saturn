@@ -24,8 +24,8 @@ never green). Legend, left to right:
 | 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
-| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100, reads both back (within 320 clk_ram of init done, before the SH-2 runs; the check owns the sound RAM port meanwhile) and both match; red if any mismatch or not finished |
-| 16 | TOC | level | disc TOC loaded (`disc_ok`) |
+| 15 | SDRAM self-check | level | always red: the self-check in `sdram_pocket` is compiled out (`ifdef POCKET_NEVER`, it did not fit); with it, after SDRAM init `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100 and reads both back, green if both match |
+| 16 | TOC | level | disc TOC loaded (`disc_ok`; wired with `POCKET_CUT_CDB_LLE`, which `ap_core.qsf` sets, else always red) |
 
 Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and
 3 red means the BIOS did not arrive (the FIFO overflowed if the loader was not ready). 7 and 14 red with 2 green means
@@ -44,16 +44,19 @@ one row of 8 hex digits: the master SH-2 program counter.
  P P P P P P P P      MSH PC, 32 bit
 ```
 
+- The default row. `POCKET_DEBUG_SNDROW=1` shows the debug6 row instead (below).
+- `POCKET_DEBUG_NOROW=1` leaves the row out (squares only). That is the shipped debug build: with the row the fit needs
+  1,852 of 1,848 LABs.
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
   shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
-- Digits live in an 8 x 4 M10K buffer rewritten continuously by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
+- Digits live in a two-word 16 bit M10K buffer, both words rewritten alternately every clk_sys by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
   in `pocket_video`. Squares 7 (MSH), 8 (SSH) and 11 (VBL) have no activity detector in this build (always red).
 - The normal build leaves no room for more: with the PC row alone the fit is 1,847 / 1,848 LABs. A version with
   COMREG/SF, IRL, IST (and IMS, TVMD, frame counter) needed 1,851 to 1,852 LABs. The taps for those exist
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
 - `sim/platform/tb_overlay.sv` checks the rendered digits against an independent copy of the font for a known buffer.
 
-## debug6: sound RAM word 0 handshake
+## debug6: sound RAM word 0 handshake (`POCKET_DEBUG_SNDROW=1`)
 
 ```
  W W W W R R R R        W = data of the last SH-2 write to 0x25A00000 (B-bus, as seen at SCSPP)
