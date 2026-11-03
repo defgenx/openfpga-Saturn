@@ -62,8 +62,7 @@ the `.toc` (and the `.img`), together with the game's `.bin` track files, into `
 On the Pocket, pick `Game (USA).json` as the disc. If the tracks sit in a subfolder of `Assets/saturn/`, pass
 `--data-path <subfolder>`. CHD is not supported.
 
-Backup RAM is saved to the card (`saturn_bram.sav`, 32 KB; `saturn_cart.sav`, 512 KB for the backup
-cartridge).
+Backup RAM is not saved to the card yet: saves last until the core is closed.
 
 ## 4. Start it
 
