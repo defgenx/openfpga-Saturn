@@ -111,6 +111,8 @@ Details of each technique:
 5. **DEBUG outputs.** The `ifdef DEBUG` outputs of removed signals (priority per layer, Xsp/Xp/dX..) are not driven.
 6. **Timing closure is not examined.** MLAB asynchronous reads and the M10K tap outputs lengthen some paths; the map
    run only measures resources. The tap RAMs are registered (no half-cycle paths); nothing uses the falling edge.
+   Since the MLAB to M10K step the `*_FERAM` reads do; the in-system timing of VDP2P and its multicycle set are in
+   docs/fit-status.md, VDP2P multicycle.
 
 ## Differential simulation
 

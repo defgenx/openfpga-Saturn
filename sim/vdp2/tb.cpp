@@ -581,6 +581,9 @@ int main(int argc, char** argv) {
 	}
 	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d mism=%ld %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, mism_total, failed ? "FAIL" : "PASS");
 	if (getenv("VDP2_COV")) { for (int k = 0; k < 16; k++) printf("cov%d=%ld ", k, covc[k]); printf("\n"); }
+#ifdef MC_CHECK
+	top->final();
+#endif
 	delete top;
 	return failed ? 1 : 0;
 }

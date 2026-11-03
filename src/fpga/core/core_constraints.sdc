@@ -46,10 +46,29 @@ foreach cpu {MSH SSH} {
 	set_multicycle_path -hold  -fall_from [get_clocks $clk_sys] -to $cpu_all 1
 }
 
-# VDP2P advances on CE_R (every second clk_sys) like the golden VDP2: register-to-register paths inside it have two
-# clk_sys periods (docs/vdp2-rewrite.md: -1.47 ns at one period, all failing paths are clock-enable paths).
-set_multicycle_path -setup -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 2
-set_multicycle_path -hold  -from [get_registers "*|VDP2|*"] -to [get_registers "*|VDP2|*"] 1
+# VDP2P registers written only at CE_R edges (CE_R, DOT_CE_R, DOT_CE_F): two clk_sys between them. Everything else in
+# VDP2 (every-clock, CPU-port/CE_F and RAM registers) stays single-cycle. A name goes in only with its proof in
+# docs/fit-status.md, VDP2P multicycle.
+set vdp2_ce_r {
+	DOTCLK_DIV HCT9 HCT VCT VCT0 HB_INT VB_INT H_CNT V_CNT HBLANK VBLANK ODD HSYNC VSYNC F DISP_INT LSMD INTERLACE_INT
+	HRES VRES_LATCH0 VRES_LATCH1 VRES DISP HTIM VTIM CELLX NPN_FETCH NCH_FETCH NVCS_FETCH RBG_FETCH RBG_CALC RCTA_FETCH
+	RCTB_FETCH RCH_FETCH LS_FETCH LW_FETCH RPA_FETCH RPB_FETCH BACK_FETCH REFRESH DOT_FETCH CT_FETCH LN_FETCH NOACCESS
+	SCRNX0 SCRNX SCRNY VA_PIPE NxPN_CYC_BY_T VRAMA0_A VRAMA1_A VRAMB0_A VRAMB1_A VRAMA_WE VRAMB_WE VRAMA0_RD VRAMA1_RD
+	VRAMB0_RD VRAMB1_RD VRAM_READ_PIPE VRAMA_D VRAMA_ALLOW VRAMB_ALLOW NBG_PN_FETCH VRAM_BANK LS_VAL_OFFS LS_TBL_OFFS
+	LS_POS VS_OFFS LW_POS LW_ADDR RP_POS BS_ADDR LN_ADDR NBG_PN_EN NBG_CH_EN NBG_CH_CNT NBG_BM_CNT NBG_PN_CNT RBG_CT_EN
+	VRAMA0_Q VRAMA1_Q VRAMB0_Q VRAMB1_Q RA0_BUF RA1_BUF RB0_BUF RB1_BUF VRAM_BANK_2 CX XS NVCSY MOSAIC_VCNT NSX NSY NY
+	LZMX NMOSY SUMX SUMY CTD ACCX ACCY SUBXA SUBXB SUBYA SUBYB MULXA MULYA KAst KAy KAx RES_LATCH RxX RxY RPxLCSD RxCTTP
+	R0RPMSB R0RP_PIPE HPOS_PIPE FBDO WxSX WxEX WHIT34 BACK_DC LINE_PAL PN_PIPE VS BG_PIPE NBG2_PN_PIPE NBG3_PN_PIPE
+	RBG_PIPE RBG_PN_PIPE RBG_TP_PIPE RBG_CH RBG_DC RBG_CDP NDC_P NCX MOSAIC_HCNT N0DOTDC N1DOTDC N2DOTDC N3DOTDC R0DOTDC
+	N0DOTCDP N1DOTCDP N2DOTCDP N3DOTCDP R0DOTCDP SDOT DOT_FST DOT_SEC DOT_THD DOT_FTH DC CC_FST DC_FST_LATCH
+	DC_SEC_LATCH DC_THD_LATCH CFST CSEC CCRT CCENFST COEN COSL SDEN CSEC_PREV1 CSEC_PREV2 BOKEN_PREV1 BOKEN_PREV2
+	HB_INT2 HB_INT3 CT_CRAM_A CT_CRAM_Q REGS.HCNT REGS.VCNT REGS.TVSTAT REG_DO REG_RD_DELAY EXLAT_N_OLD WE_N DQM BURST
+}
+set vdp2_pat [list "*|VDP2|*|wp\[*\]"]
+foreach n $vdp2_ce_r { lappend vdp2_pat "*|VDP2|$n" "*|VDP2|$n\[*\]*" "*|VDP2|$n.*" "*|VDP2|$n~*" }
+set vdp2_mc [get_registers -nowarn $vdp2_pat]
+set_multicycle_path -setup -from $vdp2_mc -to $vdp2_mc 2
+set_multicycle_path -hold  -from $vdp2_mc -to $vdp2_mc 1
 
 # SCSPP slot pipeline. SCSP_CE (saturn_pocket) is SCSP_2X_CE & SCSP_DIV: SCSP_2X_CE is a ce_gent pulse at 45.1584 MHz
 # out of clk_sys (53.4 .. 57.3 MHz, so never two clk_sys in a row) and SCSP_DIV halves it, so two SCSP_CE pulses are

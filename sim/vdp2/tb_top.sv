@@ -96,6 +96,11 @@ module tb_top (
 
 
 
+`ifdef MC_CHECK
+	// VDP2 multicycle of core_constraints.sdc (vdp2_ce_r): each register there changes only at CE_R edges (mc_gen.py)
+	`include "mc_vdp2.svh"
+`endif
+
 	// coverage probes on the golden copy
 	wire hires = u_ref.HRES[1];
 	assign cov[0] = u_ref.REGS.CCCTL.EXCCEN & u_ref.DOT_SEC.CCEN & u_ref.DOT_FST.LCEN & u_ref.DOT_THD.CCEN & ~hires;
