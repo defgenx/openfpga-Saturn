@@ -322,7 +322,7 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name ROUTER_LCELL_INSERTION_AND_LOGIC_DUPLICATION OFF
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT HIGH
-set_global_assignment -name SEED 1
+set_global_assignment -name SEED 2
 # clk_sys and clk_ram on two of the four output counters next to the PLL: a counter at Y4..Y8 adds 0.55 ns to its clock,
 # which is then skew on every clk_sys <-> clk_ram path (docs/fit-status.md, PLL output counters)
 set_location_assignment PLLOUTPUTCOUNTER_X54_Y0_N1 -to "core_top:ic|saturn_pocket:saturn|pll_sys:pll|altera_pll:altera_pll_i|altera_cyclonev_pll:cyclonev_pll|counter[0].output_counter"
