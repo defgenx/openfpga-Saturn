@@ -97,11 +97,12 @@ wire [15:0] dq_cap = cap_p;
 // ------------------------------------------------------------------ frame counter
 reg [3:0] fc = '0;           // cycle index after the last edge
 reg       sync_old = 1'b0;
-wire [3:0] slot = fc + 4'd1; // pin cycle generated at this edge
+reg [3:0] slot = 4'd1;       // pin cycle generated at this edge: fc + 1, kept as its own register (clk_ram timing)
 
 always @(posedge clk) begin
 	sync_old <= sync;
 	fc <= (sync && !sync_old) ? 4'd7 : fc + 4'd1;   // sync is high from F+6, first sampled at edge F+7
+	slot <= (sync && !sync_old) ? 4'd8 : slot + 4'd1;
 end
 
 // ------------------------------------------------------------------ init

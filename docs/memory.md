@@ -98,7 +98,8 @@ a third of the speed and VBlank erase on it loses writes. The SRAM part number i
 ### Schedule
 
 One frame = 16 clk_ram = one dot, locked to `DCE_R`. Cycle numbers count from F = `DOT_CE_F`, the edge at which VDP2
-changes its addresses. `sync` is high from F+6, so the frame counter is set to 7 when it is first seen. All commands
+changes its addresses. `sync` is high from F+6, so the frame counter is set to 7 when it is first seen (`slot`, the
+cycle generated at an edge, is `fc + 1` kept as its own register so the command decode starts from flip-flops). All commands
 are registered on the pins; the SDRAM clock is the inverted clk (DDIO), so it samples half a cycle later.
 
 | Cycle | Command |
