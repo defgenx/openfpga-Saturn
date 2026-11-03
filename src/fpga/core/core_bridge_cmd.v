@@ -219,7 +219,9 @@ always @(posedge clk) begin
     target_dataslot_getfile_1 <= target_dataslot_getfile;
     target_dataslot_openfile_1 <= target_dataslot_openfile;
     
-    if(status_setup_done & ~status_setup_done_1) begin
+    // Ready to Run only before Reset Exit: a PLL relock while running would queue a 0x0140 the host never answers,
+    // and every later dataslot read waits behind it in TARG_ST_WAITRESULT_RTR (docs/integration.md, "Host handshake")
+    if(status_setup_done & ~status_setup_done_1 & ~status_running) begin
         status_setup_done_queue <= 1;
     end
     if(target_dataslot_read & ~target_dataslot_read_1) begin

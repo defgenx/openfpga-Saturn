@@ -189,6 +189,7 @@ task automatic poll_target();
 			if (t0[31:16] == 16'h636D) begin
 				if (t0[15:0] == 16'h0140) begin                                             // ready to run
 					n_rtr++;
+					$fdisplay(ftrace, "%0t HOST Ready to Run #%0d seen", $time, n_rtr);
 					if (n_rtr == 1 || rtr_always) bridge_write(32'hF8001000, 32'h6F6B0000);
 					else if (!rtr_late) begin rtr_late = 1; $fdisplay(ftrace, "%0t HOST Ready to Run #%0d after start, not answered", $time, n_rtr); end
 				end
@@ -832,6 +833,28 @@ always @(posedge clk_74a) begin : stmon
 	occ = int'(dut.saturn.mem.loader.wbin) - int'(dut.saturn.mem.loader.rbin);
 	if (occ < 0) occ += 1 << $bits(dut.saturn.mem.loader.wbin);
 	if (occ > fifo_max) fifo_max = occ;
+end
+
+// dot clock / video standard as pll_lite sees them (NTSC: clk_ram 107.5 MHz at 320 wide, 114.5 MHz at 352 wide)
+reg [1:0] mode_q2 = 2'bxx;
+always @(posedge clk_74a) if ({dut.saturn.SMPC_DOTSEL, dut.saturn.PAL} !== mode_q2) begin
+	mode_q2 <= {dut.saturn.SMPC_DOTSEL, dut.saturn.PAL};
+	$fdisplay(ftrace, "%0t MODE dotsel %b pal %b, SDRAM tRP-short ACTs so far %0d", $time, dut.saturn.SMPC_DOTSEL, dut.saturn.PAL, sdmodel.n_trp_short);
+end
+
+// +BUSLOG=<file>: every change of the bridge pins (host drive and core_bridge_cmd read data) until status_running
+// rises, for cycle-level comparisons of two builds' start-up
+integer fbus = 0;
+reg [97:0] bus_q = '0;
+initial begin : buslog_open
+	string p;
+	if ($value$plusargs("BUSLOG=%s", p)) fbus = $fopen(p, "w");
+end
+always @(posedge clk_74a) if (fbus != 0) begin
+	bus_q <= {bridge_wr, bridge_rd, bridge_addr, bridge_wr_data, bridge_rd_data};
+	if ({bridge_wr, bridge_rd, bridge_addr, bridge_wr_data, bridge_rd_data} != bus_q)
+		$fdisplay(fbus, "%0t wr %b rd %b a %08h wd %08h rd_data %08h", $time, bridge_wr, bridge_rd, bridge_addr, bridge_wr_data, bridge_rd_data);
+	if (dut.status_running) begin $fdisplay(fbus, "%0t status_running", $time); $fclose(fbus); fbus = 0; end
 end
 
 // ------------------------------------------------------------------ run control and summary
