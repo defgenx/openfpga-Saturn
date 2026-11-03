@@ -439,6 +439,7 @@ for the measured slack.
 | `mem-long` | 66 ms retention with the 512 row scrub of bank 3 | pass |
 | `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
 | `tb_ddram` ring | 3 sectors of 588 bridge words written and read back while the other clients run | 0 errors |
+| `sim/sys`, Hyper Duel, 120 M clk_sys, `+SCUPROBE` (320 wide: clk_ram 107.4 MHz) | v0.2.4 with the old model, v0.2.4 with this model (`+SD_OLDMAP`), this schedule | v0.2.4 / old model: 0 model errors, audio 196,918 SCSP samples (114,785 non-zero), 8 key-ons. v0.2.4 / this model: 182 M model errors (tRAS at every ACT, the missing EMRS), 136,256 read words cut by a WRITE, audio identical to the old-model run (no SCSP read was cut, the VDP2 ones were). This schedule: 0 model errors, 0 cut words, 196,918 samples (112,380 non-zero), 8 key-ons, every SCSP fetch equal to the model (`smp` check), `i2s.raw` / `scsp.raw` / `pocket.raw` differ by at most 3 LSB (RMS 1 against a signal RMS of 63): the run is 7.3 us ahead from boot (TVMD.DISP at 1,945,231,626 ns against 1,945,238,919 ns) |
 
 The SDRAM model follows the AS4C32M16MSA datasheet (section 3); the PSRAM and SRAM models were written here from the
 datasheet values quoted in the other cores' sources and share any misreading with the controllers.
