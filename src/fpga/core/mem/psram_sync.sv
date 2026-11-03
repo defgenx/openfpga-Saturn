@@ -144,7 +144,7 @@ wire        dq_data   = (st == ST_DATA) && cur_we && (w_rem != 2'd0);
 wire [15:0] dq_next   = dq_new ? addr[15:0] : dq_data ? (w_cur ? din[15:0] : din[31:16]) : act_adr[15:0];
 wire        oe_next   = launching || (st == ST_LAT && cur_we) || dq_data
                      || (st == ST_CFG  && tmr >= 4'd1 && tmr <= 4'd7)
-                     || (st == ST_SCFG && tmr >= 4'd1 && tmr <= 4'd10);
+                     || (st == ST_SCFG && tmr >= 4'd1 && tmr <= 4'd12);
 
 task automatic pins_idle;
 	begin
@@ -235,7 +235,9 @@ always @(posedge clk) begin
 		end
 
 		// clocked configuration-register write: slot 0 CRE high, 1 CE#/ADV#/WE# low with the value
-		// on A and DQ (sampled at the next chip edge), 2 ADV#/WE# high, 10 CE# high, 11 CRE low
+		// on A and DQ (sampled at the next chip edge), 2 ADV#/WE# high, 12 CE# high, 13 CRE low.
+		// CE# stays low for a burst-of-one write in the mode the die is in (datasheet fig. 10 note 3):
+		// 10 edges after the latch edge covers fixed code 8 (LC + 1 = 9), the longest another core can leave.
 		ST_SCFG: begin
 			tmr <= tmr + 4'd1;
 			case (tmr[3:0])
@@ -245,8 +247,8 @@ always @(posedge clk) begin
 				p_a <= cop[0] ? 6'b001000 : 6'b000000;
 			end
 			4'd2: begin p_adv_n <= 1'b1; p_we_n <= 1'b1; end
-			4'd10: p_ce_n <= 2'b11;
-			4'd11: begin p_cre <= 1'b0; cfg_next(); end
+			4'd12: p_ce_n <= 2'b11;
+			4'd13: begin p_cre <= 1'b0; cfg_next(); end
 			default: ;
 			endcase
 		end

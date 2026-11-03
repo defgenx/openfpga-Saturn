@@ -318,8 +318,13 @@ with `be` = {enables of word 0, of word 1}, held by the client until the control
 (it never crosses a 128 halfword row). The power-up wait is not in the controller (`INIT_US = 0`): `mem_pocket` holds both
 chips until `sdram_ready` (200 us after `rst_ram`, longer than the 150 us the chips need).
 
-`tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, CE# setup 4 ns, tCEM 4 us, 150 us power-up;
-rules after the PSX model, written independently):
+Each register is written twice, asynchronously with the clock stopped (a power-on die), then clocked (a die another core
+left synchronous). A clocked register write is a burst-of-one write in the mode the die is already in (AS1C4M16PL fig. 10
+note 3), so CE# stays low 10 chip edges after the latch edge: enough for fixed code 8, the longest another core can leave.
+
+`tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, CE# setup 4 ns, tCEM 4 us, 150 us power-up,
+plus the AS1C4M16PL rules cited at each check in `sim/mem/models/psram_model.sv`; `make psram-modes` starts the dies in
+other cores' modes):
 
 | Access | clk_ram cycles | ns |
 |---|---|---|
@@ -345,7 +350,10 @@ chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait
 
 ## 5. SRAM and the CD ring
 
-The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). The CD sector ring (8 slots x 4 KB, docs/cd.md)
+The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). A read drives UB# and LB# low: an x16
+asynchronous SRAM drives a byte of DQ only while its enable is low, and with both high it leaves the bus floating (up
+to v0.2.4 reads ran with both enables high, so every SRAM pixel read returned the floating bus; `sram_model` now
+enforces the rule and `tb_fb` fails with the old strobes). The CD sector ring (8 slots x 4 KB, docs/cd.md)
 is in PSRAM1 at byte 0x108000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
 `rg_*` instead of the SRAM pins.
 
@@ -463,8 +471,10 @@ for the measured slack.
 | `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
 | `tb_ddram` ring | 3 sectors of 588 bridge words written and read back while the other clients run | 0 errors |
 
-The models were written here from the datasheet values quoted in the other cores' sources; they share any
-misreading with the controllers.
+The SDRAM model was written here from the datasheet values quoted in the other cores' sources and shares any misreading
+with the controller. The PSRAM and SRAM models were audited against the AS1C4M16PL-70BIN datasheet (Alliance, Rev 1.0
+Aug 2018) and the generic x16 asynchronous SRAM truth table (byte enables gate reads and writes); the SRAM part and
+speed are still unknown.
 
 ## 10. Untested on hardware, and risks
 
