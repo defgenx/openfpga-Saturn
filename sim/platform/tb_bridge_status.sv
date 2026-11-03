@@ -4,6 +4,7 @@
 // Host: polls Request Status, starts the slot 0 push as soon as the core leaves "booting" (the order the PSX
 // core's APF model uses; nothing in the APF docs says the host waits for "idle"), all complete, Reset Exit,
 // then serves target commands and answers Ready to Run only once (+RTR_ALWAYS answers every one).
+// The RTC registers must survive the 0x0082 that follows the RTC command.
 // Core: PLL lock, RAM ready RAM_US after it, a disc read every 300 us, one relock (pll_lite mode change) at 3 ms.
 `timescale 1ps/1ps
 module tb_bridge_status;
@@ -98,7 +99,7 @@ module tb_bridge_status;
 		res = r[15:0];
 	endtask
 
-	integer rtr_seen = 0;
+	integer rtr_seen = 0, rtc_ok = 0;
 	integer w, early = 0, n_rtr = 0, n_boot_running = 0, rtr_always = 0;
 	reg [15:0] res;
 	reg [31:0] t0, p;
@@ -108,6 +109,13 @@ module tb_bridge_status;
 		while (res == 16'd1) begin repeat (1000) @(posedge clk); cmd(16'h0000, res); end
 		$display("%0t ps  host: status %0d, RAM ready %0d: Reset Enter, slot 0 push", $time, res, ever_ready);
 		cmd(16'h0010, res);
+		// RTC once at boot, then a slot write request: its size parameter goes to the same register 0x24
+		bw(32'hF8000020, 32'd1762128000); bw(32'hF8000024, 32'h20261103); bw(32'hF8000028, 32'h02153000);
+		cmd(16'h0090, res);
+		bw(32'hF8000020, 32'd1); bw(32'hF8000024, 32'd524288);
+		cmd(16'h0082, res);
+		rtc_ok = (icb.rtc_date_bcd == 32'h20261103) && (icb.rtc_time_bcd == 32'h02153000);
+		$display("%0t ps  host: RTC date after a 0x0082 %08h (%s)", $time, icb.rtc_date_bcd, rtc_ok ? "kept" : "overwritten");
 		for (w = 0; w < 1024; w = w + 1) begin       // one word per 88 clk_74a, io_bridge_peripheral's fastest
 			bw(32'h20000000 + 4 * w, w);
 			if (!ever_ready) early = early + 1;
@@ -146,7 +154,7 @@ module tb_bridge_status;
 		#(6_000_000_000);                            // 6 ms
 		$display("Ready to Run commands %0d; status 1/2 answered while running %0d; disc reads issued %0d, completed %0d",
 		         n_rtr, n_boot_running, n_req, n_done);
-		if (n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5) $display("RESULT: PASS");
+		if (rtc_ok && n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5) $display("RESULT: PASS");
 		else $display("RESULT: FAIL");
 		$finish;
 	end
