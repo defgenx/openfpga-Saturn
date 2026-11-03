@@ -1,9 +1,8 @@
 // load_pocket.sv - bridge_loader's ld_* bus (clk_74a) to the ddram_pocket loader port (clk_ram).
 //
 // ld_sel (one-hot, as bridge_loader):  [0] BIOS 512 KB, [1] backup RAM 32 KB, [2] backup cart 512 KB.
-// A 32 bit bridge word crosses in a 512 entry asynchronous FIFO (three M10K) and leaves as 32 bit
-// writes to PSRAM0 byte addresses (docs/memory.md). Nothing leaves before `go` (clk): the words the host pushes
-// before the RAM is ready wait here (docs/integration.md, "Host handshake"):
+// A 32 bit bridge word crosses in a 256 entry asynchronous FIFO (one M10K) and leaves as 32 bit
+// writes to PSRAM0 byte addresses (docs/memory.md):
 //   BIOS         0x000000 + offset            two image words per write, as the file reads (big endian words)
 //   backup RAM   0x100000 + 2 * offset        one byte -> one image word {8'hFF, byte}: 4 bytes = 2 writes
 //   backup cart  0x800000 + 2 * offset        same expansion (the cartridge window base)
@@ -23,7 +22,6 @@ module load_pocket #(
 	input  wire [31:0] ld_data,
 
 	input  wire        clk,                // clk_ram
-	input  wire        go,                 // the RAM accepts writes (sticky)
 	output reg  [23:2] o_addr,
 	output reg  [31:0] o_data,
 	output reg         o_wr,
@@ -33,7 +31,7 @@ module load_pocket #(
 );
 
 // ---------------------------------------------------------------- async FIFO, gray pointers
-localparam int AW = 9;
+localparam int AW = 8;
 reg [58:0] mem [0:(1<<AW)-1];
 reg [AW:0] wbin = '0, wgray = '0;
 reg [AW:0] rbin = '0, rgray = '0;
@@ -82,7 +80,7 @@ assign loading = !empty || st != 2'd0 || o_wr || o_busy;   // until the last wri
 always @(posedge clk) begin
 	o_wr <= 1'b0;
 	case (st)
-	2'd0: if (!empty && go) begin
+	2'd0: if (!empty) begin
 		st <= 2'd1; second <= 1'b0;
 	end
 	2'd1: st <= 2'd2;

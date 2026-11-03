@@ -98,12 +98,6 @@ wire       sdram_ready, p0_idle, p1_idle;
 assign dbg_sdram_ready = sdram_ready;
 assign dbg_psram_ready = p0_idle & p1_idle;
 assign mem_ready = sdram_ready & p0_idle & p1_idle & ~rst_ram;
-// the loader waits for the first mem_ready after an rst_ram: a pulse in mid-load would drop a pending write
-reg        ram_rst_seen = 1'b0, ram_go = 1'b0;
-always @(posedge clk_ram) begin
-	if (rst_ram) ram_rst_seen <= 1'b1;
-	if (ram_rst_seen && mem_ready) ram_go <= 1'b1;
-end
 sdram_pocket sdram (
 	.clk(clk_ram), .init(rst_ram), .sync(sync),
 	.dram_a(dram_a), .dram_ba(dram_ba), .dram_dq_o(dram_dq_o), .dram_dq_oe(dram_dq_oe), .dram_dq_i(dram_dq_i), .dram_dqm(dram_dqm),
@@ -137,7 +131,7 @@ wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy; wire [7:0] l_ovf;
 assign dbg_ld_ovf = |l_ovf;
 load_pocket #(.LD_LITTLE(LD_LITTLE)) loader (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
-	.clk(clk_ram), .go(ram_go), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(l_ovf));
+	.clk(clk_ram), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(l_ovf));
 
 ddram_pocket ddram (
 	.clk(clk_ram), .rst(rst_ram),

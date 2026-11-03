@@ -14,8 +14,8 @@ all: build/tb_audio.vvp build/tb_ce.vvp
 	iverilog -g2012 -DPOCKET_DEBUG_OVERLAY -o build/tb_overlay.vvp tb_overlay.sv $(PLAT)/pocket_video.sv
 	vvp build/tb_overlay.vvp | tee build/overlay.log
 	@grep -q 'RESULT: PASS' build/overlay.log
-	verilator --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD --top-module tb_bridge_status -DFIX \
-	  tb_bridge_status.sv $(CORE)/pocket_status.sv $(CORE)/core_bridge_cmd.v ../../src/fpga/apf/common.v -Mdir build/bs -o tb > build/bs.log 2>&1 || (tail -20 build/bs.log; false)
+	verilator --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD --top-module tb_bridge_status \
+	  tb_bridge_status.sv $(CORE)/core_bridge_cmd.v ../../src/fpga/apf/common.v -Mdir build/bs -o tb > build/bs.log 2>&1 || (tail -20 build/bs.log; false)
 	build/bs/tb | tee build/bridge_status.log
 	@grep -q 'RESULT: PASS' build/bridge_status.log
 build/tb_ce.vvp: tb_ce.sv ../../src/fpga/core/ce_gen.sv

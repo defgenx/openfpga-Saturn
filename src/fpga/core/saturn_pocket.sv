@@ -91,7 +91,7 @@ module saturn_pocket #(
 	output wire        audio_stb,
 
 	output wire        pll_locked_74a,             // clk_74a
-	output wire        setup_ready_74a             // clk_74a: RAM controllers initialised after the first lock, or timeout (sticky)
+	output wire        setup_ready_74a             // clk_74a: PLL locked and the RAM controllers initialised (APF setup done)
 );
 
 // ---------------------------------------------------------------------------------- clocks
@@ -126,38 +126,26 @@ pll_sys_cfg pll_cfg (
 
 assign clk_audio = clk_sys;
 
-wire       rst_ram, download;                // ram_reset (clk_sys)
-// Boot timeline from the first lock (docs/integration.md, "Host handshake"): the RAM initialisation starts once the
-// lock has held 2^10 clk_74a (past pll_lite's power-up mode write) or, if it never holds, 2^12 clk_74a after the
-// first lock; setup is reported at mem_ready after that start, or 2^17 clk_74a (1.77 ms) after the first lock.
-// No path waits for the lock to hold, so a chattering lock flag cannot keep the core at "booting".
-reg [1:0]  lock_s;
-reg        ever_locked = 1'b0;
-reg [10:0] stab = 11'd0;
-reg        pll_stable = 1'b0;               // RAM initialisation may start (sticky)
-reg [17:0] since_lock = 18'd0;
+reg [1:0] lock_s;
+reg       ever_locked = 1'b0;
 always @(posedge clk_74a) begin
 	lock_s <= {lock_s[0], pll_locked};
 	if (lock_s[1]) ever_locked <= 1'b1;
-	if (!lock_s[1]) stab <= 11'd0;
-	else if (!stab[10]) stab <= stab + 1'b1;
-	if (ever_locked && !since_lock[17]) since_lock <= since_lock + 1'b1;
-	if (stab[10] || since_lock[12]) pll_stable <= 1'b1;
 end
 assign pll_locked_74a = lock_s[1];
 
-// The bridge has no back-pressure; load_pocket keeps the words pushed before the RAM is ready (docs/integration.md).
-// A mem_ready from before the rst_ram pulse does not count: the SDRAM controller starts its own init at power-up.
-reg [1:0]  rdy_s, rr_s;
-reg        rr_seen = 1'b0;
+// The host pushes the BIOS right after setup is reported and the bridge has no back-pressure, so setup is
+// reported only once the PSRAM accepts writes (the load FIFO holds 256 words); the timeout keeps a dead
+// RAM from hanging the host.
+reg [1:0]  rdy_s;
 reg        ever_ready = 1'b0;
+reg [17:0] rdy_to = 18'd0;
 always @(posedge clk_74a) begin
 	rdy_s <= {rdy_s[0], mem_ready};
-	rr_s  <= {rr_s[0], rst_ram};
-	if (rr_s[1]) rr_seen <= 1'b1;
-	if ((rdy_s[1] && rr_seen && !rr_s[1]) || since_lock[17]) ever_ready <= 1'b1;
+	if (lock_s[1] && !rdy_to[17]) rdy_to <= rdy_to + 1'b1;
+	if (rdy_s[1] || rdy_to[17]) ever_ready <= 1'b1;
 end
-assign setup_ready_74a = ever_ready;
+assign setup_ready_74a = lock_s[1] & ever_ready;
 
 `ifdef POCKET_PLL_LITE
 wire rst_req_74 = ~reset_n | ~ever_locked;
@@ -223,11 +211,10 @@ end
 wire reset = rst_s[2];
 
 // ---------------------------------------------------------------------------------- reset
+wire rst_ram, download;
 wire loading, mem_ready;
 wire dbg_sdram_ready, dbg_psram_ready, dbg_ld_ovf, dbg_chk_done, dbg_chk_ok;
-reg  [2:0] stab_s = 3'd0;
-always @(posedge clk_sys) stab_s <= {stab_s[1:0], pll_stable};
-ram_reset ramrst (.clk(clk_sys), .reset(reset & stab_s[2]), .loading(loading), .rst_ram(rst_ram), .download(download));
+ram_reset ramrst (.clk(clk_sys), .reset(reset), .loading(loading), .rst_ram(rst_ram), .download(download));
 
 wire boot_busy;
 wire rst_sys = reset | download | rst_ram | boot_busy;
