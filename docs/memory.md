@@ -323,7 +323,7 @@ left synchronous). A clocked register write is a burst-of-one write in the mode 
 note 3), so CE# stays low 10 chip edges after the latch edge: enough for fixed code 8, the longest another core can leave.
 
 `tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, CE# setup 4 ns, tCEM 4 us, 150 us power-up,
-plus the AS1C4M16PL rules listed in the header of `sim/mem/models/psram_model.sv`; `make psram-modes` starts the dies in
+plus the AS1C4M16PL rules cited at each check in `sim/mem/models/psram_model.sv`; `make psram-modes` starts the dies in
 other cores' modes):
 
 | Access | clk_ram cycles | ns |
