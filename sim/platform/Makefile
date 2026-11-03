@@ -26,3 +26,13 @@ build/tb_audio.vvp: tb_audio.sv $(PLAT)/pocket_audio.sv
 	iverilog -g2012 -o $@ tb_audio.sv $(PLAT)/pocket_audio.sv
 clean:
 	rm -rf build
+
+# Quartus branch of pocket_audio_mac (altmult_add) against the simulation branch; needs Altera's altera_mf.v.
+.PHONY: mac-equiv
+mac-equiv:
+	@test -n "$(ALTERA_MF)" || (echo "ALTERA_MF=<path to altera_mf.v>"; false)
+	@mkdir -p build/mac
+	python3 mac_split.py $(PLAT)/pocket_audio.sv $(ALTERA_MF) build/mac
+	iverilog -g2012 -o build/mac/tb.vvp tb_audio_mac.sv build/mac/mac_qis.sv build/mac/mac_sim.sv build/mac/altmult_add_sim.v
+	vvp -n build/mac/tb.vvp | tee build/mac/mac.log
+	@grep -q ', 0 mismatches' build/mac/mac.log
