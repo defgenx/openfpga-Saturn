@@ -7,6 +7,10 @@
 // answered once (+RTR_ALWAYS: every time); the PLL model relocks on every mode change.
 //
 // Plusargs: +BIOS=<file> (image for slot 0), +CYCLES=<clk_sys cycles>, +GAP=<clk_74a per bridge word>,
+//           +LDGAP=<clk_74a between slot 0 words until the core reports setup done; default 86, i.e. one word per
+//           88 clk_74a, the fastest rate of Analogue's io_bridge_peripheral.v>,
+//           +FLICKER_US / +FLICKER_LOW_US / +FLICKER_END_US (PLL lock flag chatter, models/pll_sim.sv),
+//           +MAXUS=<simulated us before the summary and exit>,
 //           +TRACE (every MSH bus cycle in the trace file), +FRAMES=<dir for PPM dumps>
 // Outputs:  build/trace.log (events), stdout (summary).
 //
@@ -106,6 +110,7 @@ sram_model #(.T_AA(0)) srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_
 reg [7:0] bios [0:524287];
 integer   bios_len = 0;
 integer   gap = 32;
+integer   ldgap = 86;
 string    bios_path;
 integer   ftrace;
 longint   cyc = 0;
@@ -203,6 +208,7 @@ initial begin : host
 	bit [31:0] w;
 	if (!$value$plusargs("BIOS=%s", bios_path)) bios_path = "";
 	if (!$value$plusargs("GAP=%d", gap)) gap = 32;
+	if (!$value$plusargs("LDGAP=%d", ldgap)) ldgap = 86;
 	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";
 	rtr_always = $test$plusargs("RTR_ALWAYS");
 	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
@@ -240,7 +246,8 @@ initial begin : host
 	$fdisplay(ftrace, "%0t HOST slot 0 write start", $time);
 	for (i = 0; i < bios_len; i = i + 4) begin
 		bridge_write(32'h20000000 + i, {bios[i], bios[i+1], bios[i+2], bios[i+3]});
-		repeat (gap) @(posedge clk_74a);
+		if (!dut.saturn.ever_ready) ld_early++;
+		repeat (dut.status_setup_done ? gap : ldgap) @(posedge clk_74a);
 	end
 	$fdisplay(ftrace, "%0t HOST slot 0 write end, %0d words, FIFO overflow %0d", $time, bios_len/4, dut.saturn.dbg_ld_ovf);
 	repeat (50) @(posedge clk_74a);
@@ -808,6 +815,25 @@ always @(posedge video_vs) if (frame_no == dumpat) begin : dmp
 	$display("tb_sys: dumped VDP1 VRAM at frame %0d", frame_no);
 end
 
+// ------------------------------------------------------------------ APF status as the core reports it
+// status_setup_done rising edges = Ready to Run commands the core queues; FIFO depth = load_pocket entries in flight
+integer ld_early = 0, st_rise3 = 0, fifo_max = 0;
+longint t_st2 = -1, t_st3 = -1, t_rdy = -1;
+reg [1:0] st_q = 2'b00;
+always @(posedge clk_74a) begin : stmon
+	int occ;
+	st_q <= {dut.status_setup_done, dut.status_boot_done};
+	if ({dut.status_setup_done, dut.status_boot_done} != st_q)
+		$fdisplay(ftrace, "%0t STATUS boot_done %b setup_done %b", $time, dut.status_boot_done, dut.status_setup_done);
+	if (dut.status_boot_done && t_st2 < 0) t_st2 = $time;
+	if (dut.status_setup_done && t_st3 < 0) t_st3 = $time;
+	if (dut.status_setup_done && !st_q[1]) st_rise3++;
+	if (dut.saturn.ever_ready && t_rdy < 0) t_rdy = $time;
+	occ = int'(dut.saturn.mem.loader.wbin) - int'(dut.saturn.mem.loader.rbin);
+	if (occ < 0) occ += 1 << $bits(dut.saturn.mem.loader.wbin);
+	if (occ > fifo_max) fifo_max = occ;
+end
+
 // ------------------------------------------------------------------ run control and summary
 longint max_cycles = 20000000;
 initial begin
@@ -815,6 +841,16 @@ initial begin
 	if ($test$plusargs("TRACE")) trace_all = 1;
 	if ($value$plusargs("FRAMES=%s", frame_dir)) have_dir = 1;
 	if (!$value$plusargs("CYCLES=%d", max_cycles)) max_cycles = 20000000;
+end
+// +MAXUS=<n>: stop after n us of simulated time (the cycle limit counts only out of reset)
+initial begin : tlimit
+	longint max_us;
+	if ($value$plusargs("MAXUS=%d", max_us)) begin
+		#(max_us * 1000000);
+		$display("tb_sys: time limit %0d us reached", max_us);
+		summary();
+		$finish;
+	end
 end
 
 task automatic summary();
@@ -833,6 +869,10 @@ task automatic summary();
 	$display("sdram: read words cut by a WRITE %0d, READ-interrupted bursts %0d, PRECHARGE %0d, tRP below 18 ns %0d",
 	         sdmodel.n_trunc, sdmodel.n_rint, sdmodel.n_pre, sdmodel.n_trp_short);
 	$display("load FIFO overflow %0d, SDRAM ready %b PSRAM ready %b", dut.saturn.dbg_ld_ovf, dut.saturn.dbg_sdram_ready, dut.saturn.dbg_psram_ready);
+	$display("APF status: boot done at %0d ns, setup done at %0d ns (-1: never), setup done rising edges %0d; RAM ready at %0d ns",
+	         t_st2 < 0 ? -1 : t_st2 / 1000, t_st3 < 0 ? -1 : t_st3 / 1000, st_rise3, t_rdy < 0 ? -1 : t_rdy / 1000);
+	$display("load FIFO: %0d slot 0 words pushed before the RAM was ready, at most %0d entries in flight (of %0d)",
+	         ld_early, fifo_max, 1 << ($bits(dut.saturn.mem.loader.wbin) - 1));
 endtask
 
 always @(posedge clk_sys) begin
