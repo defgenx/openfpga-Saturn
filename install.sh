@@ -50,7 +50,7 @@ ask() {
 # ---------------------------------------------------------------------------
 
 TMP=""
-cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
+cleanup() { if [ -n "$TMP" ]; then rm -rf "$TMP"; fi; }   # an && list here would become the exit status
 trap cleanup EXIT
 
 if [ -f "$HERE/dist/Cores/$CORE/saturn.rbf_r" ]; then
