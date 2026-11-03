@@ -19,9 +19,9 @@ build/tb_psram: tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv | build
 psram: build/tb_psram
 	$(VVP) build/tb_psram +N=1500
 
-# the dies start in the mode another core left: our own BCR, sync variable LC3, sync fixed LC6
+# the dies start in the mode another core left: our own BCR, sync variable LC3, sync fixed LC6, sync fixed LC8
 psram-modes: | build
-	@for b in 651F 1D1F 751F; do \
+	@for b in 651F 1D1F 751F 451F; do \
 	  $(IVL) $(FLAGS) -DSTART_BCR=16\'h$$b -o build/tb_psram_$$b tb_psram.sv models/psram_model.sv $(SRC)/psram_sync.sv && \
 	  printf "start BCR %s: " $$b && $(VVP) build/tb_psram_$$b +N=300 | grep -E 'PASS|FAIL'; done
 
