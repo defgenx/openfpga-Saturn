@@ -345,7 +345,10 @@ chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait
 
 ## 5. SRAM and the CD ring
 
-The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). The CD sector ring (8 slots x 4 KB, docs/cd.md)
+The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). A read drives UB# and LB# low: an x16
+asynchronous SRAM drives a byte of DQ only while its enable is low, and with both high it leaves the bus floating (up
+to v0.2.4 reads ran with both enables high, so every SRAM pixel read returned the floating bus; `sram_model` now
+enforces the rule and `tb_fb` fails with the old strobes). The CD sector ring (8 slots x 4 KB, docs/cd.md)
 is in PSRAM1 at byte 0x108000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
 `rg_*` instead of the SRAM pins.
 
