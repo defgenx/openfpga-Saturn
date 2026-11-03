@@ -66,18 +66,24 @@ FIFO has drained.
 
 | id | name | use |
 |---|---|---|
-| 0 | Disc | the game's instance JSON (parameters `0x13`: reloadable + core-specific + instance JSON), first in the list |
-| 1 | BIOS | pushed to bridge `0x20000000` |
+| 0 | BIOS | `sega_101.bin`, core-specific (parameters `0x2`), pushed to bridge `0x20000000` |
+| 1 | Disc | the game's instance JSON (parameters `0x11`: reloadable + instance JSON) |
 | 2 | CD TOC | 2048-byte `.toc`, **pushed** at load to bridge `0x60000000` (no deferload) |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
 | 16..39 | CD file 00..23 | `deferload`; one `.bin` per file of the cue (or one merged `.img`), read on demand |
 
-The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets.
-The APF data.json page requires an instance JSON slot to be a core-specific file (bit 1) and the first slot; the
-`.json` therefore lives in `Assets/saturn/defgenx.Saturn/`, the tracks and `.toc` in `Assets/saturn/common/` (the
-layout jotego's arcade cores ship). `tools/check_json.py` checks both rules.
-**Untested**: how the Pocket selects the instance JSON through slot 0 and `parameters` bit 4. The PSX core's
-`make_pocket_instances.py` shows the folder layout it uses; this has to be checked on hardware.
+The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets. The core
+decodes the pushed slots by bridge address and reads only ids 16..39 by id, so the slot order needs no RTL change.
+
+Card layout (v0.2.4's): the BIOS in `Assets/saturn/defgenx.Saturn/`; each disc's tracks, `.toc` and instance
+`.json` side by side in `Assets/saturn/common/` or one of its subfolders, `data_path` empty. **Hardware evidence** (a Pocket): this data.json, as v0.2.4 shipped it, with the
+instance JSON in `common/` next to its `.toc` and tracks, starts the core. v0.2.5 and v0.2.6 moved the Disc slot
+to id 0 with parameters `0x13` (core-specific) and the JSON to `defgenx.Saturn/`, following the data.json page's
+"core-specific file, only valid in the first slot" wording; that layout does not work on the Pocket, so the rule
+is not applied (`tools/check_json.py` does not check it). Analogue's instance JSON page says the files it lists
+"should be located starting in the same folder as the instance JSON": every slot file resolves from the JSON's
+folder plus `data_path`, and `mktoc.py` refuses a JSON for which that does not hold (section 4). **Untested** on
+hardware: a JSON in another folder with a non-empty `data_path` (`mktoc.py --card --json-dir`).
 
 ## 4. Why no cue parser on the Pocket
 
@@ -95,31 +101,34 @@ mktoc.py game.cue -o out/ [--data-path P] [--ramcart-db saturn_ramcart.txt] [--m
 `--ramcart-db` takes MiSTer's `saturn_ramcart.txt` and puts the 1M/4M RAM cartridge request into the boot header,
 as Main_MiSTer does after its database lookup.
 
-`data_path` (`--data-path`) is the track folder relative to `Assets/saturn/common/`, with a trailing `/`, empty for
-`common/` itself: slots 2 and 16..39 are not core-specific (bit 1 clear), so the Pocket looks for them under
-`common/`, while the instance JSON itself sits in `Assets/saturn/defgenx.Saturn/` (section 3). The track `filename`s
-are relative to the cue's folder; a cue that reaches outside it (`../`) is refused, the APF does not take relative
-paths. **Untested** on hardware, like the rest of section 3.
+`data_path` (`--data-path`) is the tracks' folder seen from the folder the JSON goes to, with a trailing `/`; leave
+it empty and put the JSON next to the tracks (section 3). The track `filename`s are relative to the cue's folder; a
+cue that reaches outside it (`../`) is refused, the APF does not take relative paths. When the files do not
+resolve from `-o` plus `data_path`, mktoc says so.
 
 ```
-mktoc.py --card SD_ROOT [--dry-run] [--ramcart-db saturn_ramcart.txt]
+mktoc.py --card SD_ROOT [--dry-run] [--ramcart-db saturn_ramcart.txt] [--json-dir DIR]
 ```
 
 Card mode, run by `install.sh` / `install.ps1` after the copy (the scripts only find Python and pass the card):
 
 - every `*.cue` under `Assets/saturn/common/` (hidden and `._` files skipped) gets its `.toc` (and merged `.img`)
-  next to it and its JSON in `Assets/saturn/defgenx.Saturn/`, with the `data_path` of its folder. Files are written
-  only when their content changes; a merged `.img` of the right size, newer than every track, is kept as it is.
+  and its JSON (`data_path` empty) next to it. Files are written only when their content changes; a merged `.img`
+  of the right size, newer than every track, is kept as it is. `--json-dir DIR` writes every JSON into
+  `common/DIR` instead, `data_path` then being the tracks' folder relative to it (tracks outside `DIR` are refused).
+- before writing a JSON, every slot filename (and `data_path`) is checked: no `..` or `.` component, no leading
+  `/`, no `\` or `:`, and the file exists at the JSON's folder + `data_path` + filename (a `.toc` / `.img` the
+  same run writes counts). A disc that fails is reported and gets no JSON.
 - the WWF / Road Rash flags and the RAM cart byte of an existing `.toc` are carried over (cart: only when the
   database gives none), so a regeneration does not drop options given by hand.
-- JSON name: the cue's name; when two cues share a name (case-insensitive, FAT ignores case) each is prefixed with
-  its subfolders joined by ` - `, leaving out a last folder equal to the game name (`USA/Game/Game.cue` ->
-  `USA - Game.json`); a remaining clash gets ` (2)`. A JSON in `defgenx.Saturn/` that points at the same `.toc`
-  under the other form of the name (the clash appeared or went away) is renamed `.json.old`.
-- a JSON in `common/` in mktoc's shape (only `magic`/`data_path`/`data_slots`, slot 2 a `.toc`, then 16, 17, ...)
-  is the v0.2.4 layout: after its disc is written to `defgenx.Saturn/` it is renamed `.json.old`. Without its
-  `.cue`, the JSON itself is carried over with the `data_path` of its folder, if all its files are there. Any
-  other `.json`, and a target JSON not in mktoc's shape, is left alone.
+- JSON name: the cue's name. Next to the tracks two discs cannot share it; with `--json-dir`, discs of the same
+  name (case-insensitive, FAT ignores case) are prefixed with their subfolders joined by ` - `, leaving out a last
+  folder equal to the game name (`USA/Game/Game.cue` -> `USA - Game.json`); a remaining clash gets ` (2)`.
+- a mktoc-shaped JSON (only `magic`/`data_path`/`data_slots`, slot 2 a `.toc`, then 16, 17, ...) at the target
+  name is rewritten in place (a v0.2.4 one included). One in `Assets/saturn/defgenx.Saturn/` (v0.2.5, v0.2.6) is
+  matched to its disc by `data_path` and `.toc` name and renamed `.json.old` once that disc's JSON is written;
+  without its `.cue` it is first carried over to its tracks, named after its `.toc`. Any other `.json`, and a
+  target JSON not in mktoc's shape, is left alone.
 - exit status 1 when any disc failed (the others are still written).
 
 ## 5. TOC format (version 2)
@@ -253,8 +262,8 @@ pregap. Disc B: track 1 MODE1/2048.
 
 - Quartus synthesis, timing (57 MHz `clk_sys`, `clk_74a` crossings), any hardware.
 - Real bridge round-trip time and whether one outstanding 2352-byte read keeps up with 2x.
-- Instance JSON selection through slot 0, `bridge_endian_little` byte order (the testbench uses the core_top
-  default, big endian; `BRIDGE_LITTLE` flips it), SRAM timing at the real pins.
+- An instance JSON away from its tracks (non-empty `data_path`, section 3), `bridge_endian_little` byte order
+  (the testbench uses the core_top default, big endian; `BRIDGE_LITTLE` flips it), SRAM timing at the real pins.
 - Behaviour of the Saturn firmware against a ~300 ms `0x22` status in the middle of a read; against the lead-out
   security ring (only checked against the ARM's code, not against a BIOS).
 - Index > 1, track changes inside one commanded read, disc swap while running (a TOC re-push restarts the drive; no
