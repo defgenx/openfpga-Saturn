@@ -37,7 +37,7 @@ module tb;
 	wire [63:0] to_a, from_a, to_b, from_b;
 	wire [31:0] nwr_a, nwr_b;
 
-	pll_lite dut (.clk(clk), .pal(pal), .dotsel(dotsel), .reconfig_to_pll(to_a), .reconfig_from_pll(from_a));
+	pll_lite dut (.clk(clk), .pal(pal), .dotsel(dotsel), .reapply(1'b0), .reconfig_to_pll(to_a), .reconfig_from_pll(from_a));
 	dprio_plant #(.SEED(7)) plant_a (.to(to_a), .from(from_a), .nwr(nwr_a));
 
 	reg         w = 0;

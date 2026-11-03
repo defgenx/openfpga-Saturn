@@ -11,6 +11,7 @@ module pll_lite (
 	input  wire        clk,
 	input  wire        pal,
 	input  wire        dotsel,
+	input  wire        reapply,
 	output wire [63:0] reconfig_to_pll,
 	input  wire [63:0] reconfig_from_pll
 );

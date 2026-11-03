@@ -108,7 +108,6 @@ pll_sys pll (
 `ifdef POCKET_PLL_LITE
 wire PAL;
 wire SMPC_DOTSEL;
-pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(SMPC_DOTSEL), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
 `else
 wire        cfg_waitrequest;
 reg         cfg_write;
@@ -149,6 +148,8 @@ assign setup_ready_74a = lock_s[1] & ever_ready;
 
 `ifdef POCKET_PLL_LITE
 wire rst_req_74 = ~reset_n | ~ever_locked;
+// the mode is re-applied at every host reset, as the altera_pll_reconfig writer below does
+pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(SMPC_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
 `else
 // clk_sys = 12 x VCO^-1: mode picks M (integer) and K (fraction) of the 74.25 MHz reference
 //   M reg: 0x404 = 8, 0x20504 = 9 (low count [15:8], high count [7:0], odd-division bit 17)
@@ -763,9 +764,11 @@ always @(posedge clk_sys) begin
 	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
 end
 wire dbg_tick = &dbg_win;
+reg  [6:0] dbg_tap_q = 7'd0;                   // the Saturn taps, registered once before any overlay logic
+always @(posedge clk_sys) dbg_tap_q <= dbg_tap;
 wire a_irl, a_cd, a_vs, a_de;
-dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[3]), .y(a_irl));
-dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap[4]), .y(a_cd));
+dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[3]), .y(a_irl));
+dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[4]), .y(a_cd));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
 `ifdef POCKET_CUT_CDB_LLE
@@ -776,11 +779,11 @@ wire dbg_toc = 1'b0;
 wire [15:0] dbg_g = {
 	dbg_toc,                                           // 16 TOC loaded
 	dbg_chk_s[1],                                      // 15 SDRAM self-check OK (sound RAM write/read-back)
-	dbg_tap[5],                                        // 14 SMPC released MSH
+	dbg_tap_q[5],                                        // 14 SMPC released MSH
 	1'b0,                                              // 13 CD block (activity)
 	1'b0,                                              // 12 SCU irq (activity)
 	1'b0,                                              // 11 vblank (activity)
-	dbg_tap[6],                                        // 10 VDP2 DISP
+	dbg_tap_q[6],                                        // 10 VDP2 DISP
 	dbg_wramh,                                         //  9 WRAM-H reached
 	2'b00,                                             //  8, 7 SSH, MSH (activity)
 	dbg_psram_ready,                                   //  6 PSRAM init
@@ -793,10 +796,22 @@ wire [15:0] dbg_g = {
 wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH) and 11 (VBL) have no detector in the debug build
 wire dbg_alive = a_vs & a_de;
 
-// hex text row (docs/debug-overlay.md): data of the last SH-2 write and read of sound RAM word 0
+`ifdef POCKET_DEBUG_SNDROW
+// hex text row (docs/debug-overlay.md, debug6): data of the last SH-2 write and read of sound RAM word 0
 wire        dbg_wa = dbg_snd[16];                                  // word 1 = read data
 wire [15:0] dbg_wd = dbg_snd[16] ? dbg_snd[15:0] : dbg_snd[32:17];
 wire        dbg_we = dbg_snd[33] | dbg_snd[16];
+`else
+// hex text row (docs/debug-overlay.md): MSH PC, sampled once per window; the two words are rewritten alternately
+reg  [31:0] dbg_pc = 32'd0;
+reg         dbg_wa = 1'b0;
+always @(posedge clk_sys) begin
+	if (dbg_tick) dbg_pc <= dbg_txt[99:68];
+	dbg_wa <= ~dbg_wa;
+end
+wire [15:0] dbg_wd = dbg_wa ? dbg_pc[15:0] : dbg_pc[31:16];
+wire        dbg_we = 1'b1;
+`endif
 `endif
 
 pocket_video video (
