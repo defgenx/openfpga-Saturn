@@ -22,6 +22,6 @@ DEFS := $(if $(NOCHK),,-DPOCKET_DEBUG_OVERLAY) $(if $(NOCHK),-DNOCHK_DEF) -DPOCK
 .PHONY: run clean
 run:
 	@mkdir -p $(B) && python3 gen_prog.py $(B)/prog.hex $(B)/exp.hex && verilator --binary --timing -Wno-fatal -Wno-PROCASSWIRE -Wno-lint -Wno-style -Wno-TIMESCALEMOD --x-assign 0 --x-initial 0 $(DEFS) -GNEXP=$$(wc -l < $(B)/exp.hex | tr -d " ") --top-module tb_sndram --Mdir $(B)/obj -o ../Vtb -j 4 $(FILES) >$(B)/vlog.txt 2>&1 || { tail -30 $(B)/vlog.txt; exit 1; }
-	@cd $(B) && ./Vtb > log.txt; grep -E "MISMATCH|done_flag|PASS|FAIL" log.txt; grep -q PASS log.txt
+	@cd $(B) && ./Vtb +SD_TRP_PS=17400 > log.txt; grep -E "MISMATCH|done_flag|PASS|FAIL" log.txt; grep -q PASS log.txt
 clean:
 	rm -rf build

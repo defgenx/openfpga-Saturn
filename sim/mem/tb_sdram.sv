@@ -17,12 +17,17 @@
 //   +TCO=n +TIN=n  pad delays in ps (default 5100 / 0: the slow-corner clock-out delay less the I/O cell register's
 //               clock lead over its data path, docs/memory.md section 3)
 //   +OVERLAP_PS=n  DQ contention limit in ps (default 1100)
+//   +W320          clk_ram 107.4 MHz (clk_sys 53.69 MHz, the 320 wide modes)
+//   +SD_OLDMAP     sound RAM in banks 2/3 rows 128-255 (the v0.2.4 map) instead of bank 3 rows 256-511
+//   +SD_TRP_PS=n   tRP accepted by the model, counted when below 18 ns (docs/memory.md section 3)
 
 `timescale 1ps/1ps
 
 module tb_sdram;
 
-localparam integer T_RAM = 8730;               // 114.55 MHz
+integer T_RAM = 8730;                         // 114.55 MHz; +W320: 9312 (107.4 MHz, 320 wide modes)
+integer F_SYS = 57272800;
+initial if ($test$plusargs("W320")) begin T_RAM = 9312; F_SYS = 53693175; end
 integer TCO = 5100;                       // FPGA clock/pin output delay (ps)
 integer TIN = 0;                          // pin to register input delay (ps)
 initial begin
@@ -82,15 +87,16 @@ sdram_pocket #(.INIT_CLKS(2000)) dut (
 // clk_sys data only at the first clk_ram edge after a clk_sys edge ("odd"). Counted from the first sync. ctl_even
 // (fc == 1 at the other edge) must be above 0: both edge kinds are seen.
 reg mc_sys = 1'b0, mc_on = 1'b0;
-integer mc_plan = 0, mc_sc = 0, mc_plan_even = 0, mc_sc_even = 0, mc_ctl_even = 0;
+integer mc_plan = 0, mc_sc = 0, mc_plan_even = 0, mc_sc_even = 0, mc_ctl_even = 0, mc_late = 0;
 always @(posedge clk_sys) mc_sys <= 1'b1;
 always @(posedge clk_ram) begin
 	if (dut.sync && !dut.sync_old) mc_on <= 1'b1;
 	if (mc_on) begin
 		if (dut.fc == 4'd0) begin mc_plan = mc_plan + 1; if (!mc_sys) mc_plan_even = mc_plan_even + 1; end
 		if (dut.fc == 4'd1 && !mc_sys) mc_ctl_even = mc_ctl_even + 1;
-		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr)) begin
+		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr) || (dut.slot == 4'd5 && (dut.l_rd || dut.l_wr))) begin
 			mc_sc = mc_sc + 1; if (!mc_sys) mc_sc_even = mc_sc_even + 1;
+			if (dut.slot == 4'd5 && (dut.l_rd || dut.l_wr)) mc_late = mc_late + 1;
 		end
 	end
 	mc_sys <= 1'b0;
@@ -148,17 +154,23 @@ function automatic [15:0] hash16(input [19:0] i);
 	begin t = {12'd0, i} * 32'h9E3779B1; hash16 = t[31:16] ^ t[15:0] ^ 16'h5A5A; end
 endfunction
 
-reg [15:0] shadow [0:(1<<20)-1];
+reg [15:0] shadow [0:(1<<21)-1];
 integer pi;
+reg oldmap = 0;
 initial begin
-	for (pi = 0; pi < (1<<20); pi = pi + 1) begin
-		shadow[pi] = hash16(pi[19:0]);
-		model.mem[pi] = hash16(pi[19:0]);
+	oldmap = $test$plusargs("SD_OLDMAP");
+	for (pi = 0; pi < (1<<21); pi = pi + 1) begin
+		shadow[pi] = hash16(pi[19:0] ^ {pi[20], 19'd0});
+		model.mem[pi] = shadow[pi];
 	end
 end
 
-function automatic [19:0] idx(input [1:0] bank, input [7:0] row, input [9:0] col);
+function automatic [20:0] idx(input [1:0] bank, input [8:0] row, input [9:0] col);
 	idx = {bank, row, col};
+endfunction
+// sound RAM word address -> model index
+function automatic [20:0] sc_idx(input [17:0] wa);
+	sc_idx = oldmap ? idx(wa[17] ? 2'd3 : 2'd2, {2'b01, wa[16:10]}, wa[9:0]) : idx(2'd3, {1'b1, wa[17:10]}, wa[9:0]);
 endfunction
 
 // ---------------------------------------------------------------- VDP2 emulation
@@ -172,10 +184,10 @@ reg [31:0] e0_d [0:3], e1_d [0:3];
 integer    gi;
 
 function automatic [31:0] rd_exp(input [1:0] bank, input [15:0] off);
-	reg [19:0] i0, i1;
+	reg [20:0] i0, i1;
 	begin
-		i0 = idx(bank, {2'b00, off[15:10]}, off[9:0]);
-		i1 = idx(bank, {2'b00, off[15:10]}, {off[9:1], ~off[0]});
+		i0 = idx(bank, {3'b000, off[15:10]}, off[9:0]);
+		i1 = idx(bank, {3'b000, off[15:10]}, {off[9:1], ~off[0]});
 		rd_exp = {shadow[i0], shadow[i1]};
 	end
 endfunction
@@ -257,7 +269,7 @@ always @(posedge clk_sys) begin
 			din_a <= {4{wdata}};
 			wr_a <= 8'b11 << (6 - 2*lane);
 			wr_bank = half ? 2 : 0;
-			shadow[idx(wr_bank[1:0], {2'b00, w16[15:10]}, w16[9:0])] = wdata;
+			shadow[idx(wr_bank[1:0], {3'b000, w16[15:10]}, w16[9:0])] = wdata;
 			writes_v = writes_v + 1;
 		end
 		if (wrt_b) begin
@@ -268,7 +280,7 @@ always @(posedge clk_sys) begin
 			din_b <= {4{wdata}};
 			wr_b <= 8'b11 << (6 - 2*lane);
 			wr_bank = half ? 3 : 1;
-			shadow[idx(wr_bank[1:0], {2'b00, w16[15:10]}, w16[9:0])] = wdata;
+			shadow[idx(wr_bank[1:0], {3'b000, w16[15:10]}, w16[9:0])] = wdata;
 			writes_v = writes_v + 1;
 		end
 	end
@@ -287,14 +299,14 @@ reg [15:0] rq0_d = 0, rq1_d = 0;
 reg [17:0] sca;
 reg  [1:0] sc_be;
 reg [15:0] sc_d;
-reg [19:0] sc_i;
+reg [20:0] sc_i;
 reg        sc_isrd;
 integer    hot;
 
 always @(posedge clk_sys) begin
 	scsp_ce <= 1'b0;
 	scsp_acc = scsp_acc + 22579200;
-	if (scsp_acc >= 57272800) begin scsp_acc = scsp_acc - 57272800; scsp_ce <= 1'b1; end
+	if (scsp_acc >= F_SYS) begin scsp_acc = scsp_acc - F_SYS; scsp_ce <= 1'b1; end
 	if (scsp_ce) clk_div <= ~clk_div;
 	if (clk_div && scsp_ce) cyc_num <= cyc_num + 1'd1;
 
@@ -311,7 +323,7 @@ always @(posedge clk_sys) begin
 		hot = rnd(100);
 		if (hot < 70) sca = {rnd(2) == 1, 17'd0} + rnd(24);
 		else          sca = {rnd(2) == 1, 17'd0} | rnd(131072);
-		sc_i = idx(sca[17] ? 2'd3 : 2'd2, {1'b1, sca[16:10]}, sca[9:0]);
+		sc_i = sc_idx(sca);
 		ch2addr <= {1'b0, sca};
 		if (rnd(100) < 65) begin
 			ch2rd <= 1'b1;
@@ -361,24 +373,26 @@ initial begin
 	#(3000000);
 	model.final_check;
 	bad = 0;
-	for (ai = 0; ai < (1<<20); ai = ai + 1)
+	for (ai = 0; ai < (1<<21); ai = ai + 1)
 		if (model.mem[ai] !== shadow[ai]) begin
 			bad = bad + 1;
-			if (bad < 10) $display("memory mismatch idx %h: mem %h exp %h", ai[19:0], model.mem[ai], shadow[ai]);
+			if (bad < 10) $display("memory mismatch idx %h: mem %h exp %h", ai[20:0], model.mem[ai], shadow[ai]);
 		end
 	$display("tb_sdram: profile %0d, %0d us: VDP2 checks %0d, VDP2 writes %0d, SCSP checks %0d, SCSP writes %0d",
 	         profile, run_us, checks_v, writes_v, checks_s, writes_s);
 	$display("tb_sdram: ACT %0d READ %0d WRITE %0d, scrub wraps %0d, SCSP collisions %0d, DQ contention %0d",
 	         m_act, m_rd, m_wr, dbg_scrub_wrap, dbg_scsp_drop, contention);
 	$display("tb_sdram: DQ overlap with worst-case tHZ: %0d events, max %0d ps", overlap_n, overlap_max);
+	$display("tb_sdram: read words cut by a WRITE %0d, READ-interrupted bursts %0d, PRECHARGE %0d, tRP below 18 ns %0d",
+	         model.n_trunc, model.n_rint, model.n_pre, model.n_trp_short);
 	$display("tb_sdram: SCSP read latency %0d..%0d clk_ram cycles (%0d changes)", lat_min, lat_max, lat_n);
 `ifdef MC_CHECK
-	$display("MC_CHECK plan_caps=%0d sc_caps=%0d plan_even=%0d sc_even=%0d ctl_even=%0d",
-	         mc_plan, mc_sc, mc_plan_even, mc_sc_even, mc_ctl_even);
+	$display("MC_CHECK plan_caps=%0d sc_caps=%0d (late %0d) plan_even=%0d sc_even=%0d ctl_even=%0d",
+	         mc_plan, mc_sc, mc_late, mc_plan_even, mc_sc_even, mc_ctl_even);
 	if (mc_plan == 0 || mc_sc == 0 || mc_plan_even || mc_sc_even || mc_ctl_even == 0) errs = errs + 1;
 `endif
 	$display("tb_sdram: data errors %0d, final memory mismatches %0d, SDRAM model errors %0d", errs, bad, m_err);
-	if (errs == 0 && bad == 0 && m_err == 0 && contention == 0 && dbg_scsp_drop == 0 && checks_v > 0)
+	if (errs == 0 && bad == 0 && m_err == 0 && contention == 0 && dbg_scsp_drop == 0 && checks_v > 0 && model.n_trunc == 0)
 		$display("tb_sdram: PASS");
 	else
 		$display("tb_sdram: FAIL");

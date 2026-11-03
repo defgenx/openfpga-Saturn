@@ -19,8 +19,7 @@ is the only crossing (from `clk_74a`).
 | | VDP2 B0 128 KB | bank 1 rows 0-63 |
 | | VDP2 A1 128 KB | bank 2 rows 0-63 |
 | | VDP2 B1 128 KB | bank 3 rows 0-63 |
-| | SCSP RAM 0-256 KB (word addr bit 17 = 0) | bank 2 rows 128-255 |
-| | SCSP RAM 256-512 KB | bank 3 rows 128-255 |
+| | SCSP RAM 512 KB | bank 3 rows 256-511 |
 | PSRAM0 (16 MB; die 0 = 0-8 MB, die 1 = 8-16 MB) | BIOS 512 KB | 0x000000 |
 | | backup RAM image, 64 KB (`{FF,byte}` words) | 0x100000 |
 | | WRAM-L 1 MB | 0x200000 |
@@ -55,7 +54,7 @@ Roles swap every frame, so both buffers must take display + erase and draw.
 | Option | Sustained random 16 bit | Verdict |
 |---|---|---|
 | PSRAM, synchronous burst | single word read 13 clk_ram (113 ns) = 8.8 M/s, write 15-21 clk_ram = 5.5-7.7 M/s per chip; sequential bursts reach 57 M/s but draw, CPU and erase strobes are single words | cannot take 28.6 M/s of VBlank erase or full-rate drawing, and the chip also carries VRAM or WRAM |
-| SDRAM bank 3 in the VDP2 schedule | one random access per 8 cycles per bank = 14 M/s at best; in the final schedule every bank is activated every 8 cycles (VDP2 and SCSP), so no bank has time to spare, and 4 of 16 command cycles are left | no |
+| SDRAM bank 3 in the VDP2 schedule | one random access per 8 cycles per bank = 14 M/s at best; in the final schedule every bank is activated by VDP2 in every dot and bank 3 also by the SCSP (a READ holds a bank 9 cycles), and 1 of 16 command cycles is left | no |
 | cropped 352x240x16 = 165 KB in M10K, both buffers | 330 KB of the 385 KB M10K; the rest of the core needs about 100-110 KB (docs/saturn-architecture.md) plus 2 M10K TOC, caches | no |
 | cropped 352x256x16 = 176 KB (MiSTer's own M10K part), one buffer | one cycle, unlimited | fits: 141 of 308 blocks (first version); 103 blocks with the SRAM tail below |
 | both buffers cropped to 352x240 | `OUT_Y` is 8 bit and the PAL modes show 256 lines, so 256 rows are addressable and can be displayed; 240 rows would cut 6% (9 blocks) and break PAL | no |
@@ -104,74 +103,105 @@ are registered on the pins; the SDRAM clock is the inverted clk (DDIO), so it sa
 
 | Cycle | Command |
 |---|---|
-| 1 | latch the VDP2 addresses and the four read strobes |
-| 2, 4, 6, 8 | ACT bank 0 (A0), 1 (B0), 2 (A1), 3 (B1) |
-| 5, 7, 9, 11 | READ BL2 with auto precharge on those banks (ACT + 3) |
-| 14 | ACT bank 2 for SCSP; READ or WRITE at cycle 17 (= 1 of the next frame) |
-| 0 (= 16) | ACT bank 3 for SCSP; READ or WRITE at cycle 3 |
-| 13, 15, 10, 12 | free |
+| 0 (= 16) | SCSP: ACT bank 3, row 256 + word address bits 17-10, when a request is pending |
+| 1 | latch the VDP2 addresses and strobes; WRITE bank 2 (a group A write of the previous frame) |
+| 2, 5, 8, 11 | ACT bank 0 (A0), 1 (B0), 3 (B1), 2 (A1) |
+| 3 | SCSP READ, no auto precharge |
+| 4 | SCSP WRITE |
+| 6 | PRECHARGE bank 3 after a SCSP READ |
+| 7, 10, 12, 15 | READ bank 0, 1, 3, 2 (ACT + 5, + 5, + 4, + 4) |
+| 9, 13, 12, 17 (= 1) | WRITE bank 0, 1, 3, 2 |
+| 14 | free |
 
-A VDP2 write (one 16 bit lane, the only kind VDP2 issues) replaces the reads of its group: A to bank 0 or 2 (half bit):
-ACT 2 or 6, WRITE 9; B to bank 1 or 3: ACT 4 or 8, WRITE 11. SCSP picks the bank by address bit 17.
+Every VDP2 READ and WRITE and the SCSP WRITE carry auto precharge; scrub reads are VDP2 READs whose data is dropped. A
+VDP2 write (one 16 bit lane, the only kind VDP2 issues) replaces both reads of its group: A to bank 0 or 2 (half bit),
+B to bank 1 or 3. The sound RAM is all in bank 3 (rows 256-511), which B1 and the SCSP share at an 8 cycle period;
+banks 0-2 hold one VDP2 row per frame.
 
-AS4C32M16MSA-6BIN against 8.73 ns (114.5 MHz). Datasheet values are those quoted by the other Pocket cores and in
-`sim/mem/models/sdram_model.sv`; the datasheet itself was not re-read.
+AS4C32M16MSA-6BIN datasheet rev 1.0 (Dec 2017), AC characteristics of the -6 grade, against 8.73 ns (114.5 MHz). The
+model `sim/mem/models/sdram_model.sv` checks every row of this table.
 
 | Parameter | Limit | Schedule |
 |---|---|---|
-| ACT to READ/WRITE, tRCD | 18 ns | 3 cycles = 26.2 ns |
-| ACT to precharge, tRAS | 42 ns | auto precharge at READ + 2 = ACT + 5 = 43.7 ns |
-| ACT to ACT, same bank, tRC | 60 ns | 8 cycles = 69.8 ns |
-| ACT to ACT, other bank, tRRD | 12 ns | 2 cycles = 17.5 ns |
-| precharge to ACT, tRP | 18 ns | 3 cycles = 26.2 ns |
-| write recovery | 2 cycles | write at ACT + 3 or later, next ACT >= write + 5 |
-| bank re-activation | | exactly 8 cycles after the previous ACT in every bank (VDP2 ACT at 2 + 2b, SCSP ACT at 10 + 2b) |
-| command bus | one per cycle | 12 of 16 cycles used, none twice |
-| DQ bus | no overlap | VDP2 data in cycles 8-15, SCSP data 0-7; writes sit in the gaps left by absent reads |
+| ACT to READ/WRITE, tRCD | 18 ns | 4 or 5 cycles (34.9 ns); SCSP READ 3 cycles (26.2 ns) |
+| ACT to precharge, tRAS (no tRAS lockout in the datasheet) | 48 ns | READ: auto precharge at READ + BL = ACT + 6 or 7 (52.4 ns); SCSP READ: PRECHARGE at ACT + 6; WRITE at ACT + 4 or later: precharge tWR after it (49.9 ns) |
+| precharge to ACT, tRP | 18 ns | banks 0-2: 9 cycles or more after a READ; bank 3: 2 cycles = **17.5 ns** after a READ when B1 and the SCSP alternate (below), 3 or more otherwise |
+| WRITE to ACT, tWR + tRP (tDAL) | 33 ns | 4 cycles = 34.9 ns (bank 3), more elsewhere |
+| ACT to ACT, same bank, tRC | 60 ns | 8 cycles = 69.8 ns (bank 3), 16 cycles (banks 0-2) |
+| ACT to ACT, other bank, tRRD | 12 ns | ACTs at 0, 2, 5, 8, 11: 2 cycles = 17.5 ns or more |
+| WRITE to bank m during a READ burst of bank n | interrupts it: words after the WRITE are not driven, DQM high 2 clocks before | never: every WRITE is 5 cycles or more after any READ (its last word is sampled at READ + 4); A0 READ 7 / B1 WRITE 12, B1 READ 12 / A1 WRITE 17 and A1 READ 15 / SCSP WRITE 20 are the "Read to Write" case of the datasheet (Figure 6, WRITE on the clock after the last word) |
+| READ during a READ burst | interrupts it CL later | never: READs are 2 cycles or more apart |
+| DQM | write mask at the WRITE, read mask 2 clocks later | write byte enables only; no read word is due within 2 cycles of a WRITE, so a byte write masks nothing else |
+| init | 200 us, PRECHARGE ALL, 2 AUTO REFRESH, MRS, EMRS before the first ACT | 200 us, PRECHARGE ALL, 2 x AUTO REFRESH 12 cycles apart (tRFC 80 ns), MRS (BL2, CL3, single writes), EMRS (BA = 10, A = 0: full drive strength, all banks), 4 cycles each (tMRD 2) |
+| command / address / DQM / write data setup, hold | 2.0 / 1.0 ns | SDC output delay 2.0 / -1.0 ns, no board delay (`core_constraints.sdc`) |
+| command bus | one per cycle | 15 of 16 cycles used, none twice |
 
-The write cycles were found by exhaustive search over all nine VDP2 read/write combinations and every frame-to-frame
-transition (cmd bus, ACT spacing, bank readiness, DQ read/write turnaround). At 107.5 MHz (320 wide) every margin
-grows; at 100 MHz the schedule would still need 16 cycles per dot, which is why `clk_ram` stays 2 x `clk_sys`.
+Why bank 3 has a short tRP. VDP2 fetches four independent rows per frame and all four banks hold one of them; the SCSP
+needs a slot every 16 cycles (its deadline, below) in the bank of its data, so one bank takes two rows per frame. A READ
+holds its bank for tRAS + tRP = 6 + 3 cycles at 114.5 MHz, so two READs cannot share a bank in 16 cycles. Bank 3 uses
+6 + 2 (tRP 17.5 ns, 0.5 ns short) for B1 READ -> SCSP ACT and SCSP READ -> B1 ACT, only in frames with a SCSP request
+(`n_trp_short` in the model, +SD_TRP_PS=17400 in the benches); the other split, 5 + 3, is tRAS 43.7 ns, 4.3 ns short,
+which is what v0.2.4 did at every access of every bank. At 107.4 MHz (320 wide) 2 cycles are 18.6 ns and every row of
+the table holds. A WRITE holds its bank 8 cycles (tWR in ns), so a SCSP write frame meets tRP on its own side.
+
+How the cycles were found (exhaustive search over every ACT / READ / WRITE position per slot, all slot pairs in the same
+and in adjacent frames: command bus, tRRD, per-bank timing, the VDP2 window below, no WRITE 1-4 cycles after a READ of
+another slot and no READ one cycle after a VDP2 READ): with the sound RAM split over banks 2 and 3 (v0.2.4), or with
+the groups paired per bank as Saturn_MiSTer's `sdram1.sv` pairs them (A0 / A1 in bank 0, B0 / B1 in bank 1, SCSP alone;
+there BL1 and READ at ACT + 3, against the 42 ns tRAS of MiSTer's AS4C32M16SB), two 8 cycle banks each fix both write
+cycles of their two clients at ACT + 4, and no position of the other group's reads keeps every write outside a read
+burst. With one shared bank there are solutions; a write 6 cycles after every read (one idle cycle on the bus) has none.
 
 ### Latency (VDP2)
 
 VDP2 samples the four words on the second `DOT_CE_R` after the request = F + 24. Word 0 of each pair lands in
-`doutXX[31:16]` at READ + 5 and word 1 in `doutXX[15:0]` at READ + 6 (F + 11, 13, 15, 17 for the complete words). Window: after F + 8 (the previous set is sampled there) and before F + 24, so 6 cycles of margin
-at the late end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 3 profiles x 300 us.
+`doutXX[31:16]` at READ + 5 and word 1 in `doutXX[15:0]` at READ + 6 (F + 13, 16, 18, 21 for the complete A0, B0, B1,
+A1 words). Window: after F + 8 (the previous set is sampled there) and before F + 24, so 2 cycles of margin at the late
+end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 3 profiles x 300 us at 114.5 MHz and 2 at 107.4 MHz (`+W320`).
 
 ### SCSP
 
 SCSP samples `RAM_Q` on the second `CYCLE0_CE` after its request, 265.7 ns later, and ignores `RAM_RDY`. Requests can
-follow each other every 177 ns (22.58 MHz CE, 11.29 MHz cycle). The controller waits for its bank's slot (0-16 cycles),
-reads, and delivers no earlier than `SCSP_MIN_AGE` = 14 cycles after the request so that the data cannot overwrite the
+follow each other every 177 ns (22.58 MHz CE, 11.29 MHz cycle). The controller waits for the slot (cycle 0, 0-16
+cycles), reads at ACT + 3, and delivers no earlier than `SCSP_MIN_AGE` = 14 cycles after the request so that the data cannot overwrite the
 previous request's word before that was sampled.
 
 | Bound | Cycles | ns |
 |---|---|---|
 | earliest sample of the previous request after the next request is seen (20 cycles later) | 29 | 253 |
 | delivery floor | 14 | 122 |
-| worst landing, request just after the slot (1 + 16 + 3 + 5 + 1) | 26 | 227 |
+| worst landing, request just after the slot (1 + 16 + 3 + 5 + 1, as v0.2.4) | 26 | 227 |
 | measured in `tb_sdram`, requests every 177 ns, 65% reads | 1-25 | 8-218 |
 
 There is no margin at the late end: the full-system simulation consumes deliveries up to 28 clk_ram after the request
 (`ch2 latency` histogram in `trace.log`), and a build that landed the word one clk_ram later (READ + 6) returned every SCSP
-sample fetch one request stale (silence); the capture of section 3 lands at READ + 5, as Saturn_MiSTer's. There is none
-either for a second request that arrives while the first is still waiting (`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot and are posted. The slot reads its request
-registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT and CAS instead of keeping a copy: a request is captured at most
-16 cycles before its ACT and the CAS follows 3 cycles later, and the next request is at least 20 cycles behind it.
+sample fetch one request stale (silence); the capture of section 3 lands at READ + 5, as Saturn_MiSTer's. This is why
+the SCSP READ goes out at ACT + 3 without auto precharge and closes the row with a PRECHARGE at ACT + 6: an auto
+precharge READ at ACT + 4 would meet tRAS too but land one cycle later. There is no margin either for a second request
+that arrives while the first is still waiting (`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot
+(WRITE at ACT + 4) and are posted. The slot reads its request registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT
+and CAS instead of keeping a copy. A request is captured at most 16 cycles before its ACT and the CAS follows 3 or 4
+cycles later, but the next request can come 18 clk_ram after the previous one (four SCSP CE at 2 or 3 clk_sys each in
+the 320 wide modes; 20 at 114.5 MHz), so one that arrives between the ACT edge and the CAS is only flagged (`l_rd` /
+`l_wr`) and taken from the request lines at cycle 5: the SCSP keeps `MEM_A`, `MEM_D` and its strobes until its next
+request. Its wait stays within 16 cycles (cycle 5 to the next cycle 0); its `sc_t0` counts from cycle 5, which only
+matters for the delivery floor, and the word lands 19 cycles after that. Without this, `tb_sdram +W320` returned the
+neighbouring request's word for a read and the full-system run (320 wide, 107.4 MHz) lost the sound driver. Cycle 5 is
+an odd clk_ram edge, so the hold exception of `sc_addr` / `sc_din` still holds (`make mc-check` counts these captures).
 
 ### Refresh
 
-There is no AUTO REFRESH after init. A group with no VDP2 read in a frame, and a SCSP slot with no request, issue a dummy
-read of the next row of their bank (`scr[]` counters: 64 rows in banks 0/1, 256 in banks 2/3, which wrap without a
-compare; SCSP RAM is at rows 128-255), which restores it. Real
-VDP2 timing has two no-access windows per line (`REFRESH` and `NOACCESS2`, 9 dots), so banks 0 and 1 are scrubbed at
-least 9 times per 63.5 us line, against 64 rows per bank to cover in 64 ms. Results:
+There is no AUTO REFRESH after init. A group with no VDP2 read in a frame issues a dummy read of the next row of its
+two banks (`scr[]` counters: 64 rows in banks 0-2, 512 in bank 3, which wrap without a compare: B1 rows 0-63, the
+unused rows 64-255 and the sound RAM rows 256-511), which restores it. The SCSP slot does not scrub (a dummy ACT there
+would add the short tRP of bank 3 to every frame), so the sound RAM depends on the VDP2 windows as VRAM does. Real VDP2
+timing has two no-access windows per line (`REFRESH` and `NOACCESS2`, 9 dots), so every bank is scrubbed at least 9
+times per 63.5 us line: 64 rows in 7 lines, bank 3's 512 in 57 lines (3.6 ms), against 64 ms. Results:
 
 | Test | Result |
 |---|---|
-| 66 ms, line pattern with those windows, 64 ms retention limit | PASS, 255 scrub wraps |
-| 3 ms, VDP2 reading in every dot, 2 ms limit | FAIL (retention, banks 0 and 1), as it must: a VDP2 that never idles cannot be scrubbed |
+| 66 ms, line pattern with those windows, 64 ms retention limit | PASS |
+| 3 ms, VDP2 reading in every dot, 2 ms limit | FAIL (retention), as it must: a VDP2 that never idles cannot be scrubbed |
 
 ### Clock out and data capture
 
@@ -241,20 +271,17 @@ change 0.8 ns after the clock edge at the chip.
 Neither working core runs CL3 at 114 MHz, so the data window (5.7 ns at the pad, 4.2 ns after the FPGA's own corner
 spread) is tighter than theirs. Not yet confirmed on hardware.
 
-DQ turnaround. A WRITE two pin cycles after a READ on another bank puts the FPGA's write data on the bus while the SDRAM
-starts driving that read's word 0: the write data is driven from W + 7.4 ns (slow; 3.1 fast) to W + 1 clk + the same,
-the SDRAM drives from W + 0.5 clk + clock-out + 2 clk + tLZ (1 ns), about 4 ns of contention at both corners. The schedule
-has three such pairs: the group A write at 9 against the B0 read at 7, the group B write at 11 against the A1 read at 9,
-and the SCSP bank 3 write at 3 against the bank 2 slot's read (request or scrub) at 1, so most VDP2 writes and every SCSP
-write to the upper 256 KB fight the bus. The SDRAM latches the write data at the edge where it starts driving (hold 1.0 ns
-against tLZ 1.0 ns min) and the FPGA captures the read word 1.5 clk after that edge, 2.8 ns (slow) to 5 ns (fast) after the
-fight ends, so neither datum is disturbed; it is a datasheet violation all the same, which the old model's late data hid.
-`tb_sdram` measures the overlap against the model and fails above `+OVERLAP_PS` (1100 ps default); when every slot reads,
-the bus carries read data from cycle 3.5 to 15.5 and no write cycle is free of it, so a fix needs a schedule change (for
-example dropping the other group's read in a write dot). A write that follows read data also overlaps the previous word's
-output disable (tHZ 5.4 ns max) by up to 1.0 ns. Byte writes (partial DQM) mask word 1 of the read two cycles later in the
-neighbouring slot: a CPU byte write into VDP2 VRAM while the other group reads can corrupt the second word of one fetch.
-Word and long writes are not affected.
+DQ turnaround. No WRITE is issued while a read burst is in flight (table above), so the SDRAM never drives a word into a
+write cycle. The three WRITEs on the clock after a burst's last word start driving the bus while that word is turning
+off: the FPGA drives from W + 7.4 ns (slow; 3.1 fast), the SDRAM releases at most tHZ = 6 ns after its edge W - 1, which
+is W - 0.5 clk + clock-out (6.59 / 2.63 ns), so they can overlap by up to 0.8 ns (slow) / 1.2 ns (fast) at the worst-case
+tHZ, on a word the FPGA captured a clk earlier. `tb_sdram` measures it with its pad delays (1.6 ns) and fails above
++OVERLAP_PS (1700 in the Makefile).
+
+What v0.2.4 did wrong (the model now catches all of it; `+SD_OLDMAP` selects its sound RAM map): every READ was at ACT +
+3 with auto precharge at ACT + 5, 43.7 ns against tRAS 48 ns, in every bank; the group A write at 9 cut the B0 read at 7
+and the group B write at 11 the A1 read at 9 (`tb_sdram` profile 2: 381 poisoned VDP2 words in 300 us), the SCSP bank 3
+write at 3 cut the bank 2 slot's read at 1 (a scrub there: one SCSP request is served at a time); the init had no EMRS.
 
 ## 4. PSRAM (`psram_sync.sv`)
 
@@ -387,7 +414,7 @@ passes up to tAA 30 ns (was 21 ns); the negative run uses 35 ns. Seed 3 fit: rea
 
 | Chip | Load | Capacity | Margin |
 |---|---|---|---|
-| SDRAM | VDP2 8 DQ cycles per 16 = 114.5 MB/s, SCSP up to 5.6 M requests/s (11 MB/s useful, 2 DQ cycles each), writes in the gaps | fixed schedule, 229 MB/s raw | command bus 12/16, every bank re-activated every 8 cycles; the timing table above: tRC 9.8 ns, tRRD 5.5 ns, tRCD 8.2 ns, tRAS 1.7 ns (smallest), tRP 8 ns |
+| SDRAM | VDP2 8 DQ cycles per 16 = 114.5 MB/s, SCSP up to 5.6 M requests/s (11 MB/s useful, 2 DQ cycles each), writes in the gaps | fixed schedule, 229 MB/s raw | command bus 15/16; bank 3 re-activated every 8 cycles (B1 and SCSP), banks 0-2 every 16; the timing table above: tRCD 8.2 ns (SCSP READ), tRAS 1.9 ns (WRITE), tRP -0.5 ns (bank 3, section 3), tRC 9.8 ns, tRRD 5.5 ns |
 | PSRAM0 | WRAM-H and WRAM-L line fills (32 B in 384-488 ns = 66-83 MB/s when streaming), SCU DMA bursts, posted writes at 130-180 ns | one chip, about 70 MB/s for 32 B lines, 10 M random words/s | a fill is 12 SH-2 bus cycles; no hit-rate data (no software run), see risk 9 |
 | PSRAM1 | VDP1 texture bursts 5-30 MB/s, CD RAM 1-3 MB/s, CD buffer 0.4 MB/s, CD ring 0.8 MB/s (588 words in 250 us when a sector arrives) | same | 3-5x |
 | SRAM | display read 5.1 M/s + erase 5.1 M/s + draw up to 14 M/s typical (28.6 peak), both buffers | read 28.6 M/s, write 38 M/s | active line: 4+3 cycles of 16 for display and erase; draw takes the rest |
@@ -462,29 +489,31 @@ for the measured slack.
 
 | Bench | Checks | Result |
 |---|---|---|
-| `tb_sdram` (3 profiles x 300 us, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors; DQ overlap 4.4 ns on a write two pin cycles after a read (section 3; the Makefile raises the bench's limit) |
+| `tb_sdram` (3 profiles x 300 us at 114.5 MHz, 2 at 107.4 MHz, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted at 114.5 MHz (about 2,300-2,500 per 300 us, section 3; none at 107.4 MHz); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded (was 48-120: more fills in this run, 159 against 148) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
 | `tb_load` | 2048 loader writes from 4096 + 1024 + 1024 bridge bytes (backup cart at PSRAM0 0x800000) | pass |
-| `mem-long` | 66 ms retention with the 256 row scrub of banks 2/3 | pass |
+| `mem-long` | 66 ms retention with the 512 row scrub of bank 3 | pass |
 | `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
 | `tb_ddram` ring | 3 sectors of 588 bridge words written and read back while the other clients run | 0 errors |
+| `sim/sys`, Hyper Duel, 120 M clk_sys, `+SCUPROBE` (320 wide: clk_ram 107.4 MHz) | v0.2.4 with the old model, v0.2.4 with this model (`+SD_OLDMAP`), this schedule | v0.2.4 / old model: 0 model errors, audio 196,918 SCSP samples (114,785 non-zero), 8 key-ons. v0.2.4 / this model: 182 M model errors (tRAS at every ACT, the missing EMRS), 136,256 read words cut by a WRITE, audio identical to the old-model run (no SCSP read was cut, the VDP2 ones were). This schedule: 0 model errors, 0 cut words, 196,918 samples (112,380 non-zero), 8 key-ons, every SCSP fetch equal to the model (`smp` check), `i2s.raw` / `scsp.raw` / `pocket.raw` differ by at most 3 LSB (RMS 1 against a signal RMS of 63): the run is 7.3 us ahead from boot (TVMD.DISP at 1,945,231,626 ns against 1,945,238,919 ns) |
 
-The SDRAM model was written here from the datasheet values quoted in the other cores' sources and shares any misreading
-with the controller. The PSRAM and SRAM models were audited against the AS1C4M16PL-70BIN datasheet (Alliance, Rev 1.0
-Aug 2018) and the generic x16 asynchronous SRAM truth table (byte enables gate reads and writes); the SRAM part and
-speed are still unknown.
+The SDRAM model follows the AS4C32M16MSA datasheet (section 3). The PSRAM and SRAM models were audited against the
+AS1C4M16PL-70BIN datasheet (Alliance, Rev 1.0 Aug 2018) and the generic x16 asynchronous SRAM truth table (byte enables
+gate reads and writes); the SRAM part and speed are still unknown.
 
 ## 10. Untested on hardware, and risks
 
 1. SDRAM data capture edge (section 3): READ + 4 in the I/O cell register, as Saturn_MiSTer, with 2.4 / 1.4 ns of margin
    at the slow / fast corner against the datasheet window; the debug overlay square 15 is a write/read-back self-check of
    the SDRAM.
-2. SDRAM DQ contention: a write two cycles after a read on another bank fights the bus for about 4 ns (section 3); byte
-   writes disturb word 1 of a neighbouring read.
-3. No AUTO REFRESH: retention depends on VDP2's real no-access windows. A game that disables them (it cannot: they are
-   `H_CNT` based) or a pause state with VDP2 reading continuously would lose banks 0/1 after 64 ms.
+2. SDRAM tRP in bank 3 is 17.5 ns against 18 ns at 114.5 MHz (B1 READ -> SCSP ACT and SCSP READ -> B1 ACT, section 3;
+   met at 107.4 MHz), and three WRITEs follow a read burst's last word at the next clock, which overlaps that word's
+   turn-off by up to 1.2 ns at the worst-case tHZ.
+3. No AUTO REFRESH: retention depends on VDP2's real no-access windows, for the sound RAM too (the SCSP slot does not
+   scrub). A game that disables them (it cannot: they are `H_CNT` based) or a pause state with VDP2 reading continuously
+   would lose rows after 64 ms.
 4. SCSP deadline margin 27 ns; an SCSP clock that runs faster than the NCO in `tb_sdram` shortens it.
 5. PSRAM synchronous mode at 57.3 MHz / LC4 (the PSX core runs 33.9 MHz). `READ_ADJ` / `WRITE_ADJ` are the bring-up
    knobs. The controller does not park the chips back in asynchronous mode: after this core the chips stay
@@ -494,7 +523,7 @@ speed are still unknown.
 7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
    caches, SH-1 and SCSP are counted. FB0 draw with an FB1 tail erase (or the reverse) slows the draw while FB_RDY is held low.
-12. `sdram_pocket` SCSP slots depend on requests being at least 20 clk_ram apart (they are: CE spacing 177 ns).
+12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
 10. Cartridge ROM loading and backup save-out are not implemented; the 64 KB backup image conversion assumes `{FF, byte}`.

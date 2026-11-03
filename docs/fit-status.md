@@ -468,7 +468,7 @@ strobe registers (x itself) stay out of every `-from`, so their hold is still ti
 
 | `-to` | written at | `-from` |
 |---|---|---|
-| sdram `v_wd`, `v_wbe`, `v_row`, `v_col`, `v_wsel` | `fc == 0`; `fc` is set to 7 at the odd edge of each sync (`sync && !sync_old`) and counts every edge, so `fc == 0` is seen at odd edges only (from the first sync on) | every clk_sys rising launch (`-rise_from`: a falling launch is at an odd edge) |
+| sdram `v_wd`, `v_wbe`, `v_row`, `v_col` | `fc == 0`; `fc` is set to 7 at the odd edge of each sync (`sync && !sync_old`) and counts every edge, so `fc == 0` is seen at odd edges only (from the first sync on) | every clk_sys rising launch (`-rise_from`: a falling launch is at an odd edge) |
 | sdram `sc_addr`, `sc_din` | SCSP read / write request edge | SCSPP `MEM_A`, `MEM_D` (strobes `MEM_RD`, `MEM_WE`, `MEM_CS` excluded) |
 | ddram `cdram_write_data`, `cdram_write_addr`, `cdram_rcache_addr` | cdram write / read request edge | every `cdb` register but `cdb_dram` `RAM_WE`, `RAM_RD`, `RAM_CS` |
 | ddram `cart_rcache_addr`, `cart_write_addr`, `cart_write_data` | cart read / write request edge | CART `MEM_A`, `MEM_DO` (strobes `MEM_RD`, `MEM_WE` excluded) |

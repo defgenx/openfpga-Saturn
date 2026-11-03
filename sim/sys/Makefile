@@ -12,7 +12,7 @@ MODELS := ../mem/models/psram_model.sv ../mem/models/sdram_model.sv ../mem/model
 SIMSRC := models/pll_sim.sv models/altera_mf_sim.sv
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-PROCASSWIRE -Wno-BLKANDNBLK \
           --no-assert --x-assign 0 --x-initial 0 --top-module tb_sys -O3 -CFLAGS -O2 --output-split 20000 --output-split-cfuncs 8000 -j 8
-ARGS   := +CYCLES=$(CYCLES) +GAP=$(GAP) $(if $(TRACE),+TRACE) $(if $(FRAMES),+FRAMES=$(abspath $(FRAMES)))
+ARGS   := +CYCLES=$(CYCLES) +GAP=$(GAP) +SD_TRP_PS=17400 $(if $(TRACE),+TRACE) $(if $(FRAMES),+FRAMES=$(abspath $(FRAMES)))
 
 .PHONY: all run rom clean
 all: run

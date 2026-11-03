@@ -75,11 +75,12 @@ set_multicycle_path -setup -from [get_registers {*|SCSP|OP7.* *|SCSP|EFREG_RAM|*
 set_multicycle_path -hold  -from [get_registers {*|SCSP|OP7.* *|SCSP|EFREG_RAM|*|q_b[*]}] -to $scsp_acc 1
 
 # ---------------------------------------------------------------------------------- SDRAM
-# dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). Datasheet values as quoted in docs/memory.md:
-# input setup 1.5 ns, hold 1.0 ns, output valid 5.5 ns max, hold 2.5 ns min.
+# dram_clk is the inverted clk_ram through a DDIO (sdram_clk_out.sv). AS4C32M16MSA-6 (docs/memory.md section 3): command,
+# address, DQM and write data setup 2.0 ns, hold 1.0 ns (no board delay added: the traces are not known); read data valid
+# 5.5 ns max, hold 2.5 ns min.
 create_generated_clock -name dram_clk_pin -source [get_pins $clk_ram] -invert [get_ports dram_clk]
 set sdram_out [get_ports {dram_a[*] dram_ba[*] dram_dq[*] dram_dqm[*] dram_ras_n dram_cas_n dram_we_n dram_cke}]
-set_output_delay -clock dram_clk_pin -max 1.5  -add_delay $sdram_out
+set_output_delay -clock dram_clk_pin -max 2.0  -add_delay $sdram_out
 set_output_delay -clock dram_clk_pin -min -1.0 -add_delay $sdram_out
 set_input_delay  -clock dram_clk_pin -max 5.5 -add_delay [get_ports {dram_dq[*]}]
 set_input_delay  -clock dram_clk_pin -min 2.5 -add_delay [get_ports {dram_dq[*]}]
@@ -150,7 +151,7 @@ set_multicycle_path -hold  -from [get_clocks $clk_sys] -to [get_registers "*|ddr
 # Request registers that capture clk_sys data only at odd clk_ram edges (the edge after a clk_sys edge): the hold check at
 # the coincident edge is moved one clk_ram back. Strobe registers stay out of every -from, so their hold is still timed
 # and no capture can happen at a coincident edge. Proof per group: docs/fit-status.md, odd-edge request registers.
-set_multicycle_path -hold -end -rise_from [get_clocks $clk_sys] -to [get_registers {*|sdram|v_wd[*] *|sdram|v_wbe[*] *|sdram|v_row[*] *|sdram|v_col[*] *|sdram|v_wsel[*]}] 1
+set_multicycle_path -hold -end -rise_from [get_clocks $clk_sys] -to [get_registers {*|sdram|v_wd[*] *|sdram|v_wbe[*] *|sdram|v_row[*] *|sdram|v_col[*]}] 1
 set_multicycle_path -hold -end -from [get_registers {*|SCSP|MEM_A[*] *|SCSP|MEM_D[*]}] -to [get_registers {*|sdram|sc_addr[*] *|sdram|sc_din[*]}] 1
 set cdb_data [remove_from_collection [get_registers {*|cdb|*}] [get_registers {*|cdb|dram|RAM_WE[*] *|cdb|dram|RAM_RD *|cdb|dram|RAM_CS}]]
 set_multicycle_path -hold -end -from $cdb_data -to [get_registers {*|ddram|cdram_write_data[*] *|ddram|cdram_write_addr[*] *|ddram|cdram_rcache_addr[*]}] 1

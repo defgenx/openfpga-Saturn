@@ -632,13 +632,15 @@ end
 // ---- sound RAM read check: data delivered to the SCSP against the SDRAM model content at the requested address
 reg ch2rd_q = 0; reg [19:1] ch2_a = 0; reg ch2_pend = 0; reg [15:0] ch2_exp;
 longint ch2_reads = 0, ch2_bad = 0; reg [15:0] ch2dq = 0;
-function automatic [19:0] sc_idx(input [19:1] a);
-	reg [17:0] sc; sc = a[18:1];
-	sc_idx = {1'b0, 2'd2 + {1'b0, sc[17]}, 1'b1, sc[16:0]} ;
+// sound RAM word address -> SDRAM model index (+SD_OLDMAP: banks 2/3 rows 128-255, the v0.2.4 map)
+reg sd_oldmap = 0;
+initial sd_oldmap = $test$plusargs("SD_OLDMAP");
+function automatic [20:0] sdidx(input [17:0] wa);
+	sdidx = sd_oldmap ? {wa[17] ? 2'd3 : 2'd2, 2'b01, wa[16:0]} : {2'd3, 1'b1, wa};
 endfunction
 always @(posedge dut.saturn.clk_ram) begin
 	ch2rd_q <= dut.saturn.mem.ch2rd;
-	if (dut.saturn.mem.ch2rd && !ch2rd_q) begin ch2_a <= dut.saturn.mem.ch2addr; ch2_pend <= 1; ch2_exp <= sdmodel.mem[{2'd2 + {1'b0, dut.saturn.mem.ch2addr[18]}, 1'b1, dut.saturn.mem.ch2addr[17:1]}]; end
+	if (dut.saturn.mem.ch2rd && !ch2rd_q) begin ch2_a <= dut.saturn.mem.ch2addr; ch2_pend <= 1; ch2_exp <= sdmodel.mem[sdidx(dut.saturn.mem.ch2addr[18:1])]; end
 	ch2dq <= dut.saturn.mem.ch2dout;
 	if (ch2_pend && dut.saturn.mem.ch2dout !== ch2dq) begin
 		ch2_pend <= 0; ch2_reads++;
@@ -687,7 +689,7 @@ always @(posedge clk_sys) if (!snd_dumped && n_scsp == 80000 && $test$plusargs("
 	integer f, i;
 	snd_dumped <= 1;
 	f = $fopen("sndram.bin", "wb");
-	for (i = 0; i < (1 << 18); i++) $fwrite(f, "%c%c", sdmodel.mem[{2'd2 + {1'b0, i[17]}, 1'b1, i[16:0]}][15:8], sdmodel.mem[{2'd2 + {1'b0, i[17]}, 1'b1, i[16:0]}][7:0]);
+	for (i = 0; i < (1 << 18); i++) $fwrite(f, "%c%c", sdmodel.mem[sdidx(i[17:0])][15:8], sdmodel.mem[sdidx(i[17:0])][7:0]);
 	$fclose(f);
 	$display("tb_sys: dumped sound RAM");
 end
@@ -713,12 +715,12 @@ end
 longint m68_rn = 0, m68_rbad = 0, m68_bn = 0, m68_bbad = 0; integer m68n = 0; reg dtk_q = 1; reg [1:0] m68p = 0; reg [23:0] m68a; reg [15:0] m68d0; reg m68rw; reg [1:0] m68be;
 always @(posedge clk_sys) begin
 	dtk_q <= `SAT.SCDTACK_N;
-	if (`SAT.SCDTACK_N && !dtk_q && m68rw && $time > 64'd1000000000000) begin : m68c reg [15:0] mw; mw = sdmodel.mem[{2'd2 + {1'b0, m68a[18]}, 1'b1, m68a[17:1]}]; if (m68be == 2'b11) begin m68_rn++; if (`SAT.SCDO !== mw) m68_rbad++; end else if (m68be == 2'b10) begin m68_bn++; if (`SAT.SCDO[15:8] !== mw[15:8]) m68_bbad++; end else if (m68be == 2'b01) begin m68_bn++; if (`SAT.SCDO[7:0] !== mw[7:0]) m68_bbad++; end end
+	if (`SAT.SCDTACK_N && !dtk_q && m68rw && $time > 64'd1000000000000) begin : m68c reg [15:0] mw; mw = sdmodel.mem[sdidx(m68a[18:1])]; if (m68be == 2'b11) begin m68_rn++; if (`SAT.SCDO !== mw) m68_rbad++; end else if (m68be == 2'b10) begin m68_bn++; if (`SAT.SCDO[15:8] !== mw[15:8]) m68_bbad++; end else if (m68be == 2'b01) begin m68_bn++; if (`SAT.SCDO[7:0] !== mw[7:0]) m68_bbad++; end end
 	if (!`SAT.SCDTACK_N && dtk_q) begin
 		m68p <= 2'd2; m68d0 <= `SAT.SCDO; m68a <= {`SAT.SCA, 1'b0}; m68rw <= `SAT.SCRW_N; m68be <= {~`SAT.SCUDS_N, ~`SAT.SCLDS_N};
 	end else if (m68p != 0) begin
 		m68p <= m68p - 1'd1;
-		if (m68p == 1) begin if ($test$plusargs("M68KLOG") && $time > 64'd1917000000000 && $time < 64'd1947000000000) $fdisplay(ftrace, "%0t M68KBUS %s A=%06h be=%b D=%04h model=%04h", $time, m68rw ? "RD" : "WR", m68a, m68be, m68rw ? m68d0 : `SAT.SCDI, sdmodel.mem[{2'd2 + {1'b0, m68a[18]}, 1'b1, m68a[17:1]}]); end
+		if (m68p == 1) begin if ($test$plusargs("M68KLOG") && $time > 64'd1917000000000 && $time < 64'd1947000000000) $fdisplay(ftrace, "%0t M68KBUS %s A=%06h be=%b D=%04h model=%04h", $time, m68rw ? "RD" : "WR", m68a, m68be, m68rw ? m68d0 : `SAT.SCDI, sdmodel.mem[sdidx(m68a[18:1])]); end
 	end
 end
 
@@ -732,7 +734,7 @@ always @(posedge clk_sys) if (!rst_sys) begin : smp
 	// MEM_RD/MEM_A are stable over the CYCLE0_CE of the request cycle; the device latch takes it there and RAM_Q is sampled at the next one
 	if (`SAT.SCSP.CYCLE0_CE) begin
 		if (sp_v2 && `SAT.SCSP.MEM_DEV_LATCH != 0) begin
-			exp_w = sdmodel.mem[{2'd2 + {1'b0, sp_a2[17]}, 1'b1, sp_a2[16:0]}];
+			exp_w = sdmodel.mem[sdidx(sp_a2[17:0])];
 			smp_n[`SAT.SCSP.MEM_DEV_LATCH]++;
 			if (`SAT.SCSP.RAM_Q !== exp_w) begin
 				smp_bad[`SAT.SCSP.MEM_DEV_LATCH]++; smp_stale_tot++;
@@ -801,7 +803,7 @@ always @(posedge video_vs) if (frame_no == dumpat) begin : dmp
 	$fclose(f);
 	$fdisplay(ftrace, "PC ring at dump:"); for (i = 0; i < 64; i++) $fdisplay(ftrace, "   pc %08h", pcr[(pcr_i + 448 + i) % 512]); $fflush();
 	f = $fopen("sdram.bin", "wb");
-	for (i = 0; i < (4<<18); i++) $fwrite(f, "%c%c", sdmodel.mem[i][15:8], sdmodel.mem[i][7:0]);
+	for (i = 0; i < (4<<19); i++) $fwrite(f, "%c%c", sdmodel.mem[i][15:8], sdmodel.mem[i][7:0]);
 	$fclose(f);
 	$display("tb_sys: dumped VDP1 VRAM at frame %0d", frame_no);
 end
@@ -828,6 +830,8 @@ task automatic summary();
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);
 	$display("model errors: psram0 %0d psram1 %0d sdram %0d sram %0d", m0_err, m1_err, sd_err, sr_err);
+	$display("sdram: read words cut by a WRITE %0d, READ-interrupted bursts %0d, PRECHARGE %0d, tRP below 18 ns %0d",
+	         sdmodel.n_trunc, sdmodel.n_rint, sdmodel.n_pre, sdmodel.n_trp_short);
 	$display("load FIFO overflow %0d, SDRAM ready %b PSRAM ready %b", dut.saturn.dbg_ld_ovf, dut.saturn.dbg_sdram_ready, dut.saturn.dbg_psram_ready);
 endtask
 

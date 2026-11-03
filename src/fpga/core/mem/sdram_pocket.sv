@@ -7,29 +7,19 @@
 // locked to `sync` (VDP2 DCE_R), spaced for the AS4C32M16MSA-6BIN at 114.5 MHz.
 //
 //   bank 0  VDP2 A0 (rows 0-63)          bank 1  VDP2 B0 (rows 0-63)
-//   bank 2  VDP2 A1 (rows 0-63)          bank 3  VDP2 B1 (rows 0-63)
-//           + SCSP RAM 0-256 KB (rows 128-255)   + SCSP RAM 256-512 KB (rows 128-255)
+//   bank 2  VDP2 A1 (rows 0-63)          bank 3  VDP2 B1 (rows 0-63) + SCSP RAM 512 KB (rows 256-511)
 //
-// Cycle numbers are pin-register edges after the frame start F (VDP2 DOT_CE_F):
-//   1 latch the VDP2 addresses
-//   2/4/6/8   ACT bank 0/1/2/3, then READ (BL2, auto-precharge) at ACT+3 (5/7/9/11)
-//   write     replaces the read of its half: bank 0/2 ACT 2/6 WRITE 9, bank 1/3 ACT 4/8 WRITE 11
-//   14 / 0    ACT bank 2 / bank 3 for SCSP, READ or WRITE at ACT+3 (cycle 1 / 3 of the next frame)
-// Every bank is re-activated exactly 8 cycles after its previous ACT (tRC 60 ns = 7 cycles), ACTs
-// are 2 cycles apart (tRRD 12 ns), no command cycle is used twice (12 of 16 are used), and the DQ bus
-// has no read/write overlap in any frame-to-frame sequence (checked by sim/mem/tb_sdram and the tables
-// in docs/memory.md). There is no AUTO REFRESH: a VDP2 group that does not read in a frame, or a
-// SCSP slot with no request, issues a dummy read of the next row of its bank (row scrub), which
-// restores that row. VDP2 stops fetching for several dots per line (REFRESH/NOACCESS windows).
+// Cycle numbers (the `slot` cases) are pin-register edges after the frame start F (VDP2 DOT_CE_F). The cycle table and
+// its check against every datasheet rule (no WRITE while a read burst is in flight) are in docs/memory.md section 3.
+// There is no AUTO REFRESH: a VDP2 group that does not read in a frame issues a dummy read of the next
+// row of its banks (row scrub), which restores that row. VDP2 stops fetching for several dots per line
+// (REFRESH/NOACCESS windows).
 //
 // Read data: the SDRAM clock is the inverted clk (DDIO), so the SDRAM samples a command half a
 // cycle after it is registered and, with CL3, launches word 0 two of its clocks later (2.5 clk after
 // the command edge) and word 1 one clock after that. DQ is captured in the I/O cell input register
 // (cap_p, FAST_INPUT_REGISTER) at READ + 4 and lands one clk later, as Saturn_MiSTer's sdram1.sv does
 // at the same clk_ram (docs/memory.md section 3).
-//
-// Partial-byte VDP2 writes drive DQM at the write cycle, which also masks word 1 of the read two
-// cycles later in the neighbouring slot (docs/memory.md, known limits).
 //
 
 `default_nettype none
@@ -89,8 +79,9 @@ module sdram_pocket #(
 
 localparam bit [2:0] CMD_NOP = 3'b111, CMD_ACT = 3'b011, CMD_RD = 3'b101, CMD_WR = 3'b100,
                      CMD_PRE = 3'b010, CMD_REF = 3'b001, CMD_MRS = 3'b000;
-// BL2, sequential, CL3, single-word writes
+// BL2, sequential, CL3, single-word writes; extended mode register: full drive strength, all banks
 localparam [12:0] MODE_REG = 13'b000_1_00_011_0_001;
+localparam [12:0] EMODE_REG = 13'd0;
 
 assign dram_cke = 1'b1;
 
@@ -118,12 +109,14 @@ localparam int INIT_W = $clog2(INIT_CLKS + 64);
 reg [INIT_W-1:0] icnt;
 reg  [2:0] i_cmd = CMD_NOP;
 reg [12:0] i_a;
+reg  [1:0] i_ba;
 reg  [3:0] i_step;
 reg  [4:0] i_wait;
 
 always @(posedge clk) begin
 	i_cmd <= CMD_NOP;
 	i_a   <= '0;
+	i_ba  <= 2'b00;
 	if (init) begin
 		icnt <= '0; i_step <= '0; i_wait <= '0; init_done <= 1'b0;
 	end else if (!init_done) begin
@@ -134,6 +127,7 @@ always @(posedge clk) begin
 			4'd1: begin i_cmd <= CMD_REF;                  i_wait <= 5'd11; i_step <= 4'd2; end
 			4'd2: begin i_cmd <= CMD_REF;                  i_wait <= 5'd11; i_step <= 4'd3; end
 			4'd3: begin i_cmd <= CMD_MRS; i_a <= MODE_REG; i_wait <= 5'd3;  i_step <= 4'd4; end
+			4'd4: begin i_cmd <= CMD_MRS; i_a <= EMODE_REG; i_ba <= 2'b10; i_wait <= 5'd3; i_step <= 4'd5; end
 			default: init_done <= 1'b1;
 		endcase
 	end
@@ -142,14 +136,13 @@ end
 // ------------------------------------------------------------------ VDP2 plan (latched at cycle 1)
 // per slot j (bank j): mode 0 dummy scrub read, 1 read, 2 write, 3 none
 reg  [1:0] v_mode [0:3];
-reg  [7:0] v_row  [0:3];     // ACT row of bank b (read row, write row or scrub row)
-reg  [9:0] v_col  [0:3];     // CAS column of bank b; a write's column is in its bank's entry (bank 2 / 3)
+reg  [8:0] v_row  [0:3];     // ACT row of bank b (read row, write row or scrub row)
+reg  [9:0] v_col  [0:3];     // CAS column of bank b; a write's column is in bank 2's (A) / bank 3's (B) entry
 reg [15:0] v_wd   [0:1];     // [0] group A, [1] group B
 reg  [1:0] v_wbe  [0:1];
-reg        v_wsel [0:1];     // write is to bank (group + 2*half) : half
 
-// scrub counters: banks 0/1 cover 64 rows, banks 2/3 cover 256
-reg  [7:0] scr [0:3];
+// scrub counters: banks 0-2 cover 64 rows, bank 3 all 512 (B1 rows 0-63, sound RAM rows 256-511)
+reg  [8:0] scr [0:3];
 reg  [3:0] v_act;            // ACT issued for the slot, CAS due
 
 function automatic [1:0] lane_idx(input [7:0] be);
@@ -161,15 +154,15 @@ endfunction
 function automatic [1:0] lane_be(input [7:0] be);
 	lane_be = |be[7:6] ? be[7:6] : |be[5:4] ? be[5:4] : |be[3:2] ? be[3:2] : be[1:0];
 endfunction
-function automatic [7:0] scr_next(input [7:0] s, input big);
-	scr_next = big ? s + 8'd1 : {2'd0, s[5:0] + 6'd1};   // banks 0/1: 64 rows, banks 2/3: all 256 (rows 64-127 are unused, scrubbing them is harmless)
+function automatic [8:0] scr_next(input [8:0] s, input big);
+	scr_next = big ? s + 9'd1 : {3'd0, s[5:0] + 6'd1};   // bank 3 also scrubs the unused rows 64-255 (harmless)
 endfunction
 
 wire [15:0] w_a = {addr_a0[16:3], lane_idx(wr_a)};   // word offset inside the half, write
 wire [15:0] w_b = {addr_b0[16:3], lane_idx(wr_b)};
 
 // ------------------------------------------------------------------ SCSP state
-reg [17:0] sc_addr;          // word address {bank, 17 bit offset}
+reg [17:0] sc_addr;          // word address: bank 3 row {1, sc_addr[17:10]}, column sc_addr[9:0]
 reg [15:0] sc_din;
 reg  [1:0] sc_be;
 reg        sc_wr_p, sc_rd_p;
@@ -178,14 +171,17 @@ reg  [5:0] cyc;
 reg        old_rd, old_wr;
 assign ch2rdy = ~(sc_wr_p | sc_rd_p);
 
-// A SCSP request is not overwritten before its CAS: requests are >= 20 clk_ram apart and ACT + CAS take
-// at most 16 + 3 cycles after the capture, so the CAS reads sc_addr / sc_din / sc_be / sc_t0 directly.
-reg        s_act  [2:3];     // ACT issued, CAS due
-reg        s_wr   [2:3];
-reg        s_dum  [2:3];
+// The slot reads sc_addr / sc_din / sc_be / sc_t0 at ACT and at CAS. Requests are >= 18 clk_ram apart (320 wide
+// modes) and a request can wait 16 for the slot, so one that arrives while the slot runs (ACT edge to CAS) is taken
+// at cycle 5 from the request lines, which the SCSP holds until its next request (sc_t0 then counts from cycle 5).
+reg        l_rd, l_wr;       // request seen while the slot runs
+reg        s_act;            // ACT issued, CAS due
+reg        s_wr;
+reg        s_pre;            // READ issued, PRECHARGE due
+wire       sc_run = s_act || (slot == 4'd0 && (sc_rd_p | sc_wr_p));   // the slot owns sc_* (ACT edge to CAS)
 
 // ------------------------------------------------------------------ self-check (debug overlay only)
-// After init: write A55A / 5AA5 to word 0x100 of SCSP bank 2 / 3 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
+// After init: write A55A / 5AA5 to sound RAM words 0x100 / 0x20100 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
 `ifdef POCKET_NEVER
 reg  [2:0] ck_st;
 wire       ck_run = init_done && !chk_done;
@@ -213,6 +209,11 @@ wire  [1:0] rq_wr   = ch2wr;
 wire        rq_rd   = ch2rd;
 initial begin chk_done = 1'b0; chk_ok = 1'b0; end
 `endif
+// request edges, taken now or (while the slot runs) at cycle 5
+wire       e_rd = rq_rd && !old_rd, e_wr = (|rq_wr) && !old_wr;
+wire       l_take = slot == 4'd5 && (l_rd | l_wr);
+wire       cap_rd = (e_rd && !sc_run) || (l_take && l_rd);
+wire       cap_wr = (e_wr && !sc_run) || (l_take && l_wr);
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
@@ -246,10 +247,10 @@ integer k;
 // tag stage of word 0 (sampled at READ + 4, landing at READ + 5) and of word 1 (one later)
 wire       w0_v = t_v[4], w0_i = t_i[4], w1_v = t_v[5];
 wire [2:0] w0_k = t_k[4], w1_k = t_k[5];
-reg [7:0] scr_q [0:3];
+reg [8:0] scr_q [0:3];
 
-function automatic [12:0] row_a(input [7:0] r);
-	row_a = {5'd0, r};
+function automatic [12:0] row_a(input [8:0] r);
+	row_a = {4'd0, r};
 endfunction
 function automatic [12:0] col_a(input [9:0] c);
 	col_a = {2'b00, 1'b1, c[9:0]};      // A10 = auto precharge
@@ -259,14 +260,16 @@ always @(posedge clk) begin
 	// ---- SCSP request capture
 	old_rd <= rq_rd;
 	old_wr <= |rq_wr;
-	if (rq_rd && !old_rd) begin
-		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= rq_addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
+	if (sc_run) begin
+		if (e_rd) l_rd <= 1'b1;
+		if (e_wr) l_wr <= 1'b1;
 	end
-	if ((|rq_wr) && !old_wr) begin
-		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= rq_addr[18:1]; sc_din <= rq_din; sc_be <= rq_wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
+	if (l_take) begin l_rd <= 1'b0; l_wr <= 1'b0; end
+	if (cap_rd | cap_wr) begin
+		if ((sc_rd_p | sc_wr_p) && dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1;
+		sc_addr <= rq_addr[18:1]; sc_rd_p <= cap_rd; sc_wr_p <= cap_wr; sc_t0 <= cyc;
 	end
+	if (cap_wr) begin sc_din <= rq_din; sc_be <= rq_wr; end
 	cyc <= cyc + 1'd1;
 
 	// ---- VDP2 plan latch
@@ -276,26 +279,26 @@ always @(posedge clk) begin
 			v_mode[0] <= addr_a0[17] ? 2'd3 : 2'd2;
 			v_mode[2] <= addr_a0[17] ? 2'd2 : 2'd3;
 			v_wd[0] <= lane_data(din_a, wr_a); v_wbe[0] <= lane_be(wr_a);
-			v_row[0] <= {2'd0, w_a[15:10]}; v_row[2] <= {2'd0, w_a[15:10]}; v_col[2] <= w_a[9:0]; v_wsel[0] <= addr_a0[17];
+			v_row[0] <= {3'd0, w_a[15:10]}; v_row[2] <= {3'd0, w_a[15:10]}; v_col[2] <= w_a[9:0];
 		end else if (rd_a) begin
 			v_mode[0] <= 2'd1; v_mode[2] <= 2'd1;
-			v_row[0] <= {2'd0, addr_a0[16:11]}; v_col[0] <= addr_a0[10:1] ;
-			v_row[2] <= {2'd0, addr_a1[16:11]}; v_col[2] <= addr_a1[10:1] ;
+			v_row[0] <= {3'd0, addr_a0[16:11]}; v_col[0] <= addr_a0[10:1] ;
+			v_row[2] <= {3'd0, addr_a1[16:11]}; v_col[2] <= addr_a1[10:1] ;
 		end else begin
 			v_mode[0] <= 2'd0; v_mode[2] <= 2'd0;
 			v_row[0] <= scr[0]; v_row[2] <= scr[2]; v_col[0] <= '0; v_col[2] <= '0;
 			scr[0] <= scr_next(scr[0], 1'b0);
-			scr[2] <= scr_next(scr[2], 1'b1);
+			scr[2] <= scr_next(scr[2], 1'b0);
 		end
 		if (|wr_b) begin
 			v_mode[1] <= addr_b0[17] ? 2'd3 : 2'd2;
 			v_mode[3] <= addr_b0[17] ? 2'd2 : 2'd3;
 			v_wd[1] <= lane_data(din_b, wr_b); v_wbe[1] <= lane_be(wr_b);
-			v_row[1] <= {2'd0, w_b[15:10]}; v_row[3] <= {2'd0, w_b[15:10]}; v_col[3] <= w_b[9:0]; v_wsel[1] <= addr_b0[17];
+			v_row[1] <= {3'd0, w_b[15:10]}; v_row[3] <= {3'd0, w_b[15:10]}; v_col[3] <= w_b[9:0];
 		end else if (rd_b) begin
 			v_mode[1] <= 2'd1; v_mode[3] <= 2'd1;
-			v_row[1] <= {2'd0, addr_b0[16:11]}; v_col[1] <= addr_b0[10:1];
-			v_row[3] <= {2'd0, addr_b1[16:11]}; v_col[3] <= addr_b1[10:1];
+			v_row[1] <= {3'd0, addr_b0[16:11]}; v_col[1] <= addr_b0[10:1];
+			v_row[3] <= {3'd0, addr_b1[16:11]}; v_col[3] <= addr_b1[10:1];
 		end else begin
 			v_mode[1] <= 2'd0; v_mode[3] <= 2'd0;
 			v_row[1] <= scr[1]; v_row[3] <= scr[3]; v_col[1] <= '0; v_col[3] <= '0;
@@ -309,90 +312,57 @@ always @(posedge clk) begin
 	c_tv = 1'b0; c_tk = 3'd7; c_ti = 1'b0;
 	if (init_done) begin
 		case (slot)
-		4'd2: if (v_mode[0] != 2'd3) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
-		4'd4: if (v_mode[1] != 2'd3) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
-		4'd6: if (v_mode[2] != 2'd3) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_row[2]); end
-		4'd8: if (v_mode[3] != 2'd3) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_row[3]); end
+		// ---- SCSP (bank 3): ACT at 0 (16), READ at 3 and PRECHARGE at 6, or WRITE with auto precharge at 4
+		4'd0: if (sc_rd_p | sc_wr_p) begin
+			c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a({1'b1, sc_addr[17:10]});
+			s_act <= 1'b1; s_wr <= sc_wr_p;
+			sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
+		end
+		4'd3: if (s_act && !s_wr) begin
+			s_act <= 1'b0; s_pre <= 1'b1;
+			c_cmd = CMD_RD; c_ba = 2'd3; c_a = {3'b000, sc_addr[9:0]};      // A10 low: the PRECHARGE at 6 keeps tRAS
+			c_tv = 1'b1; c_tk = 3'd4; c_ti = dl_wi;
+			dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
+			dl_t0[dl_wi] <= sc_t0;
+			dl_wi <= ~dl_wi;
+		end
+		4'd4: if (s_act && s_wr) begin
+			s_act <= 1'b0;
+			c_cmd = CMD_WR; c_ba = 2'd3; c_a = col_a(sc_addr[9:0]); c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be;
+		end
+		4'd6: if (s_pre) begin s_pre <= 1'b0; c_cmd = CMD_PRE; c_ba = 2'd3; end
 
-		4'd5: if (v_mode[0] <= 2'd1 && v_act[0]) begin v_act[0] <= 1'b0;
+		// ---- VDP2 ACTs
+		4'd2:  if (v_mode[0] != 2'd3) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
+		4'd5:  if (v_mode[1] != 2'd3) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
+		4'd8:  if (v_mode[3] != 2'd3) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_row[3]); end
+		4'd11: if (v_mode[2] != 2'd3) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_row[2]); end
+
+		// ---- VDP2 READs (scrub reads have tag 7) and WRITEs, all with auto precharge
+		4'd7:  if (v_mode[0] <= 2'd1 && v_act[0]) begin v_act[0] <= 1'b0;
 			c_cmd = CMD_RD; c_ba = 2'd0; c_a = col_a(v_col[0]); c_tv = 1'b1; c_tk = (v_mode[0] == 2'd1) ? 3'd0 : 3'd7;
 		end
-		4'd7: if (v_mode[1] <= 2'd1 && v_act[1]) begin v_act[1] <= 1'b0;
+		4'd10: if (v_mode[1] <= 2'd1 && v_act[1]) begin v_act[1] <= 1'b0;
 			c_cmd = CMD_RD; c_ba = 2'd1; c_a = col_a(v_col[1]); c_tv = 1'b1; c_tk = (v_mode[1] == 2'd1) ? 3'd1 : 3'd7;
 		end
-		4'd9: begin
-			if (v_mode[2] <= 2'd1 && v_act[2]) begin v_act[2] <= 1'b0;
-				c_cmd = CMD_RD; c_ba = 2'd2; c_a = col_a(v_col[2]); c_tv = 1'b1; c_tk = (v_mode[2] == 2'd1) ? 3'd2 : 3'd7;
-			end else if ((v_mode[0] == 2'd2 && v_act[0]) || (v_mode[2] == 2'd2 && v_act[2])) begin
-				v_act[0] <= 1'b0; v_act[2] <= 1'b0;
-				c_cmd = CMD_WR; c_ba = v_wsel[0] ? 2'd2 : 2'd0; c_a = col_a(v_col[2]);
-				c_dq = v_wd[0]; c_oe = 1'b1; c_dqm = ~v_wbe[0];
-			end
+		4'd12: if (v_act[3]) begin v_act[3] <= 1'b0;
+			c_ba = 2'd3; c_a = col_a(v_col[3]);
+			if (v_mode[3] == 2'd2) begin c_cmd = CMD_WR; c_dq = v_wd[1]; c_oe = 1'b1; c_dqm = ~v_wbe[1]; end
+			else begin c_cmd = CMD_RD; c_tv = 1'b1; c_tk = (v_mode[3] == 2'd1) ? 3'd3 : 3'd7; end
 		end
-		4'd11: begin
-			if (v_mode[3] <= 2'd1 && v_act[3]) begin v_act[3] <= 1'b0;
-				c_cmd = CMD_RD; c_ba = 2'd3; c_a = col_a(v_col[3]); c_tv = 1'b1; c_tk = (v_mode[3] == 2'd1) ? 3'd3 : 3'd7;
-			end else if ((v_mode[1] == 2'd2 && v_act[1]) || (v_mode[3] == 2'd2 && v_act[3])) begin
-				v_act[1] <= 1'b0; v_act[3] <= 1'b0;
-				c_cmd = CMD_WR; c_ba = v_wsel[1] ? 2'd3 : 2'd1; c_a = col_a(v_col[3]);
-				c_dq = v_wd[1]; c_oe = 1'b1; c_dqm = ~v_wbe[1];
-			end
+		4'd15: if (v_mode[2] <= 2'd1 && v_act[2]) begin v_act[2] <= 1'b0;
+			c_cmd = CMD_RD; c_ba = 2'd2; c_a = col_a(v_col[2]); c_tv = 1'b1; c_tk = (v_mode[2] == 2'd1) ? 3'd2 : 3'd7;
 		end
-
-		// ---- SCSP bank 2: ACT at 14, CAS at 1
-		4'd14: begin
-			c_cmd = CMD_ACT; c_ba = 2'd2;
-			if ((sc_rd_p | sc_wr_p) && !sc_addr[17]) begin
-				c_a = row_a({1'b1, sc_addr[16:10]});
-				s_act[2] <= 1'b1; s_wr[2] <= sc_wr_p; s_dum[2] <= 1'b0;
-				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
-			end else begin
-				c_a = row_a(scr[2]); scr[2] <= scr_next(scr[2], 1'b1);
-				s_act[2] <= 1'b1; s_wr[2] <= 1'b0; s_dum[2] <= 1'b1;
-			end
+		4'd9:  if (v_mode[0] == 2'd2 && v_act[0]) begin v_act[0] <= 1'b0;
+			c_cmd = CMD_WR; c_ba = 2'd0; c_a = col_a(v_col[2]); c_dq = v_wd[0]; c_oe = 1'b1; c_dqm = ~v_wbe[0];
 		end
-		4'd1: if (s_act[2]) begin
-			s_act[2] <= 1'b0;
-			c_ba = 2'd2; c_a = col_a(s_dum[2] ? 10'd0 : sc_addr[9:0]);
-			if (s_wr[2]) begin c_cmd = CMD_WR; c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be; end
-			else begin
-				c_cmd = CMD_RD; c_tv = 1'b1;
-				if (s_dum[2]) c_tk = 3'd7;
-				else begin
-					c_tk = 3'd4; c_ti = dl_wi;
-					dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
-					dl_t0[dl_wi] <= sc_t0;
-					dl_wi <= ~dl_wi;
-				end
-			end
+		4'd13: if (v_mode[1] == 2'd2 && v_act[1]) begin v_act[1] <= 1'b0;
+			c_cmd = CMD_WR; c_ba = 2'd1; c_a = col_a(v_col[3]); c_dq = v_wd[1]; c_oe = 1'b1; c_dqm = ~v_wbe[1];
 		end
-
-		// ---- SCSP bank 3: ACT at 0 (16), CAS at 3
-		4'd0: begin
-			c_cmd = CMD_ACT; c_ba = 2'd3;
-			if ((sc_rd_p | sc_wr_p) && sc_addr[17]) begin
-				c_a = row_a({1'b1, sc_addr[16:10]});
-				s_act[3] <= 1'b1; s_wr[3] <= sc_wr_p; s_dum[3] <= 1'b0;
-				sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
-			end else begin
-				c_a = row_a(scr[3]); scr[3] <= scr_next(scr[3], 1'b1);
-				s_act[3] <= 1'b1; s_wr[3] <= 1'b0; s_dum[3] <= 1'b1;
-			end
-		end
-		4'd3: if (s_act[3]) begin
-			s_act[3] <= 1'b0;
-			c_ba = 2'd3; c_a = col_a(s_dum[3] ? 10'd0 : sc_addr[9:0]);
-			if (s_wr[3]) begin c_cmd = CMD_WR; c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be; end
-			else begin
-				c_cmd = CMD_RD; c_tv = 1'b1;
-				if (s_dum[3]) c_tk = 3'd7;
-				else begin
-					c_tk = 3'd4; c_ti = dl_wi;
-					dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
-					dl_t0[dl_wi] <= sc_t0;
-					dl_wi <= ~dl_wi;
-				end
-			end
+		// the group A write to bank 2 of the previous frame's plan: this edge also latches the next plan (fc == 0),
+		// so v_mode / v_col / v_wd still hold the previous one here
+		4'd1:  if (v_mode[2] == 2'd2 && v_act[2]) begin v_act[2] <= 1'b0;
+			c_cmd = CMD_WR; c_ba = 2'd2; c_a = col_a(v_col[2]); c_dq = v_wd[0]; c_oe = 1'b1; c_dqm = ~v_wbe[0];
 		end
 		default: ;
 		endcase
@@ -401,7 +371,7 @@ always @(posedge clk) begin
 	// ---- pin registers
 	if (!init_done) begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= i_cmd;
-		dram_a <= i_a; dram_ba <= 2'b00; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
+		dram_a <= i_a; dram_ba <= i_ba; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
 	end else begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= q_cmd;
 		dram_a <= q_a; dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
@@ -451,8 +421,8 @@ always @(posedge clk) begin
 	if (init) begin
 		cyc <= '0;
 		for (k = 0; k < 4; k = k + 1) begin v_mode[k] <= 2'd3; scr[k] <= 8'd0; end
-		s_act[2] <= 1'b0; s_act[3] <= 1'b0; v_act <= 4'd0;
-		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
+		s_act <= 1'b0; s_pre <= 1'b0; v_act <= 4'd0;
+		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0; l_rd <= 1'b0; l_wr <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;
 		for (k = 0; k <= 5; k = k + 1) t_v[k] <= 1'b0;
