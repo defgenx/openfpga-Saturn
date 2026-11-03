@@ -520,3 +520,58 @@ Left to the fitter (in the seeds with both counters low; RTL changes that would 
 (17,902 -> 17,927). The packing it prevents is a fitter netlist optimization ("Packed Register / Register Packing / Timing
 optimization", `prev_l` duplicated into the DSP AY input); an instance-level `QII_AUTO_PACKED_REGISTERS` would be the
 zero-area way, but it is untested (only a fit shows it), so the gate stays.
+
+## PSRAM and SRAM pin timing (branch `psramfix`, 2026-11-03)
+
+The cram clocks were generated clocks on the `p_clk` registers and the SRAM reference was the `e_oe_n` register, so the
+clock's route and output buffer (5.6 ns on `cram1_clk`, 5.8 ns on `sram_oe_n` at slow 85C) were missing from every read
+check; `p_clk`, `e_oe_n` and the read registers were fabric registers. The clocks are now generated on the ports
+(docs/memory.md sections 4 and 5: datasheet values, board assumption, the hold rule of the F-edge pins).
+
+v0.2.4 (`memfix10-lock-s3`) re-timed (`openfpga-Saturn-worktrees/psram-sta/src/fpga/sta_p`, `orig` = release SDC, `new` =
+corrected SDC for the release RTL), setup / hold in ns:
+
+| Group | SDC | slow 85C | slow 0C | fast 85C | fast 0C |
+|---|---|---|---|---|---|
+| cram0 read | release | +2.635 / +5.833 | +2.519 / +5.878 | +5.598 / +3.781 | +5.742 / +3.682 |
+| | corrected | **-3.383** / +10.408 | **-3.298** / +10.260 | +2.078 / +6.073 | +2.423 / +5.780 |
+| cram1 read | release | +2.152 / +5.090 | +2.110 / +5.165 | +5.319 / +3.472 | +5.491 / +3.429 |
+| | corrected | **-4.467** / +10.169 | **-4.318** / +10.079 | +1.287 / +6.210 | +1.705 / +5.934 |
+| cram pins (worst chip) | release | +0.763 / +2.044 | +0.841 / +1.933 | +3.075 / +0.217 | +3.232 / +0.067 |
+| | corrected | +3.934 / +4.635 | +3.825 / +4.715 | +3.919 / +5.418 | +3.869 / +5.502 |
+| SRAM read | release | +4.182 / +3.023 | +4.710 / +6.021 | +8.926 / +2.769 | +9.184 / +1.051 |
+| | corrected | **-2.696** / +8.280 | **-1.852** / +10.988 | +4.586 / +5.778 | +5.209 / +3.718 |
+| SRAM pins | corrected | +2.327 / +0.180 | +2.217 / +0.330 | +2.257 / +0.981 | +2.144 / +1.126 |
+
+(the release-SDC pin hold of +0.07 was against an edge at the launch instant, which the
+F-edge pins never use.) Every other clock and group is unchanged by the SDC.
+
+Changes (`f412b34` and the SDC fix after it): `p_clk` in the I/O cell (`FAST_OUTPUT_REGISTER` on `cram*_clk`), read data
+in a free-running I/O cell input register on `cram*_dq` and `sram_dq` (`rdata` / `fb_q` are those registers, valid in the
+`rvalid` / `fb_done` cycle as before; the SRAM word is sampled one clk_ram later, at the edge that sets `fb_done`), every
+SRAM pin register in the I/O cells. Benches (scratchpad `eqp`, Verilator, every output at every clock, `rdata` / `fb_q`
+while `rvalid` / `fb_done`): `tb_eq_psram` 3 seeds x 3 M clk (about 107 k reads, 20 k writes, 905 k words, resets),
+`tb_eq_sram` 3 seeds x 3 M clk (409 k reads, 409 k writes, zero-delay SRAM per side); broken copies (`dq_r` sampled at
+F edges; `fb_q` from the pins after the sample edge) give 302 k / 136 k mismatches. `make -C sim/mem` passes (psram,
+ddram, fb, load, boot); the PSRAM model now checks tCSP 4 ns (fails with 9 ns, as it must).
+
+Map (`psramfix-map`): 17,927 ALMs needed, 17,323 registers, both unchanged. Seed 3 fit: 18,241 ALMs needed, 1,848 /
+1,848 LABs, 302 M10K, 0 "Can't pack"; 64 Fast Input Register (16 `cap_p` + 48 `dq_r`), `p_clk` x2 and `e_oe_n` as Fast
+Output Register.
+
+| Group (seed 3 fit) | slow 85C | slow 0C | fast 85C | fast 0C |
+|---|---|---|---|---|
+| cram0 read | +1.024 / +6.694 | +0.995 / +6.723 | +4.187 / +4.462 | +4.359 / +4.302 |
+| cram1 read | +0.909 / +6.850 | +0.910 / +6.837 | +4.092 / +4.617 | +4.272 / +4.449 |
+| cram pins (worst chip) | +3.436 / +5.677 | +3.453 / +5.700 | +3.716 / +6.028 | +3.705 / +6.044 |
+| SRAM read | +15.047 / +3.007 | +15.243 / +2.871 | +17.949 / +0.508 | +18.186 / +0.234 |
+| SRAM pins | +1.276 / +1.271 | +1.288 / +1.320 | +1.611 / +1.673 | +1.615 / +1.690 |
+| counter[0] clk_sys | **-0.393** / +0.268 | **-0.065** / +0.258 | +4.182 / +0.130 | +4.505 / +0.107 |
+| counter[1] clk_ram | **-0.605** / +0.326 | **-0.432** / +0.317 | +4.072 / +0.142 | +4.272 / +0.108 |
+
+Recovery / removal positive. The pin groups close at every corner; seed 3 does not close as a whole: clk_sys is SSH
+`bsc.VEC_BUF` -> `core.PIPE.ID.PC` / `IR` (round 9's "left to the fitter" group), clk_ram is SCU `CBUS_A` and MSH / SSH
+`BUS_RLS` -> ddram `ramh_read_busy` / `ramh_curr` / `ramh_plru` (round 7's group), both placement noise of the new I/O
+packing (v0.2.4 seed 3: +0.084 / +0.003). The fit ran with the first form of the SRAM clock source, which matched two
+registers and was ignored (no SRAM constraint during the fit); the numbers above are re-timed with the committed SDC.
+To do: the other seeds of round 9 with the committed SDC.

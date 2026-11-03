@@ -271,8 +271,45 @@ assignments the synthesis gave the eight `p_dq` bits whose configuration value d
 the eight constant bits (and `p_oe`) `ph`, so half the pins kept `p_oe` in the fabric (cram0/1 pins -0.46 ns, round 2 in
 docs/fit-status.md); `ALLOW_SYNCH_CTRL_USAGE OFF` on the registers packed them but applied to the entity and cost 13
 LABs. While `p_oe` is low the DQ pins are high impedance and `p_dq` holds `act_adr[15:0]`, which also carries a
-configuration value one slot ahead of its write. Read data is a fabric register at the R edge, as in the PSX core (the
-chip gives 9 ns of tACLK plus two clk_ram, slack +2 ns).
+configuration value one slot ahead of its write. The chip clock register `p_clk` and the read data register `dq_r` are
+I/O cell registers too (pin timing below).
+
+### Pin timing
+
+Chip figures: the AS1C8M16PL datasheet itself was not found; the AS1C4M16PL-70BIN datasheet (Alliance, same family, 64 Mb,
+Rev 1.0 Aug 2018, burst READ / WRITE tables 14 and 16) is used, whose tACLK (7 ns at 108 MHz, 5.5 at 133) matches the
+distributor data of the 128 Mb part. Values of the slowest grade that runs 57.3 MHz (the 83 MHz column; the 133 MHz grade
+is faster in every one): tACLK 9 ns max, tKOH 2 min, tSP 3 min, tCSP (CE#) 4 min, tHD 2 min, tCLK 12 min. Fixed latency
+code 4 is allowed up to 66 MHz (table 6). Board: 0.5 ns per trace assumed (not measured), so the SDC uses output setup
+3.5 (CE# 4.5), output hold 2.5, input 10.0 max / 2.0 min against the clock at the `cram*_clk` pin.
+
+The pin clock is a generated clock on the `cram*_clk` port (sourced from the `p_clk` register), so the route and
+1.8 V output buffer of the clock are in every check. Up to v0.2.4 the clock was defined on the `p_clk` register, which
+dropped the clock's 5.6 ns of route and buffer (2.3 + 3.3 ns, slow 85C) from every read check, and `p_clk` and the read
+register were fabric registers. The v0.2.4 placement re-timed with the corrected SDC (`docs/fit-status.md`, PSRAM and
+SRAM pin timing): read setup -3.38 (cram0) / -4.47 (cram1) at slow 85C, where the old SDC reported about +2.
+
+The read loop at slow 85C: the chip clock leaves the R edge register, reaches the pin, the chip drives the word tACLK
+after that edge, and the word travels back to a register that samples at the next R edge (17.46 ns later). With `p_clk`
+and the capture register in the I/O cells the loop loses most of the fabric routes at both ends (seed 3 fit, slow 85C:
+clock at the pin 8.33 -> 6.84 ns, pad to register 6.03 -> 2.97 ns) and the capture register's clock is the I/O clock,
+0.8 ns later than a LAB's: read setup +1.02 (cram0) / +0.91 (cram1) at slow 85C, hold +4.3 at fast 0C. Rules:
+
+* every pin register changes only at F edges, half a clk_ram before the chip clock edge that samples it (setup 8.73 ns);
+  the hold check is against the chip edge before (SDC `-hold -start 1`), never against an edge at the launch instant.
+* `dq_r` samples DQ at every clk edge (no enable, no logic in front, so it packs into the I/O cell next to `p_dq` and
+  `p_oe`), and `rdata` is `dq_r`: the word sampled at the R edge that sets `rvalid` is in it during the `rvalid` cycle,
+  as the old R-edge register's was. `rdata` is don't-care outside `rvalid` (`ddram_pocket` writes its caches only with
+  `rvalid`).
+* the only edge in the data window is that R edge: the word is at the pad from about 17 ns after the launch edge (slow)
+  until about 22 ns (fast: clock out + tKOH after the next edge), so neither the F edge before nor the one after works.
+* the path `dq_r` -> `ddram_pocket` cache M10K data input is one clk_ram from the I/O cell (was from a fabric register):
+  +2.88 ns in the seed 3 fit.
+* the SDC takes the clock sources with `-no_duplicates`: the fitter keeps a fabric copy of a register it packs into a pin
+  when the register feeds back into its own logic (`e_oe_n` does), and both copies match the name.
+
+The board delay (0.5 ns per trace) is an assumption; without it the read margin is about 1 ns larger. A slower chip clock
+is not needed at 57.3 MHz.
 
 Client port, 16 bit words (`ddram_pocket` forms the halfword address and the word count; the controller keeps no lane or
 beat logic): `addr` halfword address (bit 22 = die), `cnt` words (reads 1-1023, writes 1 or 2), `din` = {word 0, word 1}
@@ -281,7 +318,7 @@ with `be` = {enables of word 0, of word 1}, held by the client until the control
 (it never crosses a 128 halfword row). The power-up wait is not in the controller (`INIT_US = 0`): `mem_pocket` holds both
 chips until `sdram_ready` (200 us after `rst_ram`, longer than the 150 us the chips need).
 
-`tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, tCEM 4 us, 150 us power-up;
+`tb_psram` and `tb_ddram` (model: tACLK 9 ns, tKOH 2 ns, tHZ 7 ns, setup 3 / hold 2 ns, CE# setup 4 ns, tCEM 4 us, 150 us power-up;
 rules after the PSX model, written independently):
 
 | Access | clk_ram cycles | ns |
@@ -324,6 +361,19 @@ is in PSRAM1 at byte 0x108000 and reaches it through two `ddram_pocket` channels
   tail words (32 M10K blocks fewer).
 
 The old limit (a VBlank erase at full rate plus a sector burst lost erase writes) is gone with the ring.
+
+SRAM pin timing. The chip has no clock; the reference is the OE# pin (`sram_ref_pin`, a generated clock on the
+`sram_oe_n` port sourced from the `e_oe_n` register), every other pin is held within `SRAM_SKEW` = 2 ns of it, and read
+data is valid `SRAM_SKEW` + tAA + 1 ns of board after it (tAA 10 ns assumed: the part is not known). Up to v0.2.4 the
+reference was the `e_oe_n` register (5.8 ns of route and 3.3 V buffer dropped from the read check, which read +1.8 ns and
+is -2.70 at slow 85C with the corrected SDC) and `fb_q` was a fabric register 4.6 ns from its pad, sampled 3 clk_ram after
+the address edge. Now every SRAM pin register and the read register `dq_r` are I/O cell registers (`ap_core.qsf`), and
+`dq_r` samples at every edge: `fb_q` is `dq_r`, so in the `fb_done` cycle it holds the word sampled at the edge that sets
+`fb_done`, 4 clk_ram (34.9 ns) after the address edge. The pins of the next access change at that edge too and reach the
+chip 3 to 8 ns later, so the sample still sees the word (hold check at that edge, input minimum -`SRAM_SKEW`). `fb_q` is
+don't-care outside `fb_done` (`vdp1_fb_pocket` reads it only then). In `tb_fb` (pin delays 3.5 ns out, 1 ns in) a read
+passes up to tAA 30 ns (was 21 ns); the negative run uses 35 ns. Seed 3 fit: read setup +15.0 ns at slow 85C with tAA
+10 ns (so tAA up to about 25 ns), hold +0.23 at fast 0C, pin window +1.28 / +1.27.
 
 ## 6. Bandwidth budget
 
@@ -429,7 +479,8 @@ misreading with the controllers.
 5. PSRAM synchronous mode at 57.3 MHz / LC4 (the PSX core runs 33.9 MHz). `READ_ADJ` / `WRITE_ADJ` are the bring-up
    knobs. The controller does not park the chips back in asynchronous mode: after this core the chips stay
    synchronous until power-off, which breaks other cores that use them asynchronously (the PSX core parks them).
-6. SRAM part and speed unknown; the framebuffer needs a read of 35 ns and a write cycle of 26 ns with WE# low 8.7 ns.
+6. SRAM part and speed unknown; the framebuffer needs tAA up to about 25 ns (section 5, with the FPGA's own pad delays)
+   and a write cycle of 26 ns with WE# low 8.7 ns.
 7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
    caches, SH-1 and SCSP are counted. FB0 draw with an FB1 tail erase (or the reverse) slows the draw while FB_RDY is held low.
@@ -437,5 +488,6 @@ misreading with the controllers.
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
 10. Cartridge ROM loading and backup save-out are not implemented; the 64 KB backup image conversion assumes `{FF, byte}`.
-11. SDC: the pin paths are constrained (section 3 and `core_constraints.sdc`); the `clk_sys` to `clk_ram` crossings are
-    ordinary single-cycle paths of one clock family, timed as such.
+11. SDC: the pin paths are constrained (sections 3, 4, 5 and `core_constraints.sdc`) against clocks defined on the pins;
+    board trace delays are assumed (0.5 ns per PSRAM trace, 1 ns SRAM round trip), not measured. The `clk_sys` to
+    `clk_ram` crossings are ordinary single-cycle paths of one clock family, timed as such.

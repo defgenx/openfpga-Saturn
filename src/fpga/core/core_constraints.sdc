@@ -96,7 +96,8 @@ set_multicycle_path -setup -end -from [get_clocks dram_clk_pin] -to [get_clocks 
 # generated clock on the port, so its route and output buffer are in every check. AS1C8M16PL at <= 83 MHz, plus 0.5 ns
 # per board trace (docs/memory.md section 4): tSP 3, tCSP 4 (CE#), tHD 2, tACLK 9, tKOH 2 ns.
 foreach n {0 1} {
-	set pclk [get_registers "*|psram${n}|p_clk"]
+	# -no_duplicates: the fitter may keep a fabric copy of a register it packs into the pin
+	set pclk [get_registers -no_duplicates "*|psram${n}|p_clk"]
 	create_generated_clock -name cram${n}_clk_reg -source [get_pins $clk_ram] -divide_by 2 $pclk
 	create_generated_clock -name cram${n}_clk_pin -source $pclk [get_ports cram${n}_clk]
 	set cram_out [get_ports "cram${n}_a\[*\] cram${n}_dq\[*\] cram${n}_adv_n cram${n}_cre cram${n}_oe_n cram${n}_we_n cram${n}_ub_n cram${n}_lb_n"]
@@ -162,8 +163,9 @@ set_multicycle_path -hold -end -from [get_registers {*|cart|MEM_A[*] *|cart|MEM_
 # after the address edge, where the next access changes the pins (sram_pocket.sv). 8.73 = clk_ram period of the
 # analysed mode. docs/memory.md section 5.
 set SRAM_SKEW 2.0
-create_generated_clock -name sram_ref -source [get_pins $clk_ram] -divide_by 1 [get_registers "*|sram|e_oe_n"]
-create_generated_clock -name sram_ref_pin -source [get_registers "*|sram|e_oe_n"] [get_ports sram_oe_n]
+set eoen [get_registers -no_duplicates "*|sram|e_oe_n"]
+create_generated_clock -name sram_ref -source [get_pins $clk_ram] -divide_by 1 $eoen
+create_generated_clock -name sram_ref_pin -source $eoen [get_ports sram_oe_n]
 set sram_out [get_ports {sram_a[*] sram_dq[*] sram_we_n sram_ub_n sram_lb_n}]
 set_output_delay -clock sram_ref_pin -max [expr {8.73 - $SRAM_SKEW}] -add_delay $sram_out
 set_output_delay -clock sram_ref_pin -min $SRAM_SKEW -add_delay $sram_out
