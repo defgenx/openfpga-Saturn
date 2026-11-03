@@ -10,7 +10,7 @@ Reference behaviour: `ref/Saturn_MiSTer/rtl/Saturn/SCSP` (the golden the shrunk 
 
 Exact, every clock, against the golden (MIDI buffer registers CR2/CR3 removed as in the shrunk core): `DO RDY_N INT_N SCCE_R/F SCDO
 SCDTACK_N SCAVEC_N SCIPL_N RAM_A RAM_D RAM_WE RAM_RD RAM_CS RAM_RFS`. So the sound-RAM request timing, which the memory side
-(docs/memory.md, SCSP deadline in SDRAM banks 2/3) depends on, is unchanged. `SOUND_L/R` are exact once settled: the
+(docs/memory.md, SCSP deadline in SDRAM bank 3) depends on, is unchanged. `SOUND_L/R` are exact once settled: the
 master-volume unit is shared by both channels, so the outputs lag `SUM_L/SUM_R` and `CR0` by up to two clk_sys; the bench compares
 them after four steady clocks and compares the WAV (sampled every 512 CE) byte for byte.
 

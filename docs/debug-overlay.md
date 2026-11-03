@@ -24,7 +24,7 @@ never green). Legend, left to right:
 | 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
-| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to word 0x100 of SCSP bank 2 / 3, reads both back (within 320 clk_ram of init done, before the SH-2 runs; the check owns the sound RAM port meanwhile) and both match; red if any mismatch or not finished |
+| 15 | SDRAM self-check | level | after SDRAM init, `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100, reads both back (within 320 clk_ram of init done, before the SH-2 runs; the check owns the sound RAM port meanwhile) and both match; red if any mismatch or not finished |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`) |
 
 Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and

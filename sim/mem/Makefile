@@ -49,13 +49,14 @@ boot: build/tb_boot
 	$(VVP) build/tb_boot
 	$(VVP) build/tb_boot +OLD
 
-# OVL: DQ contention limit. The schedule puts a write two pin cycles after a read of another bank, 4 ns of overlap with
-# that read's tLZ (docs/memory.md section 3); the bench's own default (1100 ps) fails until the schedule changes.
-OVL ?= +OVERLAP_PS=5000
+# SDARGS: three WRITEs follow the last word of a read burst at the next clock (datasheet "Read to Write", Figure 6), which
+# overlaps the worst-case tHZ (6 ns) of that word by 1.6 ns at these pad delays; the model accepts tRP from 17.4 ns and
+# counts it (bank 3 alternates B1 and SCSP every 8 clk_ram). Both are in docs/memory.md section 3.
+SDARGS ?= +OVERLAP_PS=1700 +SD_TRP_PS=17400
 sdram: build/tb_sdram
-	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300 $(OVL)
-	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=300 $(OVL)
-	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 $(OVL)
+	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=300 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 $(SDARGS)
 
 clean:
 	rm -rf build
@@ -67,11 +68,11 @@ elab:
 
 # 64 ms of VDP2/SCSP traffic against the 64 ms retention limit (about 10 minutes)
 long: build/tb_sdram
-	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000 $(OVL)
+	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000 $(SDARGS)
 
 # runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 30 ns SRAM
 negative: build/tb_sdram build/tb_fb build/tb_fb_slow
-	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(OVL) | tail -3
+	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(SDARGS) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3
 
 .PHONY: all elab long negative sdram psram ddram fb load boot clean mc-check
@@ -82,14 +83,14 @@ build/tb_sdram_neg: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
 
 skew: build/tb_sdram build/tb_sdram_neg
 	@for sk in -4000 -3000 -2000 -1500 -1000 -500 0 500 1000 2000 3000 3500 4000; do \
-	  printf "rising-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done
+	  printf "rising-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram +PROFILE=2 +RUN_US=40 +CAPPS=$$sk $(SDARGS) | grep "data errors" ; done
 	@for sk in -4000 -3000 -2000 -1000 0 1000 2000 3000 4000; do \
-	  printf "falling-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram_neg +PROFILE=2 +RUN_US=40 +CAPPS=$$sk | grep "data errors" ; done
+	  printf "falling-edge capture, clock skew %6d ps: " $$sk; $(VVP) build/tb_sdram_neg +PROFILE=2 +RUN_US=40 +CAPPS=$$sk $(SDARGS) | grep "data errors" ; done
 
 # Hold exceptions of core_constraints.sdc (SDRAM request registers capture at odd clk_ram edges only): make mc-check
 build/tb_sdram_mc: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
 	$(IVL) $(FLAGS) -DMC_CHECK -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
 mc-check: build/tb_sdram_mc
-	$(VVP) build/tb_sdram_mc +PROFILE=0 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'
-	$(VVP) build/tb_sdram_mc +PROFILE=1 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'
-	$(VVP) build/tb_sdram_mc +PROFILE=2 +RUN_US=300 $(OVL) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=0 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=1 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=2 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
