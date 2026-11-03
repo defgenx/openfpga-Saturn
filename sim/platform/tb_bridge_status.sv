@@ -1,5 +1,6 @@
 // APF boot status and target commands around a PLL relock: the real core_bridge_cmd with the status inputs as
-// v0.2.4 drove them (live PLL lock) or through pocket_status (-DFIX).
+// v0.2.4 drove them (live PLL lock) or through pocket_status (-DFIX: boot done sticky from the first lock, setup
+// done sticky from RAM ready; the host must see "setup" (2) before the RAM is ready, then "idle" (3)).
 //
 // Host: polls Request Status, starts the slot 0 push as soon as the core leaves "booting" (the order the PSX
 // core's APF model uses; nothing in the APF docs says the host waits for "idle"), all complete, Reset Exit,
@@ -21,9 +22,9 @@ module tb_bridge_status;
 	wire setup_ready_74a = lock & ever_ready;
 	wire reset_n;
 `ifdef FIX
-	wire st_ready;
-	pocket_status st (.clk_74a(clk), .setup_ready_74a(setup_ready_74a), .ready(st_ready));
-	wire status_boot_done = st_ready, status_setup_done = st_ready;
+	wire status_boot_done, status_setup_done;
+	pocket_status st (.clk_74a(clk), .pll_locked_74a(lock), .setup_ready_74a(setup_ready_74a),
+	                  .boot_done(status_boot_done), .setup_done(status_setup_done));
 `else
 	wire status_boot_done = lock, status_setup_done = lock & setup_ready_74a;
 `endif
@@ -100,13 +101,14 @@ module tb_bridge_status;
 	endtask
 
 	integer rtr_seen = 0, rtc_ok = 0;
-	integer w, early = 0, n_rtr = 0, n_boot_running = 0, rtr_always = 0;
+	integer w, early = 0, n_rtr = 0, n_boot_running = 0, rtr_always = 0, first_st = 0, seen3 = 0;
 	reg [15:0] res;
 	reg [31:0] t0, p;
 	initial begin : host
 		rtr_always = $test$plusargs("RTR_ALWAYS");
 		res = 1;
 		while (res == 16'd1) begin repeat (1000) @(posedge clk); cmd(16'h0000, res); end
+		first_st = res;
 		$display("%0t ps  host: status %0d, RAM ready %0d: Reset Enter, slot 0 push", $time, res, ever_ready);
 		cmd(16'h0010, res);
 		// RTC once at boot, then a slot write request: its size parameter goes to the same register 0x24
@@ -121,10 +123,11 @@ module tb_bridge_status;
 			if (!ever_ready) early = early + 1;
 			repeat (86) @(posedge clk);
 		end
-		$display("%0t ps  host: %0d words pushed before the RAM was ready (load FIFO: 256 entries)", $time, early);
+		$display("%0t ps  host: %0d words pushed before the RAM was ready (load FIFO: 512 entries)", $time, early);
 		cmd(16'h008F, res);
 		res = 0;
 		while (res != 16'd3) begin repeat (1000) @(posedge clk); cmd(16'h0000, res); end
+		seen3 = 1;
 		cmd(16'h0011, res);
 		running = 1'b1;
 		$display("%0t ps  host: Reset Exit", $time);
@@ -152,9 +155,10 @@ module tb_bridge_status;
 
 	initial begin
 		#(6_000_000_000);                            // 6 ms
-		$display("Ready to Run commands %0d; status 1/2 answered while running %0d; disc reads issued %0d, completed %0d",
-		         n_rtr, n_boot_running, n_req, n_done);
-		if (rtc_ok && n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5) $display("RESULT: PASS");
+		$display("Ready to Run commands %0d; status 1/2 answered while running %0d; disc reads issued %0d, completed %0d; first status after booting %0d",
+		         n_rtr, n_boot_running, n_req, n_done, first_st);
+		if (rtc_ok && n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5 && first_st == 2 && seen3)
+			$display("RESULT: PASS");
 		else $display("RESULT: FAIL");
 		$finish;
 	end

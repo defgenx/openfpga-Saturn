@@ -423,9 +423,10 @@ passes up to tAA 30 ns (was 21 ns); the negative run uses 35 ns. Seed 3 fit: rea
 
 ## 7. Load path (`load_pocket.sv`)
 
-`bridge_loader`'s `ld_*` bus (clk_74a) goes through a 256 x 59 bit gray-code FIFO (one M10K; overflow counter in
+`bridge_loader`'s `ld_*` bus (clk_74a) goes through a 512 x 59 bit gray-code FIFO (three M10K; overflow counter in
 `dbg_overflow`, 0 in the test at the bridge's minimum word spacing) to a 32 bit write port of `ddram_pocket` (PSRAM0 byte
-address >> 2). A bridge word is at least 32 clk_74a = 25 clk_sys apart; a two-word write takes 15-21 clk_ram plus about
+address >> 2). Nothing leaves the FIFO before `go` (the first `mem_ready` after an `rst_ram`); the words the host pushes
+during boot wait there (docs/integration.md, "Host handshake"). A bridge word is at least 32 clk_74a = 25 clk_sys apart; a two-word write takes 15-21 clk_ram plus about
 4 of FSM, so a word is absorbed in about half its slot.
 
 | Slot (`ld_sel`) | Destination | Conversion |

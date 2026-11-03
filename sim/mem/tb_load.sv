@@ -18,7 +18,7 @@ reg         o_busy = 0;
 
 load_pocket #(.LD_LITTLE(1)) dut (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
-	.clk(clk), .o_addr(o_addr), .o_data(o_data), .o_wr(o_wr), .o_busy(o_busy), .loading(loading), .dbg_overflow(ovf)
+	.clk(clk), .go(1'b1), .o_addr(o_addr), .o_data(o_data), .o_wr(o_wr), .o_busy(o_busy), .loading(loading), .dbg_overflow(ovf)
 );
 
 // the loader port of ddram_pocket: edge detect, busy until the write is done

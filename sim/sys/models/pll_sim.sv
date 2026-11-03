@@ -25,7 +25,7 @@ module pll_sys (
 	output reg         outclk_2 = 1'b0,
 	output wire        outclk_3,
 	output wire        outclk_4,
-	output reg         locked = 1'b0,
+	output wire        locked,
 	input  wire [63:0] reconfig_to_pll,
 	output wire [63:0] reconfig_from_pll
 );
@@ -40,14 +40,35 @@ module pll_sys (
 	reg [1:0] vdiv = 2'd0;
 	// lock 200 ns after start (short, to keep runs fast), and a relock on every mode change: pll_lite rewrites M and K
 	// and the lock flag drops for the relock (20 us here) while the clocks keep running at the new rate
+	reg lk = 1'b0;
 	initial begin
-		#200000 locked = 1'b1;
+		#200000 lk = 1'b1;
 	end
 	reg [1:0] mode_q = 2'b00;
 	always @(pal or dotsel) if ({dotsel, pal} !== mode_q) begin
 		mode_q = {dotsel, pal};
-		if (locked) begin locked = 1'b0; #20000000 locked = 1'b1; end
+		if (lk) begin lk = 1'b0; #20000000 lk = 1'b1; end
 	end
+	// +FLICKER_US=<period> +FLICKER_LOW_US=<low> [+FLICKER_END_US=<t>]: the lock flag also drops for <low> us every
+	// <period> us after the first lock, until <t> us (0 or absent: forever); the clocks keep running
+	reg flick = 1'b0;
+	integer fl_per = 0, fl_low = 0, fl_end = 0;
+	initial begin
+		if ($value$plusargs("FLICKER_US=%d", fl_per) && fl_per > 0) begin
+			if (!$value$plusargs("FLICKER_LOW_US=%d", fl_low)) fl_low = 3;
+			if (!$value$plusargs("FLICKER_END_US=%d", fl_end)) fl_end = 0;
+			$display("pll_sim: lock drops %0d us every %0d us until %0d us (0: forever)", fl_low, fl_per, fl_end);
+			#200000;
+			forever begin
+				#(64'd1000000 * (fl_per - fl_low));
+				if (fl_end != 0 && $time > 64'd1000000 * fl_end) break;
+				flick = 1'b1;
+				#(64'd1000000 * fl_low);
+				flick = 1'b0;
+			end
+		end
+	end
+	assign locked = lk & ~flick;
 	// quarter-period tick: clk_ram toggles every tick, clk_sys every 2nd, clk_vid every 8th tick (period 16 ticks = 4 clk_sys)
 	reg [3:0] q = 4'd0;
 	always begin

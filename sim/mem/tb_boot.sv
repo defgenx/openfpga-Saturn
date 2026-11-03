@@ -33,7 +33,7 @@ reg  [31:0] ld_data = 0;
 wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy; wire [7:0] ovf;
 load_pocket #(.LD_LITTLE(1'b0)) ldr (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
-	.clk(clk), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(ovf));
+	.clk(clk), .go(1'b1), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(ovf));
 
 reg  [21:1] raml_addr = 0;  wire [15:0] raml_dout;  reg raml_rd = 0;  wire raml_busy;
 wire p0_busy, p0_rd, p0_we, p0_rlast, p0_rvalid, p1_busy, p1_rd, p1_we, p1_rlast, p1_rvalid;
