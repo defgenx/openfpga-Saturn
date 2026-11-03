@@ -68,7 +68,17 @@ module pll_sys (
 			end
 		end
 	end
-	assign locked = lk & ~flick;
+	// +RELOCK_US=<t>: one 20 us lock drop at t us, as a pll_lite relock for a mode change the BIOS run does not make
+	reg relk = 1'b0;
+	initial begin : relock
+		longint t;
+		if ($value$plusargs("RELOCK_US=%d", t)) begin
+			$display("pll_sim: one relock at %0d us", t);
+			#(64'd1000000 * t) relk = 1'b1;
+			#20000000 relk = 1'b0;
+		end
+	end
+	assign locked = lk & ~flick & ~relk;
 	// quarter-period tick: clk_ram toggles every tick, clk_sys every 2nd, clk_vid every 8th tick (period 16 ticks = 4 clk_sys)
 	reg [3:0] q = 4'd0;
 	always begin
