@@ -17,6 +17,7 @@
 //   +TCO=n +TIN=n  pad delays in ps (default 5100 / 0: the slow-corner clock-out delay less the I/O cell register's
 //               clock lead over its data path, docs/memory.md section 3)
 //   +OVERLAP_PS=n  DQ contention limit in ps (default 1100)
+//   +W320          clk_ram 107.4 MHz (clk_sys 53.69 MHz, the 320 wide modes)
 //   +SD_OLDMAP     sound RAM in banks 2/3 rows 128-255 (the v0.2.4 map) instead of bank 3 rows 256-511
 //   +SD_TRP_PS=n   tRP accepted by the model, counted when below 18 ns (docs/memory.md section 3)
 
@@ -24,7 +25,9 @@
 
 module tb_sdram;
 
-localparam integer T_RAM = 8730;               // 114.55 MHz
+integer T_RAM = 8730;                         // 114.55 MHz; +W320: 9312 (107.4 MHz, 320 wide modes)
+integer F_SYS = 57272800;
+initial if ($test$plusargs("W320")) begin T_RAM = 9312; F_SYS = 53693175; end
 integer TCO = 5100;                       // FPGA clock/pin output delay (ps)
 integer TIN = 0;                          // pin to register input delay (ps)
 initial begin
@@ -84,15 +87,16 @@ sdram_pocket #(.INIT_CLKS(2000)) dut (
 // clk_sys data only at the first clk_ram edge after a clk_sys edge ("odd"). Counted from the first sync. ctl_even
 // (fc == 1 at the other edge) must be above 0: both edge kinds are seen.
 reg mc_sys = 1'b0, mc_on = 1'b0;
-integer mc_plan = 0, mc_sc = 0, mc_plan_even = 0, mc_sc_even = 0, mc_ctl_even = 0;
+integer mc_plan = 0, mc_sc = 0, mc_plan_even = 0, mc_sc_even = 0, mc_ctl_even = 0, mc_late = 0;
 always @(posedge clk_sys) mc_sys <= 1'b1;
 always @(posedge clk_ram) begin
 	if (dut.sync && !dut.sync_old) mc_on <= 1'b1;
 	if (mc_on) begin
 		if (dut.fc == 4'd0) begin mc_plan = mc_plan + 1; if (!mc_sys) mc_plan_even = mc_plan_even + 1; end
 		if (dut.fc == 4'd1 && !mc_sys) mc_ctl_even = mc_ctl_even + 1;
-		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr)) begin
+		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr) || (dut.slot == 4'd5 && (dut.l_rd || dut.l_wr))) begin
 			mc_sc = mc_sc + 1; if (!mc_sys) mc_sc_even = mc_sc_even + 1;
+			if (dut.slot == 4'd5 && (dut.l_rd || dut.l_wr)) mc_late = mc_late + 1;
 		end
 	end
 	mc_sys <= 1'b0;
@@ -302,7 +306,7 @@ integer    hot;
 always @(posedge clk_sys) begin
 	scsp_ce <= 1'b0;
 	scsp_acc = scsp_acc + 22579200;
-	if (scsp_acc >= 57272800) begin scsp_acc = scsp_acc - 57272800; scsp_ce <= 1'b1; end
+	if (scsp_acc >= F_SYS) begin scsp_acc = scsp_acc - F_SYS; scsp_ce <= 1'b1; end
 	if (scsp_ce) clk_div <= ~clk_div;
 	if (clk_div && scsp_ce) cyc_num <= cyc_num + 1'd1;
 
@@ -383,8 +387,8 @@ initial begin
 	         model.n_trunc, model.n_rint, model.n_pre, model.n_trp_short);
 	$display("tb_sdram: SCSP read latency %0d..%0d clk_ram cycles (%0d changes)", lat_min, lat_max, lat_n);
 `ifdef MC_CHECK
-	$display("MC_CHECK plan_caps=%0d sc_caps=%0d plan_even=%0d sc_even=%0d ctl_even=%0d",
-	         mc_plan, mc_sc, mc_plan_even, mc_sc_even, mc_ctl_even);
+	$display("MC_CHECK plan_caps=%0d sc_caps=%0d (late %0d) plan_even=%0d sc_even=%0d ctl_even=%0d",
+	         mc_plan, mc_sc, mc_late, mc_plan_even, mc_sc_even, mc_ctl_even);
 	if (mc_plan == 0 || mc_sc == 0 || mc_plan_even || mc_sc_even || mc_ctl_even == 0) errs = errs + 1;
 `endif
 	$display("tb_sdram: data errors %0d, final memory mismatches %0d, SDRAM model errors %0d", errs, bad, m_err);

@@ -57,6 +57,8 @@ sdram: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300 $(SDARGS)
 	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=300 $(SDARGS)
 	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300 +W320 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 +W320 $(SDARGS)
 
 clean:
 	rm -rf build
@@ -94,3 +96,4 @@ mc-check: build/tb_sdram_mc
 	$(VVP) build/tb_sdram_mc +PROFILE=0 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
 	$(VVP) build/tb_sdram_mc +PROFILE=1 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
 	$(VVP) build/tb_sdram_mc +PROFILE=2 +RUN_US=300 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'
+	$(VVP) build/tb_sdram_mc +PROFILE=2 +RUN_US=300 +W320 $(SDARGS) | grep -E 'MC_CHECK|PASS|FAIL'

@@ -171,11 +171,14 @@ reg  [5:0] cyc;
 reg        old_rd, old_wr;
 assign ch2rdy = ~(sc_wr_p | sc_rd_p);
 
-// A SCSP request is not overwritten before its CAS: requests are >= 20 clk_ram apart and ACT + CAS take
-// at most 16 + 4 cycles after the capture, so the CAS reads sc_addr / sc_din / sc_be / sc_t0 directly.
+// The slot reads sc_addr / sc_din / sc_be / sc_t0 at ACT and at CAS. Requests are >= 18 clk_ram apart (320 wide
+// modes) and a request can wait 16 for the slot, so one that arrives while the slot runs (ACT edge to CAS) is taken
+// at cycle 5 from the request lines, which the SCSP holds until its next request (sc_t0 then counts from cycle 5).
+reg        l_rd, l_wr;       // request seen while the slot runs
 reg        s_act;            // ACT issued, CAS due
 reg        s_wr;
 reg        s_pre;            // READ issued, PRECHARGE due
+wire       sc_run = s_act || (slot == 4'd0 && (sc_rd_p | sc_wr_p));   // the slot owns sc_* (ACT edge to CAS)
 
 // ------------------------------------------------------------------ self-check (debug overlay only)
 // After init: write A55A / 5AA5 to sound RAM words 0x100 / 0x20100 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
@@ -206,6 +209,11 @@ wire  [1:0] rq_wr   = ch2wr;
 wire        rq_rd   = ch2rd;
 initial begin chk_done = 1'b0; chk_ok = 1'b0; end
 `endif
+// request edges, taken now or (while the slot runs) at cycle 5
+wire       e_rd = rq_rd && !old_rd, e_wr = (|rq_wr) && !old_wr;
+wire       l_take = slot == 4'd5 && (l_rd | l_wr);
+wire       cap_rd = (e_rd && !sc_run) || (l_take && l_rd);
+wire       cap_wr = (e_wr && !sc_run) || (l_take && l_wr);
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
@@ -252,14 +260,16 @@ always @(posedge clk) begin
 	// ---- SCSP request capture
 	old_rd <= rq_rd;
 	old_wr <= |rq_wr;
-	if (rq_rd && !old_rd) begin
-		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= rq_addr[18:1]; sc_rd_p <= 1'b1; sc_wr_p <= 1'b0; sc_t0 <= cyc;
+	if (sc_run) begin
+		if (e_rd) l_rd <= 1'b1;
+		if (e_wr) l_wr <= 1'b1;
 	end
-	if ((|rq_wr) && !old_wr) begin
-		if (sc_rd_p | sc_wr_p) begin if (dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1; end
-		sc_addr <= rq_addr[18:1]; sc_din <= rq_din; sc_be <= rq_wr; sc_wr_p <= 1'b1; sc_rd_p <= 1'b0; sc_t0 <= cyc;
+	if (l_take) begin l_rd <= 1'b0; l_wr <= 1'b0; end
+	if (cap_rd | cap_wr) begin
+		if ((sc_rd_p | sc_wr_p) && dbg_scsp_drop != 8'hFF) dbg_scsp_drop <= dbg_scsp_drop + 1'd1;
+		sc_addr <= rq_addr[18:1]; sc_rd_p <= cap_rd; sc_wr_p <= cap_wr; sc_t0 <= cyc;
 	end
+	if (cap_wr) begin sc_din <= rq_din; sc_be <= rq_wr; end
 	cyc <= cyc + 1'd1;
 
 	// ---- VDP2 plan latch
@@ -412,7 +422,7 @@ always @(posedge clk) begin
 		cyc <= '0;
 		for (k = 0; k < 4; k = k + 1) begin v_mode[k] <= 2'd3; scr[k] <= 8'd0; end
 		s_act <= 1'b0; s_pre <= 1'b0; v_act <= 4'd0;
-		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
+		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0; l_rd <= 1'b0; l_wr <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;
 		for (k = 0; k <= 5; k = k + 1) t_v[k] <= 1'b0;

@@ -157,7 +157,7 @@ burst. With one shared bank there are solutions; a write 6 cycles after every re
 VDP2 samples the four words on the second `DOT_CE_R` after the request = F + 24. Word 0 of each pair lands in
 `doutXX[31:16]` at READ + 5 and word 1 in `doutXX[15:0]` at READ + 6 (F + 13, 16, 18, 21 for the complete A0, B0, B1,
 A1 words). Window: after F + 8 (the previous set is sampled there) and before F + 24, so 2 cycles of margin at the late
-end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 3 profiles x 300 us.
+end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 3 profiles x 300 us at 114.5 MHz and 2 at 107.4 MHz (`+W320`).
 
 ### SCSP
 
@@ -180,8 +180,14 @@ the SCSP READ goes out at ACT + 3 without auto precharge and closes the row with
 precharge READ at ACT + 4 would meet tRAS too but land one cycle later. There is no margin either for a second request
 that arrives while the first is still waiting (`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot
 (WRITE at ACT + 4) and are posted. The slot reads its request registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT
-and CAS instead of keeping a copy: a request is captured at most 16 cycles before its ACT and the CAS follows 3 or 4
-cycles later, and the next request is at least 20 cycles behind it.
+and CAS instead of keeping a copy. A request is captured at most 16 cycles before its ACT and the CAS follows 3 or 4
+cycles later, but the next request can come 18 clk_ram after the previous one (four SCSP CE at 2 or 3 clk_sys each in
+the 320 wide modes; 20 at 114.5 MHz), so one that arrives between the ACT edge and the CAS is only flagged (`l_rd` /
+`l_wr`) and taken from the request lines at cycle 5: the SCSP keeps `MEM_A`, `MEM_D` and its strobes until its next
+request. Its wait stays within 16 cycles (cycle 5 to the next cycle 0); its `sc_t0` counts from cycle 5, which only
+matters for the delivery floor, and the word lands 19 cycles after that. Without this, `tb_sdram +W320` returned the
+neighbouring request's word for a read and the full-system run (320 wide, 107.4 MHz) lost the sound driver. Cycle 5 is
+an odd clk_ram edge, so the hold exception of `sc_addr` / `sc_din` still holds (`make mc-check` counts these captures).
 
 ### Refresh
 
@@ -425,7 +431,7 @@ for the measured slack.
 
 | Bench | Checks | Result |
 |---|---|---|
-| `tb_sdram` (3 profiles x 300 us, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted (about 2,300-2,500 per 300 us, section 3); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
+| `tb_sdram` (3 profiles x 300 us at 114.5 MHz, 2 at 107.4 MHz, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted at 114.5 MHz (about 2,300-2,500 per 300 us, section 3; none at 107.4 MHz); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded (was 48-120: more fills in this run, 159 against 148) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
@@ -456,7 +462,7 @@ datasheet values quoted in the other cores' sources and share any misreading wit
 7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
    caches, SH-1 and SCSP are counted. FB0 draw with an FB1 tail erase (or the reverse) slows the draw while FB_RDY is held low.
-12. `sdram_pocket` SCSP slots depend on requests being at least 20 clk_ram apart (they are: CE spacing 177 ns).
+12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
 10. Cartridge ROM loading and backup save-out are not implemented; the 64 KB backup image conversion assumes `{FF, byte}`.
