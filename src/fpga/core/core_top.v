@@ -341,11 +341,8 @@ wire    [31:0]  cmd_bridge_rd_data;
 // bridge host commands
 // synchronous to clk_74a
 wire            setup_ready_74a;
-wire            pll_locked_74a;
-wire            status_boot_done;                      // sticky from the first PLL lock: a relock is not a reboot
-wire            status_setup_done;                     // sticky: its rising edge triggers Ready to Run, once
-pocket_status   ist ( .clk_74a(clk_74a), .pll_locked_74a(pll_locked_74a), .setup_ready_74a(setup_ready_74a),
-                      .boot_done(status_boot_done), .setup_done(status_setup_done) );
+wire            status_boot_done = pll_locked_74a;
+wire            status_setup_done = pll_locked_74a & setup_ready_74a;    // rising edge triggers a target command
 wire            status_running = reset_n;              // we are running as soon as reset_n goes high
 
 wire            dataslot_requestread;
@@ -638,6 +635,7 @@ wire [27:0] pad = {pad2, pad1};
 wire        clk_vid;
 wire        clk_vid_90;
 wire        clk_audio;
+wire        pll_locked_74a;
 wire signed [15:0] audio_l;
 wire signed [15:0] audio_r;
 wire               audio_stb;
