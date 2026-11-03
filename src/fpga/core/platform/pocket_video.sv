@@ -35,6 +35,7 @@ module pocket_video (
 	,
 	input  wire [15:0] dbg_g,       // square green
 	input  wire [15:0] dbg_y,       // square yellow (when not green), else red
+	input  wire [15:0] dbg_o,       // square not drawn
 	input  wire        dbg_alive,   // the Saturn produces sync and DE; else a 640x224 test timing is generated
 	input  wire [15:0] dbg_wd,      // text row (clk_sys): word 0 = digits 0..3, word 1 = digits 4..7 (digit 0 in the top nibble)
 	input  wire        dbg_wa,
@@ -217,7 +218,7 @@ always @(posedge clk_vid) begin
 	end
 
 	video_de  <= s_de;
-	video_rgb <= !s_de ? 24'h0 : t_on ? 24'hFFFFFF : t_bg ? 24'h000000 : (in_sq & x[9:5] < 5'd16) ? sq_c : gen ? 24'h202020 : pix;
+	video_rgb <= !s_de ? 24'h0 : t_on ? 24'hFFFFFF : t_bg ? 24'h000000 : (in_sq & x[9:5] < 5'd16 & ~dbg_o[sq]) ? sq_c : gen ? 24'h202020 : pix;
 	video_vs  <= s_vs & ~vs_d;
 	hs_dly    <= {hs_dly[2:0], s_hs & ~hs_d};
 	video_hs  <= hs_dly[3];
