@@ -51,8 +51,8 @@ output  reg     [31:0]  dataslot_update_size,
 output  reg             dataslot_allcomplete,
 
 output  reg     [31:0]  rtc_epoch_seconds,
-output  wire    [31:0]  rtc_date_bcd,        // the host's parameter registers 0x24 / 0x28 (the RTC command is their only user)
-output  wire    [31:0]  rtc_time_bcd,
+output  reg     [31:0]  rtc_date_bcd,        // latched by the RTC command: 0x24 is also the size of 0x0082 / 0x008A
+output  reg     [31:0]  rtc_time_bcd,
 output  reg             rtc_valid,
 
 input   wire            savestate_supported,
@@ -143,8 +143,6 @@ end
     reg     [31:0]  host_48;
     reg     [31:0]  host_4C;    
     
-    assign rtc_date_bcd = host_24;
-    assign rtc_time_bcd = host_28;
     reg             host_cmd_start;
     reg     [15:0]  host_cmd_startval;
     reg     [15:0]  host_cmd;
@@ -397,6 +395,8 @@ always @(posedge clk) begin
             // user logic should detect rising edge, it is not continuously updated
             rtc_valid <= 1;
             rtc_epoch_seconds <= host_20;
+            rtc_date_bcd <= host_24;
+            rtc_time_bcd <= host_28;
             hstate <= ST_DONE_OK;
         end
         16'h00A0: begin

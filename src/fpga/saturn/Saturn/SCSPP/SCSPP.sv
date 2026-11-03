@@ -2495,6 +2495,8 @@ endmodule
 //enabled by EN, so Q changes only at the clocks that used to latch it. The read
 //address is registered one clock earlier, as in the unlatched RAMs. CLR clears
 //the held word asynchronously.
+//EN goes on clocken1: with clock_enable_output_b = "NORMAL" altsyncram enables the
+//CLOCK1 output register with clocken1 and ignores clocken3 (same in _OR, _ORN, _TDP).
 module SCSPP_RAM_LW
 #(
 	parameter W = 16,
@@ -2525,9 +2527,9 @@ module SCSPP_RAM_LW
 				.byteena_b (1'b1),
 				.clock1 (CLK),
 				.clocken0 (1'b1),
-				.clocken1 (1'b1),
+				.clocken1 (EN),
 				.clocken2 (1'b1),
-				.clocken3 (EN),
+				.clocken3 (1'b1),
 				.data_b ({W{1'b1}}),
 				.eccstatus (),
 				.q_a (),
@@ -3463,9 +3465,9 @@ module SCSPP_RAM_OR
 				.byteena_b (1'b1),
 				.clock1 (CLK),
 				.clocken0 (1'b1),
-				.clocken1 (1'b1),
+				.clocken1 (EN),
 				.clocken2 (1'b1),
-				.clocken3 (EN),
+				.clocken3 (1'b1),
 				.data_b ({16{1'b1}}),
 				.eccstatus (),
 				.q_a (),
@@ -3559,7 +3561,7 @@ module SCSPP_RAM_ORN
 				.address_a (WRADDR), .byteena_a (WREN), .clock0 (CLK), .data_a (DATA), .wren_a (|WREN),
 				.address_b (RDADDR), .q_b (Q), .aclr0 (1'b0), .aclr1 (CLR),
 				.addressstall_a (1'b0), .addressstall_b (1'b0), .byteena_b (1'b1),
-				.clock1 (CLK), .clocken0 (1'b1), .clocken1 (1'b1), .clocken2 (1'b1), .clocken3 (EN),
+				.clock1 (CLK), .clocken0 (1'b1), .clocken1 (EN), .clocken2 (1'b1), .clocken3 (1'b1),
 				.data_b ({8*NB{1'b1}}), .eccstatus (), .q_a (), .rden_a (1'b1), .rden_b (1'b1), .wren_b (1'b0));
 	defparam
 		altsyncram_component.address_aclr_b = "NONE",
@@ -3609,7 +3611,7 @@ module SCSPP_RAM_TDP
 				.address_a (AA), .byteena_a (AWE), .clock0 (CLK), .data_a (AD), .wren_a (|AWE), .q_a (QA),
 				.address_b (BA), .byteena_b (BWE), .clock1 (CLK), .data_b (BD), .wren_b (|BWE), .q_b (QB),
 				.aclr0 (1'b0), .aclr1 (1'b0), .addressstall_a (1'b0), .addressstall_b (1'b0),
-				.clocken0 (1'b1), .clocken1 (1'b1), .clocken2 (1'b1), .clocken3 (BEN),
+				.clocken0 (1'b1), .clocken1 (BEN), .clocken2 (1'b1), .clocken3 (1'b1),
 				.eccstatus (), .rden_a (1'b1), .rden_b (1'b1));
 	defparam
 		altsyncram_component.address_reg_b = "CLOCK1",

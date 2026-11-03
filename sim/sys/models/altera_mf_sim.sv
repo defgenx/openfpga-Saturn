@@ -1,8 +1,11 @@
 // Behavioural stand-ins for the Altera megafunctions that survive in the Pocket file list (simulation only):
-// altsyncram (DUAL_PORT, BIDIR_DUAL_PORT, SINGLE_PORT, ROM; the clock1 variants exist only under
-// ALTERA_RESERVED_QIS, which the sim does not define), altdpram (MLAB, asynchronous read) and dcfifo.
+// altsyncram (DUAL_PORT, BIDIR_DUAL_PORT, SINGLE_PORT, ROM), altdpram (MLAB, asynchronous read) and dcfifo.
 // M10K reads return the OLD word when the other port writes the same address on the same edge (what the
 // silicon gives for DONT_CARE); a port reading its own write returns the new word.
+// Port B timing and enables follow altera_mf's altsyncram: the read address is registered on the clock that
+// address_reg_b names (clock1 = ~clock0 is a half-cycle read), outdata_reg_b adds the output register, which
+// clock_enable_output_b = NORMAL enables with that clock's own clocken (clocken1 for CLOCK1; clocken3 only with
+// ALTERNATE). Checked against the Quartus altera_mf model for every configuration in the build.
 
 `timescale 1ps/1ps
 
@@ -47,11 +50,21 @@ module altsyncram #(
 	reg [width_b-1:0] qb_r = '0;
 
 	reg [widthad_b-1:0] ab_r;
+	localparam bit AB1 = (address_reg_b == "CLOCK1");
+	localparam bit OREG_B1 = (outdata_reg_b == "CLOCK1"), OREG_B0 = (outdata_reg_b == "CLOCK0");
+	bit oldm = 0; initial oldm = $test$plusargs("OLDMODEL");
+	// port B output register enable, as altera_mf selects it
+	wire oen_b = (clock_enable_output_b == "BYPASS" || clock_enable_output_b == "") ? 1'b1 :
+	             (clock_enable_output_b == "ALTERNATE") ? (OREG_B1 ? clocken3 : clocken2) :
+	             OREG_B1 ? clocken1 : clocken0;
+	function automatic [width_b-1:0] rdw(input [widthad_b-1:0] a);
+		if (width_b == width_a) rdw = mem[a];
+		else rdw = {mem[{a, 1'b1}], mem[{a, 1'b0}]};
+	endfunction
 	always @(posedge clock0) begin
 		if (DUAL) begin
 			// read first (old data), then write
-			if (width_b == width_a) qb_r <= mem[address_b];
-			else qb_r <= {mem[{address_b, 1'b1}], mem[{address_b, 1'b0}]};
+			if (!AB1 || oldm) qb_r <= rdw(address_b);
 			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
 		end else if (BIDIR) begin
 			// true dual port, one clock (same model as sim/scsp/altsyncram.v): both ports read the array as it was before this
@@ -59,7 +72,7 @@ module altsyncram #(
 			qa_r <= mem[address_a];
 			ab_r <= address_b;
 			if (outdata_reg_b == "CLOCK1") begin
-				if (clocken3) qb_r <= mem[ab_r];
+				if (oen_b) qb_r <= mem[ab_r];
 			end else
 				qb_r <= mem[address_b];
 			if (wren_a) for (int l = 0; l < width_byteena_a; l++) if (byteena_a[l]) mem[address_a][l*LA +: LA] <= data_a[l*LA +: LA];
@@ -77,12 +90,18 @@ module altsyncram #(
 		qa_n <= mem[address_a];
 	end
 	assign q_a = DUAL ? '0 : BIDIR ? qa_r : qa_n;
-	// DUAL_PORT with clock1 = ~clock0 (SCUP2_DRAM, address_reg_b = CLOCK1): the silicon registers the read address on the
-	// falling edge of clock0 and the output is unregistered, so the data is valid in the same clock0 cycle (half-cycle read).
-	reg half_r = 0; initial begin #1000; half_r = !$test$plusargs("OLDMODEL") && DUAL && width_a == 32 && widthad_a == 8 && (clock1 === ~clock0); end
-	reg [widthad_b-1:0] ab_h = '0;
-	always @(posedge clock1) if (half_r) ab_h <= address_b;
-	assign q_b = half_r ? mem[ab_h] : qb_r;
+	// DUAL_PORT port B: address register on clock1 when address_reg_b = CLOCK1 (with clock1 = ~clock0 the word is valid in the
+	// same clock0 cycle), then the optional output register. +OLDMODEL reads every DUAL_PORT on clock0 with no output register.
+	reg [width_b-1:0] qb_1 = '0, qb_o = '0;
+	always @(posedge clock1) if (DUAL && AB1 && !oldm) qb_1 <= rdw(address_b);
+	wire [width_b-1:0] qb_a = (AB1 && !oldm) ? qb_1 : qb_r;
+	wire oclr = (outdata_aclr_b == "CLEAR1") ? aclr1 : (outdata_aclr_b == "CLEAR0") ? aclr0 : 1'b0;
+	if (OREG_B1) begin : g_or1
+		always @(posedge clock1 or posedge oclr) if (oclr) qb_o <= '0; else if (oen_b) qb_o <= qb_a;
+	end else if (OREG_B0) begin : g_or0
+		always @(posedge clock0 or posedge oclr) if (oclr) qb_o <= '0; else if (oen_b) qb_o <= qb_a;
+	end
+	assign q_b = (!DUAL || oldm || !(OREG_B1 || OREG_B0)) ? (DUAL ? qb_a : qb_r) : qb_o;
 	assign eccstatus = 1'b0;
 endmodule
 

@@ -28,8 +28,8 @@ the **root** of the card, merging with the folders already there:
 SD card root
 ├── Assets/
 │   └── saturn/
-│       ├── common/              <- disc files: .bin tracks plus the .json and .toc from mktoc.py
-│       └── defgenx.Saturn/      <- the BIOS goes here
+│       ├── common/              <- disc files: .bin tracks plus the .toc from mktoc.py
+│       └── defgenx.Saturn/      <- the BIOS and the .json from mktoc.py
 ├── Cores/
 │   └── defgenx.Saturn/
 │       ├── saturn.rbf_r         <- the core bitstream
@@ -57,8 +57,9 @@ python3 Saturn-mktoc.py "Game (USA).cue" -o out/
 ```
 
 It writes `Game (USA).toc` and `Game (USA).json`, and a merged `.img` if the tracks need merging. Copy
-these files, together with the game's `.bin` track files, into `Assets/saturn/common/`. On the Pocket, pick
-`Game (USA).json` as the disc. If the tracks sit in a subfolder of `Assets/saturn/`, pass
+the `.toc` (and the `.img`), together with the game's `.bin` track files, into `Assets/saturn/common/`, and the
+`.json` into `Assets/saturn/defgenx.Saturn/` (the Pocket only takes an instance JSON from the core's own folder).
+On the Pocket, pick `Game (USA).json` as the disc. If the tracks sit in a subfolder of `Assets/saturn/`, pass
 `--data-path <subfolder>`. CHD is not supported.
 
 Backup RAM is saved to the card (`saturn_bram.sav`, 32 KB; `saturn_cart.sav`, 512 KB for the backup

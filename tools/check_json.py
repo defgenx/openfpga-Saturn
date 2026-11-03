@@ -66,6 +66,11 @@ for core_dir in sorted((ROOT / "Cores").iterdir()):
     if d:
         slots = d["data"]["data_slots"]
         check(len(slots) <= 32, f"{n}/data.json", "max 32 slots")
+        for k, s in enumerate(slots):
+            if int(str(s.get("parameters", 0)), 0) & 0x10:
+                # data.json page: an instance JSON slot must be a core-specific file and the first slot
+                check(k == 0, f"{n}/data.json {s['name']}", "instance JSON (bit 4) only valid in the first slot")
+                check(int(str(s["parameters"]), 0) & 0x2, f"{n}/data.json {s['name']}", "instance JSON needs bit 1 (core-specific)")
         for s in slots:
             maxlen(s["name"], 15, f"{n}/data.json name")
             if "filename" in s:

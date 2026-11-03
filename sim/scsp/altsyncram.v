@@ -52,9 +52,14 @@ module altsyncram #(
 	reg [width_a-1:0] mem [0:numwords_a-1];
 	integer i;
 	initial for (i = 0; i < numwords_a; i = i + 1) mem[i] = 0;
+	// Port B output register enable, as altera_mf's altsyncram selects it: NORMAL takes the clock's own enable
+	// (clocken1 for CLOCK1, clocken0 for CLOCK0), ALTERNATE takes clocken3 / clocken2, BYPASS none.
+	wire oen_b = (clock_enable_output_b == "BYPASS") ? 1'b1 :
+	             (clock_enable_output_b == "ALTERNATE") ? (outdata_reg_b == "CLOCK1" ? clocken3 : clocken2) :
+	             (outdata_reg_b == "CLOCK1") ? clocken1 : clocken0;
 	generate if (operation_mode == "BIDIR_DUAL_PORT") begin : g_tdp
 		// True dual port, one clock: both ports read (registered address, old data on a same-edge write) and write;
-		// port B can hold its read data in an output register enabled by clocken3.
+		// port B can hold its read data in an output register (enable: oen_b below).
 		localparam LB = width_byteena_b;
 		localparam LWB = width_b / LB;
 		reg [width_a-1:0] qa;
@@ -65,7 +70,7 @@ module altsyncram #(
 			qa <= mem[address_a];
 			ab_r <= address_b;
 			if (outdata_reg_b == "CLOCK1") begin
-				if (clocken3) qb <= mem[ab_r];
+				if (oen_b) qb <= mem[ab_r];
 			end else
 				qb <= mem[address_b];
 			if (wren_a)
@@ -81,13 +86,13 @@ module altsyncram #(
 		assign q_b = qb;
 	end else begin : g_sdp
 		reg [width_b-1:0] q;
-		// outdata_reg_b = "CLOCK1" (clock1 tied to clock0): the block's output register, enabled by clocken3,
+		// outdata_reg_b = "CLOCK1" (clock1 tied to clock0): the block's output register, enabled by oen_b,
 		// holds what the array returned for the registered address.
 		reg [widthad_b-1:0] areg;
 		// outdata_aclr_b = "CLEAR1": aclr1 clears the output register asynchronously.
 		always @(posedge clock0 or posedge aclr1) if (aclr1 && outdata_aclr_b == "CLEAR1") q <= 0; else begin
 			if (outdata_reg_b == "CLOCK1") begin
-				if (clocken3) q <= mem[areg];
+				if (oen_b) q <= mem[areg];
 			end else
 				q <= mem[address_b];
 		end

@@ -2,7 +2,8 @@
 // clk_vid_90) and pll_lite (DPRIO writer). The real pll_lite is checked against the Altera reconfiguration
 // core in sim/pll, so here pll_lite only forwards {pal, dotsel} through reconfig_to_pll[2:1] and pll_sys picks the
 // output frequency from them (NTSC 320 / 352, PAL 320 / 352, saturn_pocket.sv comment). Same phase relations as
-// the PLL: clk_ram = 2 x clk_sys, clk_vid = clk_sys / 4, clk_vid_90 = clk_vid + 90 degrees.
+// the PLL: clk_ram = 2 x clk_sys, clk_vid = clk_sys / 4, clk_vid_90 = clk_vid + 90 degrees. The clocks run before lock
+// (as the PLL outputs do while it acquires).
 
 `timescale 1ps/1ps
 
@@ -37,8 +38,15 @@ module pll_sys (
 
 	integer n = 0;
 	reg [1:0] vdiv = 2'd0;
+	// lock 200 ns after start (short, to keep runs fast), and a relock on every mode change: pll_lite rewrites M and K
+	// and the lock flag drops for the relock (20 us here) while the clocks keep running at the new rate
 	initial begin
-		#200000 locked = 1'b1;                       // PLL lock time
+		#200000 locked = 1'b1;
+	end
+	reg [1:0] mode_q = 2'b00;
+	always @(pal or dotsel) if ({dotsel, pal} !== mode_q) begin
+		mode_q = {dotsel, pal};
+		if (locked) begin locked = 1'b0; #20000000 locked = 1'b1; end
 	end
 	// quarter-period tick: clk_ram toggles every tick, clk_sys every 2nd, clk_vid every 8th tick (period 16 ticks = 4 clk_sys)
 	reg [3:0] q = 4'd0;

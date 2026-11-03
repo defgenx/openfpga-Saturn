@@ -69,7 +69,7 @@ All changes are exact on the ports unless listed in section 4.
 | 3 | `MIXS_NULL[2][16]` becomes a 32x1 MLAB; the idle generation is set one entry per slot in slots 0-15 instead of all at once in slot 31 | -32 regs |
 | 4 | `SCNT_PREV` removed: it always equals `SCNT - 1` (reset values 0 and all-ones, same update) | -15 regs |
 | 5 | DSP reads dedicated copies of the MPRO, TEMP and MADRS RAMs (68K copies read `REG_A` only, no `REG_RD` mux). `MPRO1_Q`, `TEMP_Q`, `MADRS_Q` latches removed; only `MPRO1_IRA` stays latched because `INPUTS` keeps its old value when no input is selected. The MPRO copy is written at CYCLE1_CE only (the golden writes it on every clock of the REG_WE window, which changes `MPRO0_Q` under a running step) | -58 regs, +4 M10K |
-| 6 | LFO and EVOL RAMs have one copy per reading stage whose output register (enabled by the old latch condition, cleared by RES_N where the latch was) replaces the OP1/OP4 latches (`altsyncram`, `outdata_reg_b=CLOCK1`, `clocken3`) | -50 regs, +2 M10K |
+| 6 | LFO and EVOL RAMs have one copy per reading stage whose output register (enabled by the old latch condition, cleared by RES_N where the latch was) replaces the OP1/OP4 latches (`altsyncram`, `outdata_reg_b=CLOCK1`, `clock_enable_output_b=NORMAL` with the enable on `clocken1`: altsyncram ignores `clocken3` in NORMAL mode) | -50 regs, +2 M10K |
 | 7 | MIDI buffer registers CR2/CR3 behind parameter `MIDI_REGS` (default 0): they read as 0, writes are ignored | -21 regs |
 | 8 | One 22-bit adder for the modulation phase sum (current and next slot share it); the low 6 bits for the current slot have their own adder | small |
 
