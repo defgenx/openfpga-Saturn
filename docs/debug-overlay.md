@@ -5,15 +5,15 @@ A row of 16 squares at the top left of the picture (24 x 12 pixels, pitch 32, in
 When the Saturn produces no sync or DE (no VS and DE activity in the last 0.3 to 0.6 s) `pocket_video` generates its own
 858 x 262 frame, 640 x 224 active, mid-grey background; so the squares show even with the Saturn in reset.
 
-Colours: green = condition holds; red = not; yellow = the signal toggled in the last 0.3 to 0.6 s (activity squares are
+Colours: green = condition holds; red = not; a square can also be left out (4); yellow = the signal toggled in the last 0.3 to 0.6 s (activity squares are
 never green). Legend, left to right:
 
 | # | Square | Kind | Meaning when green / yellow |
 |---|---|---|---|
 | 1 | PLL | level | system PLL locked |
-| 2 | Reset | level | Saturn out of reset (`rst_sys` low: host reset exit, BIOS slots complete, RAM reset, loader idle) |
-| 3 | BIOS | level | BIOS words arrived, loader drained, no FIFO overflow |
-| 4 | Slots | level | `reset_n` into `saturn_pocket` high (host Reset Exit and `dataslot_allcomplete`) |
+| 2 | SCSP out | activity | the SCSP's mixed output sample (`SOUND_L`/`SOUND_R`) changed; tracked by its parity, which toggles only between different samples, so yellow also means a non-zero sample |
+| 3 | I2S out | activity | the I2S data pin `audio_dac` (after `pocket_audio` and `sound_i2s`) toggling; it stays low while every sample is zero |
+| 4 | Sound RAM | level | the last SH-2 read of sound RAM word 0 (0x25A00000) returned the value of the SH-2 write before it: green = match, red = mismatch, not drawn until the first read after a write (debug6 taps `DBG_SND`) |
 | 5 | SDRAM | level | SDRAM init done |
 | 6 | PSRAM | level | both PSRAM controllers idle after init |
 | 7 | 68K reset | level | sound 68K out of reset (`SNDRES_N` high, SMPC SNDON) |
@@ -27,10 +27,13 @@ never green). Legend, left to right:
 | 15 | SDRAM self-check | level | always red: the self-check in `sdram_pocket` is compiled out (`ifdef POCKET_NEVER`, it did not fit); with it, after SDRAM init `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100 and reads both back, green if both match |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`; wired with `POCKET_CUT_CDB_LLE`, which `ap_core.qsf` sets, else always red) |
 
-Squares 7, 8 and 11 are read from registered copies of `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`.
+Squares 2, 3, 4, 7, 8 and 11 are read from registered copies of their taps (2: the SCSP output parity, 3: the
+I2S pin through a two-flop synchroniser, 4: `DBG_SND`; 7, 8, 11: `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`).
 
-Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and
-3 red means the BIOS did not arrive (the FIFO overflowed if the loader was not ready). 14 red with 2 green means
+Sound path, from the core outward: 8 yellow = the 68K runs; 4 green = the SH-2 reads back what it wrote to sound RAM;
+2 yellow = the SCSP mixes non-zero samples; 3 yellow = non-zero samples reach the DAC pin.
+
+Reading it: 1 red means no clocks. 14 red means
 the master SH-2 is held by the SMPC. 7 red means the BIOS never released the sound 68K (SMPC SNDON); 7 green with 8 not
 yellow means the 68K is out of reset but not running. 9 green means the BIOS reached its copy of WRAM-H; 10 shows whether the game or BIOS has
 turned the display on.

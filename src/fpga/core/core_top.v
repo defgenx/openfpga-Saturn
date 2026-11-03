@@ -716,6 +716,9 @@ saturn_pocket saturn (
 
     .pll_locked_74a ( pll_locked_74a ),
     .setup_ready_74a ( setup_ready_74a )
+`ifdef POCKET_DEBUG_OVERLAY
+    , .dbg_dac  ( audio_dac )
+`endif
 );
 
 
