@@ -1,6 +1,7 @@
-# Platform glue simulation (iverilog >= 12): resampler and video path.
+# Platform glue simulation (iverilog >= 12, verilator >= 5 for the bridge bench): resampler, video path, APF status.
 #   make -C sim platform
 PLAT := ../../src/fpga/core/platform
+CORE := ../../src/fpga/core
 .PHONY: all clean
 all: build/tb_audio.vvp build/tb_ce.vvp
 	vvp build/tb_ce.vvp | tee build/ce.log
@@ -13,6 +14,10 @@ all: build/tb_audio.vvp build/tb_ce.vvp
 	iverilog -g2012 -DPOCKET_DEBUG_OVERLAY -o build/tb_overlay.vvp tb_overlay.sv $(PLAT)/pocket_video.sv
 	vvp build/tb_overlay.vvp | tee build/overlay.log
 	@grep -q 'RESULT: PASS' build/overlay.log
+	verilator --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD --top-module tb_bridge_status -DFIX \
+	  tb_bridge_status.sv $(CORE)/pocket_status.sv $(CORE)/core_bridge_cmd.v ../../src/fpga/apf/common.v -Mdir build/bs -o tb > build/bs.log 2>&1
+	build/bs/tb | tee build/bridge_status.log
+	@grep -q 'RESULT: PASS' build/bridge_status.log
 build/tb_ce.vvp: tb_ce.sv ../../src/fpga/core/ce_gen.sv
 	@mkdir -p build
 	iverilog -g2012 -o $@ tb_ce.sv ../../src/fpga/core/ce_gen.sv

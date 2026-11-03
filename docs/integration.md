@@ -50,6 +50,23 @@ The PLL relock caused by a dot-clock change does not reset the Saturn (as in MiS
 of the disc header; 1/2/3 force Japan (1), USA (4), Europe (0xC). `Cartridge` uses MiSTer's `cart_sel` values; Auto takes
 the RAM cartridge request of the disc header (`mktoc.py --ramcart-db`).
 
+### Host handshake
+
+`pocket_status` reports boot done and setup done to `core_bridge_cmd` together, once the PLL has locked and the RAM
+controllers accept writes (`setup_ready_74a`: `mem_ready`, or the 1.77 ms timeout), and holds both high from then on.
+
+- Analogue's comments in `core_bridge_cmd.v` define boot done as "PLLs lock and logic is ready". The APF docs give the
+  Request Status codes (1 booting, 2 setup: "Pocket loads assets", 3 idle, 4 running) but no load order. The PSX core's
+  host model (`openfpga-PlayStation/sim/pocket/tb_apf_bios_boot.sv`) pushes slot 0 while the status is 2. Before this
+  change, boot done was the bare PLL lock, so the host could start the BIOS push about 215 us before the SDRAM power-up
+  wait had ended. That is 176 words at the bridge's fastest rate (one word per 88 clk_74a), against a 256-word load FIFO.
+- `pll_lite` relocks the PLL on every PAL or dot-clock change (SMPC CKCHG320/352). With the live lock flag, a running
+  core answered "booting" and the rising setup done sent a second Ready to Run (0x0140). The target engine then waits
+  for the host's `ok`, and every disc read queues behind it. The APF docs do not say whether the host answers 0x0140
+  after Reset Exit.
+
+`sim/platform/tb_bridge_status.sv` runs the real `core_bridge_cmd` through such a relock: `make -C sim platform`.
+
 ### Switches for the other branches
 
 `saturn_pocket.sv` has two compile switches, `POCKET_CUT_CD` (compiles out `cdd_pocket`, the `CD_*` ports of `Saturn` and
