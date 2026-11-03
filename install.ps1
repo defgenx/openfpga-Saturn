@@ -8,6 +8,7 @@
   and for each one that differs you are asked (default: keep the card's file).
   Without an interactive console (or with -DryRun) nothing on the card is ever replaced.
   Without a built core next to the script, the newest release is downloaded from GitHub.
+  Then every .cue under Assets\saturn\common gets its .toc and instance .json (needs Python 3).
 
   Easiest: double-click install.bat. Or in PowerShell:
     .\install.ps1
@@ -158,6 +159,11 @@ try {
     if (-not ($items | Where-Object { $_.Rel -eq "Saturn-INSTALL.md" }) -and (Test-Path -LiteralPath $guide)) {
         $items += @{ From = $guide; Rel = "Saturn-INSTALL.md" }
     }
+    # and the disc tool, as in the release zip
+    $tool = Join-Path $Here "tools/mktoc.py"
+    if (-not ($items | Where-Object { $_.Rel -eq "Saturn-mktoc.py" }) -and (Test-Path -LiteralPath $tool)) {
+        $items += @{ From = $tool; Rel = "Saturn-mktoc.py" }
+    }
 
     foreach ($it in $items) {
         $rel = $it.Rel -replace '\\', '/'
@@ -196,6 +202,68 @@ try {
         foreach ($s in $kept) { Write-Host "  - $s" }
         if (-not $Interactive -and -not $DryRun) { Write-Host "Run the script in a console to be asked about replacing them." }
     }
+
+    # -----------------------------------------------------------------------
+    # 3b. Discs: mktoc writes each .cue's .toc next to its tracks in common\ and its
+    #     instance .json in Assets\saturn\defgenx.Saturn\ (docs/cd.md, section 4)
+    # -----------------------------------------------------------------------
+
+    # Python 3 as a command line ("py -3", "python3" or "python"), or $null
+    function Find-Python {
+        $ErrorActionPreference = "Continue"
+        foreach ($c in "py -3", "python3", "python") {
+            $parts = $c -split " "
+            if (-not (Get-Command $parts[0] -CommandType Application -ErrorAction SilentlyContinue)) { continue }
+            $pre = @($parts | Select-Object -Skip 1)
+            # the Microsoft Store "python" stub prints a hint and fails, so run it
+            try { $ok = & $parts[0] @pre -c "import sys; print(sys.version_info >= (3, 6))" 2>$null } catch { continue }
+            if ($LASTEXITCODE -eq 0 -and "$ok".Trim() -eq "True") { return , $parts }   # keep it an array
+        }
+        return $null
+    }
+
+    $common = Join-Path $SD "Assets/saturn/common"
+    $hasDiscs = (Test-Path -LiteralPath $common -PathType Container) -and
+        (@(Get-ChildItem -LiteralPath $common -Recurse -File -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in ".cue", ".json" } | Select-Object -First 1).Count -gt 0)
+    if ($hasDiscs) {
+        Write-Host ""
+        # the mktoc next to this script first: a downloaded release may carry an older one
+        $mktoc = @((Join-Path $Here "tools/mktoc.py"), (Join-Path $Here "Saturn-mktoc.py"), (Join-Path $Src "Saturn-mktoc.py")) |
+            Where-Object { (Test-Path -LiteralPath $_) -and (Select-String -LiteralPath $_ -SimpleMatch '"--card"' -Quiet) } |
+            Select-Object -First 1
+        $py = Find-Python
+        # "E:\" as an argument would end in \" once quoted; Python takes "E:/"
+        $card = $SD.TrimEnd('\', '/')
+        if ($card -match ':$' -or -not $card) { $card += '/' }
+        if (-not $mktoc) {
+            Write-Host "This release's Saturn-mktoc.py cannot prepare the discs by itself; see Saturn-INSTALL.md, section 3."
+        } elseif (-not $py) {
+            Write-Host "Python 3 is needed to prepare the discs (.toc and .json files); it was not found." -ForegroundColor Yellow
+            if ($IsLinux -or $IsMacOS) {
+                Write-Host "  Install Python 3 (https://www.python.org/downloads/ or your package manager),"
+                Write-Host "  then run this installer again, or:"
+                $pyHint = "python3"
+            } else {
+                Write-Host "  Install it from https://www.python.org/downloads/ (or: winget install Python.Python.3.12),"
+                Write-Host "  tick 'Add python.exe to PATH', then run this installer again, or in a new console:"
+                $pyHint = "py -3"
+            }
+            Write-Host "  $pyHint `"$(Join-Path $SD 'Saturn-mktoc.py')`" --card `"$card`""
+        } else {
+            $pyArgs = @($py | Select-Object -Skip 1) + @("-I", $mktoc, "--card", $card)
+            if ($DryRun) { $pyArgs += "--dry-run" }
+            $ErrorActionPreference = "Continue"
+            & $py[0] @pyArgs
+            $rc = $LASTEXITCODE
+            $ErrorActionPreference = "Stop"
+            if ($rc -ne 0) {
+                Write-Host "Some discs were not prepared (see above). Fix them and run the installer again;"
+                Write-Host "the rest of the installation is not affected."
+            }
+        }
+    }
+
     if ($DryRun) { exit 0 }
 
     # -----------------------------------------------------------------------

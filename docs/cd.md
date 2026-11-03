@@ -83,9 +83,9 @@ layout jotego's arcade cores ship). `tools/check_json.py` checks both rules.
 
 The cue is interpreted by `tools/mktoc.py`, which ports `LoadCUE` from `saturncdd.cpp` quirk for quirk (start/end
 per track, INDEX 00/01 handling, PREGAP, one file per track or one file for all) and writes the `.toc` and the
-instance JSON next to the game. The core then needs no string handling, no file-name opening (`0x0192`) and no
-large buffers: only arithmetic on a fixed table. Cost of that choice: the user runs a PC tool once per disc
-(`mktoc.py game.cue -o <folder>`); CHD is not supported (the same as the PSX core).
+instance JSON. The core then needs no string handling, no file-name opening (`0x0192`) and no large buffers: only
+arithmetic on a fixed table. Cost of that choice: a PC tool has to run over the discs (the install scripts run
+`mktoc.py --card`, below); CHD is not supported (the same as the PSX core).
 
 ```
 mktoc.py game.cue -o out/ [--data-path P] [--ramcart-db saturn_ramcart.txt] [--merge auto|always|never] [--wwf] [--road-rash]
@@ -94,6 +94,33 @@ mktoc.py game.cue -o out/ [--data-path P] [--ramcart-db saturn_ramcart.txt] [--m
 `--merge auto` concatenates the files into one `.img` when the cue has more than 24 files (the number of file slots).
 `--ramcart-db` takes MiSTer's `saturn_ramcart.txt` and puts the 1M/4M RAM cartridge request into the boot header,
 as Main_MiSTer does after its database lookup.
+
+`data_path` (`--data-path`) is the track folder relative to `Assets/saturn/common/`, with a trailing `/`, empty for
+`common/` itself: slots 2 and 16..39 are not core-specific (bit 1 clear), so the Pocket looks for them under
+`common/`, while the instance JSON itself sits in `Assets/saturn/defgenx.Saturn/` (section 3). The track `filename`s
+are relative to the cue's folder; a cue that reaches outside it (`../`) is refused, the APF does not take relative
+paths. **Untested** on hardware, like the rest of section 3.
+
+```
+mktoc.py --card SD_ROOT [--dry-run] [--ramcart-db saturn_ramcart.txt]
+```
+
+Card mode, run by `install.sh` / `install.ps1` after the copy (the scripts only find Python and pass the card):
+
+- every `*.cue` under `Assets/saturn/common/` (hidden and `._` files skipped) gets its `.toc` (and merged `.img`)
+  next to it and its JSON in `Assets/saturn/defgenx.Saturn/`, with the `data_path` of its folder. Files are written
+  only when their content changes; a merged `.img` of the right size, newer than every track, is kept as it is.
+- the WWF / Road Rash flags and the RAM cart byte of an existing `.toc` are carried over (cart: only when the
+  database gives none), so a regeneration does not drop options given by hand.
+- JSON name: the cue's name; when two cues share a name (case-insensitive, FAT ignores case) each is prefixed with
+  its subfolders joined by ` - `, leaving out a last folder equal to the game name (`USA/Game/Game.cue` ->
+  `USA - Game.json`); a remaining clash gets ` (2)`. A JSON in `defgenx.Saturn/` that points at the same `.toc`
+  under the other form of the name (the clash appeared or went away) is renamed `.json.old`.
+- a JSON in `common/` in mktoc's shape (only `magic`/`data_path`/`data_slots`, slot 2 a `.toc`, then 16, 17, ...)
+  is the v0.2.4 layout: after its disc is written to `defgenx.Saturn/` it is renamed `.json.old`. Without its
+  `.cue`, the JSON itself is carried over with the `data_path` of its folder, if all its files are there. Any
+  other `.json`, and a target JSON not in mktoc's shape, is left alone.
+- exit status 1 when any disc failed (the others are still written).
 
 ## 5. TOC format (version 2)
 

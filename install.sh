@@ -12,6 +12,7 @@
 # Files already on the card are never replaced silently: identical ones are skipped,
 # and for each one that differs you are asked (default: keep the card's file).
 # Without a terminal (or with --dry-run) nothing on the card is ever replaced.
+# Then every .cue under Assets/saturn/common/ gets its .toc and instance .json (needs Python 3).
 #
 set -euo pipefail
 
@@ -28,7 +29,7 @@ while [ $# -gt 0 ]; do
 		--sd=*) SD="${1#--sd=}"; shift ;;
 		--dry-run|-n) DRY_RUN=1; shift ;;
 		--reset-settings) RESET_SETTINGS=1; shift ;;
-		-h|--help) sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		-h|--help) sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 		*) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
 	esac
 done
@@ -198,6 +199,10 @@ done 3< <(find . -type f -print0 | sort -z)
 if [ ! -f "$SRC/Saturn-INSTALL.md" ] && [ -f "$HERE/INSTALL.md" ]; then
 	install_file "$HERE/INSTALL.md" "Saturn-INSTALL.md"
 fi
+# and the disc tool, as in the release zip
+if [ ! -f "$SRC/Saturn-mktoc.py" ] && [ -f "$HERE/tools/mktoc.py" ]; then
+	install_file "$HERE/tools/mktoc.py" "Saturn-mktoc.py"
+fi
 
 # the folders for the BIOS and for disc images
 [ $DRY_RUN -eq 1 ] || mkdir -p "$SD/Assets/saturn/common" "$SD/Assets/saturn/defgenx.Saturn"
@@ -210,6 +215,43 @@ if [ ${#kept[@]} -gt 0 ]; then
 	for s in "${kept[@]}"; do say "  - $s"; done
 	[ $INTERACTIVE -eq 0 ] && [ $DRY_RUN -eq 0 ] && say "Run the script in a terminal to be asked about replacing them."
 fi
+
+# ---------------------------------------------------------------------------
+# 3b. Discs: mktoc writes each .cue's .toc next to its tracks in common/ and its
+#     instance .json in Assets/saturn/defgenx.Saturn/ (docs/cd.md, section 4)
+# ---------------------------------------------------------------------------
+
+prepare_discs() {
+	local common="$SD/Assets/saturn/common" mktoc="" py="" c
+	[ -d "$common" ] && [ -n "$(find "$common" -iname '*.cue' -print -quit 2>/dev/null)$(find "$common" -iname '*.json' -print -quit 2>/dev/null)" ] || return 0
+	# the mktoc next to this script first: a downloaded release may carry an older one
+	for c in "$HERE/tools/mktoc.py" "$HERE/Saturn-mktoc.py" "$SRC/Saturn-mktoc.py"; do
+		if [ -f "$c" ] && grep -q -- '"--card"' "$c"; then mktoc="$c"; break; fi
+	done
+	say ""
+	if [ -z "$mktoc" ]; then
+		say "This release's Saturn-mktoc.py cannot prepare the discs by itself; see Saturn-INSTALL.md, section 3."
+		return 0
+	fi
+	for c in python3 python; do
+		if command -v "$c" >/dev/null && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 6))' 2>/dev/null; then py="$c"; break; fi
+	done
+	if [ -z "$py" ]; then
+		say "Python 3 is needed to prepare the discs (.toc and .json files); it was not found."
+		say "  macOS: install it from https://www.python.org/downloads/ (or: brew install python)"
+		say "  Linux: install the python3 package (e.g. sudo apt install python3)"
+		say "Then run this installer again, or: python3 \"$SD/Saturn-mktoc.py\" --card \"$SD\""
+		return 0
+	fi
+	local args=(--card "$SD")
+	[ $DRY_RUN -eq 1 ] && args+=(--dry-run)
+	if ! "$py" -I "$mktoc" "${args[@]}"; then
+		say "Some discs were not prepared (see above). Fix them and run the installer again;"
+		say "the rest of the installation is not affected."
+	fi
+}
+prepare_discs
+
 [ $DRY_RUN -eq 1 ] && exit 0
 
 # ---------------------------------------------------------------------------

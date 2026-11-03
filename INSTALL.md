@@ -12,14 +12,15 @@ or on its own after downloading it from the release page:
 | Windows       | double-click **`install.bat`** (or `.\install.ps1` in PowerShell)  |
 | macOS / Linux | `./install.sh`                                                      |
 
-It finds the Pocket SD card, asks you to confirm, copies the core and this guide, and offers to eject the
-card. Options: `--dry-run` / `-DryRun` shows what would be copied and changes nothing;
-`--sd /Volumes/POCKET` / `-SD E:\` names the card yourself.
+It finds the Pocket SD card, asks you to confirm, copies the core and this guide, prepares the discs
+already on the card (section 3), and offers to eject the card. Options: `--dry-run` / `-DryRun` shows
+what would be copied and changes nothing; `--sd /Volumes/POCKET` / `-SD E:\` names the card yourself.
 
 **It never replaces a file without asking.** Files already on the card that are identical are skipped.
 For each one that differs it asks `Replace it? [y]es / [N]o / [a]ll / [s]kip all`; pressing Enter keeps
 the card's file. Run without a console (or with the dry-run option), it never replaces anything and lists
-what differs. Without a built core next to it, the installer downloads the newest release from GitHub.
+what differs. The exception is the disc files it generates (section 3), which it rewrites when they
+change. Without a built core next to it, the installer downloads the newest release from GitHub.
 
 **By hand:** copy the contents of `defgenx.Saturn.zip` (or the `release/` folder made by `./build.sh`) to
 the **root** of the card, merging with the folders already there:
@@ -48,19 +49,23 @@ renamed to it) in `Assets/saturn/defgenx.Saturn/`. The core does not start witho
 
 ## 3. Add discs
 
-The core does not read `.cue` sheets itself. For each game, run `Saturn-mktoc.py` (Python 3) on the
-`.cue`. The release zip and the install scripts put it at the root of the card; in this repository it
-is `tools/mktoc.py`.
+Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly or in a subfolder per game,
+then run the installer again. The core does not read `.cue` sheets itself: for every `.cue` the installer runs
+`Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
-```
-python3 Saturn-mktoc.py "Game (USA).cue" -o out/
-```
+- `Game (USA).toc` (and a merged `Game (USA).img` when the disc has more than 24 track files) next to the tracks;
+- `Game (USA).json` into `Assets/saturn/defgenx.Saturn/`: on the Pocket, pick it as the disc.
 
-It writes `Game (USA).toc` and `Game (USA).json`, and a merged `.img` if the tracks need merging. Copy
-the `.toc` (and the `.img`), together with the game's `.bin` track files, into `Assets/saturn/common/`, and the
-`.json` into `Assets/saturn/defgenx.Saturn/` (the Pocket only takes an instance JSON from the core's own folder).
-On the Pocket, pick `Game (USA).json` as the disc. If the tracks sit in a subfolder of `Assets/saturn/`, pass
-`--data-path <subfolder>`. CHD is not supported.
+It does this on every run, so the files always match the core. When two discs in different subfolders have
+the same name, their `.json` names start with the subfolder (`USA - Game.json`). A `.json` left in `common/` by
+v0.2.4 is moved to `defgenx.Saturn/` and the old copy is renamed `.json.old`. A WWF / Road Rash flag or RAM cart
+recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
+
+To do the same by hand: `python3 Saturn-mktoc.py --card /Volumes/POCKET` (add `--dry-run` to only see what it
+would change), or for one disc `python3 Saturn-mktoc.py "Game (USA).cue" -o out/ --data-path "Game (USA)/"`,
+where `--data-path` is the tracks' folder relative to `Assets/saturn/common/` (leave it out for `common/`
+itself). `Saturn-mktoc.py` is at the root of the card; in this repository it is `tools/mktoc.py`. CHD is not
+supported.
 
 Backup RAM is not saved to the card yet: saves last until the core is closed.
 
