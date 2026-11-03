@@ -773,20 +773,19 @@ always @(posedge clk_sys) begin
 end
 wire a_irl, a_cd, a_vs, a_de, a_68k, a_vbl, a_scsp, a_dac;
 // sound probes (squares 2-4): SCSP output parity (toggles when the mixed sample changes, so it was non-zero), the
-// I2S data pin (toggles only with non-zero samples), sound RAM word 0 write vs next read (dbg_snd, registered once)
+// I2S data pin (toggles only with non-zero samples), sound RAM word 0 write vs next read (dbg_snd as debug6 took it,
+// unregistered: event and data are valid in the same cycle; the compare result is registered)
 reg        dbg_sp_q = 1'b0;
 reg  [2:0] dbg_dac_s = 3'd0;
-reg [33:0] dbg_snd_q = 34'd0;                  // {wr_ev, BDO, rd_ev, SCSP_DO}
 reg [15:0] dbg_sw = 16'd0;
 reg        dbg_sw_v = 1'b0, dbg_sr_v = 1'b0, dbg_sr_ok = 1'b0;
 always @(posedge clk_sys) begin
 	dbg_sp_q  <= ^{SOUND_L, SOUND_R};
 	dbg_dac_s <= {dbg_dac_s[1:0], dbg_dac};
-	dbg_snd_q <= dbg_snd;
-	if (dbg_snd_q[33]) begin
-		dbg_sw <= dbg_snd_q[32:17]; dbg_sw_v <= 1'b1; dbg_sr_v <= 1'b0;
-	end else if (dbg_snd_q[16] && dbg_sw_v) begin
-		dbg_sr_v <= 1'b1; dbg_sr_ok <= (dbg_snd_q[15:0] == dbg_sw);
+	if (dbg_snd[33]) begin                     // {wr_ev, BDO, rd_ev, SCSP_DO}
+		dbg_sw <= dbg_snd[32:17]; dbg_sw_v <= 1'b1; dbg_sr_v <= 1'b0;
+	end else if (dbg_snd[16] && dbg_sw_v) begin
+		dbg_sr_v <= 1'b1; dbg_sr_ok <= (dbg_snd[15:0] == dbg_sw);
 	end
 end
 dbg_act d_scsp (.clk(clk_sys), .tick(dbg_tick), .s(dbg_sp_q), .y(a_scsp));

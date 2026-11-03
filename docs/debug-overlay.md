@@ -27,8 +27,9 @@ never green). Legend, left to right:
 | 15 | SDRAM self-check | level | always red: the self-check in `sdram_pocket` is compiled out (`ifdef POCKET_NEVER`, it did not fit); with it, after SDRAM init `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100 and reads both back, green if both match |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`; wired with `POCKET_CUT_CDB_LLE`, which `ap_core.qsf` sets, else always red) |
 
-Squares 2, 3, 4, 7, 8 and 11 are read from registered copies of their taps (2: the SCSP output parity, 3: the
-I2S pin through a two-flop synchroniser, 4: `DBG_SND`; 7, 8, 11: `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`).
+Squares 2, 3, 7, 8 and 11 are read from registered copies of their taps (2: the SCSP output parity, 3: the
+I2S pin through a two-flop synchroniser; 7, 8, 11: `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`). Square 4 takes
+`DBG_SND` unregistered, as the debug6 row did (event and data are valid in the same cycle), and registers the compare.
 
 Sound path, from the core outward: 8 yellow = the 68K runs; 4 green = the SH-2 reads back what it wrote to sound RAM;
 2 yellow = the SCSP mixes non-zero samples; 3 yellow = non-zero samples reach the DAC pin.
