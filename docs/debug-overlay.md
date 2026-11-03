@@ -16,20 +16,23 @@ never green). Legend, left to right:
 | 4 | Slots | level | `reset_n` into `saturn_pocket` high (host Reset Exit and `dataslot_allcomplete`) |
 | 5 | SDRAM | level | SDRAM init done |
 | 6 | PSRAM | level | both PSRAM controllers idle after init |
-| 7 | MSH | activity | master SH-2 bus start (BS#) toggling |
-| 8 | SSH | activity | slave SH-2 bus start toggling (SMPC released it) |
+| 7 | 68K reset | level | sound 68K out of reset (`SNDRES_N` high, SMPC SNDON) |
+| 8 | 68K bus | activity | sound 68K address strobe (`SCAS_N`) toggling |
 | 9 | WRAM-H | sticky level | the CPU bus has selected WRAM-H (0x06000000) at least once since power-up |
 | 10 | DISP | level | VDP2 TVMD.DISP set |
-| 11 | VBL | activity | VBL_N toggling |
+| 11 | VBL | activity | VBL_N toggling (VDP2 vertical blank) |
 | 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
 | 15 | SDRAM self-check | level | always red: the self-check in `sdram_pocket` is compiled out (`ifdef POCKET_NEVER`, it did not fit); with it, after SDRAM init `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100 and reads both back, green if both match |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`; wired with `POCKET_CUT_CDB_LLE`, which `ap_core.qsf` sets, else always red) |
 
+Squares 7, 8 and 11 are read from registered copies of `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`.
+
 Reading it: 1 red means no clocks. 2 red with 4 red means the host never released the core; 2 red with 4 green and
-3 red means the BIOS did not arrive (the FIFO overflowed if the loader was not ready). 7 and 14 red with 2 green means
-the SH-2 is held by the SMPC. 9 green means the BIOS reached its copy of WRAM-H; 10 shows whether the game or BIOS has
+3 red means the BIOS did not arrive (the FIFO overflowed if the loader was not ready). 14 red with 2 green means
+the master SH-2 is held by the SMPC. 7 red means the BIOS never released the sound 68K (SMPC SNDON); 7 green with 8 not
+yellow means the 68K is out of reset but not running. 9 green means the BIOS reached its copy of WRAM-H; 10 shows whether the game or BIOS has
 turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
@@ -50,7 +53,7 @@ one row of 8 hex digits: the master SH-2 program counter.
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
   shows too), sampled once per overlay window (about 0.3 s). A polling loop shows the same few values on every sample.
 - Digits live in a two-word 16 bit M10K buffer, both words rewritten alternately every clk_sys by `saturn_pocket`; the 3 x 5 font is a 128 x 3 M10K ROM
-  in `pocket_video`. Squares 7 (MSH), 8 (SSH) and 11 (VBL) have no activity detector in this build (always red).
+  in `pocket_video`.
 - The normal build leaves no room for more: with the PC row alone the fit is 1,847 / 1,848 LABs. A version with
   COMREG/SF, IRL, IST (and IMS, TVMD, frame counter) needed 1,851 to 1,852 LABs. The taps for those exist
   (`DBG_TXT` in `Saturn.sv`: SMPC_SERV, SCUP2, VDP2P) and can be enabled once the design has room.
@@ -65,7 +68,7 @@ one row of 8 hex digits: the master SH-2 program counter.
 
 Each half is written into the M10K text word by its own byte enables when the event happens (a write is the data on
 the B-bus when SCSPP accepts it with word address 0; a read is the data on the B-bus output two cycles after the read
-completes). A half that never changes stays 0000. Squares 7, 8 and 11 have no detector.
+completes). A half that never changes stays 0000.
 
 ## debug7: runtime SDRAM timing and the self-check
 

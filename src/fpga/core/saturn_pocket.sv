@@ -766,7 +766,15 @@ end
 wire dbg_tick = &dbg_win;
 reg  [6:0] dbg_tap_q = 7'd0;                   // the Saturn taps, registered once before any overlay logic
 always @(posedge clk_sys) dbg_tap_q <= dbg_tap;
-wire a_irl, a_cd, a_vs, a_de;
+reg        dbg_sndres_q = 1'b0, dbg_scas_q = 1'b1, dbg_vbl_q = 1'b1;   // DBG_68K = {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA}
+always @(posedge clk_sys) begin
+	dbg_sndres_q <= dbg_68k[26];
+	dbg_scas_q   <= dbg_68k[23];
+	dbg_vbl_q    <= VBL_N;
+end
+wire a_irl, a_cd, a_vs, a_de, a_68k, a_vbl;
+dbg_act d_68k  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_scas_q), .y(a_68k));
+dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_vbl_q), .y(a_vbl));
 dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[4]), .y(a_cd));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
@@ -782,10 +790,11 @@ wire [15:0] dbg_g = {
 	dbg_tap_q[5],                                        // 14 SMPC released MSH
 	1'b0,                                              // 13 CD block (activity)
 	1'b0,                                              // 12 SCU irq (activity)
-	1'b0,                                              // 11 vblank (activity)
+	1'b0,                                              // 11 VBL_N (activity)
 	dbg_tap_q[6],                                        // 10 VDP2 DISP
 	dbg_wramh,                                         //  9 WRAM-H reached
-	2'b00,                                             //  8, 7 SSH, MSH (activity)
+	1'b0,                                              //  8 68K bus (activity)
+	dbg_sndres_q,                                      //  7 68K out of reset (SNDRES_N)
 	dbg_psram_ready,                                   //  6 PSRAM init
 	dbg_sdram_ready,                                   //  5 SDRAM init
 	dbg_rn_s[1],                                       //  4 host release + all slots complete
@@ -793,7 +802,7 @@ wire [15:0] dbg_g = {
 	~rst_sys,                                          //  2 core reset released
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, 1'b0, 2'b00, 1'b0, 1'b0, 6'b000000};   // squares 7 (MSH), 8 (SSH) and 11 (VBL) have no detector in the debug build
+wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_68k, 1'b0, 6'b000000};   // yellow: 13 CD, 12 SCU irq, 11 VBL_N, 8 68K bus
 wire dbg_alive = a_vs & a_de;
 
 `ifdef POCKET_DEBUG_SNDROW
