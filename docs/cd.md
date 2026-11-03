@@ -66,14 +66,17 @@ FIFO has drained.
 
 | id | name | use |
 |---|---|---|
-| 0 | BIOS | unchanged |
-| 1 | Disc | the game's instance JSON (parameters `0x11`: reloadable + instance JSON) |
+| 0 | Disc | the game's instance JSON (parameters `0x13`: reloadable + core-specific + instance JSON), first in the list |
+| 1 | BIOS | pushed to bridge `0x20000000` |
 | 2 | CD TOC | 2048-byte `.toc`, **pushed** at load to bridge `0x60000000` (no deferload) |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
 | 16..39 | CD file 00..23 | `deferload`; one `.bin` per file of the cue (or one merged `.img`), read on demand |
 
 The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets.
-**Untested**: how the Pocket selects the instance JSON through slot 1 and `parameters` bit 4. The PSX core's
+The APF data.json page requires an instance JSON slot to be a core-specific file (bit 1) and the first slot; the
+`.json` therefore lives in `Assets/saturn/defgenx.Saturn/`, the tracks and `.toc` in `Assets/saturn/common/` (the
+layout jotego's arcade cores ship). `tools/check_json.py` checks both rules.
+**Untested**: how the Pocket selects the instance JSON through slot 0 and `parameters` bit 4. The PSX core's
 `make_pocket_instances.py` shows the folder layout it uses; this has to be checked on hardware.
 
 ## 4. Why no cue parser on the Pocket
@@ -223,7 +226,7 @@ pregap. Disc B: track 1 MODE1/2048.
 
 - Quartus synthesis, timing (57 MHz `clk_sys`, `clk_74a` crossings), any hardware.
 - Real bridge round-trip time and whether one outstanding 2352-byte read keeps up with 2x.
-- Instance JSON selection through slot 1, `bridge_endian_little` byte order (the testbench uses the core_top
+- Instance JSON selection through slot 0, `bridge_endian_little` byte order (the testbench uses the core_top
   default, big endian; `BRIDGE_LITTLE` flips it), SRAM timing at the real pins.
 - Behaviour of the Saturn firmware against a ~300 ms `0x22` status in the middle of a read; against the lead-out
   security ring (only checked against the ARM's code, not against a BIOS).
