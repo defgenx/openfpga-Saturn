@@ -226,7 +226,11 @@ wire       l_take = slot == 4'd5 && (l_rd | l_wr);
 wire       cap_rd = (e_rd && !sc_run) || (l_take && l_rd);
 wire       cap_wr = (e_wr && !sc_run) || (l_take && l_wr);
 wire       sc_pend = sc_rd_p | sc_wr_p;
-wire       sc_go = init_done && slot == 4'd1 && (sc_pend | cap_rd | cap_wr);   // SCSP ACT now (pending, or seen now)
+// SCSP ACT for the pins of cycle 0: a pending request goes through q from slot 0 (act_q); a request first seen at the
+// slot-1 edge itself (fresh) is put on the pins at that edge: only RAS# and the row come from the request lines
+reg        act_q = 1'b0, slot1_q = 1'b0;
+wire       fresh = slot1_q && (e_rd || e_wr);
+wire       sc_go = act_q || fresh;
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
@@ -325,6 +329,8 @@ always @(posedge clk) begin
 	c_tv = 1'b0; c_tk = 3'd7; c_ti = 1'b0;
 	if (init_done) begin
 		case (slot)
+		4'd0: begin c_ba = 2'd3; if (sc_pend) begin c_cmd = CMD_ACT; c_a = row_a({1'b1, sc_addr[17:10]}); end end
+
 		// ---- VDP2 ACTs (none while the frame re-aligns)
 		4'd2:  if (v_mode[0] != 2'd3 && !rs) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
 		4'd5:  if (v_mode[1] != 2'd3 && !rs) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
@@ -374,8 +380,10 @@ always @(posedge clk) begin
 		if (sq == 3'd5 && !s_wr) begin c_cmd = CMD_PRE; c_ba = 2'd3; end
 	end
 	sq <= (sq == 3'd0 || sq == 3'd5) ? 3'd0 : sq + 3'd1;
+	act_q <= init_done && slot == 4'd0 && sc_pend;
+	slot1_q <= init_done && slot == 4'd0 && !sc_pend && !rs_jump;
 	if (sc_go) begin
-		sq <= 3'd1; s_wr <= sc_pend ? sc_wr_p : cap_wr;
+		sq <= 3'd1; s_wr <= act_q ? sc_wr_p : cap_wr;
 		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 	end
 
@@ -383,15 +391,11 @@ always @(posedge clk) begin
 	if (!init_done) begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= i_cmd;
 		dram_a <= i_a; dram_ba <= i_ba; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
-	end else if (sc_go) begin
-		// the SCSP ACT goes to the pins at the edge it is decided (slot 1, an odd edge), which takes a request seen at
-		// that edge; the frame's cycle 0 has no other command, so q holds a NOP here
-		{dram_ras_n, dram_cas_n, dram_we_n} <= CMD_ACT;
-		dram_a <= row_a({1'b1, sc_pend ? sc_addr[17:10] : rq_addr[18:11]}); dram_ba <= 2'd3;
-		dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
 	end else begin
-		{dram_ras_n, dram_cas_n, dram_we_n} <= q_cmd;
-		dram_a <= q_a; dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
+		// at a fresh SCSP request q holds cycle 0's NOP with bank 3: RAS# low makes it the ACT (CAS#, WE# high in both)
+		{dram_ras_n, dram_cas_n, dram_we_n} <= {q_cmd[2] & ~fresh, q_cmd[1:0]};
+		dram_a <= fresh ? row_a({1'b1, rq_addr[18:11]}) : q_a;
+		dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
 	end
 
 	// ---- tag pipeline
