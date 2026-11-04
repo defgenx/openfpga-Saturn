@@ -10,6 +10,11 @@ module dprio_plant #(parameter SEED = 1) (input wire [63:0] to, output wire [63:
 	reg        v1, v2;
 	reg        lock = 1'b1;
 	integer    lcnt = 0, i, sd;
+	// feedback the PLL heads for: M (0x12 high + low count) + K, K taken when K ready (0x17 bit 11) rises
+	reg [31:0] k_eff = 0;
+	real       n_eff, n_max;
+	always @* n_eff = mem[6'h12][15:8] + mem[6'h12][7:0] + k_eff / 4294967296.0;
+	always @(posedge to[0]) if (n_eff > n_max) n_max = n_eff;
 	wire clk = to[0];
 	initial begin
 		sd = SEED;
@@ -21,7 +26,7 @@ module dprio_plant #(parameter SEED = 1) (input wire [63:0] to, output wire [63:
 		if (to[3]) begin v1 <= 1'b1; p1 <= mem[to[9:4]]; end
 		if (to[2] && !to[29] && to[1]) begin
 			nwr <= nwr + 1;
-			if (to[9:4] == 6'h17 && to[21] && !mem[6'h17][11]) begin lock <= 1'b0; lcnt <= 60; end
+			if (to[9:4] == 6'h17 && to[21] && !mem[6'h17][11]) begin lock <= 1'b0; lcnt <= 60; k_eff <= {mem[6'h19], mem[6'h18]}; end
 			mem[to[9:4]] <= to[25:10];
 		end
 		if (lcnt > 0) begin lcnt <= lcnt - 1; if (lcnt == 1) lock <= 1'b1; end
@@ -61,6 +66,7 @@ module tb;
 	endfunction
 
 	integer errs = 0, i, m;
+	real    n0a, n0b, nhi;
 	reg [31:0] kk;
 	reg [3:0] seq [0:5];
 	task check(input p, input d);
@@ -81,11 +87,17 @@ module tb;
 		seq[0] = 4'b0_1; seq[1] = 4'b0_0; seq[2] = 4'b1_1; seq[3] = 4'b1_0; seq[4] = 4'b0_1; seq[5] = 4'b1_1;
 		repeat (1200) @(posedge clk);     // DPRIO init of both blocks
 		for (m = 0; m < 6; m = m + 1) begin
+			n0a = plant_a.n_eff; n0b = plant_b.n_eff; plant_a.n_max = n0a; plant_b.n_max = n0b;
 			pal = seq[m][1]; dotsel = seq[m][0];
 			avwrite(6'd0, 0); avwrite(6'd4, !dotsel ? 32'h00020302 : 32'h00000303);
 			avwrite(6'd7, kof(pal, dotsel)); avwrite(6'd2, 0);
 			repeat (700) @(posedge clk);
 			check(pal, dotsel);
+			// no intermediate above both modes (m 0 starts from the random initial contents)
+			nhi = (n0a > plant_a.n_eff) ? n0a : plant_a.n_eff;
+			$display("mode change %.4f -> %.4f: highest feedback lite %.4f (clk_sys %.2f MHz), altera core %.4f (%.2f MHz)",
+			         n0a, plant_a.n_eff, plant_a.n_max, plant_a.n_max * 74.25 / 8, plant_b.n_max, plant_b.n_max * 74.25 / 8);
+			if (m > 0 && plant_a.n_max > nhi + 1e-6) begin errs = errs + 1; $display("overshoot above both modes"); end
 			$display("mode pal=%0d wide=%0d done, DPRIO writes lite %0d altera %0d", pal, dotsel, nwr_a, nwr_b);
 		end
 		if (errs == 0) $display("RESULT: PASS"); else $display("RESULT: FAIL");

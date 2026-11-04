@@ -169,21 +169,25 @@ the clock: 12 enables take 14 or 15 clk_sys at the 320 rates (45.1584 MHz / 53.7
 15 or 16 at the 352 rates (0.788). From the clk_ram edge R that raises the request to the sample edge that is at least
 26 clk_ram at 320 and 28 at 352.
 
-The controller sees the request at R + 1 (an odd edge, the one after a clk_sys edge) and waits for the slot-0 edge (an
-even edge, 1 to 15 cycles later); the word lands in `dl_d` 9 cycles after that edge (READ on the pins 4 later, captured
-at READ + 4, lands at READ + 5). It goes to `ch2dout` at the landing edge unless that is earlier than `SCSP_MIN_AGE` = 14
-cycles after R + 1; then it waits in `dl_d`. The floor keeps the word from
-replacing the previous request's before that was sampled.
+The controller sees the request at R + 1 (an odd edge, the one after a clk_sys edge). The SCSP ACT is decided at the
+slot-1 edge, also odd, and loaded straight into the pin registers for the frame's cycle 0 (no other command uses that
+pin cycle), so a request seen at that very edge is taken: the wait is 0 to 14 cycles after R + 1. The word lands in
+`dl_d` 8 cycles after that edge (READ on the pins 3 later, captured at READ + 4, lands at READ + 5). It goes to `ch2dout`
+at the landing edge unless that is earlier than `SCSP_MIN_AGE` = 14 cycles after R + 1; then it waits in `dl_d`. The
+floor keeps the word from replacing the previous request's before that was sampled. The READ, WRITE and PRECHARGE are
+counted from the ACT (`sq`), not from the slot, so a frame re-alignment (below) cannot split the access.
 
 | Bound | clk_ram after R |
 |---|---|
 | latest sample of the previous request (its 15 clk_sys deadline, this request 9 clk_sys after it) | 10 |
 | delivery floor | 15 |
-| worst delivery: R one edge after a slot-0 edge (1 + 15 + 9) | 25 |
+| worst delivery: R + 1 two edges after a slot-1 edge (1 + 14 + 8) | 23 |
 | earliest sample, 320 / 352 rates | 26 / 28 |
 
-So the word is in `ch2dout` one clk_ram before the earliest sample at the 320 rates and three at 352
-(`make -C sim mem sdram-scsp`: least margin 1 and 3, no stale read). Up to v0.2.14 the word went to `ch2dout` one edge
+So the word is in `ch2dout` three clk_ram before the earliest sample at the 320 rates and five at 352, a full clk_sys of
+slack (`make -C sim mem sdram-scsp`: least margin 3 and 5, no stale read; 1 at 320 within a re-alignment). v0.2.15
+decided the ACT at the even slot-0 edge, through the command pipeline register: the worst wait was 15 and the margin 1.
+Up to v0.2.14 the word went to `ch2dout` one edge
 after landing (slot edge + 10, R + 26 at worst), which is the sample edge itself at 320: reads that waited the full slot in a
 14 clk_sys deadline (about 9 %, 104 of 1,017 reads in `tb_sdram -DSCSP_EXACT +W320`) returned the previous request's
 word. The 68K reads its program through this port, so the sound driver ran on stale words: silent in every build that
@@ -211,6 +215,19 @@ request. Its wait stays within 16 cycles (cycle 5 to the next cycle 0); its `sc_
 matters for the delivery floor, and the word lands 19 cycles after that. Without this, `tb_sdram +W320` returned the
 neighbouring request's word for a read and the full-system run (320 wide, 107.4 MHz) lost the sound driver. Cycle 5 is
 an odd clk_ram edge, so the hold exception of `sc_addr` / `sc_din` still holds (`make mc-check` counts these captures).
+
+### Re-alignment
+
+The frame follows VDP2's `DOT_CE`. A sync where the frame does not expect one (power-up, and every VDP2 reset release:
+SYSRES, CKCHG, `DOTCLK_DIV` restarts at a new phase in steps of 4 clk_ram) used to set the slot counter at once, as
+Saturn_MiSTer's `sdram1.sv` does (`st_num <= 8` on every sync, no guard); that split the accesses in flight: ACT to an
+active bank, tRC and tRRD in the model at each SYSRES release of a CKCHG. Now the controller sets `rs`: no VDP2 ACT and no
+plan latch (which is then off the VDP2 phase and would take clk_sys data at even edges), for at least 24 cycles, so every
+access of the old phase completes (the last, a WRITE at cycle 17 after the ACT at 11, is done by 21); then the frame
+jumps at the next sync and the plan latched before is dropped. The SCSP keeps its old-phase slot until the jump; its
+access runs on `sq`. VDP2 gets no data for about three dots, which is right after its own reset; a VRAM write in those
+dots would be lost (the CPUs leave reset with VDP2 and need far longer for their first write). `tb_sdram +RESTART_US=20`
+resets the bench's VDP2 dot divider every 20 us at a new phase: 8 model errors before, 0 now (`make -C sim mem sdram`).
 
 ### Refresh
 
