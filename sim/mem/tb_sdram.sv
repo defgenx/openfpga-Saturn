@@ -35,8 +35,15 @@ initial begin
 end
 
 reg clk_ram = 0, clk_sys = 0;
+`ifdef SCSP_EXACT
+// rising edges of clk_sys on every other rising edge of clk_ram, as the PLL outputs (the default bench has clk_sys
+// half a clk_ram later, which hides one clk_ram of the SCSP deadline)
+reg ck_ph = 0;
+always begin #(T_RAM/2); clk_ram = ~clk_ram; if (clk_ram) begin ck_ph = ~ck_ph; clk_sys = ck_ph; end else if (!ck_ph) clk_sys = 0; end
+`else
 always #(T_RAM/2) clk_ram = ~clk_ram;
 always #(T_RAM)   clk_sys = ~clk_sys;
+`endif
 
 integer profile = 0, run_us = 200, tref_us = 64000, scsp_en = 1, clk_skew = 0;
 integer seed = 1;
@@ -286,6 +293,75 @@ always @(posedge clk_sys) begin
 	end
 end
 
+`ifdef SCSP_EXACT
+// ---------------------------------------------------------------- SCSP emulation, SCSPP.sv memory FSM timing
+// SCSP_2X_CE at 45.1584 MHz from the CE_IN accumulator (saturn_pocket.sv), SCSP_CE = every other one; the request goes
+// out one clk_sys after CYCLE1_CE (MEM_START), is dropped at the next CYCLE1_CE, RAM_Q is sampled at the second
+// CYCLE0_CE (MEM_DEV_LATCH). +CE_IN=<Hz> sets the clk_sys rate the enables assume (default F_SYS).
+integer ce_in = 0, acc2 = 0;
+initial begin if (!$value$plusargs("CE_IN=%d", ce_in)) ce_in = 0; $display("tb_sdram: SCSP_EXACT, enables for %0d Hz (0: F_SYS)", ce_in); end
+reg        ce2 = 0, sdiv = 0, cdiv = 0, mstart = 0, busy = 0;
+reg  [2:0] cnum = 0;
+reg        dev = 0, dev_l = 0;
+reg [15:0] exp_d = 0, exp_l = 0;
+reg [17:0] sca;
+reg  [1:0] sc_be;
+reg [15:0] sc_d;
+reg [20:0] sc_i;
+integer    hot;
+wire sce = ce2 & sdiv;
+// margin per read: clk_ram cycles from the edge that delivered it (dl_v falls, deliveries are in request order) to the
+// sample edge; 1 = the edge before the sample, 0 or less = too late
+longint t_dlv [0:63]; integer n_dlv = 0, n_rdq = 0, mg_min = 999, id_d = 0, id_l = 0;
+reg [1:0] dlv_q = 0;
+always @(negedge clk_ram) begin   // half a clk_ram after the delivering edge, before the next rising edge
+	if (dlv_q[0] && !dut.dl_v[0]) begin t_dlv[n_dlv % 64] = $time - T_RAM/2; n_dlv = n_dlv + 1; end
+	if (dlv_q[1] && !dut.dl_v[1]) begin t_dlv[n_dlv % 64] = $time - T_RAM/2; n_dlv = n_dlv + 1; end
+	dlv_q = {dut.dl_v[1], dut.dl_v[0]};
+end
+wire cycle1_ce = cnum[0] & cdiv & sce;
+wire cycle0_ce = ~cnum[0] & cdiv & sce;
+always @(posedge clk_sys) begin
+	ce2 <= 1'b0;
+	acc2 = acc2 + 45158400;
+	if (acc2 >= (ce_in ? ce_in : F_SYS)) begin acc2 = acc2 - (ce_in ? ce_in : F_SYS); ce2 <= 1'b1; end
+	if (ce2) sdiv <= ~sdiv;
+	if (sce) cdiv <= ~cdiv;
+	if (cdiv && sce) cnum <= cnum + 1'd1;
+	mstart <= cycle1_ce;
+	if (busy && cycle1_ce) begin busy <= 1'b0; ch2rd <= 1'b0; ch2wr <= 2'b00; end
+	if (!busy && mstart) begin
+		dev <= 1'b0;
+		if (issuing && scsp_en && rnd(100) < 90) begin
+			busy <= 1'b1;
+			hot = rnd(100);
+			if (hot < 70) sca = {rnd(2) == 1, 17'd0} + rnd(24);
+			else          sca = {rnd(2) == 1, 17'd0} | rnd(131072);
+			sc_i = sc_idx(sca);
+			ch2addr <= {1'b0, sca};
+			if (rnd(100) < 65) begin
+				ch2rd <= 1'b1; dev <= 1'b1; exp_d <= shadow[sc_i]; id_d <= n_rdq; n_rdq = n_rdq + 1;
+			end else begin
+				sc_d = $urandom;
+				sc_be = (rnd(4) == 0) ? (rnd(2) ? 2'b01 : 2'b10) : 2'b11;
+				ch2din <= sc_d; ch2wr <= sc_be;
+				if (sc_be[0]) shadow[sc_i][7:0]  = sc_d[7:0];
+				if (sc_be[1]) shadow[sc_i][15:8] = sc_d[15:8];
+				writes_s = writes_s + 1;
+			end
+		end
+	end
+	if (cycle0_ce) begin
+		dev_l <= dev; exp_l <= exp_d; id_l <= id_d;
+		if (dev_l) begin
+			checks_s = checks_s + 1;
+			if (n_dlv <= id_l) mg_min = 0;
+			else if (($time - t_dlv[id_l % 64]) / T_RAM < mg_min) mg_min = ($time - t_dlv[id_l % 64]) / T_RAM;
+			if (ch2dout !== exp_l) begin errs = errs + 1; if (errs < 20) $display("%0t SCSP read mismatch got %h exp %h", $time, ch2dout, exp_l); end
+		end
+	end
+end
+`else
 // ---------------------------------------------------------------- SCSP emulation (SCSP.sv timing)
 integer scsp_acc = 0;
 reg        scsp_ce = 0, clk_div = 0;
@@ -339,6 +415,7 @@ always @(posedge clk_sys) begin
 		end
 	end
 end
+`endif
 
 // SCSP read latency statistics: first ch2dout change after each read request, in clk_ram cycles
 reg ch2rd_q = 0, rq_pend = 0;
@@ -386,6 +463,9 @@ initial begin
 	$display("tb_sdram: read words cut by a WRITE %0d, READ-interrupted bursts %0d, PRECHARGE %0d, tRP below 18 ns %0d",
 	         model.n_trunc, model.n_rint, model.n_pre, model.n_trp_short);
 	$display("tb_sdram: SCSP read latency %0d..%0d clk_ram cycles (%0d changes)", lat_min, lat_max, lat_n);
+`ifdef SCSP_EXACT
+	$display("tb_sdram: SCSP sample margin, least clk_ram cycles from the delivery to the sample: %0d", mg_min);
+`endif
 `ifdef MC_CHECK
 	$display("MC_CHECK plan_caps=%0d sc_caps=%0d (late %0d) plan_even=%0d sc_even=%0d ctl_even=%0d",
 	         mc_plan, mc_sc, mc_late, mc_plan_even, mc_sc_even, mc_ctl_even);

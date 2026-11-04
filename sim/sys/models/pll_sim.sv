@@ -92,14 +92,15 @@ module pll_sys (
 		end
 	end
 	assign locked = lk & ~flick & ~relk;
-	// quarter-period tick: clk_ram toggles every tick, clk_sys every 2nd, clk_vid every 8th tick (period 16 ticks = 4 clk_sys)
+	// quarter-period tick: clk_ram toggles every tick, clk_sys every 2nd, clk_vid every 8th tick (period 16 ticks = 4 clk_sys).
+	// All three rise on the same tick, as the PLL's phase-0 counters do (clk_ram rises at even q).
 	reg [3:0] q = 4'd0;
 	always begin
 		#(per/4);
 		q <= q + 4'd1;
 		outclk_1 <= ~outclk_1;
-		if (q[0]) outclk_0 <= ~outclk_0;
-		if (q[2:0] == 3'd7) outclk_2 <= ~outclk_2;
+		if (!q[0]) outclk_0 <= ~outclk_0;
+		if (q[2:0] == 3'd0) outclk_2 <= ~outclk_2;
 	end
 	// 90 degrees of clk_vid = one clk_sys period
 	assign #(17460) outclk_3 = outclk_2;
