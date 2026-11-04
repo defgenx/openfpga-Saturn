@@ -52,59 +52,40 @@ the RAM cartridge request of the disc header (`mktoc.py --ramcart-db`).
 
 ### Host handshake
 
-`pocket_status` drives the two status inputs of `core_bridge_cmd`. Both are sticky:
+`core_top` drives the two status inputs of `core_bridge_cmd`:
 
-- boot done rises at the first PLL lock (`pll_locked_74a`). That is v0.2.4's timing and the template's
-  (`status_boot_done = pll_core_locked_s`). Request Status answers 2 ("setup") from then on.
-- setup done rises at `setup_ready_74a`: the first `mem_ready` after the post-lock RAM initialisation, or 2^17
-  clk_74a (1.77 ms) after the first lock. Request Status answers 3, and the rising edge queues Ready to Run (0x0140)
-  exactly once.
+| Input | Before Reset Exit | From Reset Exit to Reset Enter (`status_hold`) |
+|---|---|---|
+| boot done | `pll_locked_74a` | high |
+| setup done | `pll_locked_74a & setup_ready_74a` | high |
 
-Why sticky: `pll_lite` relocks the PLL on every PAL or dot-clock change (SMPC CKCHG320/352). With v0.2.4's live lock
-flag, a running core answered "booting" and a second rising setup done sent another Ready to Run. The target engine then
-waits for the host's `ok`, and every disc read (0x0180) queues behind it.
+- Before Reset Exit both follow the lock flag live, as v0.2.4 and the template do (`status_boot_done =
+  pll_core_locked_s`). Request Status answers 2 ("setup") once the PLL is locked and 3 ("idle") at `setup_ready_74a`:
+  the lock and the first `mem_ready` (`ever_ready`), or 2^17 clk_74a (1.77 ms) of lock if the RAM never reports ready.
+  The rising setup done queues Ready to Run (0x0140).
+- `status_hold` sets in the first clk_74a after Reset Exit with setup done high and clears at Reset Enter
+  (`status_running` low). While it is set both inputs stay high, so the `pll_lite` relock of a PAL or dot-clock change
+  (SMPC CKCHG320/352) never makes Request Status answer 1 or 2 mid-game.
+- `core_bridge_cmd` queues Ready to Run only while `status_running` is low. A second 0x0140 while running would wait
+  for an `ok` the host never sends, and every later disc read (0x0180) would queue behind it in
+  `TARG_ST_WAITRESULT_RTR`.
 
-Why boot done does not wait for the RAM: v0.2.5 held both inputs low until the RAM was ready, and the RAM init waited
-for the lock to hold 2^13 clk_74a. If the lock flag chatters, it never holds that long, so the core stays at "booting"
-and the Pocket reports "core not ready to run". `tb_sys +FLICKER_US=50 +FLICKER_LOW_US=3` reproduces this: v0.2.5
-never leaves status 1. Now no path waits for the lock to hold; every step is bounded from the first lock.
-
-**RAM initialisation (`saturn_pocket`, `pll_stable`).** The SDRAM/PSRAM init starts (the rising reset to `ram_reset`)
-once the lock has held 2^10 clk_74a (13.8 us), or 2^12 clk_74a (55 us) after the first lock if it never holds.
-`setup_ready_74a` ignores any `mem_ready` from before that `rst_ram` pulse, because `sdram_pocket` starts its own
-power-up wait at configuration. The 2^10 hold is the shortest power of two that is safely past `pll_lite`'s power-up
-mode write:
-
-- `self_reset` releases at clk_74a 341 and `fpll_dprio_init` finishes about 75 clocks later. The power-up M/K write
-  (written whether or not the PLL is locked) ends with the K-ready write at clk_74a 430 (5.8 us).
-- `pll_lite` then gives the lock flag 32 clocks to drop (state 17) and waits for the relock.
-- Even with the flag high from the first edge, the counter reaches 2^10 at clk_74a 1026. That is 596 clocks after the
-  last write, 18 times the window `pll_lite` itself allows for the drop. Any drop restarts the count, so the init
-  starts only after the lock has held 13.8 us past the relock.
-
-With it, `mem_ready` comes about 244 us after the first lock in `tb_sys`. In v0.2.4 the init started at the first
-clk_sys edges (230 us). The 55 us fallback stays far below the SDRAM's 200 us power-up wait.
+Why nothing is held before Reset Exit: v0.2.5 and v0.2.6 made both inputs sticky from the first lock / RAM ready (with
+a lock-hold gate on the RAM init and a 512-word load FIFO), and the Pocket rejected both with "core not ready to run",
+while v0.2.4 starts. The boot side up to Reset Exit is v0.2.4's: `core_bridge_cmd.v` (RTC outputs wired to the
+parameter registers 0x24 / 0x28), `saturn_pocket`'s readiness, the RAM init from configuration, the 256-entry load FIFO.
 
 **Load FIFO.** The host may push slot 0 as soon as the status is 2, at one word per 88 clk_74a or more
-(`io_bridge_peripheral.v`), and the bridge has no back-pressure. `load_pocket` holds 512 words (3 M10K). Nothing
-leaves it before `mem_pocket`'s `ram_go` (the first `mem_ready` after an `rst_ram`), so a word cannot be in flight in
-`ddram_pocket` when the post-lock `rst_ram` pulse clears its pending write.
+(`io_bridge_peripheral.v`), and the bridge has no back-pressure. `load_pocket` holds 256 words (one M10K). In `tb_sys`
+with the BIOS (host pushing at 88 clk_74a per word from the moment the status leaves 1) the status is 2 at 0.24 us and
+3 at 230 us; 186 words arrive before the RAM is ready, at most 185 are in flight, no overflow.
 
-`tb_sys` (host pushing at 88 clk_74a per word from the moment the status leaves 1; `FIFO overflow` and the `load FIFO`
-summary line):
-
-| Case | Status 2 | Status 3 | Words before RAM ready | FIFO peak |
-|---|---|---|---|---|
-| stable lock | 0.25 us | 244 us | 198 | 198 / 512 |
-| lock drops 3 us every 50 us, forever | 0.25 us | 244 us | 198 | 198 / 512 |
-| lock drops 1 us every 5 us, forever (2^12 fallback) | 0.25 us | 286 us | 233 | 233 / 512 |
-
-Each case has one rising setup done. With the former 256 entries, the fallback case would have left 23 words of margin.
-
-`sim/platform/tb_bridge_status.sv` runs the real `core_bridge_cmd` through a relock (`make -C sim platform`). The host
-must see 2 before the RAM is ready, then 3, exactly one Ready to Run and no status 1/2 while running. The full-system
-model (`sim/sys/models/pll_sim.sv`) drops the lock for 20 us on every mode change, and `+FLICKER_*` adds chatter.
-`tb_sys` polls Request Status as described above and answers Ready to Run once.
+**Checks.** `sim/platform/tb_bridge_status.sv` (`make -C sim platform`) runs the real `core_bridge_cmd` with the
+expressions above through a relock 1.6 ms after Reset Exit: the host must see 2 before the RAM is ready, then 3,
+exactly one Ready to Run and no status 1/2 while running. `-DLIVE` (the lock flag live throughout) answers 1/2 five times
+during the relock and fails. In `tb_sys`, `sim/sys/models/pll_sim.sv` drops the lock for 20 us on every mode change,
+`+RELOCK_US=<t>` adds one such drop at t us and `+FLICKER_*` adds chatter; the trace logs `PLL locked` and `STATUS`
+changes. With BIOS and disc, `+RELOCK_US=80000` (20 ms after Reset Exit) leaves both status inputs high.
 
 ### Switches for the other branches
 
@@ -147,6 +128,8 @@ register model; the reconfiguration itself, and VCO lock at 640 MHz on the -C8 p
 No fixed-clock fallback was taken. Had reconfiguration been dropped, a fixed 57.27 MHz would run NTSC 320 content
 6.5 %, PAL 320 7.3 % and PAL 352 0.7 % too fast (and PAL at 60 Hz timing); the PLL-reconfiguration block costs
 737 ALMs in the fitter (section 7), the one cost of keeping it.
+
+`POCKET_FIXED_352` is a diagnostic build that pins the PLL and the CE mode to 352 (docs/debug-overlay.md).
 
 `pll_sys.v` was generated, not hand-written: `tools/gen_pll_sys.sh` runs `ip-generate` from the Quartus Docker image
 (`altera_pll` with `gui_en_reconf`, `altera_pll_reconfig`).
