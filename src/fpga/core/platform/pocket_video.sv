@@ -71,7 +71,8 @@ always @(posedge clk_sys) begin
 		vs  <= ~VS_N & pass;
 		idle <= 5'd0;
 	end else if (!idle[4]) idle <= idle + 5'd1;
-	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; end
+	// the gate closes too: a VDP2 leaving reset starts in TVMD's 320 mode, whatever the clock
+	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; vs <= 1'b0; pass <= 1'b0; end
 
 	// mode is locked for the whole frame, as in MiSTer's top
 	vbl_old <= VBL_N;
