@@ -194,7 +194,10 @@ half of ours.
 Neither bench saw it: the full-system `pll_sim` and `tb_sdram`'s default clocks raised clk_sys on clk_ram's falling
 edge, so the request crossing and the sample crossing were each half a clk_ram shorter than on the PLL, whose phase-0
 outputs rise together. `pll_sim` now raises clk_sys, clk_ram and clk_vid on the same tick, and `tb_sdram -DSCSP_EXACT`
-does the same with the SCSPP request timing (`+CE_IN=<Hz>` for the rate the enables assume).
+does the same with the SCSPP request timing (`+CE_IN=<Hz>` for the rate the enables assume). With the aligned clocks the
+full-system run (`tb_sys`, BIOS and Hyper Duel, build E macros, 2.1 s) reproduces the hardware: before the landing-edge
+delivery 19,795 of 367,752 68K samples and 658 of 53,276 SCU samples were stale, no key-on, silent output; with it none of
+2.36 M samples is stale, key-ons start at 0.95 s and the BIOS chime at 1.95 s.
 
 The SCSP READ goes out at ACT + 3 without auto precharge and closes the row with a PRECHARGE at ACT + 6: an auto
 precharge READ at ACT + 4 would meet tRAS too but land one cycle later. There is no margin for a second request
