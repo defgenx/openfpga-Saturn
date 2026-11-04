@@ -9,7 +9,7 @@
       "description": "Sega Saturn, port of the Saturn_MiSTer core",
       "author": "defgenx",
       "url": "https://github.com/defgenx/openfpga-Saturn",
-      "version": "0.2.12",
+      "version": "0.2.13",
       "date_release": "2026-11-04"
     },
     "framework": {
