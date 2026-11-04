@@ -57,7 +57,7 @@ module tb;
 	endtask
 
 	function [31:0] kof(input p, input d);
-		kof = !p ? (!d ? 32'hAFC38FAE : 32'h4196FC35) : (!d ? 32'hA052BF5B : 32'h31219DBD);
+		kof = !p ? (!d ? 32'hCA825FC9 : 32'h2BB9FD78) : (!d ? 32'hC0372A3C : 32'h20C113D3);
 	endfunction
 
 	integer errs = 0, i, m;
@@ -69,10 +69,10 @@ module tb;
 				if (plant_a.mem[i] !== plant_b.mem[i]) begin
 					errs = errs + 1; $display("MISMATCH reg %h lite %h altera %h", i, plant_a.mem[i], plant_b.mem[i]);
 				end
-			if (plant_a.mem[6'h12] !== {d ? 8'd5 : 8'd4, 8'd4}) begin errs = errs + 1; $display("bad M reg"); end
+			if (plant_a.mem[6'h12] !== {8'd3, d ? 8'd3 : 8'd2}) begin errs = errs + 1; $display("bad M reg"); end
 			kk = kof(p, d);
 			if (plant_a.mem[6'h18] !== kk[15:0] || plant_a.mem[6'h19] !== kk[31:16]) begin errs = errs + 1; $display("bad K"); end
-			if (plant_a.mem[6'h17][4] !== d || plant_a.mem[6'h15][4] !== 1'b0 || plant_a.mem[6'h17][11] !== 1'b1) begin errs = errs + 1; $display("bad flags"); end
+			if (plant_a.mem[6'h17][4] !== !d || plant_a.mem[6'h15][4] !== 1'b0 || plant_a.mem[6'h17][11] !== 1'b1) begin errs = errs + 1; $display("bad flags"); end
 			if (!plant_a.lock || !plant_b.lock) begin errs = errs + 1; $display("not locked"); end
 		end
 	endtask
@@ -82,7 +82,7 @@ module tb;
 		repeat (1200) @(posedge clk);     // DPRIO init of both blocks
 		for (m = 0; m < 6; m = m + 1) begin
 			pal = seq[m][1]; dotsel = seq[m][0];
-			avwrite(6'd0, 0); avwrite(6'd4, !dotsel ? 32'h00000404 : 32'h00020504);
+			avwrite(6'd0, 0); avwrite(6'd4, !dotsel ? 32'h00020302 : 32'h00000303);
 			avwrite(6'd7, kof(pal, dotsel)); avwrite(6'd2, 0);
 			repeat (700) @(posedge clk);
 			check(pal, dotsel);
