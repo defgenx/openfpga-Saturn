@@ -1,7 +1,8 @@
 # System PLL (74.25 MHz reference, fractional, runtime reconfigurable) and its reconfiguration block.
 # Regenerate with tools/gen_pll_sys.sh.
 set_global_assignment -name SYNTHESIS_ONLY_QIP ON
-set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) pll_sys.v]
+# pll_sys.v (NTSC 352) or pll_sys_320.v (POCKET_PLL_COMPILE_320), `included by pll_sys_select.v
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) pll_sys_select.v]
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) pll_sys_cfg.v]
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) altera_pll_reconfig_top.v]
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) altera_pll_reconfig_core.v]

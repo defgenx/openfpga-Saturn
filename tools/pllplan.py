@@ -4,6 +4,8 @@
   python3 tools/pllplan.py                    the plan: M, K, VCO per mode, counters, the MiSTer comparison
   python3 tools/pllplan.py --template         ip-generate --component-parameter list that yields the template
   python3 tools/pllplan.py --patch FILE       turn the template pll_sys.v into ours (in place, checked)
+  python3 tools/pllplan.py --patch FILE --mode "NTSC 320"
+                                              the same for another compiled mode (pll_sys_320.v, POCKET_PLL_COMPILE_320)
   python3 tools/pllplan.py --verilog          the M / K constants for pll_lite.sv, saturn_pocket.sv and sim/pll
 
 MiSTer: 50 MHz reference, VCO post-divider 2, clk_sys counter 8, clk_ram 4, M 8 (320) / 9 (352), charge pump 20 uA,
@@ -99,9 +101,15 @@ def template_args():
     print(" ".join("--component-parameter=" + x for x in a))
 
 
-def patch(fn):
+def phase_ps(ph, f):
+    """phase_shift string value: ph eighths of a counter-input period (1 / (C0 x clk_sys)), in ps."""
+    return round(ph / 8 * 1e6 / (C0 * f))
+
+
+def patch(fn, mode=COMPILED):
     s = open(fn).read()
-    r = [r for r in plan(REF) if r["name"] == COMPILED][0]
+    r = [r for r in plan(REF) if r["name"] == mode][0]
+    t = [r for r in plan(REF) if r["name"] == COMPILED][0]   # the template's frequencies are the compiled mode's
 
     def get(p):
         mm = re.search(r"\.%s\(\"?([^\")]*)\"?\)" % re.escape(p), s)
@@ -122,6 +130,7 @@ def patch(fn):
         want.update({f"c_cnt_hi_div{i}": str(hi), f"c_cnt_lo_div{i}": str(lo),
                      f"c_cnt_odd_div_duty_en{i}": "true" if odd else "false",
                      f"c_cnt_prst{i}": str(ph // 8 + 1), f"c_cnt_ph_mux_prst{i}": str(ph % 8)})
+        want[f"phase_shift{i}"] = f"{phase_ps(ph, t['f'])} ps"
     for p, v in want.items():
         assert get(p) == v, f"template {p} = {get(p)}, expected {v}"
 
@@ -134,10 +143,12 @@ def patch(fn):
     put("pll_output_clk_frequency", f"{r['vco'] / VCO_DIV:.6f} MHz", True)
     for i, (name, c, ph) in enumerate(COUNTERS):
         put(f"output_clock_frequency{i}", f"{r['real'] * C0 / c:.6f} MHz", True)
-    s = s.replace("module  pll_sys(", "// tools/gen_pll_sys.sh: ip-generate at 50 MHz, then tools/pllplan.py --patch "
+        put(f"phase_shift{i}", f"{phase_ps(ph, r['real'])} ps", True)
+    how = "" if mode == COMPILED else f' --mode "{mode}"'
+    s = s.replace("module  pll_sys(", f"// tools/gen_pll_sys.sh: ip-generate at 50 MHz, then tools/pllplan.py --patch{how} "
                   "(reference 74.25 MHz, M, K)\nmodule  pll_sys(", 1)
     open(fn, "w").write(s)
-    print(f"patched {fn}: reference {REF} MHz, M {r['m']} (hi {hi}, lo {lo}{', odd' if odd else ''}), K {r['k']}")
+    print(f"patched {fn} ({mode}): reference {REF} MHz, M {r['m']} (hi {hi}, lo {lo}{', odd' if odd else ''}), K {r['k']}")
 
 
 def verilog():
@@ -150,7 +161,9 @@ def main():
     if "--template" in sys.argv:
         return template_args()
     if "--patch" in sys.argv:
-        return patch(sys.argv[sys.argv.index("--patch") + 1])
+        mode = sys.argv[sys.argv.index("--mode") + 1] if "--mode" in sys.argv else COMPILED
+        assert mode in [m[0] for m in MODES], f"unknown mode {mode}"
+        return patch(sys.argv[sys.argv.index("--patch") + 1], mode)
     if "--verilog" in sys.argv:
         return verilog()
     show()

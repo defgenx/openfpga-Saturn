@@ -1,13 +1,17 @@
 // Simulation stand-ins for the PLL pair: pll_sys (Altera fractional PLL, outputs clk_sys / clk_ram / clk_vid /
 // clk_vid_90) and pll_lite (DPRIO writer). The real pll_lite is checked against the Altera reconfiguration
-// core in sim/pll, so here pll_lite only forwards {pal, dotsel} through reconfig_to_pll[2:1] and pll_sys picks the
-// output frequency from them (NTSC 320 / 352, PAL 320 / 352, saturn_pocket.sv comment). Same phase relations as
+// core in sim/pll, so here pll_lite only forwards {pal, dotsel} through reconfig_to_pll[2:1] with bit 39 set, and pll_sys
+// picks the output frequency from them (NTSC 320 / 352, PAL 320 / 352, saturn_pocket.sv comment). With NO_RECONFIG
+// (POCKET_PLL_NO_RECONFIG) pll_lite drives its IDLE value, bit 39 is 0 and pll_sys runs at the compiled mode from the
+// start, without relock: NTSC 352, or NTSC 320 under POCKET_PLL_COMPILE_320. Same phase relations as
 // the PLL: clk_ram = 2 x clk_sys, clk_vid = clk_sys / 4, clk_vid_90 = clk_vid + 90 degrees. The clocks run before lock
 // (as the PLL outputs do while it acquires).
 
 `timescale 1ps/1ps
 
-module pll_lite (
+module pll_lite #(
+	parameter NO_RECONFIG = 0
+) (
 	input  wire        clk,
 	input  wire        pal,
 	input  wire        dotsel,
@@ -15,7 +19,7 @@ module pll_lite (
 	output wire [63:0] reconfig_to_pll,
 	input  wire [63:0] reconfig_from_pll
 );
-	assign reconfig_to_pll = {61'd0, dotsel, pal, 1'b0};
+	assign reconfig_to_pll = NO_RECONFIG ? 64'h0000_0000_3000_0002 : {24'd0, 1'b1, 36'd0, dotsel, pal, 1'b0};
 endmodule
 
 module pll_sys (
@@ -30,10 +34,18 @@ module pll_sys (
 	input  wire [63:0] reconfig_to_pll,
 	output wire [63:0] reconfig_from_pll
 );
-	wire pal = reconfig_to_pll[1], dotsel = reconfig_to_pll[2];
+	wire rcfg = reconfig_to_pll[39];
+`ifdef POCKET_PLL_COMPILE_320
+	localparam COMP_DOT = 1'b0;
+`else
+	localparam COMP_DOT = 1'b1;
+`endif
+	wire pal = rcfg ? reconfig_to_pll[1] : 1'b0, dotsel = rcfg ? reconfig_to_pll[2] : COMP_DOT;
 	// clk_sys period in ps (multiple of 4 so that the clk_ram half period is an integer)
 	integer per;
 	always @* per = !pal ? (!dotsel ? 18604 : 17460) : (!dotsel ? 18736 : 17584);
+	initial #1 $display("pll_sim: %0s, clk_sys period %0d ps at 1 ps", rcfg ? "pll_lite reconfigures" :
+	                    "no reconfiguration (compiled mode)", per);
 
 	assign reconfig_from_pll = {47'd0, locked, 16'd0};
 

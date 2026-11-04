@@ -6,11 +6,14 @@
 //   M:  write 0x12 {hi,lo};  read-modify-write 0x15 (bit 4, bypass) and 0x17 (bit 4, odd division)
 //   K:  read 0x17; write it with bit 11 (K ready) = 0; write 0x18, 0x19 (K); write 0x17 with bit 11 = 1
 // The DPRIO init (self_reset, fpll_dprio_init) is reused from altera_pll_reconfig_core.v.
+// NO_RECONFIG (build-only POCKET_PLL_NO_RECONFIG) ties the bus to IDLE instead: no DPRIO access, not even the init.
 // Owning doc: docs/integration.md section 2. Check: sim/pll (final DPRIO contents equal to the Altera core's).
 
 `default_nettype none
 
-module pll_lite (
+module pll_lite #(
+	parameter NO_RECONFIG = 0
+) (
 	input  wire        clk,                 // clk_74a, the PLL reference
 	input  wire        pal,                 // asynchronous
 	input  wire        dotsel,              // asynchronous, 1 = 352 wide
@@ -99,21 +102,28 @@ wire [15:0] w_dat = (st == 5'd7) ? {d1[15:5], 1'b0, d1[3:0]} :
                     (st == 5'd2) ? {8'd3, 6'd0, 1'b1, wide} :
                     w_k ? w_k16 :
                     {d2[15:12], (st == 5'd16) ? 1'b1 : (st == 5'd13) ? 1'b0 : d2[11], d2[10:5], (st == 5'd8) ? !wide : d2[4], d2[3:0]};
-assign reconfig_to_pll[0]     = clk;
-assign reconfig_to_pll[1]     = ~init_reset;
-assign reconfig_to_pll[2]     = i_done ? o_wr : i_wr;
-assign reconfig_to_pll[3]     = i_done ? o_rd : i_rd;
-assign reconfig_to_pll[9:4]   = i_done ? o_addr : i_addr;
-assign reconfig_to_pll[25:10] = i_done ? w_dat : i_wd;
-assign reconfig_to_pll[27:26] = 2'b11;
-assign reconfig_to_pll[28]    = i_ssl;
-assign reconfig_to_pll[29]    = i_mdio_dis;
-assign reconfig_to_pll[30]    = 1'b0;
-assign reconfig_to_pll[31]    = 1'b0;
-assign reconfig_to_pll[36:32] = 5'd0;
-assign reconfig_to_pll[37]    = i_scanen;
-assign reconfig_to_pll[38]    = i_atpg;
-assign reconfig_to_pll[63:39] = 25'd0;
+wire [63:0] lite_bus;
+assign lite_bus[0]     = clk;
+assign lite_bus[1]     = ~init_reset;
+assign lite_bus[2]     = i_done ? o_wr : i_wr;
+assign lite_bus[3]     = i_done ? o_rd : i_rd;
+assign lite_bus[9:4]   = i_done ? o_addr : i_addr;
+assign lite_bus[25:10] = i_done ? w_dat : i_wd;
+assign lite_bus[27:26] = 2'b11;
+assign lite_bus[28]    = i_ssl;
+assign lite_bus[29]    = i_mdio_dis;
+assign lite_bus[30]    = 1'b0;
+assign lite_bus[31]    = 1'b0;
+assign lite_bus[36:32] = 5'd0;
+assign lite_bus[37]    = i_scanen;
+assign lite_bus[38]    = i_atpg;
+assign lite_bus[63:39] = 25'd0;
+
+// IDLE: the values altera_pll.v (Cyclone V branch) gives the PLL's DPRIO ports in its non-reconfigurable "General"
+// subtype: rstn 1 [1], sershiftload 1 [28], mdiodis 1 [29]; clk, read, write, address, data, byteen, phase_en, updn
+// and cntsel 0. The PLL then keeps the configuration it was compiled with.
+localparam [63:0] IDLE = 64'h0000_0000_3000_0002;
+assign reconfig_to_pll = NO_RECONFIG ? IDLE : lite_bus;
 
 endmodule
 
