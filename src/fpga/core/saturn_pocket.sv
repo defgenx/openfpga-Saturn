@@ -160,10 +160,10 @@ wire rst_req_74 = ~reset_n | ~ever_locked;
 // the mode is re-applied at every host reset, as the altera_pll_reconfig writer below does
 pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(PLL_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
 `else
-// clk_sys = 12 x VCO^-1: mode picks M (integer) and K (fraction) of the 74.25 MHz reference
-//   M reg: 0x404 = 8, 0x20504 = 9 (low count [15:8], high count [7:0], odd-division bit 17)
-//   NTSC 320: M 8.6866 53.7482 MHz   NTSC 352: M 9.2562 57.2728 MHz
-//   PAL  320: M 8.6263 53.3750 MHz   PAL  352: M 9.1919 56.8750 MHz
+// clk_sys = (VCO / 2) / 8: mode picks M (integer) and K (fraction) of the 74.25 MHz reference (tools/pllplan.py)
+//   M reg: 0x20302 = 5, 0x303 = 6 (high count [15:8], low count [7:0], odd-division bit 17)
+//   NTSC 320: M 5.7911 53.7482 MHz   NTSC 352: M 6.1708 57.2728 MHz
+//   PAL  320: M 5.7508 53.3750 MHz   PAL  352: M 6.1279 56.8750 MHz
 wire PAL;
 wire SMPC_DOTSEL;
 wire rst_req_74 = ~reset_n | ~ever_locked;
@@ -190,13 +190,13 @@ always @(posedge clk_74a) begin
 		3'd1: begin cfg_address <= 6'd0; cfg_data <= 32'd0; cfg_write <= 1'b1; end
 		3'd3: begin
 			cfg_address <= 6'd4;
-			cfg_data    <= !dotsel2 ? 32'h00000404 : 32'h00020504;
+			cfg_data    <= !dotsel2 ? 32'h00020302 : 32'h00000303;
 			cfg_write   <= 1'b1;
 		end
 		3'd5: begin
 			cfg_address <= 6'd7;
-			cfg_data    <= !pald2 ? (!dotsel2 ? 32'hAFC38FAE : 32'h4196FC35)
-			                      : (!dotsel2 ? 32'hA052BF5B : 32'h31219DBD);
+			cfg_data    <= !pald2 ? (!dotsel2 ? 32'hCA825FC9 : 32'h2BB9FD78)
+			                      : (!dotsel2 ? 32'hC0372A3C : 32'h20C113D3);
 			cfg_write   <= 1'b1;
 		end
 		3'd7: begin cfg_address <= 6'd2; cfg_data <= 32'd0; cfg_write <= 1'b1; end

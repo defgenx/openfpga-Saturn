@@ -871,7 +871,11 @@ initial begin : act_win
 	if ($test$plusargs("ACTLOG")) forever begin
 		#(64'd1000000000);
 		$fdisplay(ftrace, "%0t ACT 1ms VS %0d DE %0d IRL %0d ACS2 %0d alive %b pll_locked %b SYSRES_N %b SNDRES_N %b", $time,
+`ifdef POCKET_DEBUG_OVERLAY
 			n_vs, n_de, n_irl, n_cd, dut.saturn.dbg_alive, dut.saturn.pll_locked, `SAT.SYSRES_N, `SAT.SNDRES_N);
+`else
+			n_vs, n_de, n_irl, n_cd, 1'bx, dut.saturn.pll_locked, `SAT.SYSRES_N, `SAT.SNDRES_N);
+`endif
 		n_vs = 0; n_de = 0; n_irl = 0; n_cd = 0;
 	end
 end

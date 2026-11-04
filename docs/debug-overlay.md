@@ -64,6 +64,7 @@ one row of 8 hex digits: the master SH-2 program counter.
 ```
 
 - The default row. `POCKET_DEBUG_SNDROW=1` shows the debug6 row instead (below).
+- Release builds (from v0.2.13) set neither macro: no squares, no grey fallback frame.
 - `POCKET_DEBUG_NOROW=1` leaves the row out (squares only). That is the shipped debug build: with the row the fit needs
   1,852 of 1,848 LABs.
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache

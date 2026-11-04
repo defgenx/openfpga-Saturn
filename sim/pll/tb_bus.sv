@@ -77,10 +77,10 @@ module tb_bus;
 			if (state) state <= state + 3'd1;
 			case (state)
 			3'd1: begin cfg_address <= 6'd0; cfg_data <= 32'd0; cfg_write <= 1'b1; end
-			3'd3: begin cfg_address <= 6'd4; cfg_data <= !dotsel2 ? 32'h00000404 : 32'h00020504; cfg_write <= 1'b1; end
+			3'd3: begin cfg_address <= 6'd4; cfg_data <= !dotsel2 ? 32'h00020302 : 32'h00000303; cfg_write <= 1'b1; end
 			3'd5: begin
 				cfg_address <= 6'd7;
-				cfg_data    <= !pald2 ? (!dotsel2 ? 32'hAFC38FAE : 32'h4196FC35) : (!dotsel2 ? 32'hA052BF5B : 32'h31219DBD);
+				cfg_data    <= !pald2 ? (!dotsel2 ? 32'hCA825FC9 : 32'h2BB9FD78) : (!dotsel2 ? 32'hC0372A3C : 32'h20C113D3);
 				cfg_write   <= 1'b1;
 			end
 			3'd7: begin cfg_address <= 6'd2; cfg_data <= 32'd0; cfg_write <= 1'b1; end

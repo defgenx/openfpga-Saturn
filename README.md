@@ -3,6 +3,21 @@
 An openFPGA port of [Saturn_MiSTer](https://github.com/MiSTer-devel/Saturn_MiSTer), the MiSTer project's
 Sega Saturn core, to the Analogue Pocket.
 
+This core follows MiSTer's Saturn implementation as closely as possible and deviates only where the Pocket forces it.
+Clocks are the main example: the PLL plan is MiSTer's (VCO post-divider 2, the same C counters, a VCO in MiSTer's
+854 .. 916 MHz range, the same M + K reconfiguration on every 320/352 and PAL change), with M and K recomputed for the
+Pocket's 74.25 MHz reference, so each mode gets exactly MiSTer's `clk_sys` ([docs/integration.md](docs/integration.md#2-clock-plan)).
+The other forced deviations:
+
+* Memories: MiSTer's SDRAM, DDR3 and BRAM buffers are mapped to the Pocket's SDRAM, two PSRAMs, SRAM and M10K
+  ([docs/memory.md](docs/memory.md)).
+* FPGA size: the Pocket has 18,480 ALMs against MiSTer's 41,910, so blocks are rewritten for area and a few features are cut
+  ([docs/cuts.md](docs/cuts.md), [docs/game-impact.md](docs/game-impact.md)).
+* CD: MiSTer's ARM side emulates the drive; here the disc streams from the SD card and the CD block runs as HLE firmware
+  ([docs/cd.md](docs/cd.md), [docs/cdb-hle.md](docs/cdb-hle.md)).
+* APF glue: the MiSTer framework (OSD, `hps_io`, video mixer) is replaced by the Pocket's bridge, data slots, scaler and
+  I2S audio ([docs/integration.md](docs/integration.md)).
+
 > **Status: work in progress, does not fit the Pocket yet.** The whole Saturn system is integrated on the
 > Pocket top (memory, CD streaming, HLE CD block, clocks, video, audio) and synthesises, but the fitter needs
 > about 30,700 ALMs against 18,480. Exact rewrites and low-impact cuts are not enough; the next step is
@@ -19,7 +34,7 @@ ref/Saturn_MiSTer    upstream at the imported commit, golden model for sim/
 sim/                 simulations (make -C sim <target>)
 firmware/cdb/        HLE CD block firmware (RV32, runs on SERV)
 dist/                Cores/defgenx.Saturn (definition files), Platforms/saturn.json, Assets/
-tools/               reverse_bits.py (rbf -> rbf_r), check_json.py (APF limits)
+tools/               reverse_bits.py (rbf -> rbf_r), check_json.py (APF limits), pllplan.py (PLL plan)
 build.sh             compile in Docker (raetro/quartus:21.1) and package defgenx.Saturn.zip
 install.sh/.bat/.ps1 copy the core to the SD card
 ```

@@ -1,11 +1,12 @@
 // pll_lite - DPRIO writer for pll_sys, replacing altera_pll_reconfig (pll_sys_cfg) under POCKET_PLL_LITE.
 //
 // Only the M counter and the fractional K change between the four modes (NTSC/PAL x 320/352); every
-// output scales together. The sequence is the one altera_pll_reconfig_core issues for a write of M and K:
+// output scales together. M 5 (hi 3, lo 2, odd) at 320, M 6 (hi 3, lo 3) at 352; values from tools/pllplan.py.
+// The sequence is the one altera_pll_reconfig_core issues for a write of M and K:
 //   M:  write 0x12 {hi,lo};  read-modify-write 0x15 (bit 4, bypass) and 0x17 (bit 4, odd division)
 //   K:  read 0x17; write it with bit 11 (K ready) = 0; write 0x18, 0x19 (K); write 0x17 with bit 11 = 1
 // The DPRIO init (self_reset, fpll_dprio_init) is reused from altera_pll_reconfig_core.v.
-// Owning doc: docs/fit-status.md. Check: sim/pll (final DPRIO contents equal to the Altera core's).
+// Owning doc: docs/integration.md section 2. Check: sim/pll (final DPRIO contents equal to the Altera core's).
 
 `default_nettype none
 
@@ -50,8 +51,8 @@ reg  [5:0] o_addr = 6'd0;
 reg [15:0] d1 = 16'd0, d2 = 16'd0;
 
 wire        wide = mode[1];
-wire [31:0] k_val = !mode[0] ? (!wide ? 32'hAFC38FAE : 32'h4196FC35)
-                             : (!wide ? 32'hA052BF5B : 32'h31219DBD);
+wire [31:0] k_val = !mode[0] ? (!wide ? 32'hCA825FC9 : 32'h2BB9FD78)
+                             : (!wide ? 32'hC0372A3C : 32'h20C113D3);
 
 always @(posedge clk) begin
 	md_s1 <= {dotsel, pal};
@@ -91,13 +92,13 @@ always @(posedge clk) begin
 end
 
 // Write data, valid while o_wr is high (data is ignored otherwise), selected by the state that follows the write:
-//   2: 0x12 {M hi, M lo}   7: 0x15   8: 0x17 with bit 4   13: 0x17 with bit 11 = 0   14, 15: K lo, K hi   16: 0x17 with bit 11 = 1
+//   2: 0x12 {M hi, M lo}   7: 0x15   8: 0x17 with bit 4 (M odd)   13: 0x17 with bit 11 = 0   14, 15: K lo, K hi   16: 0x17 with bit 11 = 1
 wire        w_k   = (st == 5'd14) || (st == 5'd15);
 wire [15:0] w_k16 = (st == 5'd14) ? k_val[15:0] : k_val[31:16];
 wire [15:0] w_dat = (st == 5'd7) ? {d1[15:5], 1'b0, d1[3:0]} :
-                    (st == 5'd2) ? {5'd0, 1'b1, 1'b0, wide, 5'd0, 1'b1, 2'b00} :
+                    (st == 5'd2) ? {8'd3, 6'd0, 1'b1, wide} :
                     w_k ? w_k16 :
-                    {d2[15:12], (st == 5'd16) ? 1'b1 : (st == 5'd13) ? 1'b0 : d2[11], d2[10:5], (st == 5'd8) ? wide : d2[4], d2[3:0]};
+                    {d2[15:12], (st == 5'd16) ? 1'b1 : (st == 5'd13) ? 1'b0 : d2[11], d2[10:5], (st == 5'd8) ? !wide : d2[4], d2[3:0]};
 assign reconfig_to_pll[0]     = clk;
 assign reconfig_to_pll[1]     = ~init_reset;
 assign reconfig_to_pll[2]     = i_done ? o_wr : i_wr;
