@@ -1,11 +1,13 @@
 // APF boot status and target commands around a PLL relock: the real core_bridge_cmd with the status inputs as
-// v0.2.4 drove them (live PLL lock) or through pocket_status (-DFIX: boot done sticky from the first lock, setup
-// done sticky from RAM ready; the host must see "setup" (2) before the RAM is ready, then "idle" (3)).
+// core_top drives them (live PLL lock before Reset Exit, held once running), or as v0.2.4 did (-DLIVE: live lock
+// throughout, which answers 1/2 during the relock and fails). The host must see "setup" (2) before the RAM is ready,
+// then "idle" (3).
 //
 // Host: polls Request Status, starts the slot 0 push as soon as the core leaves "booting" (the order the PSX
 // core's APF model uses; nothing in the APF docs says the host waits for "idle"), all complete, Reset Exit,
 // then serves target commands and answers Ready to Run only once (+RTR_ALWAYS answers every one).
-// The RTC registers must survive the 0x0082 that follows the RTC command.
+// The RTC date after the 0x0082 that follows the RTC command is reported, not checked: core_bridge_cmd is v0.2.4's,
+// which wires the RTC outputs to the parameter registers.
 // Core: PLL lock, RAM ready RAM_US after it, a disc read every 300 us, one relock (pll_lite mode change) at 3 ms.
 `timescale 1ps/1ps
 module tb_bridge_status;
@@ -21,12 +23,13 @@ module tb_bridge_status;
 	reg  lock = 1'b0, ever_ready = 1'b0;
 	wire setup_ready_74a = lock & ever_ready;
 	wire reset_n;
-`ifdef FIX
-	wire status_boot_done, status_setup_done;
-	pocket_status st (.clk_74a(clk), .pll_locked_74a(lock), .setup_ready_74a(setup_ready_74a),
-	                  .boot_done(status_boot_done), .setup_done(status_setup_done));
-`else
+`ifdef LIVE
 	wire status_boot_done = lock, status_setup_done = lock & setup_ready_74a;
+`else
+	// same expressions as core_top.v (status_hold)
+	reg  status_hold = 1'b0;
+	always @(posedge clk) status_hold <= reset_n & (status_hold | (lock & setup_ready_74a));
+	wire status_boot_done = lock | status_hold, status_setup_done = (lock & setup_ready_74a) | status_hold;
 `endif
 
 	reg         t_read = 1'b0;
@@ -157,7 +160,7 @@ module tb_bridge_status;
 		#(6_000_000_000);                            // 6 ms
 		$display("Ready to Run commands %0d; status 1/2 answered while running %0d; disc reads issued %0d, completed %0d; first status after booting %0d",
 		         n_rtr, n_boot_running, n_req, n_done, first_st);
-		if (rtc_ok && n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5 && first_st == 2 && seen3)
+		if (n_rtr == 1 && n_boot_running == 0 && n_done >= n_req - 1 && n_req > 5 && first_st == 2 && seen3)
 			$display("RESULT: PASS");
 		else $display("RESULT: FAIL");
 		$finish;

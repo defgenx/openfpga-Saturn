@@ -821,9 +821,12 @@ end
 integer ld_early = 0, st_rise3 = 0, fifo_max = 0;
 longint t_st2 = -1, t_st3 = -1, t_rdy = -1;
 reg [1:0] st_q = 2'b00;
+reg       lk_q = 1'b0;
 always @(posedge clk_74a) begin : stmon
 	int occ;
 	st_q <= {dut.status_setup_done, dut.status_boot_done};
+	lk_q <= dut.pll_locked_74a;
+	if (dut.pll_locked_74a != lk_q) $fdisplay(ftrace, "%0t PLL locked %b", $time, dut.pll_locked_74a);
 	if ({dut.status_setup_done, dut.status_boot_done} != st_q)
 		$fdisplay(ftrace, "%0t STATUS boot_done %b setup_done %b", $time, dut.status_boot_done, dut.status_setup_done);
 	if (dut.status_boot_done && t_st2 < 0) t_st2 = $time;

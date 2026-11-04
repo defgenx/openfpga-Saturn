@@ -341,9 +341,13 @@ wire    [31:0]  cmd_bridge_rd_data;
 // bridge host commands
 // synchronous to clk_74a
 wire            setup_ready_74a;
-wire            status_boot_done = pll_locked_74a;
-wire            status_setup_done = pll_locked_74a & setup_ready_74a;    // rising edge triggers a target command
 wire            status_running = reset_n;              // we are running as soon as reset_n goes high
+// Before Reset Exit the status follows the lock exactly as v0.2.4 did; once running it holds through the PLL relock of
+// a dot-clock change (SMPC CKCHG352/320), so Request Status never answers "booting" mid-game (docs/integration.md).
+reg             status_hold = 1'b0;
+always @(posedge clk_74a) status_hold <= status_running & (status_hold | (pll_locked_74a & setup_ready_74a));
+wire            status_boot_done = pll_locked_74a | status_hold;
+wire            status_setup_done = (pll_locked_74a & setup_ready_74a) | status_hold;    // rising edge triggers a target command
 
 wire            dataslot_requestread;
 wire    [15:0]  dataslot_requestread_id;
