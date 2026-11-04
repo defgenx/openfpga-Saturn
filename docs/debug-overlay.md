@@ -41,6 +41,18 @@ turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
 
+## Fixed 352 clock (`POCKET_FIXED_352`)
+
+Diagnostic build macro (with `POCKET_PLL_LITE`), never set in the committed `ap_core.qsf`. `saturn_pocket` gives
+`pll_lite` DOTSEL 1 and the CE mode (`clk_mode`) DOTSEL 1 whatever the SMPC selects, so `clk_sys` stays at the
+compile-time 352 rate (57.2728 MHz NTSC, 56.875 MHz PAL) and CKCHG320/352 never reconfigures or relocks the PLL. The
+mode is still written at power-up and re-applied at each host reset, and a PAL change still relocks. The VDP2 keeps its
+own 320/352 setting (TVMD), so 320-dot content, the BIOS included, runs 6.5 % fast (NTSC).
+
+It separates the two things that happen together at a game's first CKCHG352 (Hyper Duel: the first runtime relock and
+the first time at 57.27 MHz): with the macro the BIOS already runs at 57.27 MHz, and no relock follows. BIOS broken =
+57.27 MHz timing; game picture only with the macro = the relock.
+
 ## Hex text row
 
 Under the squares, at x 32..159 and y 16..31 (black background, white digits, cell 16 x 16, glyph 3 x 5 scaled 4 x 2),

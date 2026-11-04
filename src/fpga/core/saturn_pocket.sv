@@ -111,6 +111,12 @@ pll_sys pll (
 `ifdef POCKET_PLL_LITE
 wire PAL;
 wire SMPC_DOTSEL;
+`ifdef POCKET_FIXED_352
+// diagnostic: PLL and CE mode stay at 352, CKCHG320/352 never relocks the PLL (docs/debug-overlay.md)
+wire PLL_DOTSEL = 1'b1;
+`else
+wire PLL_DOTSEL = SMPC_DOTSEL;
+`endif
 `else
 wire        cfg_waitrequest;
 reg         cfg_write;
@@ -152,7 +158,7 @@ assign setup_ready_74a = lock_s[1] & ever_ready;
 `ifdef POCKET_PLL_LITE
 wire rst_req_74 = ~reset_n | ~ever_locked;
 // the mode is re-applied at every host reset, as the altera_pll_reconfig writer below does
-pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(SMPC_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
+pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(PLL_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
 `else
 // clk_sys = 12 x VCO^-1: mode picks M (integer) and K (fraction) of the 74.25 MHz reference
 //   M reg: 0x404 = 8, 0x20504 = 9 (low count [15:8], high count [7:0], odd-division bit 17)
@@ -291,7 +297,11 @@ wire [64:0] RTC = {tog_s[1], 16'h0000, rtc_pl};
 // without reset). The accumulators take in_clk - k (threshold) and k - in_clk (negative step) for their step k as constants
 // of the registered mode; in the first clock the threshold is 0 and the step k, which is what in_clk = 0 gave.
 reg [2:0] clk_mode = 3'd0;     // {in_clk loaded, PAL, SMPC_DOTSEL}
+`ifdef POCKET_FIXED_352
+always @(posedge clk_sys) clk_mode <= {1'b1, PAL, 1'b1};
+`else
 always @(posedge clk_sys) clk_mode <= {1'b1, PAL, SMPC_DOTSEL};
+`endif
 function automatic [26:0] mode_sub(input [2:0] m, input [26:0] k, input neg);
 	casez (m)
 		3'b0??:  mode_sub = neg ? k : 27'd0;
