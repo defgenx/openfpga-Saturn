@@ -551,6 +551,66 @@ always @(posedge video_rgb_clock) begin
 end
 
 
+// ---- scaler-side view: lines start at video_hs, frames at video_vs (the APF scaler's reading of the bus).
+// Per frame: DE lines, pixels per line (min/max), lines with more than one DE run, HS-to-DE offset (min/max),
+// closest VS-to-HS spacing; with +FRAMES the same frames as frame_<n>_scl.ppm.
+reg [23:0] sbuf [0:1023][0:511];
+integer s_x = 0, s_y = -1, s_run = 0, s_hsde = 0, s_w = 0, s_h = 0;
+integer s_pmin = 99999, s_pmax = 0, s_multi = 0, s_offmin = 99999, s_offmax = 0, s_vshs = 99999, s_sincevs = 99999;
+integer s_delines = 0, s_fn = 0;
+reg     s_de_q = 1'b0, s_line_de = 1'b0;
+task automatic s_line_end();
+	if (s_line_de) begin
+		s_delines++;
+		if (s_x < s_pmin) s_pmin = s_x;
+		if (s_x > s_pmax) s_pmax = s_x;
+		if (s_run > 1) s_multi++;
+	end
+endtask
+always @(posedge video_rgb_clock) begin : scl
+	integer f, xx, yy;
+	string fn;
+	s_de_q <= video_de;
+	s_sincevs = s_sincevs + 1;
+	if (video_vs) begin
+		s_line_end();
+		if (s_fn > 0)
+			$fdisplay(ftrace, "%0t SCL %0d: DE lines %0d, px/line %0d..%0d, multi-run lines %0d, HS->DE %0d..%0d, VS->HS min %0d",
+			          $time, s_fn, s_delines, s_pmin, s_pmax, s_multi, s_offmin, s_offmax, s_vshs);
+		if (have_dir && s_fn > 0 && (s_fn % 32 == 0 || s_fn < 3) && s_w > 0 && s_h > 0) begin
+			fn = $sformatf("%s/frame_%0d_scl.ppm", frame_dir, s_fn);
+			f = $fopen(fn, "wb");
+			$fwrite(f, "P6\n%0d %0d\n255\n", s_w, s_h);
+			for (yy = 0; yy < s_h; yy++) for (xx = 0; xx < s_w; xx++)
+				$fwrite(f, "%c%c%c", sbuf[xx][yy][23:16], sbuf[xx][yy][15:8], sbuf[xx][yy][7:0]);
+			$fclose(f);
+		end
+		s_fn++; s_y = -1; s_x = 0; s_run = 0; s_line_de = 1'b0; s_w = 0; s_h = 0;
+		s_pmin = 99999; s_pmax = 0; s_multi = 0; s_offmin = 99999; s_offmax = 0; s_vshs = 99999; s_delines = 0;
+		s_sincevs = 0;
+	end
+	if (video_hs) begin
+		if (s_sincevs < s_vshs) s_vshs = s_sincevs;
+		s_line_end();
+		s_y++; s_x = 0; s_run = 0; s_line_de = 1'b0; s_hsde = 0;
+		if (have_dir && s_y >= 0 && s_y < 512) for (xx = 0; xx < 1024; xx++) sbuf[xx][s_y] = 24'h000000;
+	end else s_hsde++;
+	if (video_de) begin
+		if (!s_de_q) begin
+			s_run++;
+			if (s_hsde < s_offmin) s_offmin = s_hsde;
+			if (s_hsde > s_offmax) s_offmax = s_hsde;
+		end
+		s_line_de = 1'b1;
+		if (s_x < 1024 && s_y >= 0 && s_y < 512) begin
+			sbuf[s_x][s_y] = video_rgb;
+			if (s_x + 1 > s_w) s_w = s_x + 1;
+			if (s_y + 1 > s_h) s_h = s_y + 1;
+		end
+		s_x++;
+	end
+end
+
 // ---- VDP2 VRAM write groups seen by sdram_pocket (one 16 bit lane is written per slot)
 longint wg_total = 0, wg_multi = 0;
 reg [7:0] wa_q = 0, wb_q = 0;
@@ -836,6 +896,19 @@ always @(posedge clk_74a) begin : stmon
 	occ = int'(dut.saturn.mem.loader.wbin) - int'(dut.saturn.mem.loader.rbin);
 	if (occ < 0) occ += 1 << $bits(dut.saturn.mem.loader.wbin);
 	if (occ > fifo_max) fifo_max = occ;
+end
+
+// +HRES352_US=<t>: from t us on, the VDP2 timing generator's HRES / VRES registers are held at 352 wide / 240 lines
+// (backdoor force), so the real timing generator, pocket_video and the scaler view run the 704 x 240 mode of a 352 game
+initial begin : hres352
+	longint t;
+	if ($value$plusargs("HRES352_US=%d", t)) begin
+		#(64'd1000000 * t);
+		@(posedge clk_sys);
+		$fdisplay(ftrace, "%0t FORCE VDP2 HRES 1 VRES 1", $time);
+		force `SAT.VDP2.HRES = 3'd1;
+		force `SAT.VDP2.VRES = 2'd1;
+	end
 end
 
 // +SMPC_CMD_US=<t> [+SMPC_CMD=<hex>, default 0E CKCHG352]: at t us the SMPC_SERV sees a COMREG write of the command,

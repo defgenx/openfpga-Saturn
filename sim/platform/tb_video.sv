@@ -1,6 +1,7 @@
 // pocket_video: synthetic Saturn pixel stream for one width/height combination. Checks, per frame: 640/704 DE
 // clocks per line, the right number of lines, low-res pixels doubled, the scaler slot word on the first clock after
-// each line, HS at least 3 clocks after VS, RGB zero outside DE and the slot word.
+// each line, HS at least 3 clocks after VS, RGB zero outside DE and the slot word. MISMATCH_V runs the other clock
+// mode: NTSC 320 timing on the 352 clock and PAL 352 timing on the 320 clock must produce no DE, HS or VS.
 `timescale 1ns/1ps
 module tb_video;
 	`ifndef HIRES_V
@@ -12,7 +13,17 @@ module tb_video;
 `ifndef VRES_V
 `define VRES_V 0
 `endif
+`ifndef MISMATCH_V
+`define MISMATCH_V 0
+`endif
+`ifndef PAL_V
+`define PAL_V 0
+`endif
 	localparam HIRES = `HIRES_V, WIDE = `WIDE_V, VRES = `VRES_V;       // HRES[1], HRES[0], VRES[1:0]
+	localparam MISMATCH = `MISMATCH_V;             // 1: the clock mode is the other width class
+	localparam PAL = `PAL_V;
+	// gated: NTSC 320 timing on the 352 clock (63.8 Hz), PAL 352 timing on the 320 clock (46.9 Hz)
+	localparam GATED = MISMATCH && (PAL ? WIDE : !WIDE);
 	localparam DOT  = HIRES ? 4 : 8;               // clk_sys per Saturn pixel
 	localparam W    = (WIDE ? 352 : 320) * (HIRES ? 2 : 1);   // pixels per line at the Saturn pixel rate
 	localparam TOTW = W + 60 * (HIRES ? 2 : 1);
@@ -33,6 +44,7 @@ module tb_video;
 
 	pocket_video dut (.clk_sys(clk_sys), .clk_vid(clk_vid), .R(R), .G(G), .B(B), .DCLK(DCLK), .HS_N(HS_N), .VS_N(VS_N),
 	                  .HBL_N(HBL_N), .VBL_N(VBL_N), .HRES({HIRES[0], WIDE[0]}), .VRES(VRES[1:0]),
+	                  .clk_md({PAL[0], WIDE[0] ^ MISMATCH[0]}),
 	                  .video_rgb(rgb), .video_de(de), .video_hs(hs), .video_vs(vs), .video_skip(skip));
 
 	always @(posedge clk_sys) begin
@@ -53,6 +65,8 @@ module tb_video;
 
 	integer lines = 0, de_run = 0, since_vs = 1000, errors = 0, frames = 0, slot_checks = 0, hs_count = 0;
 	reg de_q = 0;
+	integer n_de = 0;
+	always @(posedge clk_vid) if (de || vs) n_de = n_de + 1;
 	reg [23:0] prev_px = 0;
 	always @(posedge clk_vid) begin
 		de_q <= de;
@@ -87,8 +101,10 @@ module tb_video;
 
 	initial begin
 		#(90e6);
-		$display("HIRES=%0d WIDE=%0d VRES=%0d: frames %0d, lines %0d, hs %0d, slot checks %0d, errors %0d", HIRES, WIDE, VRES, frames, lines, hs_count, slot_checks, errors);
-		if (errors == 0 && frames >= 3 && slot_checks > 100) $display("RESULT: PASS"); else $display("RESULT: FAIL");
+		$display("HIRES=%0d WIDE=%0d VRES=%0d MISMATCH=%0d PAL=%0d GATED=%0d: frames %0d, lines %0d, hs %0d, slot checks %0d, errors %0d", HIRES, WIDE, VRES, MISMATCH, PAL, GATED, frames, lines, hs_count, slot_checks, errors);
+		if (GATED) begin
+			if (errors == 0 && frames == 0 && hs_count == 0 && n_de == 0) $display("RESULT: PASS"); else $display("RESULT: FAIL");
+		end else if (errors == 0 && frames >= 3 && slot_checks > 100) $display("RESULT: PASS"); else $display("RESULT: FAIL");
 		$finish;
 	end
 endmodule

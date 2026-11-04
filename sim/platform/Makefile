@@ -8,8 +8,8 @@ all: build/tb_audio.vvp build/tb_ce.vvp
 	@grep -q 'RESULT: PASS' build/ce.log
 	vvp build/tb_audio.vvp | tee build/audio.log
 	@grep -q 'RESULT: PASS' build/audio.log
-	@for cfg in "0 0 0" "0 1 1" "1 0 0" "1 1 2"; do set -- $$cfg; \
-	  iverilog -g2012 -DHIRES_V=$$1 -DWIDE_V=$$2 -DVRES_V=$$3 -o build/tb_video.vvp tb_video.sv $(PLAT)/pocket_video.sv && \
+	@for cfg in "0 0 0 0 0" "0 1 1 0 0" "1 0 0 0 0" "1 1 2 0 0" "0 0 0 1 0" "0 1 1 1 0" "0 1 2 1 1" "0 0 2 1 1"; do set -- $$cfg; \
+	  iverilog -g2012 -DHIRES_V=$$1 -DWIDE_V=$$2 -DVRES_V=$$3 -DMISMATCH_V=$$4 -DPAL_V=$$5 -o build/tb_video.vvp tb_video.sv $(PLAT)/pocket_video.sv && \
 	  vvp build/tb_video.vvp | tee build/video.log && grep -q 'RESULT: PASS' build/video.log || exit 1; done
 	iverilog -g2012 -DPOCKET_DEBUG_OVERLAY -o build/tb_overlay.vvp tb_overlay.sv $(PLAT)/pocket_video.sv
 	vvp build/tb_overlay.vvp | tee build/overlay.log

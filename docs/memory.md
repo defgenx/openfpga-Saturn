@@ -243,6 +243,12 @@ AS4C32M16 are within them); `tb_sys`, `tb_sdram` and `tb_sndram` carry pad delay
 slow-corner clock-out less the I/O register's 1.49 ns clock lead over its data path, `+TIN=n` 0) so the default setting
 is what they exercise.
 
+Both clock modes. The SCSP slot and the VDP2 slots share `cap_p` and the tag stage (word 0 at READ + 4), so their
+windows cannot differ. STA runs at 114.5 MHz; at 107.5 MHz (320 wide) the setup relationship (1.5 clk_ram) is 0.85 ns
+longer and the hold relationship (0.5 clk_ram) 0.29 ns longer, so v0.2.12 variant B's slow-corner +1.12 / +3.08 ns
+become about +1.97 / +2.79. The PSRAM and SRAM read checks get 2 and 4 clk_ram of setup (+1.14 / +2.28 ns at 320) and
+hold relationships of 0, independent of the clock.
+
 Sweep with the corrected model (`sh sim/mem/sweep.sh [TIN_ps]`, one line per TCO): READ + 4 passes for TCO 2.0 to 7.5 ns
 (READ + 5 and + 6, tried while the setting existed, nowhere). The hardware-equivalent TCO for the I/O cell register is 5.1 ns
 (slow) and 3.2 ns (fast), so the margins are 2.4 ns at the slow end and 1.2 ns at the fast end. `sim/sndram` (SH-2 through

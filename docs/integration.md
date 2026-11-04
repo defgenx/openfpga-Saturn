@@ -195,7 +195,8 @@ separate the suspects for the silent 320 BIOS: runtime reprogramming, the 320 cl
   `POCKET_PLL_NO_RECONFIG`, `pll_lite` still rewrites M and K at the first lock.
 
 Test builds of v0.2.14: E = both macros (fixed at 320), C = `POCKET_PLL_NO_RECONFIG` only (fixed at the compiled 352,
-CE mode 320 in the BIOS).
+CE mode 320 in the BIOS). C and v0.2.12 variant B show stripes from the BIOS on: the VDP2 dot clock is `clk_sys` / 8
+whatever the CE mode, so both send the BIOS's 320 timing at 63.75 Hz (section 3, frame gate).
 
 ## 3. Video
 
@@ -217,8 +218,29 @@ CE mode 320 in the BIOS).
   one-line shift between fields) and nothing else; a woven 704x480 frame needs about 2.7 Mbit of buffer, more than the
   M10K that is left. A line-doubled 480-line frame would not look better than the scaler's own stretch of the field.
 * HS is the Saturn HS delayed 4 `clk_vid` so that it is never closer than 3 clocks to VS; both are single-clock pulses.
+* Frame gate: the scaler takes 47 to 61 Hz (docs/pocket-platform.md 4.1), and the frame rate is the dot count over
+  the clock. `pocket_video` blanks the two combinations outside that range (bold below), from `HRES[0]` and the
+  PLL's mode `{PAL, DOTSEL}` (`pll_md` in `saturn_pocket`: the compiled NTSC mode under `POCKET_PLL_NO_RECONFIG`,
+  else the mode `pll_lite` writes), decided at VBlank start with the slot:
+
+| Timing (dots x lines) | 320 clock (53.75 / 53.38 MHz) | 352 clock (57.27 / 56.88 MHz) |
+|---|---|---|
+| NTSC 320, 427 x 263 | 59.83 Hz | **63.75 Hz** |
+| NTSC 352, 455 x 263 | 56.15 Hz | 59.83 Hz |
+| PAL 320, 427 x 313 | 49.92 Hz | 53.19 Hz |
+| PAL 352, 455 x 313 | **46.85 Hz** | 49.92 Hz |
+
+  320 timing on the 352 clock happens after every CKCHG352: the SMPC reset clears TVMD (320 wide) and the VDP2 runs
+  that way until the game writes TVMD again. With the PLL held at 352 (`POCKET_FIXED_352`, or
+  `POCKET_PLL_NO_RECONFIG` without `POCKET_PLL_COMPILE_320`) it is the whole BIOS. A gated frame has no
+  DE, HS or VS, as while the VDP2 is held in reset; the debug overlay shows its generated frame instead.
 * `make -C sim platform` (`tb_video`) checks DE length (640/704), lines per frame, pixel doubling, slot word, zero RGB
-  outside DE and the HS/VS spacing for 320/352 low-res and 640/704 hi-res.
+  outside DE and the HS/VS spacing for 320/352 low-res and 640/704 hi-res, and that the two gated combinations
+  produce no DE, HS or VS.
+* `sim/sys` logs the scaler's view of each frame (`SCL` lines in `trace.log`: lines start at HS, frames at VS; DE
+  lines, pixels per line, lines with more than one DE run, HS to DE offset, VS to HS spacing) and writes it as
+  `frame_<n>_scl.ppm` with `+FRAMES`. `+HRES352_US=<t>` holds the VDP2 timing generator at 352 x 240 from t us on,
+  for the 704 x 240 path without a game that switches to it.
 
 Not checked: that the scaler accepts a slot word at this position and a VS that falls in the middle of the Saturn's
 VBlank (the generic template does the same), and refresh rate acceptance for PAL (about 50 Hz).
