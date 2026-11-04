@@ -8,7 +8,8 @@
 #   counter[2] clk_vid    clk_sys / 4 (APF pixel clock)
 #   counter[3] clk_vid_90 clk_vid + 90 degrees
 #   counter[4] clk_ram_cap clk_ram + 90 degrees (unused since the SDRAM read capture moved into the I/O cell register)
-# Analysis runs at the fastest mode (NTSC, 352 wide); every other mode is slower.
+# Analysis runs at the compiled mode: the fastest (NTSC, 352 wide), every other mode is slower; NTSC 320 under the
+# build-only POCKET_PLL_COMPILE_320 (docs/integration.md section 2).
 #
 
 set clk_sys   {ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk}
@@ -195,14 +196,15 @@ set_multicycle_path -hold -end -from [get_registers {*|cart|MEM_A[*] *|cart|MEM_
 # No clock at the chip. The reference is the OE# pin (sram_ref_pin, a generated clock on the port, sourced from the
 # e_oe_n register), so pad and route delays are counted. Every other pin is held within SRAM_SKEW of it, and read data
 # is valid SRAM_SKEW + tAA (10 ns) + 1 ns of board after it. The I/O cell input register takes it RD_CYC = 4 clk_ram
-# after the address edge, where the next access changes the pins (sram_pocket.sv). 8.73 = clk_ram period of the
-# analysed mode. docs/memory.md section 5.
+# after the address edge, where the next access changes the pins (sram_pocket.sv). T_RAM = clk_ram period of the
+# analysed mode to 0.01 ns (8.73 at NTSC 352). docs/memory.md section 5.
 set SRAM_SKEW 2.0
+set T_RAM [format %.2f [get_clock_info -period [get_clocks $clk_ram]]]
 set eoen [get_registers -no_duplicates "*|sram|e_oe_n"]
 create_generated_clock -name sram_ref -source [get_pins $clk_ram] -divide_by 1 $eoen
 create_generated_clock -name sram_ref_pin -source $eoen [get_ports sram_oe_n]
 set sram_out [get_ports {sram_a[*] sram_dq[*] sram_we_n sram_ub_n sram_lb_n}]
-set_output_delay -clock sram_ref_pin -max [expr {8.73 - $SRAM_SKEW}] -add_delay $sram_out
+set_output_delay -clock sram_ref_pin -max [expr {$T_RAM - $SRAM_SKEW}] -add_delay $sram_out
 set_output_delay -clock sram_ref_pin -min $SRAM_SKEW -add_delay $sram_out
 set_input_delay  -clock sram_ref_pin -max [expr {$SRAM_SKEW + 11.0}] -add_delay [get_ports {sram_dq[*]}]
 set_input_delay  -clock sram_ref_pin -min [expr {-$SRAM_SKEW}] -add_delay [get_ports {sram_dq[*]}]

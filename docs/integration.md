@@ -177,6 +177,26 @@ that same mgmt writer with the same constants.
 
 The reference is `clk_74a` for both the PLL and the audio side, so the 44.1 and 48 kHz rates stay locked to each other.
 
+### Hardware test macros
+
+Build-only: they go in a build copy of `ap_core.qsf`, never in the committed one, and need `POCKET_PLL_LITE`. They
+separate the suspects for the silent 320 BIOS: runtime reprogramming, the 320 clock frequency and the 320 CE pattern.
+
+- `POCKET_PLL_NO_RECONFIG`: `pll_lite #(.NO_RECONFIG(1))` drives `reconfig_to_pll` with the values `altera_pll.v`
+  (Cyclone V branch) gives the PLL's DPRIO ports in the non-reconfigurable "General" subtype: rstn, sershiftload and
+  mdiodis 1; clock, read, write, address, data, byte enables and the phase-step inputs 0. There is no DPRIO access, not
+  even the power-up init, so the PLL runs as compiled. The CE mode (`clk_mode`) still follows `SMPC_DOTSEL`. `sim/pll`
+  `tb_pll_fixed` counts zero accesses from power-up through every mode and host reset; the same run with the default
+  `pll_lite` fails. In `sim/sys`, `models/pll_sim.sv` then runs the compiled mode from the start and never relocks.
+- `POCKET_PLL_COMPILE_320`: `pll_sys_select.v` takes `pll_sys_320.v` instead of `pll_sys.v`. `gen_pll_sys.sh` makes it
+  from the same template with `pllplan.py --patch --mode "NTSC 320"`: M 5 (odd), K `0xCA825FC9`, VCO 859.97 MHz, the
+  same counters and presets, phase strings for 320. The module is still `pll_sys`, so the counter locations and SDC
+  clock names apply, and STA analyses the 320 clocks (the SRAM output delay takes its period from `clk_ram`). Without
+  `POCKET_PLL_NO_RECONFIG`, `pll_lite` still rewrites M and K at the first lock.
+
+Test builds of v0.2.14: E = both macros (fixed at 320), C = `POCKET_PLL_NO_RECONFIG` only (fixed at the compiled 352,
+CE mode 320 in the BIOS).
+
 ## 3. Video
 
 * `clk_vid` = `clk_sys` / 4. Hi-res (640/704) modes are one Saturn pixel per `clk_vid`; low-res pixels are held two clocks, so

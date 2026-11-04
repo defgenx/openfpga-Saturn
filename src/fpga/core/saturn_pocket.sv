@@ -101,6 +101,7 @@ module saturn_pocket #(
 wire clk_sys, clk_ram, clk_ram_cap, pll_locked;
 wire [63:0] rc_to, rc_from;
 
+// compiled in NTSC 352; NTSC 320 under the build-only POCKET_PLL_COMPILE_320 (pll_sys/pll_sys_select.v)
 pll_sys pll (
 	.refclk(clk_74a), .rst(1'b0),
 	.outclk_0(clk_sys), .outclk_1(clk_ram), .outclk_2(clk_vid), .outclk_3(clk_vid_90), .outclk_4(clk_ram_cap),
@@ -157,8 +158,14 @@ assign setup_ready_74a = lock_s[1] & ever_ready;
 
 `ifdef POCKET_PLL_LITE
 wire rst_req_74 = ~reset_n | ~ever_locked;
+`ifdef POCKET_PLL_NO_RECONFIG
+// hardware test: the PLL keeps its compiled mode, no DPRIO access at all; the CE mode still follows SMPC_DOTSEL
+// (docs/integration.md, hardware test macros)
+pll_lite #(.NO_RECONFIG(1)) pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(PLL_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
+`else
 // the mode is re-applied at every host reset, as the altera_pll_reconfig writer below does
 pll_lite pll_cfg (.clk(clk_74a), .pal(PAL), .dotsel(PLL_DOTSEL), .reapply(rst_req_74), .reconfig_to_pll(rc_to), .reconfig_from_pll(rc_from));
+`endif
 `else
 // clk_sys = (VCO / 2) / 8: mode picks M (integer) and K (fraction) of the 74.25 MHz reference (tools/pllplan.py)
 //   M reg: 0x20302 = 5, 0x303 = 6 (high count [15:8], low count [7:0], odd-division bit 17)
