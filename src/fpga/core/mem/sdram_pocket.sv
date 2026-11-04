@@ -98,11 +98,21 @@ wire [15:0] dq_cap = cap_p;
 reg [3:0] fc = '0;           // cycle index after the last edge
 reg       sync_old = 1'b0;
 reg [3:0] slot = 4'd1;       // pin cycle generated at this edge: fc + 1, kept as its own register (clk_ram timing)
+// A sync that does not fall where the frame expects it (power-up, VDP2 reset release) starts a re-alignment: no VDP2 ACT
+// for rs_n >= 24 cycles, so every VDP2 access of the old phase completes, then the frame jumps at the next sync.
+// The SCSP access runs on its own counter (sq) and needs no stop. docs/memory.md section 3, re-alignment.
+wire       sync_e = sync && !sync_old;
+reg        rs = 1'b0;
+reg  [5:0] rs_n = '0;
+wire       rs_jump = sync_e && rs && rs_n >= 6'd24;
 
 always @(posedge clk) begin
 	sync_old <= sync;
-	fc <= (sync && !sync_old) ? 4'd7 : fc + 4'd1;   // sync is high from F+6, first sampled at edge F+7
-	slot <= (sync && !sync_old) ? 4'd8 : slot + 4'd1;
+	fc <= rs_jump ? 4'd7 : fc + 4'd1;   // sync is high from F+6, first sampled at edge F+7
+	slot <= rs_jump ? 4'd8 : slot + 4'd1;
+	if (rs_jump) rs <= 1'b0;
+	else if (sync_e && slot != 4'd7 && !rs) begin rs <= 1'b1; rs_n <= '0; end
+	else if (rs && rs_n != 6'd63) rs_n <= rs_n + 1'd1;
 end
 
 // ------------------------------------------------------------------ init
@@ -176,10 +186,10 @@ assign ch2rdy = ~(sc_wr_p | sc_rd_p);
 // modes) and a request can wait 16 for the slot, so one that arrives while the slot runs (ACT edge to CAS) is taken
 // at cycle 5 from the request lines, which the SCSP holds until its next request (sc_t0 then counts from cycle 5).
 reg        l_rd, l_wr;       // request seen while the slot runs
-reg        s_act;            // ACT issued, CAS due
 reg        s_wr;
-reg        s_pre;            // READ issued, PRECHARGE due
-wire       sc_run = s_act || (slot == 4'd0 && (sc_rd_p | sc_wr_p));   // the slot owns sc_* (ACT edge to CAS)
+reg  [2:0] sq;               // SCSP access: 1 at the edge after the ACT; READ at 2, WRITE at 3, PRECHARGE at 5 (0 idle)
+wire       s_act = (sq == 3'd1) || (sq == 3'd2) || (sq == 3'd3 && s_wr);   // ACT issued, CAS due
+wire       sc_run = s_act || (slot == 4'd1 && (sc_rd_p | sc_wr_p));   // the slot owns sc_* (ACT edge to CAS)
 
 // ------------------------------------------------------------------ self-check (debug overlay only)
 // After init: write A55A / 5AA5 to sound RAM words 0x100 / 0x20100 (replacing the ch2 request while it runs), read both back. chk_ok = both match. 64 clk_ram per step, aligned to `cyc`; the partial first step is idle (done within 320 clk_ram after init_done).
@@ -215,6 +225,8 @@ wire       e_rd = rq_rd && !old_rd, e_wr = (|rq_wr) && !old_wr;
 wire       l_take = slot == 4'd5 && (l_rd | l_wr);
 wire       cap_rd = (e_rd && !sc_run) || (l_take && l_rd);
 wire       cap_wr = (e_wr && !sc_run) || (l_take && l_wr);
+wire       sc_pend = sc_rd_p | sc_wr_p;
+wire       sc_go = init_done && slot == 4'd1 && (sc_pend | cap_rd | cap_wr);   // SCSP ACT now (pending, or seen now)
 
 // delivery of SCSP reads (two in flight at most)
 reg        dl_v [0:1];
@@ -273,8 +285,8 @@ always @(posedge clk) begin
 	if (cap_wr) begin sc_din <= rq_din; sc_be <= rq_wr; end
 	cyc <= cyc + 1'd1;
 
-	// ---- VDP2 plan latch
-	if (fc == 4'd0) begin
+	// ---- VDP2 plan latch (not while re-aligning: fc is off the VDP2 phase, and these take clk_sys data at odd edges only)
+	if (fc == 4'd0 && !rs) begin
 		// group A -> banks 0 (A0) and 2 (A1); group B -> banks 1 (B0) and 3 (B1)
 		if (|wr_a) begin
 			v_mode[0] <= addr_a0[17] ? 2'd3 : 2'd2;
@@ -313,31 +325,11 @@ always @(posedge clk) begin
 	c_tv = 1'b0; c_tk = 3'd7; c_ti = 1'b0;
 	if (init_done) begin
 		case (slot)
-		// ---- SCSP (bank 3): ACT at 0 (16), READ at 3 and PRECHARGE at 6, or WRITE with auto precharge at 4
-		4'd0: if (sc_rd_p | sc_wr_p) begin
-			c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a({1'b1, sc_addr[17:10]});
-			s_act <= 1'b1; s_wr <= sc_wr_p;
-			sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
-		end
-		4'd3: if (s_act && !s_wr) begin
-			s_act <= 1'b0; s_pre <= 1'b1;
-			c_cmd = CMD_RD; c_ba = 2'd3; c_a = {3'b000, sc_addr[9:0]};      // A10 low: the PRECHARGE at 6 keeps tRAS
-			c_tv = 1'b1; c_tk = 3'd4; c_ti = dl_wi;
-			dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
-			dl_t0[dl_wi] <= sc_t0;
-			dl_wi <= ~dl_wi;
-		end
-		4'd4: if (s_act && s_wr) begin
-			s_act <= 1'b0;
-			c_cmd = CMD_WR; c_ba = 2'd3; c_a = col_a(sc_addr[9:0]); c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be;
-		end
-		4'd6: if (s_pre) begin s_pre <= 1'b0; c_cmd = CMD_PRE; c_ba = 2'd3; end
-
-		// ---- VDP2 ACTs
-		4'd2:  if (v_mode[0] != 2'd3) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
-		4'd5:  if (v_mode[1] != 2'd3) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
-		4'd8:  if (v_mode[3] != 2'd3) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_row[3]); end
-		4'd11: if (v_mode[2] != 2'd3) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_row[2]); end
+		// ---- VDP2 ACTs (none while the frame re-aligns)
+		4'd2:  if (v_mode[0] != 2'd3 && !rs) begin v_act[0] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd0; c_a = row_a(v_row[0]); end
+		4'd5:  if (v_mode[1] != 2'd3 && !rs) begin v_act[1] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd1; c_a = row_a(v_row[1]); end
+		4'd8:  if (v_mode[3] != 2'd3 && !rs) begin v_act[3] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd3; c_a = row_a(v_row[3]); end
+		4'd11: if (v_mode[2] != 2'd3 && !rs) begin v_act[2] <= 1'b1; c_cmd = CMD_ACT; c_ba = 2'd2; c_a = row_a(v_row[2]); end
 
 		// ---- VDP2 READs (scrub reads have tag 7) and WRITEs, all with auto precharge
 		4'd7:  if (v_mode[0] <= 2'd1 && v_act[0]) begin v_act[0] <= 1'b0;
@@ -367,12 +359,36 @@ always @(posedge clk) begin
 		end
 		default: ;
 		endcase
+		// ---- SCSP (bank 3): ACT on the pins of cycle 0 (decided at slot 1, below), READ 3 later and PRECHARGE 6 later,
+		// or WRITE with auto precharge 4 later; counted from the ACT so a frame jump cannot split the access
+		if (sq == 3'd2 && !s_wr) begin
+			c_cmd = CMD_RD; c_ba = 2'd3; c_a = {3'b000, sc_addr[9:0]};      // A10 low: the PRECHARGE keeps tRAS
+			c_tv = 1'b1; c_tk = 3'd4; c_ti = dl_wi;
+			dl_v[dl_wi] <= 1'b1; dl_ld[dl_wi] <= 1'b0;
+			dl_t0[dl_wi] <= sc_t0;
+			dl_wi <= ~dl_wi;
+		end
+		if (sq == 3'd3 && s_wr) begin
+			c_cmd = CMD_WR; c_ba = 2'd3; c_a = col_a(sc_addr[9:0]); c_dq = sc_din; c_oe = 1'b1; c_dqm = ~sc_be;
+		end
+		if (sq == 3'd5 && !s_wr) begin c_cmd = CMD_PRE; c_ba = 2'd3; end
+	end
+	sq <= (sq == 3'd0 || sq == 3'd5) ? 3'd0 : sq + 3'd1;
+	if (sc_go) begin
+		sq <= 3'd1; s_wr <= sc_pend ? sc_wr_p : cap_wr;
+		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0;
 	end
 
 	// ---- pin registers
 	if (!init_done) begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= i_cmd;
 		dram_a <= i_a; dram_ba <= i_ba; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
+	end else if (sc_go) begin
+		// the SCSP ACT goes to the pins at the edge it is decided (slot 1, an odd edge), which takes a request seen at
+		// that edge; the frame's cycle 0 has no other command, so q holds a NOP here
+		{dram_ras_n, dram_cas_n, dram_we_n} <= CMD_ACT;
+		dram_a <= row_a({1'b1, sc_pend ? sc_addr[17:10] : rq_addr[18:11]}); dram_ba <= 2'd3;
+		dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
 	end else begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= q_cmd;
 		dram_a <= q_a; dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
@@ -422,10 +438,12 @@ always @(posedge clk) begin
 		if (scr[k] < scr_q[k] && dbg_scrub_wrap != 8'hFF) dbg_scrub_wrap <= dbg_scrub_wrap + 1'd1;
 	end
 
+	if (rs_jump) for (k = 0; k < 4; k = k + 1) v_mode[k] <= 2'd3;
+
 	if (init) begin
 		cyc <= '0;
 		for (k = 0; k < 4; k = k + 1) begin v_mode[k] <= 2'd3; scr[k] <= 8'd0; end
-		s_act <= 1'b0; s_pre <= 1'b0; v_act <= 4'd0;
+		sq <= 3'd0; v_act <= 4'd0;
 		sc_rd_p <= 1'b0; sc_wr_p <= 1'b0; l_rd <= 1'b0; l_wr <= 1'b0;
 		dl_v[0] <= 1'b0; dl_v[1] <= 1'b0; dl_wi <= 1'b0;
 		dbg_scrub_wrap <= '0; dbg_scsp_drop <= '0;

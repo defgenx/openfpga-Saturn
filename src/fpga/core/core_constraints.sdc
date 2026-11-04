@@ -187,7 +187,7 @@ set_multicycle_path -hold  -from [get_clocks $clk_sys] -to [get_registers "*|ddr
 # the coincident edge is moved one clk_ram back. Strobe registers stay out of every -from, so their hold is still timed
 # and no capture can happen at a coincident edge. Proof per group: docs/fit-status.md, odd-edge request registers.
 set_multicycle_path -hold -end -rise_from [get_clocks $clk_sys] -to [get_registers {*|sdram|v_wd[*] *|sdram|v_wbe[*] *|sdram|v_row[*] *|sdram|v_col[*]}] 1
-set_multicycle_path -hold -end -from [get_registers {*|SCSP|MEM_A[*] *|SCSP|MEM_D[*]}] -to [get_registers {*|sdram|sc_addr[*] *|sdram|sc_din[*]}] 1
+set_multicycle_path -hold -end -from [get_registers {*|SCSP|MEM_A[*] *|SCSP|MEM_D[*]}] -to [get_registers {*|sdram|sc_addr[*] *|sdram|sc_din[*] *|sdram|dram_a[*]}] 1
 set cdb_data [remove_from_collection [get_registers {*|cdb|*}] [get_registers {*|cdb|dram|RAM_WE[*] *|cdb|dram|RAM_RD *|cdb|dram|RAM_CS}]]
 set_multicycle_path -hold -end -from $cdb_data -to [get_registers {*|ddram|cdram_write_data[*] *|ddram|cdram_write_addr[*] *|ddram|cdram_rcache_addr[*]}] 1
 set_multicycle_path -hold -end -from [get_registers {*|cart|MEM_A[*] *|cart|MEM_DO[*]}] -to [get_registers {*|ddram|cart_rcache_addr[*] *|ddram|cart_write_addr[*] *|ddram|cart_write_data[*]}] 1
