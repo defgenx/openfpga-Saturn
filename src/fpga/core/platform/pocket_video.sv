@@ -8,6 +8,10 @@
 // clk_sys side registers a pixel and the syncs at DCLK and latches the mode at VBlank start; the
 // clk_vid side samples them every cycle. A Saturn pixel lasts 4 (hi-res) or 8 clk_sys, so it is
 // sampled once or twice.
+//
+// Frames whose rate is outside the scaler's 47 to 61 Hz are blanked (no DE, HS or VS, as while the VDP2 is held
+// in reset): NTSC 320 timing on the 352 clock (63.8 Hz) and PAL 352 timing on the 320 clock (46.9 Hz),
+// docs/integration.md section 3.
 
 `default_nettype none
 
@@ -25,6 +29,7 @@ module pocket_video (
 	input  wire        VBL_N,
 	input  wire  [1:0] HRES,        // [0] 0 = 320, 1 = 352 wide
 	input  wire  [1:0] VRES,        // 0 = 224, 1 = 240, 2/3 = 256 lines
+	input  wire  [1:0] clk_md,      // {PAL, DOTSEL} of the clock the PLL produces
 
 	output reg  [23:0] video_rgb,
 	output reg         video_de,
@@ -55,30 +60,38 @@ reg        vbl_old;
 // last line does not stay high.
 reg  [4:0] idle = 5'd0;
 
+// frame gate, decided at VBlank start (before the frame's VS)
+reg        pass = 1'b0;
+
 always @(posedge clk_sys) begin
 	if (DCLK) begin
 		pix <= {R, G, B};
-		de  <= HBL_N & VBL_N;
-		hs  <= ~HS_N;
-		vs  <= ~VS_N;
+		de  <= HBL_N & VBL_N & pass;
+		hs  <= ~HS_N & pass;
+		vs  <= ~VS_N & pass;
 		idle <= 5'd0;
 	end else if (!idle[4]) idle <= idle + 5'd1;
-	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; end
+	// the gate closes too: a VDP2 leaving reset starts in TVMD's 320 mode, whatever the clock
+	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; vs <= 1'b0; pass <= 1'b0; end
 
 	// mode is locked for the whole frame, as in MiSTer's top
 	vbl_old <= VBL_N;
-	if (vbl_old & ~VBL_N)
+	if (vbl_old & ~VBL_N) begin
 		slot <= {(VRES == 2'd0) ? 2'd0 : (VRES == 2'd1) ? 2'd1 : 2'd2, HRES[0]};
+		pass <= clk_md[1] ? (~HRES[0] | clk_md[0]) : (HRES[0] | ~clk_md[0]);
+	end
 end
 
 `ifdef POCKET_DEBUG_OVERLAY
-// ---- clk_vid: debug build. Timing is the Saturn's, or a generated 858 x 262 frame when it has none; a
-// row of 16 status squares (24 x 12 px, pitch 32) is drawn over the picture (docs/debug-overlay.md).
+// ---- clk_vid: debug build. Timing is the Saturn's, or a generated frame when it has none or its frame is gated
+// (854 / 910 x 263 for the 320 / 352 clock, 59.8 Hz); a row of 16 status squares (24 x 12 px, pitch 32) is drawn
+// over the picture (docs/debug-overlay.md).
 reg  [9:0] x = 10'd0;
 reg  [8:0] y = 9'd0;
 reg        de_d, hs_d, vs_d;
 reg  [3:0] hs_dly;
-wire       gen  = ~dbg_alive;
+wire       gen  = ~dbg_alive | ~pass;
+wire [9:0] gen_xl = clk_md[0] ? 10'd909 : 10'd853;
 wire       s_de = gen ? (x < 10'd640 && y < 9'd224) : de;
 wire       s_hs = gen ? (x >= 10'd700 && x < 10'd732) : hs;
 wire       s_vs = gen ? (y >= 9'd232 && y < 9'd235) : vs;
@@ -209,8 +222,8 @@ always @(posedge clk_vid) begin
 	vs_d <= s_vs;
 
 	if (gen) begin
-		x <= (x == 10'd857) ? 10'd0 : x + 10'd1;
-		if (x == 10'd857) y <= (y == 9'd261) ? 9'd0 : y + 9'd1;
+		x <= (x >= gen_xl) ? 10'd0 : x + 10'd1;
+		if (x >= gen_xl) y <= (y >= 9'd262) ? 9'd0 : y + 9'd1;
 	end else begin
 		x <= de ? x + 10'd1 : 10'd0;
 		if (de_d & ~de) y <= y + 9'd1;

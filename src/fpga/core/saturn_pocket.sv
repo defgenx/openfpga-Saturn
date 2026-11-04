@@ -309,6 +309,20 @@ always @(posedge clk_sys) clk_mode <= {1'b1, PAL, 1'b1};
 `else
 always @(posedge clk_sys) clk_mode <= {1'b1, PAL, SMPC_DOTSEL};
 `endif
+// {PAL, DOTSEL} of the clock the PLL produces, for the pocket_video frame gate (it differs from clk_mode under
+// POCKET_PLL_NO_RECONFIG, where the PLL keeps its compiled NTSC mode)
+reg [1:0] pll_md = 2'b00;
+`ifdef POCKET_PLL_NO_RECONFIG
+`ifdef POCKET_PLL_COMPILE_320
+always @(posedge clk_sys) pll_md <= 2'b00;
+`else
+always @(posedge clk_sys) pll_md <= 2'b01;
+`endif
+`elsif POCKET_PLL_LITE
+always @(posedge clk_sys) pll_md <= {PAL, PLL_DOTSEL};
+`else
+always @(posedge clk_sys) pll_md <= {PAL, SMPC_DOTSEL};
+`endif
 function automatic [26:0] mode_sub(input [2:0] m, input [26:0] k, input neg);
 	casez (m)
 		3'b0??:  mode_sub = neg ? k : 27'd0;
@@ -872,7 +886,7 @@ wire        dbg_we = 1'b1;
 pocket_video video (
 	.clk_sys(clk_sys), .clk_vid(clk_vid),
 	.R(R), .G(G), .B(B), .DCLK(DCLK), .HS_N(HS_N), .VS_N(VS_N), .HBL_N(HBL_N), .VBL_N(VBL_N),
-	.HRES(HRES), .VRES(VRES),
+	.HRES(HRES), .VRES(VRES), .clk_md(pll_md),
 	.video_rgb(video_rgb), .video_de(video_de), .video_hs(video_hs), .video_vs(video_vs), .video_skip(video_skip)
 `ifdef POCKET_DEBUG_OVERLAY
 	, .dbg_g(dbg_g), .dbg_y(dbg_y), .dbg_o(dbg_o), .dbg_alive(dbg_alive), .dbg_wd(dbg_wd), .dbg_wa(dbg_wa), .dbg_we(dbg_we)

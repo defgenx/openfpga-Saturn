@@ -2,8 +2,10 @@
 
 A row of 16 squares at the top left of the picture (24 x 12 pixels, pitch 32, in the 640 wide scaler slot), drawn in
 `pocket_video`. Build with `set_global_assignment -name VERILOG_MACRO "POCKET_DEBUG_OVERLAY=1"` in `ap_core.qsf`.
-When the Saturn produces no sync or DE (no VS and DE activity in the last 0.3 to 0.6 s) `pocket_video` generates its own
-858 x 262 frame, 640 x 224 active, mid-grey background; so the squares show even with the Saturn in reset.
+When the Saturn produces no sync or DE (no VS and DE activity in the last 0.3 to 0.6 s), or its frame is gated
+(docs/integration.md section 3, frame gate), `pocket_video` generates its own frame, 854 x 263 on the 320 clock and
+910 x 263 on the 352 clock (59.8 Hz on both), 640 x 224 active, mid-grey background; so the squares show even with
+the Saturn in reset.
 
 Colours: green = condition holds; red = not; a square can also be left out (4); yellow = the signal toggled in the last 0.3 to 0.6 s (activity squares are
 never green). Legend, left to right:
@@ -50,8 +52,13 @@ mode is still written at power-up and re-applied at each host reset, and a PAL c
 own 320/352 setting (TVMD), so 320-dot content, the BIOS included, runs 6.5 % fast (NTSC).
 
 It separates the two things that happen together at a game's first CKCHG352 (Hyper Duel: the first runtime relock and
-the first time at 57.27 MHz): with the macro the BIOS already runs at 57.27 MHz, and no relock follows. BIOS broken =
-57.27 MHz timing; game picture only with the macro = the relock.
+the first time at 57.27 MHz): with the macro the BIOS already runs at 57.27 MHz, and no relock follows.
+
+The BIOS picture is not a valid test of the 57.27 MHz timing: 320 timing on the 352 clock is 63.75 Hz, above the
+scaler's 61 Hz. Up to v0.2.13 those frames went to the scaler (v0.2.12 variant B: stripes from the BIOS on, the
+overlay squares 1 line tall). With the frame gate the BIOS shows the generated frame and the squares (59.8 Hz), and
+the Saturn's frames go out again from the first VBlank after the VDP2 runs 352 timing. The switch between the
+generated and the Saturn timing cuts one frame short (as the switch at power-up always did).
 
 ## Hex text row
 
