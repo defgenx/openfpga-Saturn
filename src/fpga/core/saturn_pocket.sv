@@ -330,8 +330,19 @@ wire SCSP_2X_CE;
 ce_gent #(26) SCSP_CEGen (.clk(clk_sys), .thr(scsp_thr[25:0]), .nstep(scsp_nstp[25:0]), .out_clk(26'd45158400), .in_ce(1'b1), .ce(SCSP_2X_CE), .ev());
 
 bit SCSP_DIV;
+`ifdef POCKET_SCSP_CE_352
+// diagnostic (docs/integration.md, hardware test macros): the SCSP alone takes its enable at the 352 clk_sys rate;
+// CD, CDD, SMPC and the 48 kHz output keep SCSP_2X_CE at the real rate
+wire [26:0] scsp_thr_d  = mode_sub({clk_mode[2:1], 1'b1}, 27'd45158400, 1'b0);
+wire [26:0] scsp_nstp_d = mode_sub({clk_mode[2:1], 1'b1}, 27'd45158400, 1'b1);
+wire SCSP_2X_CE_D;
+ce_gent #(26) SCSP_CEGen_D (.clk(clk_sys), .thr(scsp_thr_d[25:0]), .nstep(scsp_nstp_d[25:0]), .out_clk(26'd45158400), .in_ce(1'b1), .ce(SCSP_2X_CE_D), .ev());
+always @(posedge clk_sys) if (SCSP_2X_CE_D) SCSP_DIV <= ~SCSP_DIV;
+wire SCSP_CE = SCSP_2X_CE_D & SCSP_DIV;
+`else
 always @(posedge clk_sys) if (SCSP_2X_CE) SCSP_DIV <= ~SCSP_DIV;
 wire SCSP_CE = SCSP_2X_CE & SCSP_DIV;
+`endif
 
 wire SMPC_CE;
 wire CD_EV;   // SMPC (4 MHz) and CD (40 MHz) are 1/10 and 1 of the same ratio: every 10th CD enable

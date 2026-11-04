@@ -194,8 +194,14 @@ separate the suspects for the silent 320 BIOS: runtime reprogramming, the 320 cl
   clock names apply, and STA analyses the 320 clocks (the SRAM output delay takes its period from `clk_ram`). Without
   `POCKET_PLL_NO_RECONFIG`, `pll_lite` still rewrites M and K at the first lock.
 
+- `POCKET_SCSP_CE_352`: the SCSP takes its clock enable from a second accumulator with the 352 constants
+  (`mode_sub({clk_mode[2:1], 1'b1}, ...)`), so it runs at 45.1584 x clk_sys / 57.2728 MHz (NTSC) whatever the PLL runs
+  at; `SCSP_2X_CE` for CD, CDD and SMPC and the 48 kHz accumulator keep the real mode. Under the 320 clock the SCSP
+  and the pitch are 6.2 % slow, and the enable density is the 352 one (0.788 instead of 0.840 of clk_sys). It tests the
+  SCSP sound-RAM deadline of docs/memory.md section 3 (SCSP) on hardware.
+
 Test builds of v0.2.14: E = both macros (fixed at 320), C = `POCKET_PLL_NO_RECONFIG` only (fixed at the compiled 352,
-CE mode 320 in the BIOS).
+CE mode 320 in the BIOS). F = E + `POCKET_SCSP_CE_352`.
 
 ## 3. Video
 
