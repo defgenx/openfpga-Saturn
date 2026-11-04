@@ -162,23 +162,42 @@ end. `tb_sdram` models exactly this pipeline and checks every word: 0 errors in 
 
 ### SCSP
 
-SCSP samples `RAM_Q` on the second `CYCLE0_CE` after its request, 265.7 ns later, and ignores `RAM_RDY`. Requests can
-follow each other every 177 ns (22.58 MHz CE, 11.29 MHz cycle). The controller waits for the slot (cycle 0, 0-16
-cycles), reads at ACT + 3, and delivers no earlier than `SCSP_MIN_AGE` = 14 cycles after the request so that the data cannot overwrite the
-previous request's word before that was sampled.
+The SCSP raises a request one clk_sys after `CYCLE1_CE` (`MEM_START` in `SCSPP.sv`), samples `RAM_Q` at the second
+`CYCLE0_CE` after that `CYCLE1_CE`, 12 `SCSP_2X_CE` later (265.7 ns), and ignores `RAM_RDY`. Requests can follow each
+other at every `CYCLE1_CE` (8 `SCSP_2X_CE`, 177 ns). In clk_sys cycles the deadline depends on the enable density, not on
+the clock: 12 enables take 14 or 15 clk_sys at the 320 rates (45.1584 MHz / 53.75 MHz = 0.840 of the clocks carry one) and
+15 or 16 at the 352 rates (0.788). From the clk_ram edge R that raises the request to the sample edge that is at least
+26 clk_ram at 320 and 28 at 352.
 
-| Bound | Cycles | ns |
-|---|---|---|
-| earliest sample of the previous request after the next request is seen (20 cycles later) | 29 | 253 |
-| delivery floor | 14 | 122 |
-| worst landing, request just after the slot (1 + 16 + 3 + 5 + 1, as v0.2.4) | 26 | 227 |
-| measured in `tb_sdram`, requests every 177 ns, 65% reads | 1-25 | 8-218 |
+The controller sees the request at R + 1 (an odd edge, the one after a clk_sys edge) and waits for the slot-0 edge (an
+even edge, 1 to 15 cycles later); the word lands in `dl_d` 9 cycles after that edge (READ on the pins 4 later, captured
+at READ + 4, lands at READ + 5). It goes to `ch2dout` at the landing edge unless that is earlier than `SCSP_MIN_AGE` = 14
+cycles after R + 1; then it waits in `dl_d`. The floor keeps the word from
+replacing the previous request's before that was sampled.
 
-There is no margin at the late end: the full-system simulation consumes deliveries up to 28 clk_ram after the request
-(`ch2 latency` histogram in `trace.log`), and a build that landed the word one clk_ram later (READ + 6) returned every SCSP
-sample fetch one request stale (silence); the capture of section 3 lands at READ + 5, as Saturn_MiSTer's. This is why
-the SCSP READ goes out at ACT + 3 without auto precharge and closes the row with a PRECHARGE at ACT + 6: an auto
-precharge READ at ACT + 4 would meet tRAS too but land one cycle later. There is no margin either for a second request
+| Bound | clk_ram after R |
+|---|---|
+| latest sample of the previous request (its 15 clk_sys deadline, this request 9 clk_sys after it) | 10 |
+| delivery floor | 15 |
+| worst delivery: R one edge after a slot-0 edge (1 + 15 + 9) | 25 |
+| earliest sample, 320 / 352 rates | 26 / 28 |
+
+So the word is in `ch2dout` one clk_ram before the earliest sample at the 320 rates and three at 352
+(`make -C sim mem sdram-scsp`: least margin 1 and 3, no stale read). Up to v0.2.14 the word went to `ch2dout` one edge
+after landing (slot edge + 10, R + 26 at worst), which is the sample edge itself at 320: reads that waited the full slot in a
+14 clk_sys deadline (about 9 %, 104 of 1,017 reads in `tb_sdram -DSCSP_EXACT +W320`) returned the previous request's
+word. The 68K reads its program through this port, so the sound driver ran on stale words: silent in every build that
+ran the BIOS with the 320 enables (v0.2.11, v0.2.13, v0.2.14 C and E), sound in v0.2.12 B (352 enables, where R + 26
+still met the 28-cycle deadline). Saturn_MiSTer's `sdram1.sv` has an SCSP slot every 8 clk_ram, so its worst wait is
+half of ours.
+
+Neither bench saw it: the full-system `pll_sim` and `tb_sdram`'s default clocks raised clk_sys on clk_ram's falling
+edge, so the request crossing and the sample crossing were each half a clk_ram shorter than on the PLL, whose phase-0
+outputs rise together. `pll_sim` now raises clk_sys, clk_ram and clk_vid on the same tick, and `tb_sdram -DSCSP_EXACT`
+does the same with the SCSPP request timing (`+CE_IN=<Hz>` for the rate the enables assume).
+
+The SCSP READ goes out at ACT + 3 without auto precharge and closes the row with a PRECHARGE at ACT + 6: an auto
+precharge READ at ACT + 4 would meet tRAS too but land one cycle later. There is no margin for a second request
 that arrives while the first is still waiting (`dbg_scsp_drop` counts it, 0 in all runs). SCSP writes use the same slot
 (WRITE at ACT + 4) and are posted. The slot reads its request registers (`sc_addr`, `sc_din`, `sc_be`, `sc_t0`) at ACT
 and CAS instead of keeping a copy. A request is captured at most 16 cycles before its ACT and the CAS follows 3 or 4
@@ -492,6 +511,7 @@ for the measured slack.
 | Bench | Checks | Result |
 |---|---|---|
 | `tb_sdram` (3 profiles x 300 us at 114.5 MHz, 2 at 107.4 MHz, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted at 114.5 MHz (about 2,300-2,500 per 300 us, section 3; none at 107.4 MHz); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
+| `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded (was 48-120: more fills in this run, 159 against 148) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
@@ -516,7 +536,8 @@ gate reads and writes); the SRAM part and speed are still unknown.
 3. No AUTO REFRESH: retention depends on VDP2's real no-access windows, for the sound RAM too (the SCSP slot does not
    scrub). A game that disables them (it cannot: they are `H_CNT` based) or a pause state with VDP2 reading continuously
    would lose rows after 64 ms.
-4. SCSP deadline margin 27 ns; an SCSP clock that runs faster than the NCO in `tb_sdram` shortens it.
+4. SCSP deadline margin one clk_ram (9.3 ns) at the 320 rates, three at 352 (section 3, SCSP); a slower slot or a later
+   landing breaks the 320 modes first.
 5. PSRAM synchronous mode at 57.3 MHz / LC4 (the PSX core runs 33.9 MHz). `READ_ADJ` / `WRITE_ADJ` are the bring-up
    knobs. The controller does not park the chips back in asynchronous mode: after this core the chips stay
    synchronous until power-off, which breaks other cores that use them asynchronously (the PSX core parks them).

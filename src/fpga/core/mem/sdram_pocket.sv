@@ -406,11 +406,14 @@ always @(posedge clk) begin
 		endcase
 	end
 
-	// ---- SCSP delivery
+	// ---- SCSP delivery: at the landing edge, or later once SCSP_MIN_AGE has passed
 	for (k = 0; k <= 1; k = k + 1) begin
 		if (dl_v[k] && dl_ld[k] && (cyc - dl_t0[k]) >= SCSP_MIN_AGE[5:0]) begin
 			ch2dout <= dl_d[k]; dl_v[k] <= 1'b0;
 		end
+	end
+	if (w0_v && w0_k == 3'd4 && (cyc - dl_t0[w0_i]) >= SCSP_MIN_AGE[5:0]) begin
+		ch2dout <= dq_cap; dl_v[w0_i] <= 1'b0;
 	end
 
 	// ---- scrub wrap indicator
