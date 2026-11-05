@@ -32,6 +32,15 @@ module tb_video;
 	localparam RESTART = `RESTART_V;
 	reg stopped = 0, swapped = 0;
 	initial if (RESTART) begin #(60e6); stopped = 1; #(2e6); swapped = 1; stopped = 0; end
+	// PARTIAL_V: matched 352 mode, then DCLK stops for 2 ms and the timing restarts mid-frame (line 100) with 320-wide
+	// lines while HRES already reads 352, until the middle of the next frame (the CKCHG352 sequence: the VDP2 leaves
+	// reset in 320 timing and the game writes TVMD). Every DE line must stay 704 wide and every frame H lines.
+`ifndef PARTIAL_V
+`define PARTIAL_V 0
+`endif
+	localparam PARTIAL = `PARTIAL_V;
+	reg narrow = 0; integer rs_lines = 0; reg restarted = 0;
+	initial if (PARTIAL) begin #(40e6); stopped = 1; #(2e6); stopped = 0; restarted = 1; narrow = 1; end
 	localparam DOT  = HIRES ? 4 : 8;               // clk_sys per Saturn pixel
 	localparam W    = (WIDE ? 352 : 320) * (HIRES ? 2 : 1);   // pixels per line at the Saturn pixel rate
 	localparam TOTW = W + 60 * (HIRES ? 2 : 1);
@@ -58,13 +67,14 @@ module tb_video;
 	always @(posedge clk_sys) begin
 		DCLK <= 0;
 		dc = dc + 1;
-		if (stopped) begin dc = 0; VS_N <= 1'b0; end
+		if (stopped) begin dc = 0; VS_N <= 1'b0; if (PARTIAL) begin x = 0; y = 100; end end
 		else if (dc == DOT) begin
 			dc = 0;
 			DCLK <= 1;
 			x = x + 1;
-			if (x == TOTW) begin x = 0; y = y + 1; if (y == TOTH) y = 0; end
-			HBL_N <= (x < W);
+			if (x == TOTW) begin x = 0; y = y + 1; if (y == TOTH) y = 0;
+				if (narrow) begin rs_lines = rs_lines + 1; if (rs_lines == TOTH - 100 + TOTH / 2) narrow = 0; end end
+			HBL_N <= (x < (narrow ? W * 320 / 352 : W));
 			VBL_N <= (y >= 8 && y < 8 + H);
 			HS_N  <= !(x >= W + 10 && x < W + 30);
 			VS_N  <= !(y >= 1 && y < 4 && x < W + 30);
@@ -95,7 +105,8 @@ module tb_video;
 			if (!HIRES && (de_run % 2 == 0) && rgb != prev_px) begin errors = errors + 1; $display("low-res pixel not doubled at %0d", de_run); end
 			prev_px <= rgb;
 		end else begin
-			if (de_q) begin
+			if (de_q && PARTIAL && stopped) de_run = 0;   // the line the reset cuts
+			else if (de_q) begin
 				if (de_run != OUTW) begin errors = errors + 1; $display("DE run %0d want %0d", de_run, OUTW); end
 				lines = lines + 1;
 				de_run = 0;
@@ -109,8 +120,17 @@ module tb_video;
 		end
 	end
 
+	integer frames_rs = 0;
+	always @(posedge clk_vid) if (vs && restarted && lines != 0) frames_rs = frames_rs + 1;
+	// the frame the reset cuts is already out (no frame buffer); it is not counted
+	always @(posedge stopped) if (PARTIAL) lines = 0;
 	initial begin
-		#(90e6);
+		#(PARTIAL ? 130e6 : 90e6);
+		if (PARTIAL) begin
+			$display("PARTIAL: errors %0d, frames after the restart %0d", errors, frames_rs);
+			if (errors == 0 && frames_rs >= 2) $display("RESULT: PASS"); else $display("RESULT: FAIL");
+			$finish;
+		end
 		$display("HIRES=%0d WIDE=%0d VRES=%0d MISMATCH=%0d PAL=%0d GATED=%0d: frames %0d, lines %0d, hs %0d, slot checks %0d, errors %0d", HIRES, WIDE, VRES, MISMATCH, PAL, GATED, frames, lines, hs_count, slot_checks, errors);
 		if (RESTART) begin
 			$display("RESTART: frames before %0d, DE/HS/VS clocks after the restart %0d", frames, n_after);

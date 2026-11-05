@@ -263,9 +263,17 @@ whatever the CE mode, so both send the BIOS's 320 timing at 63.75 Hz (section 3,
   DE, HS or VS, as while the VDP2 is held in reset; the debug overlay shows its generated frame instead. The gate also
   closes while DCLK is stopped (VDP2 reset), so after a reset nothing goes out before the next VBlank start decides:
   without that, the frame open at the CKCHG352 let the first 320 frame on the 352 clock through (`sim/sys`).
+  It opens only after one whole clean frame: from a VBlank start to the next with DCLK running, the same `{HRES, VRES}`
+  at both ends, every DE line as wide as HRES and as many DE lines as VRES; more than 320 lines without a VBlank (a VS
+  gap) closes it as well. Without that, at the game's CKCHG352 the VDP2 left reset in 320 timing, the game wrote TVMD
+  mid-frame, and an 11-line frame of 640-dot lines reached the scaler after a 121 ms VS gap (`sim/sys`, 16 s run).
+  Every gate opening therefore costs one frame. The line and the frame that a reset cuts are already out: there is
+  no frame buffer to hold them back.
 * `make -C sim platform` (`tb_video`) checks DE length (640/704), lines per frame, pixel doubling, slot word, zero RGB
   outside DE and the HS/VS spacing for 320/352 low-res and 640/704 hi-res, that the two gated combinations
-  produce no DE, HS or VS, and (`RESTART_V`) that nothing follows a DCLK stop that switches NTSC 320 to the 352 clock.
+  produce no DE, HS or VS, (`RESTART_V`) that nothing follows a DCLK stop that switches NTSC 320 to the 352 clock,
+  and (`PARTIAL_V`) that after a DCLK stop restarting mid-frame with 320-wide lines under a 352 HRES every DE line is
+  704 wide and every frame has its full line count (fails on the gate without the clean-frame rule).
 * `sim/sys` logs the scaler's view of each frame (`SCL` lines in `trace.log`: lines start at HS, frames at VS; DE
   lines, pixels per line, lines with more than one DE run, HS to DE offset, VS to HS spacing) and writes it as
   `frame_<n>_scl.ppm` with `+FRAMES`. `+HRES352_US=<t>` holds the VDP2 timing generator at 352 x 240 from t us on,
