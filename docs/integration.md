@@ -167,10 +167,30 @@ sequence for an M + K write. M at 0x12 {hi, lo}; read-modify-write of 0x15 bit 4
 host reset and on every mode change. The C counters are never written, so the outputs keep their ratios, the 2:1
 `clk_ram` and the phases in every mode. The Saturn is not reset or held on a relock, as in MiSTer.
 
+**Write order.** M takes effect when it is written, K when K-ready rises, 189 ns (14 `clk_74a`) later in this sequence.
+In between the PLL heads for M_new + K_old. Going up (320 -> 352, M 5 -> 6) that is 6 + 0.791 = 6.791, clk_sys 63.0 MHz
+(PAL 62.7) against the 57.27 MHz the design is timed for (worst setup slack about 0.3 ns, 1.7 %); with a loop bandwidth of
+1.5 .. 2.0 MHz the VCO covers most of that step in 189 ns. Altera's reconfiguration core writes in the same order, so
+MiSTer has the same transient with its numbers (9 + 0.600 = 9.600 against 9.164, +4.8 %). The game's CKCHG352 is the
+only upward change (the first write after lock goes from the compiled 352 down to the BIOS's 320), which matches every
+DPRIO build passing the BIOS and dying at the game start on hardware, while v0.2.12 B (no DPRIO) ran the game.
+`pll_lite` therefore writes K first when going up and M first otherwise: the intermediate is M 5 + K 0.171 = 5.171
+(48 MHz) in both directions, below both modes. `tb_pll_lite` models the feedback the PLL heads for (M + the K taken
+at K-ready) and fails on an intermediate above both modes: the previous order fails at NTSC 320 -> PAL 352 (63.03 MHz)
+and PAL 320 -> NTSC 352 (62.66 MHz). This is the register-level target, not the VCO trajectory, which no bench
+models; the settling overshoot of the final step is not checked either.
+
+Full-system runs to 16.2 s (`tb_sys`, BIOS + Hyper Duel, `pll_sim` relocks with clean clocks): release config, CKCHG352
+at 13.35 s; `POCKET_FIXED_352` (no relock), CKCHG352 at 12.55 s. Both: 0 SDRAM model errors, 0 stale SCSP samples, SYSRES
+released 0.10 s later, TVMD 352 x 240, display on 0.39 s after the CKCHG, VDP1 draw-end and VBlank interrupts at 60 Hz,
+the CPU in the game's frame-wait loop (0x06022688, waits for the draw-end handler's frame counter at 0x060494A6), no
+SNDON and a black picture until the end of the run, the same in both. So the sim shows no difference the relock makes,
+and does not reach the game's picture or music within 3.5 s of the CKCHG.
+
 `sim/pll` (`make -C sim pll`) runs it against `pll_sys_cfg` driven with MiSTer's mgmt sequence (M at 4, K at 7, start at
 2). `tb_pll_lite` checks the final DPRIO registers after NTSC 352, NTSC 320, PAL 352, PAL 320, NTSC 352 and PAL 352.
 `tb_bus` + `bus_diff.py` check the full `reconfig_to_pll` bus access by access from power-up through all four modes:
-the DPRIO init is identical, and every burst is identical. The non-`POCKET_PLL_LITE` branch of `saturn_pocket.sv` is
+the DPRIO init is identical, and every downward burst is identical (an upward one has the K part first, above). The non-`POCKET_PLL_LITE` branch of `saturn_pocket.sv` is
 that same mgmt writer with the same constants.
 
 `POCKET_FIXED_352` is a diagnostic build that pins the PLL and the CE mode to 352 (docs/debug-overlay.md).
@@ -243,9 +263,17 @@ whatever the CE mode, so both send the BIOS's 320 timing at 63.75 Hz (section 3,
   DE, HS or VS, as while the VDP2 is held in reset; the debug overlay shows its generated frame instead. The gate also
   closes while DCLK is stopped (VDP2 reset), so after a reset nothing goes out before the next VBlank start decides:
   without that, the frame open at the CKCHG352 let the first 320 frame on the 352 clock through (`sim/sys`).
+  It opens only after one whole clean frame: from a VBlank start to the next with DCLK running, the same `{HRES, VRES}`
+  at both ends, every DE line as wide as HRES and as many DE lines as VRES; more than 320 lines without a VBlank (a VS
+  gap) closes it as well. Without that, at the game's CKCHG352 the VDP2 left reset in 320 timing, the game wrote TVMD
+  mid-frame, and an 11-line frame of 640-dot lines reached the scaler after a 121 ms VS gap (`sim/sys`, 16 s run).
+  Every gate opening therefore costs one frame. The line and the frame that a reset cuts are already out: there is
+  no frame buffer to hold them back.
 * `make -C sim platform` (`tb_video`) checks DE length (640/704), lines per frame, pixel doubling, slot word, zero RGB
   outside DE and the HS/VS spacing for 320/352 low-res and 640/704 hi-res, that the two gated combinations
-  produce no DE, HS or VS, and (`RESTART_V`) that nothing follows a DCLK stop that switches NTSC 320 to the 352 clock.
+  produce no DE, HS or VS, (`RESTART_V`) that nothing follows a DCLK stop that switches NTSC 320 to the 352 clock,
+  and (`PARTIAL_V`) that after a DCLK stop restarting mid-frame with 320-wide lines under a 352 HRES every DE line is
+  704 wide and every frame has its full line count (fails on the gate without the clean-frame rule).
 * `sim/sys` logs the scaler's view of each frame (`SCL` lines in `trace.log`: lines start at HS, frames at VS; DE
   lines, pixels per line, lines with more than one DE run, HS to DE offset, VS to HS spacing) and writes it as
   `frame_<n>_scl.ppm` with `+FRAMES`. `+HRES352_US=<t>` holds the VDP2 timing generator at 352 x 240 from t us on,

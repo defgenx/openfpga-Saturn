@@ -45,6 +45,11 @@ reg [1:0] mode;                               // applied
 reg       valid = 1'b0;
 reg [4:0] st = 5'd0;
 reg [4:0] wt;
+// Order of the two writes: the PLL heads for M_new + K_old after the M write and for M_old + K_new after the K write,
+// and the higher of those overshoots the faster mode (320 -> 352: 6 + 0.791 = 63.0 MHz clk_sys against 57.3).
+// So going up (M 5 -> 6) K goes first, else M: the intermediate is then 5.17 (48 MHz), below both modes.
+// ph: 0 M then K, 1 K first, 2 M after K. docs/integration.md section 2, runtime reconfiguration.
+reg [1:0] ph = 2'd0;
 
 reg [1:0] ra_s = 2'b00;
 reg       ra_pend = 1'b0;                     // a reapply edge not yet served
@@ -73,7 +78,8 @@ always @(posedge clk) begin
 			mode <= md_s2;
 			valid <= 1'b1;
 			ra_pend <= 1'b0;
-			st <= 5'd1;
+			if (valid && md_s2[1] && !mode[1]) begin ph <= 2'd1; st <= 5'd8; end
+			else begin ph <= 2'd0; st <= 5'd1; end
 		end
 		5'd1: begin o_wr <= 1'b1; o_addr <= 6'h12; st <= 5'd2; end
 		5'd2: begin o_rd <= 1'b1; o_addr <= 6'h15; st <= 5'd3; end
@@ -87,9 +93,10 @@ always @(posedge clk) begin
 		5'd13: begin o_wr <= 1'b1; o_addr <= 6'h18;  st <= 5'd14; end
 		5'd14: begin o_wr <= 1'b1; o_addr <= 6'h19; st <= 5'd15; end
 		5'd15: begin o_wr <= 1'b1; o_addr <= 6'h17; st <= 5'd16; wt <= 5'd0; end
+		5'd9: begin st <= (ph == 2'd2) ? 5'd16 : 5'd10; wt <= 5'd0; end   // M after K: done
 		5'd16: begin wt <= wt + 5'd1; if (&wt) st <= 5'd17; end   // let the lock flag drop
-		5'd17: if (locked) st <= 5'd0;
-		default: st <= st + 5'd1;                              // wait states 4, 9, 10
+		5'd17: if (locked) begin st <= (ph == 2'd1) ? 5'd1 : 5'd0; if (ph == 2'd1) ph <= 2'd2; end
+		default: st <= st + 5'd1;                              // wait states 4, 10
 		endcase
 	end
 end

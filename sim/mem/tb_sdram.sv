@@ -68,11 +68,26 @@ wire [15:0] ch2dout; wire ch2rdy, init_done;
 wire [7:0] dbg_scrub_wrap, dbg_scsp_drop;
 reg init = 1;
 
-// DOT_CE_R / DOT_CE_F as VDP2.sv makes them
-reg [1:0] dot_div = 0; reg ce_ph = 0;
+// DOT_CE_R / DOT_CE_F as VDP2.sv makes them; vres holds DOTCLK_DIV at 0 as the VDP2 reset does (CE_R keeps running)
+reg [1:0] dot_div = 0; reg ce_ph = 0; reg vres = 0;
 always @(posedge clk_sys) begin
 	ce_ph <= ~ce_ph;
-	if (ce_ph) dot_div <= dot_div + 1'd1;
+	if (vres) dot_div <= 2'd0;
+	else if (ce_ph) dot_div <= dot_div + 1'd1;
+end
+// +RESTART_US=<n>: a VDP2 reset every n us, held 200 + i clk_sys (i = restart count), so the dot restarts at a new
+// phase of the controller's frame each time. VDP2 makes no access in the reset and for 5 dots after it (the CPUs leave
+// reset with it), and those dots are not checked.
+integer rs_per = 0, rs_i = 0, skip_dots = 0;
+initial if (!$value$plusargs("RESTART_US=%d", rs_per)) rs_per = 0;
+initial if (rs_per > 0) begin
+	wait (init_done);
+	forever begin
+		#(rs_per * 64'd1000000);
+		@(posedge clk_sys) vres <= 1'b1;
+		repeat (200 + rs_i) @(posedge clk_sys);
+		vres <= 1'b0; rs_i = rs_i + 1;
+	end
 end
 wire ce_r = ce_ph;
 wire dot_ce_r = (dot_div == 2'd3) & ce_r;
@@ -99,7 +114,7 @@ always @(posedge clk_sys) mc_sys <= 1'b1;
 always @(posedge clk_ram) begin
 	if (dut.sync && !dut.sync_old) mc_on <= 1'b1;
 	if (mc_on) begin
-		if (dut.fc == 4'd0) begin mc_plan = mc_plan + 1; if (!mc_sys) mc_plan_even = mc_plan_even + 1; end
+		if (dut.fc == 4'd0 && !dut.rs) begin mc_plan = mc_plan + 1; if (!mc_sys) mc_plan_even = mc_plan_even + 1; end
 		if (dut.fc == 4'd1 && !mc_sys) mc_ctl_even = mc_ctl_even + 1;
 		if ((dut.rq_rd && !dut.old_rd) || ((|dut.rq_wr) && !dut.old_wr) || (dut.slot == 4'd5 && (dut.l_rd || dut.l_wr))) begin
 			mc_sc = mc_sc + 1; if (!mc_sys) mc_sc_even = mc_sc_even + 1;
@@ -214,9 +229,10 @@ reg pipe1;
 integer wr_bank;
 
 always @(posedge clk_sys) begin
+	if (vres) begin wr_a <= 8'd0; wr_b <= 8'd0; rd_a <= 1'b0; rd_b <= 1'b0; skip_dots = 5; end
 	if (dot_ce_r) begin
 		// VRAMxx_Q <= RAx_Q when VRAM_READ_PIPE[1]
-		if (pipe1) begin
+		if (pipe1 && skip_dots == 0) begin
 			if (e1_v[0] && dout_a0 !== e1_d[0]) begin errs = errs + 1; $display("%0t VDP2 A0 mismatch got %h exp %h", $time, dout_a0, e1_d[0]); end
 			if (e1_v[1] && dout_b0 !== e1_d[1]) begin errs = errs + 1; $display("%0t VDP2 B0 mismatch got %h exp %h", $time, dout_b0, e1_d[1]); end
 			if (e1_v[2] && dout_a1 !== e1_d[2]) begin errs = errs + 1; $display("%0t VDP2 A1 mismatch got %h exp %h", $time, dout_a1, e1_d[2]); end
@@ -229,12 +245,13 @@ always @(posedge clk_sys) begin
 		for (gi = 0; gi < 4; gi = gi + 1) begin e1_v[gi] <= e0_v[gi]; e1_d[gi] <= e0_d[gi]; e0_v[gi] <= 1'b0; end
 		pipe1 <= sample_pending;
 		sample_pending <= 1'b0;
+		if (skip_dots > 0) skip_dots = skip_dots - 1;
 
 		dotn = dotn + 1;
 		linepos = dotn % 454;
 		wr_a <= 8'd0; wr_b <= 8'd0; rd_a <= 1'b0; rd_b <= 1'b0;
 		busy_a = 0; busy_b = 0; wrt_a = 0; wrt_b = 0;
-		if (issuing) begin
+		if (issuing && skip_dots == 0) begin
 			case (profile)
 				0: begin busy_a = 1; busy_b = 1; end
 				1: if (!((linepos >= 150 && linepos < 155) || (linepos >= 400 && linepos < 409) || linepos >= 352)) begin
@@ -455,6 +472,7 @@ initial begin
 			bad = bad + 1;
 			if (bad < 10) $display("memory mismatch idx %h: mem %h exp %h", ai[20:0], model.mem[ai], shadow[ai]);
 		end
+	if (rs_per > 0) $display("tb_sdram: VDP2 restarts %0d", rs_i);
 	$display("tb_sdram: profile %0d, %0d us: VDP2 checks %0d, VDP2 writes %0d, SCSP checks %0d, SCSP writes %0d",
 	         profile, run_us, checks_v, writes_v, checks_s, writes_s);
 	$display("tb_sdram: ACT %0d READ %0d WRITE %0d, scrub wraps %0d, SCSP collisions %0d, DQ contention %0d",

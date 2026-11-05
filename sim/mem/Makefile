@@ -65,13 +65,15 @@ sdram: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 $(SDARGS)
 	$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=300 +W320 $(SDARGS)
 	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 +W320 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 +RESTART_US=20 $(SDARGS)
+	$(VVP) build/tb_sdram +PROFILE=2 +RUN_US=300 +RESTART_US=20 +W320 $(SDARGS)
 
 # SCSP sound-RAM deadline with the SCSPP request timing and PLL-aligned clocks (docs/memory.md section 3, SCSP):
 # 320 and 352 enables at their clocks (NTSC, PAL), and the 320 enables at the 352 clock
 build/tb_sdram_scsp: tb_sdram.sv models/sdram_model.sv $(SDSRC) | build
 	$(IVL) $(FLAGS) -DSCSP_EXACT -o $@ tb_sdram.sv models/sdram_model.sv $(SDSRC)
 sdram-scsp: build/tb_sdram_scsp
-	@for a in "+W320 +CE_IN=53748200" "+W320 +CE_IN=53375000" "+CE_IN=57272800" "+CE_IN=56875000" "+CE_IN=53748200"; do \
+	@for a in "+W320 +CE_IN=53748200" "+W320 +CE_IN=53375000" "+CE_IN=57272800" "+CE_IN=56875000" "+CE_IN=53748200" "+W320 +CE_IN=53748200 +RESTART_US=20"; do \
 	  printf "%s: " "$$a"; $(VVP) build/tb_sdram_scsp +PROFILE=2 +RUN_US=300 $(SDARGS) $$a | grep -E 'margin|PASS|FAIL' | tr '\n' ' '; echo; done
 
 clean:

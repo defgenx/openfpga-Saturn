@@ -60,8 +60,20 @@ reg        vbl_old;
 // last line does not stay high.
 reg  [4:0] idle = 5'd0;
 
-// frame gate, decided at VBlank start (before the frame's VS)
+// frame gate, decided at VBlank start (before the frame's VS). It opens only after one whole clean frame: from a VBlank
+// start to the next with DCLK running, the same {HRES, VRES} at both ends, every DE line HRES wide and VRES lines of
+// DE. A reset (DCLK stop), a mid-frame mode change or a frame of more than 320 lines closes it until then.
 reg        pass = 1'b0;
+reg        f_ok = 1'b0;          // the current interval started at a VBlank start and is clean so far
+reg  [8:0] f_lines = 9'd0;       // DE lines in the interval
+reg  [8:0] f_tot = 9'd0;         // lines in the interval (HBL_N falls)
+reg [10:0] f_dots = 11'd0;       // dots of the current DE line
+reg  [3:0] f_md = 4'd0;
+reg        act_q = 1'b0, hbl_q = 1'b0;
+wire       act = HBL_N & VBL_N;
+wire [10:0] want_dots = HRES[1] ? (HRES[0] ? 11'd704 : 11'd640) : (HRES[0] ? 11'd352 : 11'd320);
+wire  [8:0] want_lines = (VRES == 2'd0) ? 9'd224 : (VRES == 2'd1) ? 9'd240 : 9'd256;
+wire        in_range = clk_md[1] ? (~HRES[0] | clk_md[0]) : (HRES[0] | ~clk_md[0]);
 
 always @(posedge clk_sys) begin
 	if (DCLK) begin
@@ -71,14 +83,27 @@ always @(posedge clk_sys) begin
 		vs  <= ~VS_N & pass;
 		idle <= 5'd0;
 	end else if (!idle[4]) idle <= idle + 5'd1;
+	if (DCLK) begin
+		act_q <= act; hbl_q <= HBL_N;
+		f_dots <= act ? (act_q ? f_dots + 11'd1 : 11'd1) : f_dots;
+		if (act_q && !act) begin
+			f_lines <= f_lines + 9'd1;
+			if (f_dots != want_dots) f_ok <= 1'b0;
+		end
+		if (hbl_q && !HBL_N) begin
+			f_tot <= f_tot + 9'd1;
+			if (f_tot == 9'd320) begin f_ok <= 1'b0; pass <= 1'b0; end   // no VBlank: a VS gap
+		end
+	end
 	// the gate closes too: a VDP2 leaving reset starts in TVMD's 320 mode, whatever the clock
-	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; vs <= 1'b0; pass <= 1'b0; end
+	if (idle[4]) begin de <= 1'b0; hs <= 1'b0; vs <= 1'b0; pass <= 1'b0; f_ok <= 1'b0; end
 
 	// mode is locked for the whole frame, as in MiSTer's top
 	vbl_old <= VBL_N;
 	if (vbl_old & ~VBL_N) begin
 		slot <= {(VRES == 2'd0) ? 2'd0 : (VRES == 2'd1) ? 2'd1 : 2'd2, HRES[0]};
-		pass <= clk_md[1] ? (~HRES[0] | clk_md[0]) : (HRES[0] | ~clk_md[0]);
+		pass <= in_range && f_ok && f_lines == want_lines && f_md == {HRES, VRES};
+		f_ok <= ~idle[4]; f_lines <= 9'd0; f_tot <= 9'd0; f_md <= {HRES, VRES};
 	end
 end
 
