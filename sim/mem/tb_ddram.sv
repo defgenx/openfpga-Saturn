@@ -249,6 +249,23 @@ task automatic vram_burst(input [18:1] a, input [8:0] n);
 		@(posedge clk);
 	end
 endtask
+// a command-table read at VDP1P's pace: per word, address and RD for one clk_sys (2 clk_ram), the word taken at the
+// clk_sys edge where busy is low (VS_CMD_READ), then one clk_sys in VS_IDLE before the next address
+task automatic vram_cmd(input [18:1] a);
+	integer k;
+	begin
+		for (k = 0; k < 16; k = k + 1) vram_write(a + k, $urandom);
+		@(posedge clk);
+		for (k = 0; k < 16; k = k + 1) begin
+			vram_addr <= a + k; vram_blen <= 9'd0; vram_rd <= 1'b1;
+			repeat (2) @(posedge clk);
+			vram_rd <= 1'b0;
+			while (vram_busy) repeat (2) @(posedge clk);
+			if (sv_vram[a + k] && vram_dout !== sh_vram[a + k]) begin errs = errs + 1; if (errs < 10) $display("%0t vram cmd %h+%0d got %h exp %h", $time, a, k, vram_dout, sh_vram[a + k]); end
+			repeat (2) @(posedge clk);
+		end
+	end
+endtask
 task automatic cdr_write(input [18:1] a, input [15:0] d);
 	begin
 		@(posedge clk); while (cdram_busy) @(posedge clk);
@@ -360,7 +377,8 @@ initial begin
 				rv = $urandom % 8;
 				if (rv < 3) vram_write($urandom % 65536, $urandom);
 				else if (rv < 6) vram_read($urandom % 65536);
-				else vram_burst(($urandom % 1024) * 8, 8 + ($urandom % 24));
+				else if (rv < 7) vram_burst(($urandom % 1024) * 8, 8 + ($urandom % 24));
+				else vram_cmd(($urandom % 4096) * 16);
 			end
 			done_vdp = 1;
 		end

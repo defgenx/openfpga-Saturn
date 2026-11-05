@@ -715,7 +715,10 @@ wire [ 15:  0] ring_cache_q, cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_c
 ddp_cache_ram #(6, 32) cache0 (clk, {ramh_curr,a_cw}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:2]}, ramh_cache_q);
 ddp_cache_ram #(4, 16) cache1 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd0, cdram_rcache_addr[4:1], cdram_cache_q);
 ddp_cache_ram #(4, 16) cache2 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
-ddp_cache_ram #(9, 16) cache3 (clk, b_cw, p1_rdata, b_cache_wren & b_chan == 3'd1, {vdp1vram_addr[9:3],vdp1vram_rcache_addr_lsb}, vdp1vram_cache_q);
+// cache3 registers its read address: the lane bits must be vdp1vram_rcache_addr_lsb's next value (docs/memory.md section 4)
+wire           vdp1vram_lsb_ld = !rst_pulse && vdp1vram_rd && !vdp1vram_rd_old;
+wire [  2:  1] vdp1vram_ra_lsb = vdp1vram_lsb_ld ? vdp1vram_addr[2:1] : vdp1vram_rcache_addr_lsb;
+ddp_cache_ram #(9, 16) cache3 (clk, b_cw, p1_rdata, b_cache_wren & b_chan == 3'd1, {vdp1vram_addr[9:3],vdp1vram_ra_lsb}, vdp1vram_cache_q);
 ddp_cache_ram #(4, 16) cache5 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd2, cdbuf_rcache_addr[4:1], cdbuf_cache_q);
 ddp_cache_ram #(4, 16) cache6 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd2, cart_rcache_addr[4:1], cart_cache_q);
 ddp_cache_ram #(4, 16) cache8 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd4, ring_rcache_addr[3:0], ring_cache_q);

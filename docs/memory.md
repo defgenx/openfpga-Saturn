@@ -424,6 +424,16 @@ fill queued behind a posted write drain and a long burst on the same
 chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait on `ramh_busy`) is required; at
 28.6 MHz a fill is 12 bus cycles idle.
 
+VDP1 VRAM reads hit the 512-word cache (`cache3`) without a busy cycle: VDP1P puts the next address out at a clk_sys
+edge and takes the word at the following one, two clk_ram later, and the cache RAM registers its read address at the
+clk_ram edge in between. MiSTer registers `vdp1vram_addr[9:3]` in its 64 bit RAM and picks the 16 bit lane after it
+with `vdp1vram_rcache_addr_lsb`, which loads at that same edge. The Pocket cache is 16 bits wide, so the lane bits are
+part of the read address and must be the register's next value (the incoming `vdp1vram_addr[2:1]` on a read strobe).
+Taken from the register itself they are one clk_ram late and VDP1 reads word n-1 of a command table (n+3 at n = 4, 8,
+12): every vertex X gets the CMDSIZE or a Y word, the BIOS particles and menu draw at column 0 and the screen stays
+black. That was the case up to v0.2.16 on hardware (clk_sys and clk_ram rise together); the full-system sim shows it
+since its clocks are aligned the same way.
+
 ## 5. SRAM and the CD ring
 
 The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). A read drives UB# and LB# low: an x16
@@ -542,7 +552,7 @@ for the measured slack.
 | `tb_sdram` (3 profiles x 300 us at 114.5 MHz, 2 at 107.4 MHz, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted at 114.5 MHz (about 2,300-2,500 per 300 us, section 3; none at 107.4 MHz); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
 | `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
-| `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded (was 48-120: more fills in this run, 159 against 148) |
+| `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
 | `tb_load` | 2048 loader writes from 4096 + 1024 + 1024 bridge bytes (backup cart at PSRAM0 0x800000) | pass |
 | `mem-long` | 66 ms retention with the 512 row scrub of bank 3 | pass |
