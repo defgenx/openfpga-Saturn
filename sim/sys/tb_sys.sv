@@ -982,6 +982,83 @@ always @(posedge clk_74a) if (fbus != 0) begin
 	if (dut.status_running) begin $fdisplay(fbus, "%0t status_running", $time); $fclose(fbus); fbus = 0; end
 end
 
+// ---- +V1PROBE: per Saturn frame (VBlank start), VDP1 commands read, draw writes (count, non-zero data, x range in
+// 16 bit mode), writes as vdp1_fb_pocket takes them per buffer, SRAM writes / reads the engine issues, and the
+// display side: non-zero VOUTO / FBDI dots in the active area and in columns > 0. +FBDUMP=<n>: both buffers as
+// 352x256 big-endian words (index x*256+y) to fb0.bin / fb1.bin at pocket frame n.
+bit v1p = 0;
+initial v1p = $test$plusargs("V1PROBE");
+integer v1_cmd = 0, v1_dw = 0, v1_dwnz = 0, v1_dwx0 = 0, v1_xmin = 999, v1_xmax = -1, v1_ymin = 999, v1_ymax = -1;
+integer v1_f0w = 0, v1_f0nz = 0, v1_f1w = 0, v1_f1nz = 0, v1_f1m = 0, v1_srw = 0, v1_srr = 0;
+integer v1_vo = 0, v1_vox = 0, v1_fbdi = 0, v1_dots = 0, v1_dc = 0, v1_fe = 0, v1_fs = 0;
+reg     v1_rd_q = 1'b0, v1_vbl_q = 1'b1;
+always @(posedge clk_sys) if (v1p) begin
+	v1_rd_q <= (`SAT.VDP1.CMD_ST == 1);
+	if (`SAT.VDP1.CMD_ST == 1 && !v1_rd_q) v1_cmd++;
+	if (`SAT.VDP1.FB_WE != 2'b00) begin : dw
+		integer x, y;
+		x = `SAT.VDP1.FB_A[9:1]; y = `SAT.VDP1.FB_A[17:10];
+		v1_dw++;
+		if (`SAT.VDP1.FB_D != 16'h0000) begin
+			v1_dwnz++;
+			if (x == 0) v1_dwx0++;
+			if (x < v1_xmin) v1_xmin = x; if (x > v1_xmax) v1_xmax = x;
+			if (y < v1_ymin) v1_ymin = y; if (y > v1_ymax) v1_ymax = y;
+		end
+	end
+	if (`SAT.VDP1.FRAME_ERASE_EN) v1_fe++;
+	if (`SAT.VDP1.FRAME_START) v1_fs++;
+	if (dut.saturn.mem.fb.FB0_WE != 2'b00) begin v1_f0w++; if (dut.saturn.mem.fb.FB0_D != 0) v1_f0nz++; end
+	if (dut.saturn.mem.fb.FB1_WE != 2'b00) begin v1_f1w++; if (dut.saturn.mem.fb.FB1_D != 0) v1_f1nz++; if (dut.saturn.mem.fb.mm1) v1_f1m++; end
+	if (`SAT.VDP1.DCE_R && `SAT.VDP1.VTIM_N && `SAT.VDP1.HTIM_N) begin
+		v1_dots++;
+		if (`SAT.VDP1.VOUTO != 16'h0000) begin v1_vo++; if (`SAT.VDP1.OUT_X > 9'd1) v1_vox++; end
+		if (`SAT.FBDI != 16'h0000) v1_fbdi++;
+	end
+	v1_vbl_q <= `SAT.VBL_N;
+	if (!`SAT.VBL_N && v1_vbl_q) begin
+		$fdisplay(ftrace, "%0t V1 frame(pocket %0d) FB_SEL %b TVMR %h FBCR %h PTMR %h | cmds %0d fstart %0d draw-wr %0d nz %0d x0 %0d x %0d..%0d y %0d..%0d | fb0 wr %0d nz %0d fb1 wr %0d nz %0d m10k %0d | sram wr %0d rd %0d | erase-en %0d | dots %0d vout-nz %0d (x>1 %0d) fbdi-nz %0d",
+			$time, frame_no, `SAT.VDP1.FB_SEL, `SAT.VDP1.TVMR, `SAT.VDP1.FBCR, `SAT.VDP1.PTMR, v1_cmd, v1_fs, v1_dw, v1_dwnz, v1_dwx0,
+			v1_xmin, v1_xmax, v1_ymin, v1_ymax, v1_f0w, v1_f0nz, v1_f1w, v1_f1nz, v1_f1m, v1_srw, v1_srr, v1_fe, v1_dots, v1_vo, v1_vox, v1_fbdi);
+		v1_cmd = 0; v1_dw = 0; v1_dwnz = 0; v1_dwx0 = 0; v1_xmin = 999; v1_xmax = -1; v1_ymin = 999; v1_ymax = -1;
+		v1_f0w = 0; v1_f0nz = 0; v1_f1w = 0; v1_f1nz = 0; v1_f1m = 0; v1_srw = 0; v1_srr = 0; v1_vo = 0; v1_vox = 0; v1_fbdi = 0;
+		v1_dots = 0; v1_fe = 0; v1_fs = 0;
+	end
+end
+always @(posedge dut.saturn.clk_ram) if (v1p && dut.saturn.mem.fb.sr_req) begin
+	if (dut.saturn.mem.fb.sr_we) v1_srw++; else v1_srr++;
+end
+// +CMDPROBE=<frame>: from that pocket frame, for 3 frames and at most 400 lines, each command word VDP1 latches next
+// to the PSRAM1 model word at its address, then the vertex/origin registers when the command's read completes
+integer cmdprobe = -1, cmdp_n = 0;
+initial if (!$value$plusargs("CMDPROBE=%d", cmdprobe)) cmdprobe = -1;
+reg cmdp_we = 1'b0;   // VDP1P's block-local CMD_WE (VRAM_ST 6 = VS_CMD_READ)
+always @(posedge `SAT.VDP1.CLK) cmdp_we <= `SAT.VDP1.RST_N && `SAT.VDP1.VRAM_ST == 6 && `SAT.VDP1.VRAM_RDY;
+always @(posedge `SAT.VDP1.CLK) if (cmdprobe >= 0 && frame_no >= cmdprobe && frame_no < cmdprobe + 3 && cmdp_n < 400) begin
+	if (cmdp_we) begin
+		$fdisplay(ftrace, "%0t CMDW f%0d addr %h pos %h got %h model %h", $time, frame_no, `SAT.VDP1.CMD_ADDR,
+			`SAT.VDP1.CMD_POS, `SAT.VDP1.CMD_DAT, model1.mem[{4'd0, `SAT.VDP1.CMD_ADDR} + `SAT.VDP1.CMD_POS]);
+		cmdp_n++;
+	end
+	if (`SAT.VDP1.CMD_READ_DONE)
+		$fdisplay(ftrace, "%0t CMDDONE f%0d ctrl %h LOC %0d,%0d VERTA %0d,%0d", $time, frame_no, `SAT.VDP1.CMD.CMDCTRL,
+			$signed(`SAT.VDP1.LOC_COORD.X), $signed(`SAT.VDP1.LOC_COORD.Y), $signed(`SAT.VDP1.VERTA.X), $signed(`SAT.VDP1.VERTA.Y));
+end
+integer fbdump = -1;
+initial if (!$value$plusargs("FBDUMP=%d", fbdump)) fbdump = -1;
+always @(posedge video_vs) if (frame_no == fbdump) begin : fbd
+	integer f, i;
+	f = $fopen("fb0.bin", "wb");
+	for (i = 0; i < 90112; i++) $fwrite(f, "%c%c", srmodel.mem[40960 + i][15:8], srmodel.mem[40960 + i][7:0]);
+	$fclose(f);
+	f = $fopen("fb1.bin", "wb");
+	for (i = 0; i < 49152; i++) $fwrite(f, "%c%c", dut.saturn.mem.fb.m1[i][15:8], dut.saturn.mem.fb.m1[i][7:0]);
+	for (i = 0; i < 40960; i++) $fwrite(f, "%c%c", srmodel.mem[i][15:8], srmodel.mem[i][7:0]);
+	$fclose(f);
+	$fdisplay(ftrace, "%0t FBDUMP at pocket frame %0d, FB_SEL %b", $time, frame_no, `SAT.VDP1.FB_SEL);
+	$display("tb_sys: dumped both VDP1 framebuffers at frame %0d", frame_no);
+end
+
 // ------------------------------------------------------------------ run control and summary
 longint max_cycles = 20000000;
 initial begin

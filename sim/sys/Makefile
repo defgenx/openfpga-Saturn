@@ -17,7 +17,7 @@ ARGS   := +CYCLES=$(CYCLES) +GAP=$(GAP) +SD_TRP_PS=17400 $(if $(TRACE),+TRACE) $
 .PHONY: all run rom clean
 all: run
 
-$(B)/files.f: prep.py qip2f.py $(wildcard $(ROOT)/src/fpga/core/*.sv $(ROOT)/src/fpga/saturn/*/*.sv)
+$(B)/files.f: prep.py qip2f.py $(wildcard $(ROOT)/src/fpga/core/*.sv $(ROOT)/src/fpga/core/*.v $(ROOT)/src/fpga/core/*/*.sv $(ROOT)/src/fpga/saturn/*/*.sv $(ROOT)/src/fpga/saturn/*/*/*.sv)
 	python3 prep.py $(ROOT) $(B)
 
 $(B)/obj/Vtb_sys: Makefile $(B)/files.f tb_sys.sv $(MACROS) $(SIMSRC) $(MODELS)
