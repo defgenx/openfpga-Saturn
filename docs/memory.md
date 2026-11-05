@@ -169,9 +169,12 @@ the clock: 12 enables take 14 or 15 clk_sys at the 320 rates (45.1584 MHz / 53.7
 15 or 16 at the 352 rates (0.788). From the clk_ram edge R that raises the request to the sample edge that is at least
 26 clk_ram at 320 and 28 at 352.
 
-The controller sees the request at R + 1 (an odd edge, the one after a clk_sys edge). The SCSP ACT is decided at the
-slot-1 edge, also odd, and loaded straight into the pin registers for the frame's cycle 0 (no other command uses that
-pin cycle), so a request seen at that very edge is taken: the wait is 0 to 14 cycles after R + 1. The word lands in
+The controller sees the request at R + 1 (an odd edge, the one after a clk_sys edge). The SCSP ACT goes on the pins of
+the frame's cycle 0, which no other command uses: a request pending at the slot-0 edge through the command register `q`,
+and a request first seen at the slot-1 edge (also odd) at that very edge, where only RAS# comes from the request strobes
+and the row on `dram_a` is that of the request lines whenever nothing is pending (don't care on the NOP). So the wait
+is 0 to 14 cycles after R + 1. (A first version that put the whole ACT behind the strobe decode missed setup by up to
+1 ns on SCSP `MEM_WE` -> every SDRAM pin register; `MEM_A` -> `dram_a` takes the odd-edge hold exception of `sc_addr`.) The word lands in
 `dl_d` 8 cycles after that edge (READ on the pins 3 later, captured at READ + 4, lands at READ + 5). It goes to `ch2dout`
 at the landing edge unless that is earlier than `SCSP_MIN_AGE` = 14 cycles after R + 1; then it waits in `dl_d`. The
 floor keeps the word from replacing the previous request's before that was sampled. The READ, WRITE and PRECHARGE are
