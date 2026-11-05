@@ -111,6 +111,7 @@ reg [7:0] bios [0:524287];
 integer   bios_len = 0;
 integer   gap = 32;
 integer   ldgap = 86;
+integer   dslat_us = 0;                                          // +DSLAT_US: host delay before each data slot read's data, like the Pocket's SD card
 string    bios_path;
 integer   ftrace;
 longint   cyc = 0;
@@ -170,6 +171,7 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 		end
 		for (i = got; i < len; i++) sec[i] = 8'h00;
 		bridge_write(32'hF8001000, 32'h62750000);                 // ack: data follows
+		repeat (dslat_us * 74) @(posedge clk_74a);
 		for (i = 0; i < len; i = i + 4) begin
 			bridge_write(baddr + i, {sec[i], sec[i+1], sec[i+2], sec[i+3]});
 			repeat (gap) @(posedge clk_74a);
@@ -210,6 +212,7 @@ initial begin : host
 	if (!$value$plusargs("BIOS=%s", bios_path)) bios_path = "";
 	if (!$value$plusargs("GAP=%d", gap)) gap = 32;
 	if (!$value$plusargs("LDGAP=%d", ldgap)) ldgap = 86;
+	if (!$value$plusargs("DSLAT_US=%d", dslat_us)) dslat_us = 0;
 	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";
 	rtr_always = $test$plusargs("RTR_ALWAYS");
 	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
