@@ -180,6 +180,13 @@ at K-ready) and fails on an intermediate above both modes: the previous order fa
 and PAL 320 -> NTSC 352 (62.66 MHz). This is the register-level target, not the VCO trajectory, which no bench
 models; the settling overshoot of the final step is not checked either.
 
+Full-system runs to 16.2 s (`tb_sys`, BIOS + Hyper Duel, `pll_sim` relocks with clean clocks): release config, CKCHG352
+at 13.35 s; `POCKET_FIXED_352` (no relock), CKCHG352 at 12.55 s. Both: 0 SDRAM model errors, 0 stale SCSP samples, SYSRES
+released 0.10 s later, TVMD 352 x 240, display on 0.39 s after the CKCHG, VDP1 draw-end and VBlank interrupts at 60 Hz,
+the CPU in the game's frame-wait loop (0x06022688, waits for the draw-end handler's frame counter at 0x060494A6), no
+SNDON and a black picture until the end of the run, the same in both. So the sim shows no difference the relock makes,
+and does not reach the game's picture or music within 3.5 s of the CKCHG.
+
 `sim/pll` (`make -C sim pll`) runs it against `pll_sys_cfg` driven with MiSTer's mgmt sequence (M at 4, K at 7, start at
 2). `tb_pll_lite` checks the final DPRIO registers after NTSC 352, NTSC 320, PAL 352, PAL 320, NTSC 352 and PAL 352.
 `tb_bus` + `bus_diff.py` check the full `reconfig_to_pll` bus access by access from power-up through all four modes:
