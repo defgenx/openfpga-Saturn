@@ -220,3 +220,107 @@ All 14 map estimates and VDP2/MSH/SSH rows were independently checked against ra
 The first preflight stopped before Quartus because the source verifier treated a gitlink directory as a file; this was corrected and the measurements used a fresh scratch root. No Quartus measurement was retried. Quartus fit reports use Latin-1 for degree symbols; the report reader handles that encoding.
 
 All 29 scratch trees (14 preflight copies, 14 map copies, one fit copy) were removed using individually listed absolute paths, without globs. Deletion commands and receipts: `/home/omar/LocalOnly/pocket-saturn-20261105/a0-measure-20261105-v2/cleanup-exact-trees.py` and `/home/omar/LocalOnly/pocket-saturn-20261105/a0-measure-20261105-v2/cleanup.log`. Logs and extracted run records remain outside the repository; no database or full report is committed.
+
+## Follow-up: seven-small seeds 1/3 and eight-feature seed 5
+
+Same release source, image and QSF settings as above, with only the specified feature macro removals and seed change. Eight-feature = seven-small plus SPECIAL; ZOOM, RPARAMB and WDT remain cut. Fresh copies, separate heavy slots, no RTL edits.
+
+| Restored set / seed | Compile exit | Map ALMs | Fit ALMs needed | LABs used or required / 1,848 | M10K used / 308 | Wall seconds |
+|---|---:|---:|---:|---:|---:|---:|
+| seven-small-seed1 | 0 | 17880 | 18,037 | 1,846 / 1,848 | 303 / 308 | 841.85 |
+| seven-small-seed3 | 0 | 17880 | 18,172 | 1,848 / 1,848 | 303 / 308 | 819.48 |
+| eight-special-seed5 | 0 | 17912 | 18,206 | 1,848 / 1,848 | 303 / 308 | 834.30 |
+
+Worst reported setup/hold over all clocks at each corner (ns):
+
+| Run | Corner | Worst setup | Worst hold |
+|---|---|---:|---:|
+| seven-small-seed1 | Slow 1100mV 85C | +0.173 | +0.291 |
+| seven-small-seed1 | Slow 1100mV 0C | +0.081 | +0.280 |
+| seven-small-seed1 | Fast 1100mV 85C | +1.609 | +0.040 |
+| seven-small-seed1 | Fast 1100mV 0C | +1.613 | +0.023 |
+| seven-small-seed3 | Slow 1100mV 85C | -0.342 | +0.292 |
+| seven-small-seed3 | Slow 1100mV 0C | -0.413 | +0.217 |
+| seven-small-seed3 | Fast 1100mV 85C | +1.609 | +0.065 |
+| seven-small-seed3 | Fast 1100mV 0C | +1.613 | +0.022 |
+| eight-special-seed5 | Slow 1100mV 85C | +0.105 | +0.281 |
+| eight-special-seed5 | Slow 1100mV 0C | +0.219 | +0.270 |
+| eight-special-seed5 | Fast 1100mV 85C | +1.610 | +0.128 |
+| eight-special-seed5 | Fast 1100mV 0C | +1.614 | +0.095 |
+
+seven-small-seed1: reported setup/hold pass (+0.081/+0.023 ns); seven-small-seed3: TIMING FAIL (-0.413/+0.022 ns); eight-special-seed5: reported setup/hold pass (+0.105/+0.095 ns).
+
+Reported slack covers constrained paths. The original source constraints were not changed. Any negative slack is a timing failure even if Quartus exits 0. Diagnostics are quoted below.
+
+### seven-small-seed1
+
+Started `2026-11-05T01:08:02Z`; slot `taro-20261105T010759Z-3090`. Log: `/home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/seven-small-seed1/run.log`.
+
+```sh
+koboard slot take taro --kind heavy --as "Codex - saturn-a0-cuts" --est 30
+python3 -u sizing/pocket-cuts/measure.py fit --scratch /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105 --run seven-small-seed1
+# build.sh compile launches:
+docker run --rm --platform linux/amd64 --name saturn-a0-a0-followup-20261105-seven-small-seed1 -v /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/seven-small-seed1/tree:/build -w /build/src/fpga raetro/quartus:21.1 sh ../../tools/qflow.sh
+koboard slot done taro-20261105T010759Z-3090 --as "Codex - saturn-a0-cuts"
+```
+
+```text
+; ALMs needed [=A-B+C]                                        ; 18,037                ;       ;
+; Total LABs:  partially or completely used                   ; 1,846 / 1,848         ; 100 % ;
+; M10K blocks                                                 ; 303 / 308             ; 98 %  ;
+Info (332102): Design is not fully constrained for setup requirements
+Info (332102): Design is not fully constrained for hold requirements
+```
+
+### seven-small-seed3
+
+Started `2026-11-05T01:08:03Z`; slot `taro-20261105T010759Z-3264`. Log: `/home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/seven-small-seed3/run.log`.
+
+```sh
+koboard slot take taro --kind heavy --as "Codex - saturn-a0-cuts" --est 30
+python3 -u sizing/pocket-cuts/measure.py fit --scratch /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105 --run seven-small-seed3
+# build.sh compile launches:
+docker run --rm --platform linux/amd64 --name saturn-a0-a0-followup-20261105-seven-small-seed3 -v /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/seven-small-seed3/tree:/build -w /build/src/fpga raetro/quartus:21.1 sh ../../tools/qflow.sh
+koboard slot done taro-20261105T010759Z-3264 --as "Codex - saturn-a0-cuts"
+```
+
+```text
+; ALMs needed [=A-B+C]                                        ; 18,172                ;       ;
+; Total LABs:  partially or completely used                   ; 1,848 / 1,848         ; 100 % ;
+; M10K blocks                                                 ; 303 / 308             ; 98 %  ;
+Info (332102): Design is not fully constrained for setup requirements
+Info (332102): Design is not fully constrained for hold requirements
+```
+
+### eight-special-seed5
+
+Started `2026-11-05T01:08:01Z`; slot `taro-20261105T010759Z-82e2`. Log: `/home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/eight-special-seed5/run.log`.
+
+```sh
+koboard slot take taro --kind heavy --as "Codex - saturn-a0-cuts" --est 30
+python3 -u sizing/pocket-cuts/measure.py fit --scratch /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105 --run eight-special-seed5
+# build.sh compile launches:
+docker run --rm --platform linux/amd64 --name saturn-a0-a0-followup-20261105-eight-special-seed5 -v /home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/eight-special-seed5/tree:/build -w /build/src/fpga raetro/quartus:21.1 sh ../../tools/qflow.sh
+koboard slot done taro-20261105T010759Z-82e2 --as "Codex - saturn-a0-cuts"
+```
+
+```text
+; ALMs needed [=A-B+C]                                        ; 18,206                ;       ;
+; Total LABs:  partially or completely used                   ; 1,848 / 1,848         ; 100 % ;
+; M10K blocks                                                 ; 303 / 308             ; 98 %  ;
+Info (332102): Design is not fully constrained for setup requirements
+Info (332102): Design is not fully constrained for hold requirements
+```
+
+Retained follow-up summary SHA-256:
+
+```text
+88b206f5d8ed1918225fc7a2e453b3a40ed13827d7d97eed5dcc17e7b2b9f664  seven-small-seed1/ap_core.fit.summary
+c43d48badc12184207d471bf2087a6306d8312dbc1b1dfbe3b7d76b2c8e13e25  seven-small-seed1/ap_core.sta.summary
+5879c570d372beea5f3144fdefae3758ae540971da83020995a5d4ce1450f0e7  seven-small-seed3/ap_core.fit.summary
+a073f0a135a1670055264a34c838bff2d1936744104cb9b078ff91b45896c89b  seven-small-seed3/ap_core.sta.summary
+2b62ccbd747cb952fab08f396a7a57a6295ca19ebce2141659bf73e68364ac4a  eight-special-seed5/ap_core.fit.summary
+eccabc8768c4fbac5b539e5f6b43c5cba527ab80f18ab7c1880d06d690869ac8  eight-special-seed5/ap_core.sta.summary
+```
+
+All three follow-up scratch trees were removed by individually listed absolute paths; receipts: `/home/omar/LocalOnly/pocket-saturn-20261105/a0-followup-20261105/cleanup.log`. Logs and extracted records remain outside the repository.

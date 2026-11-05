@@ -25,6 +25,8 @@ FEATURES = "EXTCC SHADOW BACKLINE SPECIAL LNCOL ZOOM RPARAMB MOSAIC SPRWIN LINEW
 SMALL = "EXTCC SHADOW BACKLINE LNCOL MOSAIC SPRWIN LINEWIN".split()
 RUNS = {"baseline": [], **{x.lower(): [x] for x in FEATURES},
         "wdt": ["WDT"], "seven-small": SMALL, "all-ten": FEATURES}
+FITS = {"seven-small-fit": (SMALL, 5), "seven-small-seed1": (SMALL, 1),
+        "seven-small-seed3": (SMALL, 3), "eight-special-seed5": (SMALL + ["SPECIAL"], 5)}
 
 
 def check_disk():
@@ -42,7 +44,7 @@ def macro(feature):
     return "POCKET_CUT_SH2_WDT" if feature == "WDT" else "POCKET_CUT_VDP2_" + feature
 
 
-def prepare(scratch, name, features):
+def prepare(scratch, name, features, seed=5):
     check_disk()
     tree = scratch / name / "tree"
     tree.mkdir(parents=True, exist_ok=False)
@@ -60,6 +62,10 @@ def prepare(scratch, name, features):
         changed = changed.replace(line, "")
     assert "set_global_assignment -name SEED 5\n" in changed
     assert "set_global_assignment -name NUM_PARALLEL_PROCESSORS 1\n" in changed
+    if seed != 5:
+        assert changed.count("set_global_assignment -name SEED 5\n") == 1
+        changed = changed.replace("set_global_assignment -name SEED 5\n",
+                                  f"set_global_assignment -name SEED {seed}\n")
     qsf.write_text(changed)
     # Verify every tracked source byte; only the precisely derived QSF may differ.
     tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=SOURCE).split(b"\0")
@@ -124,8 +130,8 @@ def collect_map(tree, destination):
     return {"alm": int(match[1].replace(",", "")), "selected": selected, "entities": entities}
 
 
-def execute(scratch, name, features, fit=False):
-    tree = prepare(scratch, name, features)
+def execute(scratch, name, features, fit=False, seed=5):
+    tree = prepare(scratch, name, features, seed)
     container = "saturn-a0-" + scratch.name + "-" + name
     command = ["docker", "run", "--rm", "--platform", "linux/amd64", "--name", container,
                "-v", str(tree) + ":/build", "-w", "/build/src/fpga", IMAGE,
@@ -145,7 +151,7 @@ def execute(scratch, name, features, fit=False):
         env = dict(os.environ, PATH=str(wrapper) + ":" + os.environ["PATH"], QUARTUS_IMAGE=IMAGE)
     else:
         env = os.environ.copy()
-    record = {"name": name, "features": features, "tree": str(tree), "container": container,
+    record = {"name": name, "features": features, "seed": seed, "tree": str(tree), "container": container,
               "command": shlex.join(command), "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     print("START " + name, flush=True)
     started = time.monotonic()
@@ -335,16 +341,115 @@ def report(scratch):
     (OUTPUT / "RESULTS.md").write_text("\n".join(lines))
 
 
+def append_fits(scratch):
+    """Append the requested seed/feature follow-up; preserve the original report."""
+    names = [name for name in FITS if name != "seven-small-fit"]
+    records = []
+    for name in names:
+        recordfile = scratch / name / "run.json"
+        record = json.loads(recordfile.read_text())
+        tree = Path(record["tree"])
+        fitrpt = tree / "src/fpga/output_files/ap_core.fit.rpt"
+        if fitrpt.exists():
+            rows = {}
+            for line in fitrpt.read_text(encoding="latin-1").splitlines():
+                if re.match(r";\s*(ALMs needed \[|Total LABs:|M10K blocks\s)", line):
+                    rows.setdefault(line.split(";")[1].strip(), line.strip())
+            record["resource_rows"] = list(rows.values())
+            mapped = collect_map(tree, None)
+            record["map"] = {k: mapped[k] for k in ("alm", "selected")}
+        runlog = (scratch / name / "run.log").read_text(encoding="latin-1")
+        record["diagnostics"] = [line for line in runlog.splitlines()
+                                 if line.startswith("Error") or "not fully constrained" in line]
+        required = re.search(r"requires\s+([\d,]+)\s+LABs", runlog, re.I)
+        record["required_labs"] = int(required[1].replace(",", "")) if required else None
+        recordfile.write_text(json.dumps(record, indent=2) + "\n")
+        records.append(record)
+    marker = "## Follow-up: seven-small seeds 1/3 and eight-feature seed 5"
+    lines = [marker, "",
+             "Same release source, image and QSF settings as above, with only the specified feature "
+             "macro removals and seed change. Eight-feature = seven-small plus SPECIAL; ZOOM, "
+             "RPARAMB and WDT remain cut. Fresh copies, separate heavy slots, no RTL edits.", "",
+             "| Restored set / seed | Compile exit | Map ALMs | Fit ALMs needed | LABs used or required / 1,848 | M10K used / 308 | Wall seconds |",
+             "|---|---:|---:|---:|---:|---:|---:|"]
+    for record in records:
+        values = {row.split(";")[1].strip(): row.split(";")[2].strip()
+                  for row in record.get("resource_rows", [])}
+        def resource(prefix):
+            return next((v for k, v in values.items() if k.startswith(prefix)), "N/A")
+        labs = resource("Total LABs:")
+        if record["required_labs"] is not None:
+            needed = record["required_labs"]
+            labs = f"{needed:,} required / 1,848 ({needed-1848:+d} LABs)"
+        lines.append(f"| {record['name']} | {record['returncode']} | {record.get('map', {}).get('alm', 'N/A')} | "
+                     f"{resource('ALMs needed')} | {labs} | {resource('M10K blocks')} | {record['seconds']:.2f} |")
+    lines += ["", "Worst reported setup/hold over all clocks at each corner (ns):", "",
+              "| Run | Corner | Worst setup | Worst hold |", "|---|---|---:|---:|"]
+    outcomes = []
+    for record in records:
+        sta = OUTPUT / record["name"] / "ap_core.sta.summary"
+        if not sta.exists():
+            lines.append(f"| {record['name']} | All four: STA not reached | N/A | N/A |")
+            outcomes.append(record["name"] + ": STA unavailable")
+            continue
+        matched = re.findall(r"Type\s*:\s*(.*?) Model (Setup|Hold) '(.*?)'\s*\nSlack\s*:\s*([^\n]+)", sta.read_text())
+        corners = {}
+        for corner, kind, clock, slack in matched:
+            corners.setdefault(corner, {}).setdefault(kind, []).append((float(slack), clock))
+        assert len(corners) == 4, record["name"]
+        for corner, kinds in corners.items():
+            assert set(kinds) == {"Setup", "Hold"}
+            setup, hold = min(kinds["Setup"])[0], min(kinds["Hold"])[0]
+            lines.append(f"| {record['name']} | {corner} | {setup:+.3f} | {hold:+.3f} |")
+        worst_setup = min(pair[0] for kinds in corners.values() for pair in kinds["Setup"])
+        worst_hold = min(pair[0] for kinds in corners.values() for pair in kinds["Hold"])
+        state = "reported setup/hold pass" if min(worst_setup, worst_hold) >= 0 else "TIMING FAIL"
+        outcomes.append(f"{record['name']}: {state} ({worst_setup:+.3f}/{worst_hold:+.3f} ns)")
+    lines += ["", "; ".join(outcomes) + ".", "",
+              "Reported slack covers constrained paths. The original source constraints were not changed. "
+              "Any negative slack is a timing failure even if Quartus exits 0. Diagnostics are quoted below.", ""]
+    for record in records:
+        name = record["name"]
+        slot = (scratch / (name + "-slot.txt")).read_text().strip()
+        lines += [f"### {name}", "", f"Started `{record['started_utc']}`; slot `{slot}`. "
+                  f"Log: `{scratch / name / 'run.log'}`.", "", "```sh",
+                  'koboard slot take taro --kind heavy --as "Codex - saturn-a0-cuts" --est 30',
+                  f"python3 -u sizing/pocket-cuts/measure.py fit --scratch {scratch} --run {name}",
+                  "# build.sh compile launches:",
+                  shlex.join(["docker", "run", "--rm", "--platform", "linux/amd64", "--name", record["container"],
+                              "-v", record["tree"] + ":/build", "-w", "/build/src/fpga", IMAGE, "sh", "../../tools/qflow.sh"]),
+                  f'koboard slot done {slot} --as "Codex - saturn-a0-cuts"', "```", "",
+                  "```text", *record.get("resource_rows", []), *record["diagnostics"], "```", ""]
+    lines += ["Retained follow-up summary SHA-256:", "", "```text"]
+    for name in names:
+        for path in sorted((OUTPUT / name).glob("*.summary")):
+            lines.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(OUTPUT)}")
+    lines += ["```", ""]
+    cleanup = scratch / "cleanup.log"
+    if cleanup.exists():
+        receipts = cleanup.read_text().splitlines()
+        assert len(receipts) == 3 and all(line.startswith("REMOVED ") for line in receipts)
+        lines += ["All three follow-up scratch trees were removed by individually listed absolute paths; "
+                  f"receipts: `{cleanup}`. Logs and extracted records remain outside the repository.", ""]
+    target = OUTPUT / "RESULTS.md"
+    original = target.read_text().split(marker, 1)[0].rstrip()
+    target.write_text(original + "\n\n" + "\n".join(lines))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("stage", choices=["maps", "fit", "report"])
+    p.add_argument("stage", choices=["maps", "fit", "report", "append-fits"])
     p.add_argument("--scratch", required=True, type=Path)
     p.add_argument("--jobs", type=int, default=6)
+    p.add_argument("--run", choices=list(FITS), default="seven-small-fit")
     args = p.parse_args()
     if not 1 <= args.jobs <= 6:
         p.error("jobs must be between 1 and 6")
     if args.stage == "report":
         report(args.scratch.resolve())
+        return
+    if args.stage == "append-fits":
+        append_fits(args.scratch.resolve())
         return
     # Allow the measurement-only commit itself; release source must still match.
     assert capture(["git", "rev-parse", REVISION], cwd=SOURCE) == REVISION
@@ -354,7 +459,8 @@ def main():
     scratch = args.scratch.resolve()
     scratch.mkdir(parents=True, exist_ok=True)
     if args.stage == "fit":
-        execute(scratch, "seven-small-fit", SMALL, fit=True)
+        features, seed = FITS[args.run]
+        execute(scratch, args.run, features, fit=True, seed=seed)
     else:
         (scratch / "image.txt").write_text(capture(["docker", "image", "inspect", IMAGE, "--format", "{{.Id}}"])+"\n")
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:

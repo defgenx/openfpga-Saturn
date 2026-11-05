@@ -1,0 +1,517 @@
+------------------------------------------------------------
+Timing Analyzer Summary
+------------------------------------------------------------
+
+Type  : Slow 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.105
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.356
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'dram_clk_pin'
+Slack : 1.143
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'sram_ref_pin'
+Slack : 1.285
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'cram0_clk_pin'
+Slack : 3.431
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'cram1_clk_pin'
+Slack : 3.434
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'clk_74a'
+Slack : 3.601
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'bridge_spiclk'
+Slack : 10.108
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 13.091
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.281
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'clk_74a'
+Slack : 0.311
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.326
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'bridge_spiclk'
+Slack : 0.533
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 0.574
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'sram_ref_pin'
+Slack : 1.449
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'dram_clk_pin'
+Slack : 3.076
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'cram1_clk_pin'
+Slack : 5.672
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Hold 'cram0_clk_pin'
+Slack : 6.044
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Recovery 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.324
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Recovery 'clk_74a'
+Slack : 10.492
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Removal 'clk_74a'
+Slack : 1.116
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Removal 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 1.949
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|fpll_0|fpll|vcoph[0]'
+Slack : 1.091
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 2.747
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'sram_ref'
+Slack : 4.319
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'clk_74a'
+Slack : 5.336
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'bridge_spiclk'
+Slack : 5.785
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.104
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'cram0_clk_reg'
+Slack : 8.682
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'cram1_clk_reg'
+Slack : 8.694
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 33.853
+TNS   : 0.000
+
+Type  : Slow 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk'
+Slack : 33.853
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.219
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.261
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'dram_clk_pin'
+Slack : 1.114
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'sram_ref_pin'
+Slack : 1.304
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'cram1_clk_pin'
+Slack : 3.452
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'cram0_clk_pin'
+Slack : 3.463
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'clk_74a'
+Slack : 3.829
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'bridge_spiclk'
+Slack : 10.251
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 13.176
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.270
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'clk_74a'
+Slack : 0.296
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.296
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'bridge_spiclk'
+Slack : 0.553
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 0.590
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'sram_ref_pin'
+Slack : 1.482
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'dram_clk_pin'
+Slack : 3.140
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'cram1_clk_pin'
+Slack : 5.689
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Hold 'cram0_clk_pin'
+Slack : 6.008
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Recovery 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.422
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Recovery 'clk_74a'
+Slack : 10.612
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Removal 'clk_74a'
+Slack : 1.030
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Removal 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 1.765
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|fpll_0|fpll|vcoph[0]'
+Slack : 1.091
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 2.690
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'sram_ref'
+Slack : 4.320
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'clk_74a'
+Slack : 5.257
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'bridge_spiclk'
+Slack : 5.779
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.046
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'cram0_clk_reg'
+Slack : 8.684
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'cram1_clk_reg'
+Slack : 8.696
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk'
+Slack : 33.787
+TNS   : 0.000
+
+Type  : Slow 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 33.789
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'sram_ref_pin'
+Slack : 1.610
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'dram_clk_pin'
+Slack : 1.641
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'cram0_clk_pin'
+Slack : 3.718
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'cram1_clk_pin'
+Slack : 3.788
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 4.075
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 4.549
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'clk_74a'
+Slack : 8.594
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'bridge_spiclk'
+Slack : 12.087
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 15.127
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.128
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'clk_74a'
+Slack : 0.133
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.138
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'bridge_spiclk'
+Slack : 0.211
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 0.226
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'sram_ref_pin'
+Slack : 1.761
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'dram_clk_pin'
+Slack : 3.345
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'cram1_clk_pin'
+Slack : 6.007
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Hold 'cram0_clk_pin'
+Slack : 6.210
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Recovery 'clk_74a'
+Slack : 12.037
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Recovery 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 12.974
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Removal 'clk_74a'
+Slack : 0.462
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Removal 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.616
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|fpll_0|fpll|vcoph[0]'
+Slack : 1.091
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 3.251
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'sram_ref'
+Slack : 4.354
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'clk_74a'
+Slack : 5.211
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'bridge_spiclk'
+Slack : 6.387
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.610
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'cram0_clk_reg'
+Slack : 8.693
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'cram1_clk_reg'
+Slack : 8.715
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 34.427
+TNS   : 0.000
+
+Type  : Fast 1100mV 85C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk'
+Slack : 34.427
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'sram_ref_pin'
+Slack : 1.614
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'dram_clk_pin'
+Slack : 1.648
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'cram0_clk_pin'
+Slack : 3.704
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'cram1_clk_pin'
+Slack : 3.771
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 4.261
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 4.844
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'clk_74a'
+Slack : 8.816
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'bridge_spiclk'
+Slack : 12.232
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Setup 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 15.364
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.095
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 0.120
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'clk_74a'
+Slack : 0.123
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 0.193
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'bridge_spiclk'
+Slack : 0.201
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'sram_ref_pin'
+Slack : 1.768
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'dram_clk_pin'
+Slack : 3.355
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'cram1_clk_pin'
+Slack : 6.034
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Hold 'cram0_clk_pin'
+Slack : 6.205
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Recovery 'clk_74a'
+Slack : 12.193
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Recovery 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 13.264
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Removal 'clk_74a'
+Slack : 0.409
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Removal 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 0.454
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|fpll_0|fpll|vcoph[0]'
+Slack : 1.091
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk'
+Slack : 3.254
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'sram_ref'
+Slack : 4.357
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'clk_74a'
+Slack : 5.162
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'bridge_spiclk'
+Slack : 6.392
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk'
+Slack : 7.613
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'cram0_clk_reg'
+Slack : 8.717
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'cram1_clk_reg'
+Slack : 8.723
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk'
+Slack : 34.430
+TNS   : 0.000
+
+Type  : Fast 1100mV 0C Model Minimum Pulse Width 'ic|saturn|pll|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk'
+Slack : 34.431
+TNS   : 0.000
+
+------------------------------------------------------------
