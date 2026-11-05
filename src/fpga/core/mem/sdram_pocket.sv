@@ -392,9 +392,10 @@ always @(posedge clk) begin
 		{dram_ras_n, dram_cas_n, dram_we_n} <= i_cmd;
 		dram_a <= i_a; dram_ba <= i_ba; dram_dqm <= 2'b00; dram_dq_oe <= 1'b0; dram_dq_o <= '0;
 	end else begin
-		// at a fresh SCSP request q holds cycle 0's NOP with bank 3: RAS# low makes it the ACT (CAS#, WE# high in both)
+		// at the slot-1 edge with nothing pending q holds cycle 0's NOP with bank 3: the row of the request lines goes on
+		// the address pins anyway (don't care on a NOP), and RAS# low for a fresh request makes it the ACT
 		{dram_ras_n, dram_cas_n, dram_we_n} <= {q_cmd[2] & ~fresh, q_cmd[1:0]};
-		dram_a <= fresh ? row_a({1'b1, rq_addr[18:11]}) : q_a;
+		dram_a <= slot1_q ? row_a({1'b1, rq_addr[18:11]}) : q_a;
 		dram_ba <= q_ba; dram_dqm <= q_dqm; dram_dq_o <= q_dq; dram_dq_oe <= q_oe;
 	end
 
