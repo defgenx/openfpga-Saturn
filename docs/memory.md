@@ -114,6 +114,16 @@ What differs from MiSTer:
 * Flags are kept per block number, so an FB_MODE3 change reinterprets them until the next erase (and a fill queued
   before the change writes the wrong words).
 
+### Draw handshake
+
+MiSTer's VDP1 issues draw accesses without looking at FB_RDY and takes a draw read's data (colour calculation,
+half-transparency, MON) two clk_sys after its strobe; only the FB1 M10K columns answer that fast. Under `POCKET_VDP1P`,
+VDP1P's `FB_DRAW_RDY` is FB_RDY: a draw strobe is not issued while it is low (`FB_DRAW_WAIT`, FB_ST's draw branch), and
+`FBDS_READBACK` takes `FB_DRAW_Q` only once it is high again. Without the define it is 1, MiSTer's logic (`sim/vdp1`
+compares against that). While FB_RDY stays high the timing is MiSTer's: an M10K pixel takes 2 clk_sys per write and 5
+per read-modify-write. A draw read waits for the write FIFO to drain (the engine serves writes first), so a
+read-modify-write right after a long write span can wait up to about 190 SRAM writes.
+
 **The Pocket's SRAM is an AS6C2016-55BIN** (Analogue, https://www.analogue.co/developer/docs/external-hardware):
 tAA 55 ns, tWP 45 ns, tAW / tBW 50 ns, tDW 25 ns, tWC 55 ns (Alliance datasheet v1.1). Up to v0.2.18 `sram_pocket` ran it
 as a 10 ns part (read sampled at 35 ns, WE# low 8.7 ns), so on hardware every SRAM pixel was wrong: FB1 columns 192 and
@@ -130,6 +140,7 @@ Measured in `sim/mem/tb_fb` with the 55 ns model and RD_CYC = WR_CYC = 8:
 | VBlank erase, 1 write per 2 clk_sys (C) | 0 drops, 0 errors, 0 SRAM writes (lazy erase; before it: 255 drops, 400 errors) |
 | FB1 tail erase with FB0 drawing, FB0 erase with the FB1 tail drawing (D) | 0 drops, 0 errors (before: 255 drops, 607 errors) |
 | draws into erased blocks: random words, byte lanes, two blocks interleaved, reads in between; every word of 16 rows of both buffers read back; display of erased, drawn and untouched blocks; the same in FB_MODE3 (E) | 0 errors, display valid within 6 clk_sys |
+| VDP1P's draw side (FBD_ST + FB_ST model, FB_RDY honoured, F): 4 rows of 352 writes, 2 read-modify-write passes over them, 3,000 random mixed pixels, both buffers, every pixel read back | 0 drops, 0 errors; FB0 60 ns per write, 231 per read-modify-write; FB1 M10K span 2 / 5 clk_sys per pixel (MiSTer's). Ignoring FB_RDY (`-DFBD_NOWAIT`, `make negative`): 255 drops, 1,245 errors |
 | the whole bench with the clocks' PLL phase (`-DCLK_ALIGNED`) and random SRAM power-up contents (`+MEMRAND`) | pass (display within 7 clk_sys, 7 also before the lazy erase) |
 | SRAM model timing checks | 0 errors |
 
@@ -639,11 +650,10 @@ gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
 7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
    caches, SH-1 and SCSP are counted.
-14. VDP1P waits for FB_RDY on CPU accesses only. A draw write is posted without it (into SRAM pixels faster than the
-    SRAM takes them on a long span: drops count in `dbg_drop`), and a draw read takes `FB_DRAW_Q` one clk_sys after its
-    strobe, before an SRAM read returns (only the M10K columns 0-191 of FB1 answer in time). `tb_fb` drives the
-    FB_RDY handshake instead. The engine drains the write FIFO ahead of the display read, so drawing into SRAM pixels
-    can delay display reads of the other buffer.
+14. VDP1P's draw side waits for FB_RDY (section 2, "Draw handshake"); `tb_fb` F checks a model of it, not VDP1P
+    itself, and drawing into SRAM pixels is slower than on MiSTer (a read-modify-write after a long span waits for
+    the FIFO). The engine drains the write FIFO ahead of the display read, so drawing into SRAM pixels can delay
+    display reads of the other buffer.
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.

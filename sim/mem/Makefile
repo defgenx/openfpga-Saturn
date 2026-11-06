@@ -38,6 +38,9 @@ build/tb_fb: tb_fb.sv $(FBSRC) | build
 build/tb_fb_slow: tb_fb.sv $(FBSRC) | build
 	$(IVL) $(FLAGS) -DSRAMAA_PS=66000 -o $@ tb_fb.sv $(FBSRC)
 
+build/tb_fb_nowait: tb_fb.sv $(FBSRC) | build
+	$(IVL) $(FLAGS) -DFBD_NOWAIT -o $@ tb_fb.sv $(FBSRC)
+
 build/tb_fb_al: tb_fb.sv $(FBSRC) | build
 	$(IVL) $(FLAGS) -DCLK_ALIGNED -o $@ tb_fb.sv $(FBSRC)
 
@@ -93,10 +96,12 @@ elab:
 long: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000 $(SDARGS)
 
-# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 66 ns SRAM (read sampled 69.8 ns after the address edge, 4.5 ns of pins; 62 ns passes)
-negative: build/tb_sdram build/tb_fb build/tb_fb_slow
+# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 66 ns SRAM (read sampled 69.8 ns after the address edge, 4.5 ns of pins; 62 ns passes);
+# VDP1P's draw side ignoring FB_RDY (test F)
+negative: build/tb_sdram build/tb_fb build/tb_fb_slow build/tb_fb_nowait
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(SDARGS) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3
+	-$(VVP) build/tb_fb_nowait +N=100 | grep -E 'tb_fb: F|PASS|FAIL'
 
 .PHONY: all elab long negative sdram sdram-scsp psram psram-modes ddram fb load boot clean mc-check
 

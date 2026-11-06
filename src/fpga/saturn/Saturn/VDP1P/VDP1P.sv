@@ -125,6 +125,12 @@ module VDP1P (
 	bit          FB_RD;
 	bit  [15: 0] FB_DRAW_Q;
 	bit          FB_DRAW_WAIT;
+`ifdef POCKET_VDP1P
+	// Pocket: draw strobes wait for FB_RDY and a draw read for its data (SRAM pixels; docs/memory.md section 2, "Draw handshake")
+	wire         FB_DRAW_RDY = FB_RDY;
+`else
+	wire         FB_DRAW_RDY = 1'b1;   // MiSTer: the frame buffers always answer in time
+`endif
 	bit  [17: 1] FB_DISP_A;
 	bit          FB_DISP_WE;
 	bit  [15: 0] FB_DISP_Q;
@@ -1200,7 +1206,7 @@ module VDP1P (
 					FBD_ST <= FBDS_READBACK;
 				end
 			
-				FBDS_READBACK: begin
+				FBDS_READBACK: if (FB_DRAW_RDY) begin
 					DRAW_BACK_C <= FB_DRAW_Q;
 					FB_DRAW_PEND <= 1;
 					FBD_ST <= FBDS_WRITE;
@@ -1832,7 +1838,7 @@ module VDP1P (
 							FB_ST <= FS_CPU_WAIT;
 						end
 					end
-					else if (((FB_READ_PEND && !FB_RD) || (FB_DRAW_PEND && !FB_WE)) && FB_DRAW_WE && !(FBRAM_SEL && BURST)) begin
+					else if (((FB_READ_PEND && !FB_RD) || (FB_DRAW_PEND && !FB_WE)) && FB_DRAW_WE && !(FBRAM_SEL && BURST) && FB_DRAW_RDY) begin
 						FB_Y = !DIE ? DRAW_Y[8:0] : DRAW_Y[9:1];
 						casex (TVMR.TVM[1:0]) 
 							2'bx0: begin
@@ -1884,7 +1890,7 @@ module VDP1P (
 		end
 	end
 	assign CPU_VRAM_BUSY = VRAM_SEL || CPU_VRAM_RPEND || CPU_VRAM_WPEND || CPU_VRAM_ACCESS;
-	assign FB_DRAW_WAIT = (FB_ST != FS_IDLE) || CPU_FB_WPEND || CPU_FB_RPEND;
+	assign FB_DRAW_WAIT = (FB_ST != FS_IDLE) || CPU_FB_WPEND || CPU_FB_RPEND || !FB_DRAW_RDY;
 	wire PAT_PREREAD_WAIT = (VRAM_ST == VS_PAT_READ) && PAT_PREREAD && !VRAM_RDY;
 	
 	// Vertex set-up arithmetic for the scaled-sprite zoom points and the normal-sprite far corner. X words

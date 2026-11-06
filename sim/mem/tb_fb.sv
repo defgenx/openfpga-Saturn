@@ -8,6 +8,9 @@
 //   B2, D       FB1 display across the M10K / SRAM tail boundary, concurrent erase and draw on both SRAM streams
 //   E           draws into erased blocks (partial blocks, byte lanes, two blocks interleaved, reads in between), every
 //               word read back; display reads across erased / untouched / materialised blocks; the same in FB_MODE3
+//   F           VDP1P's draw side (FBD_ST + FB_ST) waiting for FB_RDY: long write spans and read-modify-write passes on
+//               both buffers, every pixel read back; M10K spans keep 2 / 5 clk_sys per pixel
+//   -DFBD_NOWAIT   test F's VDP1P model ignores FB_RDY (MiSTer's draw timing): must FAIL
 //   -DSRAMAA_PS=n  SRAM access time in the model (default 55000, the Pocket's AS6C2016-55)
 //   -DCLK_ALIGNED  clk_sys rising with every other clk_ram rising edge (the PLL's phase); default half a clk_ram off
 //   +N=count    operations in test A;  +SEED=n  another random sequence;  +MEMRAND  random SRAM power-up contents (never visible: all blocks start erased)
@@ -244,8 +247,75 @@ task automatic disp(input integer fb_sel, input [17:1] a);
 	end
 endtask
 
+// ---------------------------------------------------------------- VDP1P draw side (test F): FBD_ST and FB_ST's draw
+// branch of VDP1P.sv with FB_DRAW_RDY = FB_RDY (POCKET_VDP1P); keep in step with VDP1P.sv. -DFBD_NOWAIT: FB_RDY ignored
+// (MiSTer's timing), test F must then fail.
+`ifdef FBD_NOWAIT
+wire        v_rdy = 1'b1;
+`else
+wire        v_rdy = fb_rdy;
+`endif
+localparam [2:0] V_IDLE = 0, V_READ = 1, V_RWAIT = 2, V_RBACK = 3, V_WRITE = 4;
+reg         v_on = 0, v_fst = 0, v_rpend = 0, v_dpend = 0, v_rmw = 0, v_rd = 0;
+reg   [2:0] v_st = V_IDLE;
+reg  [17:1] v_pa = 0;                        // DRAW_X / DRAW_Y
+reg  [15:0] v_d = 0, v_back = 0;             // pixel colour, DRAW_BACK_C
+reg   [1:0] v_we = 0;
+integer     v_n = 0, v_i = 0, v_cyc = 0;
+reg  [17:1] f_a [0:8191];
+reg  [15:0] f_d [0:8191];
+reg         f_m [0:8191];                    // 1: read-modify-write (new = old + d, as half-transparency reads), 0: write
+wire        v_wait = v_fst || !v_rdy;        // FB_DRAW_WAIT (no CPU access here)
+wire [15:0] v_wd = v_rmw ? v_back + v_d : v_d;   // FB_DRAW_D
+always @(posedge clk_sys) if (v_on) begin
+	v_cyc <= v_cyc + 1;
+	case (v_st)
+	V_IDLE:  if (v_i < v_n) begin
+		v_pa <= f_a[v_i]; v_d <= f_d[v_i]; v_rmw <= f_m[v_i]; v_i <= v_i + 1;
+		if (f_m[v_i]) begin v_rpend <= 1; v_st <= V_READ; end else begin v_dpend <= 1; v_st <= V_WRITE; end
+	end
+	V_READ:  if (!v_wait) begin v_rpend <= 0; v_st <= V_RWAIT; end
+	V_RWAIT: v_st <= V_RBACK;
+	V_RBACK: if (v_rdy) begin v_back <= fsel ? fb0_q : fb1_q; v_dpend <= 1; v_st <= V_WRITE; end
+	V_WRITE: if (!v_wait) begin v_dpend <= 0; v_st <= V_IDLE; end
+	default: v_st <= V_IDLE;
+	endcase
+	if (!v_fst) begin
+		if (((v_rpend && !v_rd) || (v_dpend && !(|v_we))) && v_rdy) begin
+			v_we <= {2{v_dpend}}; v_rd <= v_rpend; v_fst <= 1;
+			if (fsel) begin fb0_a <= v_pa; fb0_d <= v_wd; fb0_we <= {2{v_dpend}}; fb0_rd <= v_rpend; end
+			else      begin fb1_a <= v_pa; fb1_d <= v_wd; fb1_we <= {2{v_dpend}}; fb1_rd <= v_rpend; end
+		end
+	end else begin
+		v_we <= 0; v_rd <= 0; v_fst <= 0;
+		fb0_we <= 0; fb0_rd <= 0; fb1_we <= 0; fb1_rd <= 0;
+	end
+end
+
+// queue one test F pixel of buffer fb_sel and update the shadow
+task automatic fpush(input integer fb_sel, input [8:0] x, input [7:0] y, input [15:0] d, input m);
+	reg [16:0] ix; reg [15:0] o;
+	begin
+		f_a[v_n] = vaddr(x, y); f_d[v_n] = d; f_m[v_n] = m; v_n = v_n + 1;
+		ix = idx_of(x, y);
+		o = (fb_sel == 0) ? sh0[ix] : sh1[ix];
+		o = m ? o + d : d;
+		if (fb_sel == 0) sh0[ix] = o; else sh1[ix] = o;
+		if (in_sram(fb_sel, ix)) begin if (fb_sel == 0) bf0[blk_of(ix)] = 0; else bf1[blk_of(ix)] = 0; end
+	end
+endtask
+// run the queued pixels through the VDP1P model; returns clk_sys taken
+task automatic frun(output integer cyc);
+	begin
+		@(posedge clk_sys); v_i = 0; v_cyc = 0; v_on <= 1;
+		@(posedge clk_sys);
+		while (v_i < v_n || v_st != V_IDLE || v_fst) @(posedge clk_sys);
+		v_on = 0; cyc = v_cyc; v_n = 0;
+	end
+endtask
+
 // ---------------------------------------------------------------- stimulus
-integer t, bx, by, px, py, k2, pass, n, w0;
+integer t, bx, by, px, py, k2, pass, n, w0, cy, f_bad;
 reg [15:0] rd16;
 reg [15:0] expq;
 integer t_a0;
@@ -402,6 +472,32 @@ initial begin
 		draw_r(0, bx, by);
 	end
 	$display("tb_fb: D concurrent erase and draw on both SRAM streams: FIFO drops %0d, errors %0d", fb_drop, errs - pass);
+
+	// ---- F: VDP1P's draw side (model above) on rows 100-104: long write spans, read-modify-write passes, a random mix
+	pass = errs; w0 = fb_drop; f_bad = 0;
+	for (k2 = 0; k2 < 2; k2 = k2 + 1) begin
+		@(posedge clk_sys) fsel <= (k2 == 0);
+		drain;
+		if (k2 == 1) begin   // M10K columns 0-191: MiSTer's 2 clk_sys per write, 5 per read-modify-write
+			for (bx = 0; bx < 192; bx = bx + 1) fpush(1, bx, 104, $urandom, 0);
+			frun(cy); if (cy > 2 * 192 + 3) f_bad = f_bad + 1;
+			$display("tb_fb: F FB1 M10K span: 192 writes in %0d clk_sys", cy);
+			for (bx = 0; bx < 192; bx = bx + 1) fpush(1, bx, 104, $urandom, 1);
+			frun(cy); if (cy > 5 * 192 + 3) f_bad = f_bad + 1;
+			$display("tb_fb: F FB1 M10K span: 192 read-modify-writes in %0d clk_sys", cy);
+		end
+		for (by = 100; by < 104; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) fpush(k2, bx, by, $urandom, 0);
+		frun(cy);
+		$display("tb_fb: F FB%0d 1408 writes (4 rows of 352): %0d ns per pixel, drops %0d", k2, cy * 2 * T_RAM / 1408000, fb_drop);
+		for (n = 0; n < 2; n = n + 1) for (by = 100; by < 104; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) fpush(k2, bx, by, $urandom, 1);
+		frun(cy);
+		$display("tb_fb: F FB%0d 2816 read-modify-writes: %0d ns per pixel", k2, cy * 2 * T_RAM / 2816000);
+		for (n = 0; n < 3000; n = n + 1) fpush(k2, $urandom % 352, 100 + $urandom % 4, $urandom, $urandom % 2);
+		frun(cy);
+		for (by = 100; by < 105; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) draw_r(k2, bx, by);
+	end
+	errs = errs + f_bad;
+	$display("tb_fb: F VDP1P draw side with FB_RDY: FIFO drops %0d, timing violations %0d, errors %0d", fb_drop - w0, f_bad, errs - pass);
 
 	// ---- E: draws into erased blocks. FB0 rows 0-55 and the FB1 tail rows 0-124 are erased (D); per row two
 	// neighbouring blocks at a time get random words written (random byte lanes), with reads in between
