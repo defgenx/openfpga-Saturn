@@ -138,8 +138,15 @@ The cut builds do not match the golden by design; only the macro-less build is c
 
 ## Compact SCU DSP (`POCKET_SCU_DSP_COMPACT`, `SCUP2_DSPC.sv`)
 
-Same ports as `SCUP2_DSP`; `POCKET_CUT_SCU_DSP` wins if both are set. A step is a 1-6 clk micro-sequence (D1 source and flags,
-AC, P=RX*RY, X read, Y read, D1 write and commit; idle phases skipped) with one data-RAM read copy each for the engine, the DMA and the
-CPU, and one write port (DMA, CPU, engine). Differences from `SCUP2_DSP`: the DMA hazard pause is evaluated at step start instead
-of at CE_F, a CPU data-RAM access while T0 uses the transfer address, DSP-to-program-RAM DMA is not lock-step with the program.
-Verification: `make -C sim/scu/dspc` (control-port bench against `SCUP2_DSP`, state compared after every step; `mutate.sh`).
+Same ports as `SCUP2_DSP`; `POCKET_CUT_SCU_DSP` wins if both are set. A step is a micro-sequence (ph0: D1 source, flags, AC,
+P=RX*RY; X read; Y read; commit: D1 write, CT/PC/LOP, IC fetch; idle phases skipped) with one data-RAM read copy each for the engine,
+the DMA and the CPU, and one write port (DMA, CPU, engine). The commit happens only on `CE` (`DSP_CE & CE_R`, every 4 clk), one
+instruction per CE as `SCU_DSP`: PC, CT, D1 writes, `RA0W`/`WA0W`/`DMAW`, T0 and the DMA start, END/E and S/Z/C/V (computed in ph0,
+written at the commit) change on the same clock as in `SCU_DSP`; AC/P/RX/RY are written 1-3 clk earlier. A pause or stop written
+after ph0 holds the step until the DSP runs again; a PC load drops it. Differences from `SCUP2_DSP`: an instruction with an X- or
+Y-bus RAM read whose execution is started by a control write (single step, EP clear, EX without PC load) on the CE_R two clocks
+before a CE commits one CE (4 clk) later; the DMA hazard pause is evaluated at step start instead of at CE_F, a CPU data-RAM access
+while T0 uses the transfer address, DSP-to-program-RAM DMA is not lock-step with the program.
+Verification: `make -C sim/scu/dspc` (control-port bench against `SCUP2_DSP`: state after every single step, state and PC-change
+clocks in free run, directed and random programs; `mutate.sh`). `make -C sim/scu DUT=SCUP2 DSPC=1` builds the MiSTer differential
+with the compact DSP (outputs compared before each clock edge, where the SCU samples them).

@@ -59,6 +59,24 @@ module tb;
 		if (d_DMAW) begin d_log <= (d_log * 31) ^ {28'd0, d_DMAC} ^ 32'h3; d_nev <= d_nev + 1; end
 	end
 
+	// per-instruction timing: hash of (clock, PC) at every PC change, and first clock where the PCs differ
+	integer clk_n = 0; reg [31:0] r_th = 0, d_th = 0; reg [7:0] r_pco = 0, d_pco = 0; integer pc_diff = 0, pc_diff_t = -1;
+	always @(posedge CLK) begin
+		clk_n <= clk_n + 1;
+		r_pco <= u_r.PC; d_pco <= u_d.PC;
+		if (!RES_N) begin r_th <= 0; d_th <= 0; pc_diff <= 0; pc_diff_t <= -1; end
+		else if (u_r.PC !== r_pco) r_th <= (r_th * 33) ^ {clk_n[23:0], u_r.PC};
+		if (RES_N && u_d.PC !== d_pco) d_th <= (d_th * 33) ^ {clk_n[23:0], u_d.PC};
+		if (RES_N && u_r.PC !== u_d.PC) begin pc_diff <= pc_diff + 1; if (pc_diff_t < 0) pc_diff_t <= clk_n; end
+	end
+
+	integer r_pcc = -1, d_pcc = -1, step_late = 0, step_n = 0;
+	always @(posedge CLK) begin
+		if (RES_N && u_r.PC !== r_pco && r_pcc < 0) r_pcc <= clk_n;
+		if (RES_N && u_d.PC !== d_pco && d_pcc < 0) d_pcc <= clk_n;
+	end
+	reg tcheck = 1;
+
 	integer errors = 0, checks = 0;
 	always @(posedge CLK) if ((d_RA0W | d_WA0W | d_DMAW) && !CE_R) begin errors = errors + 1; $display("%0t STROBE outside CE_R", $time); end
 	always @(posedge CLK) if ($test$plusargs("DMAW")) begin
@@ -124,6 +142,7 @@ module tb;
 			if (u_r.LPS_EXE !== u_d.LPS_EXE) mism("LPS_EXE");
 			if (r_log !== d_log || r_nev !== d_nev) begin mism("STROBES"); $display("  ref %08x/%0d dut %08x/%0d", r_log, r_nev, d_log, d_nev); end
 			if (r_SUM !== d_SUM || r_CNT !== d_CNT) mism("DMA sink");
+			if (tcheck && r_th !== d_th) begin mism("TIMING"); $display("  PC differs on %0d clocks, first at clock %0d", pc_diff, pc_diff_t); end
 			for (i = 0; i < 256; i = i + 1)
 				if (u_r.DATA_RAM_X.MEM[i] !== u_d.DATA_RAM_E.MEM[i]) begin mism("DRAM"); $display("  [%0d] ref %08x dut %08x", i, u_r.DATA_RAM_X.MEM[i], u_d.DATA_RAM_E.MEM[i]); i = 256; end
 			for (i = 0; i < 256; i = i + 1)
@@ -189,7 +208,7 @@ module tb;
 	task run_single(input integer seed, input integer nprog, input integer nstep, input integer allow_dma);
 		integer k;
 		begin
-			do_reset;
+			do_reset; tcheck = 0;
 			for (k = 0; k < nprog; k = k + 1) prog[k] = rnd_instr(nprog, allow_dma);
 			for (k = nprog; k < 256; k = k + 1) prog[k] = 0;
 			for (k = 0; k < 256; k = k + 1) ramimg[k] = $urandom;
@@ -197,14 +216,38 @@ module tb;
 			// random start state: LOP, CT via the program itself
 			cmp("load");
 			for (k = 0; k < nstep; k = k + 1) begin
+				r_pcc = -1; d_pcc = -1;
 				wr(0, 32'h0002_0000);              // single step
 				settle;
+				// a step started by a control write two clocks before a CE commits one CE late when it needs 3 steps
+				step_n = step_n + 1;
+				if (d_pcc == r_pcc + 4) step_late = step_late + 1;
+				else if (d_pcc !== r_pcc) begin mism("STEP TIMING"); $display("  ref clk %0d dut clk %0d", r_pcc, d_pcc); end
 				if (dbg) $display("step %0d IC r%08x d%08x PC r%02x d%02x T0 %b %b TN %0d TOP %02x DS %0d", k, u_r.IC, u_d.IC, u_r.PC, u_d.PC, u_r.T0, u_d.T0, u_r.TN0, u_r.TOP, u_d.DS);
 				cmp("step");
 				if (errors != 0) begin $display("  seed %0d step %0d IC=%08x", seed, k, u_r.IC); k = nstep; end
 			end
 			rd(0); rd(2);
 			wr(2, 0); rd(3); rd(3);
+			tcheck = 1;
+		end
+	endtask
+
+	// random free run: state compared nclk clocks after the start, right after a CE (both DSPs between instructions)
+	task run_freerand(input integer seed, input integer nprog, input integer nclk, input integer allow_dma);
+		integer k;
+		begin
+			do_reset;
+			for (k = 0; k < nprog; k = k + 1) prog[k] = rnd_instr(nprog, allow_dma);
+			for (k = nprog; k < 256; k = k + 1) prog[k] = 0;
+			for (k = 0; k < 256; k = k + 1) ramimg[k] = $urandom;
+			load_ram; load_prg(nprog);
+			wr(0, 32'h0001_8000);
+			repeat (nclk) @(posedge CLK);
+			@(posedge CLK); while (!CE) @(posedge CLK);
+			#1;
+			cmp("freerand");
+			if (errors != 0) $display("  seed %0d", seed);
 		end
 	endtask
 
@@ -311,6 +354,11 @@ module tb;
 			if (only < 0 || only == 1000 + s) run_single(1000 + s, 8 + (s % 20), 60, 1);
 		end
 
+		for (s = 0; s < 60; s = s + 1) begin
+			if (only < 0 || only == 2000 + s) run_freerand(2000 + s, 8 + (s % 40), 300 + 37 * s, s & 1);
+		end
+
+		$display("single steps %0d, one CE late (start two clocks before a CE) %0d", step_n, step_late);
 		$display("checks=%0d errors=%0d", checks, errors);
 		if (errors == 0) $display("PASS"); else $display("FAIL");
 		$finish;

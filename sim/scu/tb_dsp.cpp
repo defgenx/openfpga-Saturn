@@ -17,6 +17,9 @@ static Vtb_dsp* d;
 static uint64_t cyc = 0;
 
 static void check(const char* w) {
+#ifdef EDGE_ONLY   // compact DSP: compared where the SCU samples (before the clock edge), not with the old inputs after it
+	if (w[3] == '1') return;
+#endif
 	uint32_t mm = d->MM;
 	if (!d->CE_F) mm &= ~(1u << DMA_DO_BIT);   // DMA_DO is only sampled in CE_F cycles
 	if (!mm) return;

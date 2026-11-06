@@ -1,7 +1,7 @@
 //Compact SCU DSP (POCKET_SCU_DSP_COMPACT), same ports as SCUP2_DSP. Docs: docs/scu.md "Compact SCU DSP".
-//A step is a short micro-sequence (1-6 clk) instead of one parallel commit:
-//  ph0 D1 source -> D1T, flags    ph1 AC <- ALU/0    ph2 P <- RX*RY    ph3 X read -> RX/P
-//  ph4 Y read -> RY/AC            ph5 D1 write, CT/PC/LOP update, IC fetch (commit)
+//A step is a short micro-sequence (2-4 clk) instead of one parallel commit:
+//  ph0 D1 source -> D1T, flags, AC <- ALU/0, P <- RX*RY    ph3 X read -> RX/P    ph4 Y read -> RY/AC
+//  ph5 D1 write, CT/PC/LOP update, IC fetch (commit), only on CE: one instruction per CE as SCU_DSP
 //Phases without work are skipped. The steps read AC/P/RX/RY in an order that keeps the old-value semantics.
 //One RAM read port per user (engine, DMA, CPU), one write port (priority DMA, CPU, engine).
 module SCUP2_DSPC (
@@ -39,6 +39,7 @@ module SCUP2_DSPC (
 	reg [11:0] LOP;
 	reg  [5:0] CT0, CT1, CT2, CT3;
 	reg        EX, EP, ES, E, T0, S, Z, C, V, LPS_EXE, PAUSED, DMA_END_PEND, DMA_END_OLD;
+	reg        FP, SN, ZN, CN, VN;  //flags computed in ph0, written to S/Z/C/V at commit (status reads see SCU_DSP's timing)
 	reg  [2:0] ph;
 	reg        DDIR;       //DMA direction (1: RAM -> D0)
 	reg  [2:0] DS;         //DMA IC[10:8]: bank (1:0), 1xx = program RAM (DIR 0) / no CT (DIR 1)
@@ -91,14 +92,7 @@ module SCUP2_DSPC (
 	wire en2 = cA & IC[24] & ~IC[23];
 	wire en3 = cA & (IC[25] | (IC[24] & IC[23]));
 	wire en4 = cA & (IC[19] | IC[18:17] == 2'b11);
-	reg [2:0] nxt;
-	always @* begin
-		nxt = 3'd5;
-		if (en4 && ph < 3'd4) nxt = 3'd4;
-		if (en3 && ph < 3'd3) nxt = 3'd3;
-		if (en2 && ph < 3'd2) nxt = 3'd2;
-		if (en1 && ph < 3'd1) nxt = 3'd1;
-	end
+	wire [2:0] nxt = (en3 && ph < 3'd3) ? 3'd3 : (en4 && ph < 3'd4) ? 3'd4 : 3'd5;
 
 	//Run / hazard
 	wire RUN = (EX | ES) & ~EP & ~PAUSED;
@@ -118,7 +112,9 @@ module SCUP2_DSPC (
 
 	//Write-port users that outrank the engine
 	wire CPU_WE = ~RUN & DATA_TRANS_WE & CE_R & ~(T0 & ~DDIR & ~DS[2] & DATA_TRANS_ADDR[7:6] == DS[1:0]);
-	wire commit = step & pe == 3'd5 & CE_R & ~DWR_WE & ~CPU_WE;   //CE_R: the SCU samples RA0W/WA0W/DMAW there
+	//CE: SCU_DSP's instruction cadence (CE is a CE_R). RUN: a pause or stop written after ph0 holds the step in ph5
+	wire commit = step & pe == 3'd5 & CE & RUN & ~DWR_WE & ~CPU_WE;
+	wire pc_load = CE_R & ~EX & A == 2'b00 & |WE & DI[15];
 
 	//ALU
 	wire        ALU_SUB = IC[29:26] == 4'b0101;
@@ -199,21 +195,22 @@ module SCUP2_DSPC (
 		if (rst) begin
 			AC <= 0; P <= 0; RX <= 0; RY <= 0; D1T <= 0;
 			CT0 <= 0; CT1 <= 0; CT2 <= 0; CT3 <= 0;
-			S <= 0; Z <= 0; C <= 0; V <= 0;
+			S <= 0; Z <= 0; C <= 0; V <= 0; FP <= 0;
 		end else begin
 			if (step) case (pe)
 				3'd0: begin
 					D1T <= D1SRC;
+					FP <= 0;
 					if (alu_en) case (IC[29:26])
-						4'b0001, 4'b0010, 4'b0011, 4'b1000, 4'b1001, 4'b1010, 4'b1011, 4'b1111: begin S <= S31; Z <= ZL; C <= ALC; end
-						4'b0100: begin S <= S31; Z <= ZL; C <= ALC; V <= V | OVF31; end
-						4'b0101: begin S <= S31; Z <= ZL; C <= ALC; V <= V | UNF31; end
-						4'b0110: begin S <= S47; Z <= ZL & ZH; C <= ALC; V <= V | OVF47; end
+						4'b0001, 4'b0010, 4'b0011, 4'b1000, 4'b1001, 4'b1010, 4'b1011, 4'b1111: begin FP <= 1; SN <= S31; ZN <= ZL; CN <= ALC; VN <= 0; end
+						4'b0100: begin FP <= 1; SN <= S31; ZN <= ZL; CN <= ALC; VN <= OVF31; end
+						4'b0101: begin FP <= 1; SN <= S31; ZN <= ZL; CN <= ALC; VN <= UNF31; end
+						4'b0110: begin FP <= 1; SN <= S47; ZN <= ZL & ZH; CN <= ALC; VN <= OVF47; end
 						default: ;
 					endcase
+					if (en1) AC <= IC[18] ? ALQ : 48'd0;     //ACS 10: ALU, 01: clear
+					if (en2) P <= MUL;
 				end
-				3'd1: AC <= IC[18] ? ALQ : 48'd0;     //ACS 10: ALU, 01: clear
-				3'd2: P <= MUL;
 				3'd3: begin
 					if (IC[25]) RX <= RAMQ;
 					if (IC[24] & IC[23]) P <= {{16{RAMQ[31]}},RAMQ};
@@ -225,6 +222,7 @@ module SCUP2_DSPC (
 				default: ;
 			endcase
 			if (commit) begin
+				if (FP) begin S <= SN; Z <= ZN; C <= CN; V <= V | VN; end
 				if (d_rx & ~(cA & IC[25])) RX <= D1T;
 				if (d_p  & ~(cA & IC[24])) P  <= {{16{D1T[31]}},D1T};
 				if (inc[0]) CT0 <= CT0 + 6'd1;
@@ -242,6 +240,7 @@ module SCUP2_DSPC (
 				if (dma_ct[2]) CT2 <= CT2 + 6'd1;
 				if (dma_ct[3]) CT3 <= CT3 + 6'd1;
 			end
+			if (pc_load) FP <= 0;
 			if (A == 2'b00 & RE) V <= 0;
 		end
 	end
@@ -277,7 +276,7 @@ module SCUP2_DSPC (
 				if (DMA_EN & dma_prg) PC <= PC + 8'd1;
 				if (~EX) begin
 					if (PRG_TRANS_WE) PC <= PC + 8'd1;
-					if (A == 2'b00 & |WE & DI[15]) begin PC <= DI[7:0]; IC <= 0; end
+					if (A == 2'b00 & |WE & DI[15]) begin PC <= DI[7:0]; IC <= 0; ph <= 0; end
 				end
 			end
 		end

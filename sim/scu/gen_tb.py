@@ -2,6 +2,7 @@
 import sys
 DUT = sys.argv[1] if len(sys.argv) > 1 else "SCU"
 OUT = sys.argv[2] + "/" if len(sys.argv) > 2 else ""
+DSPMOD = sys.argv[3] if len(sys.argv) > 3 else DUT + "_DSP"
 rng = lambda w: "" if w == 1 else "[%d:0] " % (w - 1)
 
 scu_ins = [("CE_R",1),("CE_F",1),("RES_N",1),("CA",25),("CDI",32),("CCS1_N",1),("CCS2_N",1),("CCS3_N",1),
@@ -54,5 +55,5 @@ def gen(top, ref, dut, params, ins, outs, extra=""):
 gen("tb_scu", "REF_SCU", DUT, ("#(parameter RAMH_SLOW=0)", "#(RAMH_SLOW)"), scu_ins, scu_outs)
 if DUT == "SCUP2":   # no debug taps in SCUP2_DSP
     dsp_outs = [o for o in dsp_outs if not o[0].startswith("DBG_") and not o[0].startswith("HOOK")]
-gen("tb_dsp", "REF_SCU_DSP", DUT + "_DSP", ("", ""), dsp_ins, dsp_outs,
+gen("tb_dsp", "REF_SCU_DSP", DSPMOD, ("", ""), dsp_ins, dsp_outs,
     "\tinitial if ($bits(SCUDSP_PKG::DecInst_t) != 78) $fatal(1, \"DecInst_t width\");\n" if DUT == "SCU" else "")

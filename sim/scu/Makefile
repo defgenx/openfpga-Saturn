@@ -5,7 +5,7 @@ VERILATOR ?= verilator
 SRC   ?= ../../src/fpga/saturn/Saturn/SCU
 # DUT=SCUP selects the area-first rewrite (src/.../SCUP: modules SCUP and SCUP_DSP)
 DUT   ?= SCU
-REFD  := ../../ref/Saturn_MiSTer/rtl/Saturn/SCU
+REFD  ?= ../../ref/Saturn_MiSTer/rtl/Saturn/SCU
 B     := build
 FILES := SCU_PKG DSP_PKG RAM DSP SCU
 ifeq ($(DUT),SCUP)
@@ -18,10 +18,16 @@ SRC   := ../../src/fpga/saturn/Saturn/SCUP2
 B     := build_scup2
 FILES := SCUP2_DSP_PKG SCUP2_RAM SCUP2_PKG SCUP2_DSP SCUP2
 endif
+# DUT=SCUP2 DSPC=1: SCUP2 built with POCKET_SCU_DSP_COMPACT, tb_dsp compares SCUP2_DSPC
+ifeq ($(DSPC),1)
+B     := build_scup2c
+FILES += SCUP2_DSPC
+DEFS  := -DPOCKET_SCU_DSP_COMPACT -CFLAGS -DEDGE_ONLY
+endif
 SEEDS ?= 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 CYCLES ?= 3000000
 VFLAGS := --quiet --cc --exe --build -O2 --x-assign 0 --x-initial 0 -Wno-fatal -Wno-lint -Wno-style \
-          -Wno-DEFOVERRIDE -CFLAGS -O2 -CFLAGS -I$(abspath $(B)) -j 4
+          -Wno-DEFOVERRIDE $(DEFS) -CFLAGS -O2 -CFLAGS -I$(abspath $(B)) -j 4
 
 .PHONY: all run cover clean
 all: run
@@ -38,7 +44,7 @@ DEPS  := tb_common.h $(REFSV) $(DUTSV)
 GEN := $(B)/tb_scu.sv $(B)/tb_scu_names.h $(B)/tb_dsp.sv $(B)/tb_dsp_names.h
 $(GEN): gen_tb.py
 	@mkdir -p $(B)
-	python3 gen_tb.py $(DUT) $(B)
+	python3 gen_tb.py $(DUT) $(B) $(if $(filter 1,$(DSPC)),SCUP2_DSPC)
 
 $(B)/slow%/Vtb_scu: $(DEPS) $(B)/tb_scu.sv tb_scu.cpp $(B)/tb_scu_names.h
 	$(VERILATOR) $(VFLAGS) --top-module tb_scu -GRAMH_SLOW=$* --Mdir $(B)/slow$* $(REFSV) $(DUTSV) $(B)/tb_scu.sv tb_scu.cpp
