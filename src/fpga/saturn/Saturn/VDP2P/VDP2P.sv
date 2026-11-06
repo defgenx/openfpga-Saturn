@@ -2831,7 +2831,8 @@ module VDP2P import VDP2P_PKG::*; (
 	always @(posedge CLK or negedge RST_N) begin
 		bit          NxDOT_FETCH[4];
 		bit          R0DOT_FETCH;
-	
+		bit  [ 7: 0] N0B, N1B;
+
 		if (!RST_N) begin
 			// synopsys translate_off
 			R0DOT <= DD_NULL;
@@ -2848,55 +2849,25 @@ module VDP2P import VDP2P_PKG::*; (
 			NxDOT_FETCH[3] = (!MOSAIC_HCNT || !NSxREG[3].MZE);
 			R0DOT_FETCH    = (!MOSAIC_HCNT || !RSxREG[0].MZE);
 			
+			//Reduction (Nx_HF4 / Nx_QT4: 4 bpp, Nx_HF8: 8 bpp): one byte source, the second read port when QT4 and x bit 4 or
+			//HF8 and x bit 3, then the nibble by x bit 3 at 4 bpp; otherwise the full word of the read ports
 			if (NxDOT_FETCH[0]) begin
 				if (RSxREG[1].ON) begin
 					N0DOTDC <= RxDC[1];
 					N0DOTCDP <= RxCDP[1];
-				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMHF) begin
-					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						1'b1: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-					endcase
-				end else if (NSxREG[0].CHCN == 3'b000 && NSxREG[0].ZMQT) begin
-					case (NCX[0].INT[4:3])
-						2'b00: begin N0DOTDC <= {28'h0000000,N0_D0[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						2'b01: begin N0DOTDC <= {28'h0000000,N0_D0[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-						2'b10: begin N0DOTDC <= {28'h0000000,N0_D2[ 3: 0]}; N0DOTCDP <= N0CDP_W; end
-						2'b11: begin N0DOTDC <= {28'h0000000,N0_D2[ 7: 4]}; N0DOTCDP <= N0CDP_W; end
-					endcase
-				end else if (NSxREG[0].CHCN == 3'b001 && NSxREG[0].ZMHF) begin
-					case (NCX[0].INT[3])
-						1'b0: begin N0DOTDC <= {24'h000000,N0_D0[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
-						1'b1: begin N0DOTDC <= {24'h000000,N0_D2[ 7: 0]}; N0DOTCDP <= N0CDP_W; end
-					endcase
 				end else begin
-					N0DOTDC <= {N0_D3[ 7: 0],N0_D1[ 7: 0],N0_D2[ 7: 0],N0_D0[ 7: 0]};
+					N0B = (N0_QT4 ? N0I[4] : N0_HF8 & N0I[3]) ? N0_D2 : N0_D0;
+					N0DOTDC <= {(N0_HF4 | N0_QT4 | N0_HF8) ? 24'h000000 : {N0_D3,N0_D1,N0_D2},
+					            (N0_HF4 | N0_QT4) ? {4'h0, N0I[3] ? N0B[7:4] : N0B[3:0]} : N0B};
 					N0DOTCDP <= N0CDP_W;
 				end
 			end
-			
+
 			if (NxDOT_FETCH[1]) begin
-				if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMHF) begin
-					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						1'b1: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else if (NSxREG[1].CHCN == 3'b000 && NSxREG[1].ZMQT) begin
-					case (NCX[1].INT[4:3])
-						2'b00: begin N1DOTDC <= {28'h0000000,N1_D1[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						2'b01: begin N1DOTDC <= {28'h0000000,N1_D1[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-						2'b10: begin N1DOTDC <= {28'h0000000,N1_D3[ 3: 0]}; N1DOTCDP <= N1CDP_W; end
-						2'b11: begin N1DOTDC <= {28'h0000000,N1_D3[ 7: 4]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else if (NSxREG[1].CHCN == 3'b001 && NSxREG[1].ZMHF) begin
-					case (NCX[1].INT[3])
-						1'b0: begin N1DOTDC <= {24'h000000,N1_D1[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
-						1'b1: begin N1DOTDC <= {24'h000000,N1_D3[ 7: 0]}; N1DOTCDP <= N1CDP_W; end
-					endcase
-				end else begin
-					N1DOTDC <= {16'h0000,N1_D3[ 7: 0],N1_D1[ 7: 0]};
-					N1DOTCDP <= N1CDP_W;
-				end
+				N1B = (N1_QT4 ? N1I[4] : N1_HF8 & N1I[3]) ? N1_D3 : N1_D1;
+				N1DOTDC <= {16'h0000, (N1_HF4 | N1_QT4 | N1_HF8) ? 8'h00 : N1_D3,
+				            (N1_HF4 | N1_QT4) ? {4'h0, N1I[3] ? N1B[7:4] : N1B[3:0]} : N1B};
+				N1DOTCDP <= N1CDP_W;
 			end
 				
 			if (NxDOT_FETCH[2]) begin
