@@ -152,6 +152,9 @@ MLAB/timing risk to the cache path; marked not recommended.
 
 ## POCKET_CUT_SH2_DIVU_SHARED
 
+Measured in the full Pocket build with SH7604P (fitter, 2026-11-06): MSH -84, SSH -95 ALMs, the shared unit +294,
+so **+115 ALMs net**: not worth it with SH7604P, and not set in `ap_core.qsf`.
+
 One divide datapath (R/D/Q/R64/D64 registers, the 65-bit adders, step counter) serves both CPUs
 (`SH/SH7604/DIVU_SHARED.sv`: `SH7604_DIVU_SHR` shared, `SH7604_DIVU_CL` per CPU with DVSR/DVDNT/DVCR/VCRDIV/mirror
 registers and the bus side). `Saturn.sv` instantiates the shared unit between MSH and SSH and `SH7604` gets two ports
