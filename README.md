@@ -36,22 +36,71 @@ Tested on a Pocket:
 ## Install
 
 1. Download `defgenx.Saturn.zip` from the [latest release](https://github.com/defgenx/openfpga-Saturn/releases) and
-   unzip it onto the root of the SD card.
-2. Put your Saturn BIOS image (any name, `.bin` or `.rom`, 512 KB, not included) in `Assets/saturn/defgenx.Saturn/`;
-   the core asks which one to use the first time it starts.
-3. Copy each game's `.cue` and `.bin` tracks onto the card: at its root, or in `Assets/saturn/common/` (directly or
-   in a folder per game).
-4. With the card in a computer, double-click **`Saturn-prepare-card.command`** (macOS) or
-   **`Saturn-prepare-card.bat`** (Windows) at the root of the card (needs [Python 3](https://www.python.org/downloads/);
-   on macOS, the first time, right-click it and choose Open). It moves games and a BIOS left at the card root (or in
-   `Assets/saturn/`) to their folders, then writes each game's `Game.json` and `Game.toc` next to its tracks. Run it
-   again after adding games; it only changes what is new. From a terminal: `python3 Saturn-mktoc.py` at the root of
-   the card (`--dry-run` shows what it would do).
-5. On the Pocket, open the Saturn core and pick the game's `Game.json`.
+   unzip it onto the root of the SD card (let it merge with the folders already there).
+2. Add a BIOS and your games (below).
+3. Put the card back in the Pocket and open **Saturn** from the openFPGA menu.
 
-A disc can also be loaded as one merged image: `--merge always` writes `Game.img`; load it in the **Disc image**
-slot and `Game.toc` in the **Disc TOC** slot from the core's menu. Details: [INSTALL.md](INSTALL.md),
-[docs/cd.md](docs/cd.md).
+## Installing the BIOS
+
+The Saturn BIOS is not included; use a dump of your own console's BIOS (512 KB).
+
+1. Copy it into `Assets/saturn/defgenx.Saturn/` on the card. Any name and either extension works (`sega_101.bin`,
+   `mpr-17933.bin`, `Saturn BIOS (JP).bin`, `*.rom`, ...). Several BIOS images can sit there side by side.
+2. The first time the core starts, the Pocket asks which BIOS to use and remembers the choice. To change it later,
+   use the core's menu (**Core Settings** / slot **BIOS**).
+
+The card preparation script below also moves a BIOS left at the root of the card into that folder.
+
+## Installing games
+
+A game is its `.cue` and the `.bin` track files the `.cue` lists (a "bin/cue" dump, one `.bin` per track or a
+single `.bin`). CHD is not supported.
+
+```
+SD card
+├── Assets/saturn/
+│   ├── defgenx.Saturn/        BIOS image(s)
+│   └── common/
+│       └── Panzer Dragoon (Japan)/
+│           ├── Panzer Dragoon (Japan).cue
+│           ├── Panzer Dragoon (Japan) (Track 01).bin
+│           ├── Panzer Dragoon (Japan) (Track 02).bin
+│           ├── ...
+│           ├── Panzer Dragoon (Japan).json    written by the script
+│           └── Panzer Dragoon (Japan).toc     written by the script
+├── Saturn-mktoc.py
+├── Saturn-prepare-card.command   (macOS)
+└── Saturn-prepare-card.bat       (Windows)
+```
+
+1. Copy the game's `.cue` and `.bin` files onto the card: at the root, or in `Assets/saturn/common/` (one folder per
+   game is tidiest).
+2. With the card in a computer, double-click **`Saturn-prepare-card.command`** (macOS) or
+   **`Saturn-prepare-card.bat`** (Windows) at the root of the card. It needs
+   [Python 3](https://www.python.org/downloads/); on macOS, the first time, right-click the file and choose **Open**.
+   It moves games left at the root into `Assets/saturn/common/<game>/`, then writes each game's `.json` and `.toc`
+   next to its tracks, and shows what it did. Run it again whenever you add games; it only changes what is new.
+   From a terminal: `python3 Saturn-mktoc.py` at the root of the card (`--dry-run` shows what it would do).
+3. On the Pocket, open the Saturn core and pick the game's **`.json`**.
+
+Other ways to load a disc, from the core's menu:
+
+* **One merged image**: `python3 Saturn-mktoc.py --merge always` also writes `Game.img`, all the tracks in one
+  file; load it in the **Disc image** slot and `Game.toc` in the **Disc TOC** slot. Discs with more than 24 track
+  files are merged this way automatically.
+* **The `.cue` directly** (from the next release, not yet tested on hardware): pick the game's `.cue` in the **Disc
+  image** slot; the core reads it and opens its track files itself, no script needed.
+
+If something goes wrong:
+
+* "Disc unsuitable for this system" or a disc that never loads: run the preparation script again, then pick the
+  game's `.json` (not a `.bin`).
+* "ID undefined" when picking a `.json`: the disc has more than 24 track files and was prepared with `--merge never`;
+  run the script again without it.
+* "Backup RAM cannot be used": saves are not supported yet (see [What does not work yet](#what-does-not-work-yet));
+  press Start to continue.
+
+More details: [INSTALL.md](INSTALL.md), [docs/cd.md](docs/cd.md).
 
 ## How it differs from MiSTer
 
