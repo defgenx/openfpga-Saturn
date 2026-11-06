@@ -769,3 +769,22 @@ A first fit of the same branch without the registered `USEL` / `HM3` (`vdp2fix-s
 placement left SH-2 paths at -3.07 (SSH `cache.IBADDR` -> `core.RD_SAVE`, +1.23 in integ2-s3), -2.05 (MSH `bsc.VEC_BUF`
 -> `core.PIPE.ID.IR`), VDP1 -0.66, SCU -0.57, ddram -0.21. Those non-VDP2 groups pass in `vdp2fix-s3b` with no change
 to them: they are placement-dependent at this utilization.
+
+## Eight VDP2 cuts restored (branch `restore-eight-vdp2-features`, 2026-11-05)
+
+Measured on `571587d` (v0.2.15) with `sizing/pocket-cuts/measure.py` (whole-design `quartus_map`, area profile, one
+processor; full compiles through `tools/qflow.sh`). Restoring one feature at a time, map "ALMs needed" against the
+release's 17,758: EXTCC +65, SHADOW +50, BACKLINE -1, SPECIAL +68, LNCOL +35, MOSAIC +40, SPRWIN +40, LINEWIN +35,
+ZOOM +209, RPARAMB +224, SH-2 WDT +112; the seven small ones together +122, all ten +610. Per-entity rows and the
+summaries are in `sizing/pocket-cuts/`.
+
+| Build | Seed | ALMs needed | LABs | M10K | Worst setup / hold (slow 85C, slow 0C) |
+|---|---|---|---|---|---|
+| seven small restored (EXTCC SHADOW BACKLINE LNCOL MOSAIC SPRWIN LINEWIN) | 5 | 18,218 | 1,848 / 1,848 | 303 | +0.172 / +0.290, +0.088 / +0.283 |
+| same | 1 | 18,037 | 1,846 | 303 | +0.173 / +0.291, +0.081 / +0.280 |
+| same | 3 | 18,172 | 1,848 | 303 | **-0.342**, **-0.413** (setup) |
+| eight restored (+ SPECIAL) | 5 | 18,206 | 1,848 / 1,848 | 303 | +0.105 / +0.281, +0.219 / +0.270 |
+
+Fast corners +1.61 setup, hold >= +0.02 on every run. The qsf now restores these eight (ZOOM and RPARAMB stay cut,
+about +430 map ALMs together); `sim/sys/macros_qsf.f` follows. The uncut VDP2P logic is the exact design checked
+by `make -C sim vdp2` (docs/vdp2.md); no RTL changed. Seed 3 shows the usual placement sensitivity at 100% LABs.

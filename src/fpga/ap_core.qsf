@@ -822,16 +822,8 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
 set_global_assignment -name VERILOG_MACRO "POCKET_SCU_DSP_COMPACT=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_SCSP_DSP_COMPACT=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_SH2_WDT=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_EXTCC=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SHADOW=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_BACKLINE=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPECIAL=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LNCOL=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_ZOOM=1"
 set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_RPARAMB=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_MOSAIC=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_SPRWIN=1"
-set_global_assignment -name VERILOG_MACRO "POCKET_CUT_VDP2_LINEWIN=1"
 
 # SDRAM pins: command/address/data/enable output registers and the read data input register live in the I/O cells
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to dram_dq[*]

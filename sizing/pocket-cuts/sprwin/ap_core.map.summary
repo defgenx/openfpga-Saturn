@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Thu Nov  5 00:54:23 2026
+Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Lite Edition
+Revision Name : ap_core
+Top-level Entity Name : apf_top
+Family : Cyclone V
+Logic utilization (in ALMs) : N/A
+Total registers : 17328
+Total pins : 224
+Total virtual pins : 0
+Total block memory bits : 1,413,720
+Total DSP Blocks : 46
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1
+Total DLLs : 0
