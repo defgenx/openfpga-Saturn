@@ -29,7 +29,7 @@ the **root** of the card, merging with the folders already there:
 SD card root
 ├── Assets/
 │   └── saturn/
-│       ├── common/              <- discs: .bin tracks, .toc and .json side by side
+│       ├── common/              <- discs: merged .img and .toc (from the .cue and .bin tracks)
 │       └── defgenx.Saturn/      <- the BIOS (sega_101.bin)
 ├── Cores/
 │   └── defgenx.Saturn/
@@ -53,10 +53,12 @@ Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly 
 then run the installer again. The core does not read `.cue` sheets itself: for every `.cue` the installer runs
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
-- `Game (USA).toc` (and a merged `Game (USA).img` when the disc has more than 24 track files) next to the tracks;
-- `Game (USA).json` in the same folder: on the Pocket, pick it as the disc.
+- `Game (USA).img`, all the disc's tracks merged into one file, and `Game (USA).toc`, next to the tracks;
+- `Game (USA).json` in the same folder (not used by the core from v0.2.19 on).
 
-This is the v0.2.4 layout, the one that runs on the Pocket. It does this on every run, so the files always
+On the Pocket, pick `Game (USA).img` as the disc image, then `Game (USA).toc` when the core asks for the TOC. The
+Pocket serves only the file picked as the disc, so a disc made of several track files must be merged
+(docs/cd.md section 3). It does this on every run, so the files always
 match the core; a `.json` already next to the tracks is rewritten in place. The `.json` files v0.2.5 and v0.2.6
 put in `Assets/saturn/defgenx.Saturn/` do not start a disc: each is renamed `.json.old` once its disc has its
 `.json` next to the tracks. A WWF / Road Rash flag or RAM cart recorded in an existing `.toc` is kept. Without

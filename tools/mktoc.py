@@ -220,7 +220,7 @@ def data_path_for(folder):
     return "" if folder in ("", ".") else folder + "/"
 
 
-def build(cue, outdir, data_path, ramcart_db=None, merge_mode="auto", wwf=False, rr=False, cart=0):
+def build(cue, outdir, data_path, ramcart_db=None, merge_mode="always", wwf=False, rr=False, cart=0):
     """Interpret one cue. cart: RAM cart type used when the database has none for the disc.
     Returns (toc bytes, instance JSON dict, (merged image path, files) or None, summary)."""
     trk, toc_end, files = parse_cue(cue)
@@ -565,8 +565,9 @@ def main():
     ap.add_argument("--data-path", default="",
                     help="folder of the track files seen from the JSON's folder (default '': the JSON goes next to them)")
     ap.add_argument("--ramcart-db", help="MiSTer saturn_ramcart.txt for the RAM cartridge request")
-    ap.add_argument("--merge", choices=["auto", "always", "never"], default="auto",
-                    help="concatenate the track files into one image (auto: only above %d files)" % TRACK_SLOTS)
+    ap.add_argument("--merge", choices=["auto", "always", "never"], default="always",
+                    help="concatenate the track files into one image (default always: the Pocket serves only the "
+                         "picked disc file; auto: only above %d files)" % TRACK_SLOTS)
     ap.add_argument("--wwf", action="store_true", help="WWF TOC hack (reports INDEX 01 start)")
     ap.add_argument("--road-rash", action="store_true", help="Road Rash hack (no seek delay on read)")
     ap.add_argument("--card", metavar="SD_ROOT",
