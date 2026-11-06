@@ -125,10 +125,7 @@ RV32IC 14,380 bytes (14,336 with `-msave-restore`, which would allow a 14 KB ROM
 Tests: `sim/cue/host_cue.cpp` (the firmware's `cue.h` against a C++ model of the port and the host; compared with
 mktoc by `sim/sys/gen_cue.py check` on five cues: one file per track, one `.img`, 12 files with a cooked first
 track, REM/CATALOG lines and unquoted names, MODE2, CRLF) and `sim/sys` with `PLUSARGS="+CARD=<dir> +CUE=<path>"`
-(tb_sys answers `0x0190`/`0x0192` from a file table, `python3 sim/sys/gen_cue.py gen <dir>` makes the discs): the
-two-file and the one-`.img` cue reach "disc ready" 24 / 19 ms after Reset Exit (59 / 39 target commands with the
-model's ~0.1 ms answers) with the TOC RAM equal to mktoc's TOC. The sector stream after the commit is the
-`.img` + `.toc` path (1 s drive start-up, not run in `sim/sys`; `make -C sim cdb` covers slots 16 and 17).
+(tb_sys answers `0x0190`/`0x0192` from a file table).
 
 ## 4. Cue sheets on a PC
 
