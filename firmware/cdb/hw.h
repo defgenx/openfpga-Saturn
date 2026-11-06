@@ -20,5 +20,6 @@ enum {
 	EV_OVR = 1u << 12, EV_TO = 1u << 13, EV_ARMED = 1u << 14, EV_FWBUSY = 1u << 18   /* bits 15..17: target command result */
 };
 /* R_EVCLR bits */
+enum { XF_MORE = 1u << 12 };          /* R_XF_CNT: another segment of this transfer follows */
 enum { CLR_CMD = 1, CLR_SEC = 2, CLR_DCHG = 4, CLR_TO = 8 };
 #endif

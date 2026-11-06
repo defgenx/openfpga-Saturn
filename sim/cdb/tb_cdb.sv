@@ -146,6 +146,7 @@ generate if (LLE) begin : g
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
 	function [15:0] dram_word(input integer a); dram_word = ram[a]; endfunction
 	function [31:0] dbg_state(input integer d); dbg_state = 0; endfunction
+	task fw_stall(input integer us); endtask
 end else begin : g
 	// ------------------------------------------------------------ HLE: cdb_hle + cd_stream
 	wire [18:1] RAM_A; wire [15:0] RAM_D; wire [1:0] RAM_WE; wire RAM_RD, RAM_CS; reg [15:0] RAM_Q = 0; reg RAM_RDY = 1;
@@ -207,6 +208,16 @@ end else begin : g
 	end
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
 	function [15:0] dram_word(input integer a); dram_word = dmem[a]; endfunction
+	// +FEEDPC=<hex>: address of dt_feed (firmware/cdb/build/cdb.lst); reports the longest firmware main-loop period
+	integer feed_pc, feed_last = 0, feed_max = 0, feed_max_t = 0;
+	initial if (!$value$plusargs("FEEDPC=%h", feed_pc)) feed_pc = -1;
+	always @(posedge clk) if (hle.ic && hle.iack && hle.ia == feed_pc) begin
+		if (feed_last != 0 && cnt - feed_last > feed_max) begin feed_max = cnt - feed_last; feed_max_t = cnt; end
+		feed_last = cnt;
+	end
+	final if (feed_pc >= 0) $display("dt_feed: longest gap %0d us (at %0d us)", feed_max / 57, feed_max_t / 57);
+	// fault injection: the firmware CPU gets no instruction for us microseconds (a long firmware operation)
+	task fw_stall(input integer us); begin force hle.iack = 1'b0; repeat (us * 57) @(posedge clk); release hle.iack; end endtask
 	always @(posedge clk) if ($test$plusargs("XFMON") && hle.xf_mode_we) $display("[%0t] XF_MODE <= %0d", $time, hle.cpu_wd[2:0]);
 	wire [31:0] dbgw = {hle.xf_mode, hle.xf_idle, hle.f_empty, hle.seg1_free, hle.dp_wr, hle.abus_wait};
 	function [31:0] dbg_state(input integer d); dbg_state = dbgw; endfunction
@@ -305,6 +316,19 @@ begin
 end
 endtask
 
+// data port read at the A-bus's fastest rate: strobes on one CE_R, released one clock after AWAIT_N
+task host_rd_fast(input [7:0] off);
+begin
+	wait_ce_r;
+	AA <= off[7:1]; ACS2_N <= 0; ARD_N <= 0;
+	repeat (2) @(posedge clk);
+	while (!AWAIT_N) @(posedge clk);
+	@(posedge clk);
+	rd_data = ADO;
+	ARD_N <= 1; ACS2_N <= 1;
+end
+endtask
+
 task delay_us(input integer us);
 begin
 	repeat (us * 57) @(posedge clk);
@@ -380,6 +404,17 @@ initial begin
 				if ($test$plusargs("DBGDATA")) $fwrite(lf, " [st=%h t=%0t]", g.dbg_state(0), $time);
 				for (w = 0; w < a1; w = w + 1) begin host_rd(8'h00); $fwrite(lf, " %04h", rd_data); end
 				$fwrite(lf, "\n");
+			end
+			else if (op == "fdata") begin               // fdata <words> [<word index> <stall us>]: optional firmware stall
+				n = $sscanf(line, " %s %d %d %d", op, a1, a3, a4);
+				if (n < 4) a3 = -1;
+				$fwrite(lf, "DATA %0d", a1);
+				a2 = cnt;
+				for (w = 0; w < a1; w = w + 1) begin
+					if (w == a3) fork g.fw_stall(a4); join_none
+					host_rd_fast(8'h00); $fwrite(lf, " %04h", rd_data);
+				end
+				$fwrite(lf, " us=%0d\n", (cnt - a2) / 57);
 			end
 			else if (op == "putdata") begin
 				n = $sscanf(line, " %s %d %h", op, a1, a2);

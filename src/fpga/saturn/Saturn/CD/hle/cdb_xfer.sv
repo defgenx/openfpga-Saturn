@@ -1,5 +1,6 @@
 // Transfer engine of the HLE CD block: moves words between CD block DRAM and the host data-port FIFO,
 // or DRAM to DRAM, or zero-fills. The CPU queues segments {a, b, count}; one segment runs, one waits.
+// Bit 12 of the count write ("more") says another segment of the same transfer follows; fin = idle and none follows.
 //   mode 1 read  : DRAM[a..] -> FIFO -> host (data port read)
 //   mode 2 write : host -> FIFO -> DRAM[a..]
 //   mode 3 copy  : DRAM[a..] -> DRAM[b..]
@@ -17,6 +18,7 @@ module cdb_xfer (
 	input  wire [11:0] cnt_d,
 	output wire        seg1_free,
 	output wire        idle,
+	output wire        fin,               // transfer complete: host reads past this point return 0
 	output reg  [2:0]  mode = 3'd0,
 	output wire [31:0] hostcnt,           // 18 bits are counted: a transfer is at most 200 sectors of 1176 words (235,200 < 2^18)
 
@@ -50,11 +52,13 @@ reg [17:0] sa = 18'd0, sb = 18'd0, a1 = 18'd0;
 reg [11:0] c0 = 12'd0, c1 = 12'd0;
 reg [17:0] a_t = 18'd0;
 reg        v1 = 1'b0;
+reg        more = 1'b0;
 reg [15:0] hold = 16'd0;
 reg [1:0]  ph = 2'd0;
 
 assign seg1_free = !v1;
 assign idle = (c0 == 12'd0) && !v1 && !rq;
+assign fin  = idle && !more;
 assign rq_d = (mode == 3'd2) ? hold : (mode == 3'd3) ? hold : 16'd0;
 
 wire push_eng = rq && dn && !rq_we && mode == 3'd1;
@@ -67,12 +71,13 @@ CDB_FERAM #(3,16) fifo(clk, do_push && rst_n && !mode_we, wp, push_eng ? dq : f_
 
 always @(posedge clk) begin
 	if (!rst_n || (mode_we)) begin
-		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0;
+		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0; more <= 1'b0;
 		if (mode_we) mode <= mode_d; else mode <= 3'd0;
 	end else begin
 		if (a_we) a_t <= wd;
 		if (b_we) sb <= wd[17:0];
 		if (cnt_we) begin
+			more <= wd[12];
 			if (c0 == 12'd0 && !v1) begin sa <= a_t; c0 <= cnt_d; end
 			else begin a1 <= a_t; c1 <= cnt_d; v1 <= 1'b1; end
 		end

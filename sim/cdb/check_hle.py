@@ -18,7 +18,8 @@ def words(b):
 def user(lba):
     return words(sector(lba)[16:2064])
 
-COOKED = len(sys.argv) > 2
+COOKED = len(sys.argv) > 2 and sys.argv[2] == "cooked"
+BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -58,8 +59,24 @@ def find_cmd(sec, prefix, nth=0):
     return None
 
 def datas(sec):
-    return [[int(x, 16) for x in l.split()[2:]] for l in cmds(sec) if l.startswith("DATA ")]
+    return [[int(x, 16) for x in l.split()[2:] if not x.startswith("us=")] for l in cmds(sec) if l.startswith("DATA ")]
 
+if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host rate, with and without a firmware stall
+    def run(n, first):
+        return [w for i in range(n) for w in user(first + i)]
+    for sec, n in (("bulk", 50), ("stall", 4), ("bulkdel", 40)):
+        d = datas(sec)[0]
+        e = run(n, 0)
+        bad = [i for i in range(len(e)) if i >= len(d) or d[i] != e[i]]
+        ok("%s: %d sectors word for word" % (sec, n), not bad, "%d words differ, first at %s" % (len(bad), bad[:1]))
+        r = find_cmd(sec, "0600")
+        ok("%s: end data transfer count %d" % (sec, n * 1024), r is not None and (r[0] & 0xFF) << 16 | r[1] == n * 1024, r)
+    d = datas("past_end")[0]
+    ok("past end: 1024 words then zeros", d[:1024] == user(40) and all(x == 0 for x in d[1024:]), d[1020:1030])
+    r = find_cmd("past_end", "0600")
+    ok("past end: count 1024", r is not None and r[1] == 1024, r)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
 if COOKED:
     d = datas("cooked")
     ok("cooked sectors in partition", find_cmd("cooked", "5100")[3] == 3)

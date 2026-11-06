@@ -394,8 +394,9 @@ The figures predate the cuts: the sibling branches (VDP2, VDP1, SCSP, SCU, SH-1,
 * Backup RAM and backup cartridge: loaded from the bridge, but the read-back for saving (`bk_rd_data` at `0x4xxxxxxx` /
   `0x5xxxxxxx`) is still zero, so nothing is saved. Cartridge ROM has no data slot.
 * Pads: Digital only. No 3D/analog pad, mouse, or six-button remap beyond core_top's `pad2saturn`; player 2 uses `cont2`.
-* `cfg_cart` Backup selects the backup cart type, but its save file cannot be written (above). No "CD speed" setting:
-  the drive speed follows the BIOS command (the old interact entry was replaced by Cartridge).
+* `cfg_cart` Backup selects the backup cart type, but its save file cannot be written (above). No "CD speed" setting
+  (the old interact entry was replaced by Cartridge): with the HLE CD block data is always read at 2x and CD-DA at 1x,
+  the speed bit of Init is ignored (docs/cdb-hle.md section 7).
 * Video: field-per-frame for interlaced content; the slot word position and 90 degree clock handling are untested on a scaler.
   PAL 256-line modes are mapped to the 640x256/704x256 slots; the scaler's PAL refresh handling is unchecked.
 * PLL reconfiguration (M 5 / 6, VCO 854 .. 916 MHz, section 2) and that `clk_ram` stays aligned after it are untested

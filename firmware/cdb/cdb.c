@@ -548,8 +548,8 @@ static void dt_feed(void)
 	while (dt.active && dt.cur < dt.n && (MM(R_EV) & EV_SEG1FREE)) {
 		u32 off, cnt, b = dt.list[dt.cur];
 		sec_range((u8)b, &off, &cnt);
-		xf_seg(baddr(b) + off, 0, cnt);
 		dt.cur++;
+		xf_seg(baddr(b) + off, 0, cnt | (dt.cur < dt.n ? XF_MORE : 0));   /* more: the host waits for the next segment */
 	}
 }
 

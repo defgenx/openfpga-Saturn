@@ -57,8 +57,13 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 * **Data path**: bulk sector data never passes through the CPU. `cdb_sink` writes each arriving sector into a DRAM
   slot (byte order as the YGR019 delivers to the SH-1, so a DRAM word is the host-order halfword) and latches
   header words 6-9 (`m s f mode`, `file chan submode cinfo`) for the CPU. `cdb_xfer` runs one segment
-  `{addr, addr2, count}` and holds a second: Get Sector Data queues one segment per buffer, so the CPU has a full
-  sector time to queue the next one and the host never waits between sectors. Copy and zero-fill use the same
+  `{addr, addr2, count}` and holds a second: Get Sector Data queues one segment per buffer, the next one when the
+  engine takes the queued one (one segment, about 0.65 ms of host reads, ahead). Every segment but the last of a
+  transfer is written with the "more" bit (`XF_CNT` bit 12). A data-port access that finds the FIFO empty (read) or
+  full (write) holds `AWAIT_N` while the transfer has words to come, as the YGR019 does until the SH-1 feeds it; only
+  an access after the last segment has drained completes at once (read value 0). The wait gives up after 4,095
+  `CDD_CE` (23 ms), returns 0 and sets `EV_TO`. The longest firmware main-loop period measured over `script_cmds.txt`
+  is 2.8 ms (section 8), about four segments of host reads. Copy and zero-fill use the same
   engine. The 8-word FIFO between engine and data port is the only host-facing buffer.
 * **CD-DA**: audio sectors are consumed by the sink from the same stream, left on even words and right on odd words,
   to `CD_SL/CD_SR`, which is what the YGR019 did. One sector can be armed in `cdb_hle` while the previous one is
@@ -86,7 +91,7 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 | 0A | EV | R | bit0 cmd, 1 results read, 2 sector done, 3 disc change, 4 FIFO empty, 5 seg1 free, 6 xfer idle, 7 lk busy, 8 disc ok, 9 pf ready, 10 feed busy, 11 engine busy, 12 sink overrun, 13 host timeout, 14 armed, 15-17 target command result, 18 target command busy |
 | 0B | EVCLR | W | bit0 cmd, 1 sector, 2 disc change, 3 timeout |
 | 0C | TICKS | R | counts `CDD_CE` (176.4 kHz) |
-| 10-14 | XF_MODE, A, B, CNT, HCNT | W, W, W, W (commit), R | mode 0 stop/flush, 1 read, 2 write, 3 copy, 4 zero-fill |
+| 10-14 | XF_MODE, A, B, CNT, HCNT | W, W, W, W (commit), R | mode 0 stop/flush, 1 read, 2 write, 3 copy, 4 zero-fill; CNT bit 12: another segment follows |
 | 18-19 | DR_A, DR_D | W, R/W | DRAM window |
 | 1C-1E | SK_BASE (arm), HDR_A, HDR_B | | sector base, latched header |
 | 20-26 | LK_X, LK_IDX, LK_CTL, LK_R0, LK_START, NTR, TOCEND | | `cd_stream` lookup |
@@ -153,14 +158,15 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 
 ## 7. Known deviations
 
-1. The drive is modelled as Mednafen does: data always at 2x, audio at 1x (the speed bit of Init and Play is ignored),
+1. The drive is modelled as Mednafen does: data always at 2x, audio at 1x (the speed bit of Init is ignored: the
+   firmware sets `sd_spd2` for every data sector),
    startup 1 s after a disc is loaded, then a seek to FAD 150. Position, track, index and relative time come from the
    TOC, not from Q subcode. INDEX 01 only; pregap shows as index 0 with a counting-down relative time.
 2. No stall status: when the bridge cannot deliver a sector the drive stays in PLAY and does not advance
    (`cdd_ctl` reported `0x22`).
 3. TOC details: first/last entries use ctrl/adr `0x41`/`0x01` from the data flag, disc type byte 0.
-4. A data-port read while no transfer is running returns 0 immediately instead of the stale FIFO word; a read that
-   waits more than ~140 us for the engine times out (flag `EV_TO`).
+4. A data-port read after the end of the transfer (or with none running) returns 0 immediately instead of the stale
+   FIFO word; a read inside a transfer waits for data, up to 23 ms, then returns 0 (flag `EV_TO`).
 5. End Data Transfer returns the number of words the host really read (Mednafen: reads + 5 prefetched).
 6. Hardware info: `0000 0001 0000 FF00` before Init, `0600` after (the LLE without a drive keeps FF00).
 7. The firmware answers from a loop, not an interrupt: a periodic report is up to ~100 us late.
@@ -173,7 +179,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 
 ## 8. Tests
 
-`make -C sim cdb` (about 12 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
+`make -C sim cdb` (about 20 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
 
 * `sim/cdb/tb_cdb.sv`: SCU-side host model (`YGR019`-compatible access timing), `cd_stream` with an APF bridge and
   SRAM model, a `ddram_pocket`-style `cdram` model with random latency, script interpreter
@@ -185,6 +191,14 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   into the partition and PEND, Get Sector Data bytes, sector length 2352/2340/2336 sizes, the file-system chain
   (authenticate, change dir, scope, file info, read file with the data compared byte for byte), cooked track
   (sync, header, EDC area, body), CD-DA sample check against the audio file. **26 + 6 checks, 0 failed.**
+* `script_bulk.txt` (`check_hle.py <log> bulk`): Get Sector Data of 50 sectors, of 4 sectors with the firmware CPU
+  stopped for 3 ms mid-transfer (`fdata <n> <word> <us>` holds SERV's instruction bus), Get+Delete of 40 sectors with a
+  2.5 ms stop, all read with `host_rd_fast` (one A-bus read per wait release, 0.63 us per word) while the drive keeps
+  delivering sectors; data compared word for word with the image, End Data Transfer counts, and a read 6 words past the
+  end of a 1-sector transfer (zeros, count 1024). **8 checks, 0 failed**; the RTL before the "more" bit fails 4 (a
+  zero-filled sector each in the stalled transfers, counts 3072 and 38,359).
+* `+FEEDPC=<dt_feed address from firmware/cdb/build/cdb.lst>` reports the longest firmware main-loop period:
+  2,765 us over `script_cmds.txt`.
 * **LLE comparison** (`make -C sim cdb-compare`, same script on pruned SH-1 + cdb105m + YGR019 + `cdd_pocket`):
   `script_nodisc.txt` has 63 records (selectors, buffers, put/copy/move/delete, sector length, bad arguments, MPEG
   and unknown commands, data transfers with data compared word by word). After aligning the HLE with what the LLE

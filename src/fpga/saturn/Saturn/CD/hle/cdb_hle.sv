@@ -143,7 +143,7 @@ reg         shclk = 1'b0;
 wire        shce_r = shclk & CD_CE;
 
 wire [15:0] f_q, hs_wd;
-wire        f_empty, f_full, seg1_free, xf_idle;
+wire        f_empty, f_full, seg1_free, xf_idle, xf_fin;
 wire [2:0]  xf_mode;
 wire [31:0] hostcnt;
 reg         f_pop = 1'b0, f_push = 1'b0;
@@ -175,6 +175,8 @@ always @(posedge CLK) begin
 	end else begin
 		if (CE_R) begin awr_old <= AWRL_N & AWRU_N; ard_old <= ARD_N; end
 		if (shce_r && wait_cnt != 3'd0) wait_cnt <= wait_cnt - 3'd1;
+		// data-port wait for the transfer engine: up to 4095 CDD_CE (23 ms) while the transfer has words to come
+		if (CDD_CE && abus_wait && data_port) to_cnt <= to_cnt + 12'd1;
 
 		if (scu_sel) begin
 			if ((!AWRL_N || !AWRU_N) && awr_old && CE_F) begin
@@ -202,13 +204,12 @@ always @(posedge CLK) begin
 		if (CE_F && abus_wait && wait_cnt == 3'd0) begin
 			if (!data_port) abus_wait <= 1'b0;
 			else begin
-				to_cnt <= to_cnt + 12'd1;
 				if (!dp_wr && xf_mode == 3'd1) begin
 					if (!f_empty) begin ADO <= f_q; f_pop <= 1'b1; abus_wait <= 1'b0; end
-					else if (xf_idle || to_cnt == 12'hFFF) begin ADO <= 16'd0; abus_wait <= 1'b0; if (!xf_idle) ev_to <= 1'b1; end
+					else if (xf_fin || to_cnt == 12'hFFF) begin ADO <= 16'd0; abus_wait <= 1'b0; if (!xf_fin) ev_to <= 1'b1; end
 				end else if (dp_wr && xf_mode == 3'd2) begin
 					if (!f_full) begin f_wd <= ADI; f_push <= 1'b1; abus_wait <= 1'b0; end
-					else if (xf_idle || to_cnt == 12'hFFF) begin abus_wait <= 1'b0; if (!xf_idle) ev_to <= 1'b1; end
+					else if (xf_fin || to_cnt == 12'hFFF) begin abus_wait <= 1'b0; if (!xf_fin) ev_to <= 1'b1; end
 				end else begin
 					ADO <= 16'd0; abus_wait <= 1'b0;
 				end
@@ -262,7 +263,7 @@ cdb_sink sink (
 cdb_xfer xfer (
 	.clk(CLK), .rst_n(RST_N && RES_N), .mode_we(xf_mode_we), .mode_d(cpu_wd[2:0]),
 	.a_we(xf_a_we), .b_we(xf_b_we), .cnt_we(xf_cnt_we), .wd(cpu_wd[17:0]), .cnt_d(cpu_wd[11:0]),
-	.seg1_free(seg1_free), .idle(xf_idle), .mode(xf_mode), .hostcnt(hostcnt),
+	.seg1_free(seg1_free), .idle(xf_idle), .fin(xf_fin), .mode(xf_mode), .hostcnt(hostcnt),
 	.f_q(f_q), .f_empty(f_empty), .f_full(f_full), .f_pop(f_pop), .f_push(f_push), .f_wd(f_wd),
 	.rq(xf_rq), .rq_we(xf_rq_we), .rq_a(xf_a), .rq_d(xf_d), .dn(dram_done[1]), .dq(dram_q));
 
