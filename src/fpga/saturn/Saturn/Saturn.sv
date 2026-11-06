@@ -147,6 +147,10 @@ module Saturn
 	output     [23: 0] SD_HDR,
 	input              FD_BUSY,
 	input      [17: 0] CD_DATA18,
+	output             FW_WR,
+	output     [ 7: 0] FW_A,
+	output     [31: 0] FW_D,
+	input      [ 3: 0] FW_ST,
 `endif
 `endif
 	
@@ -1223,7 +1227,8 @@ module Saturn
 		.lk_data(LK_DATA), .lk_s2048(LK_S2048),
 		.pf_flush(PF_FLUSH), .pf_fad(PF_FAD), .pf_en(PF_EN), .pf_ready(PF_READY),
 		.sd_go(SD_GO), .sd_kind(SD_KIND), .sd_synth(SD_SYNTH), .sd_spd2(SD_SPD2), .sd_hdr(SD_HDR), .fd_busy(FD_BUSY),
-		.cd_data(CD_DATA18), .cd_ck(CD_CK));
+		.cd_data(CD_DATA18), .cd_ck(CD_CK),
+		.fw_wr(FW_WR), .fw_a(FW_A), .fw_d(FW_D), .fw_st(FW_ST));
 	bit YGR019_AWAIT_N;
 	assign CD_HDATA = 1'b0;
 	assign CD_COMCLK = 1'b1;

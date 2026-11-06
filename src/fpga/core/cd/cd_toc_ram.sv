@@ -1,4 +1,5 @@
-// 512 x 32 simple dual-port RAM, write on the bridge clock, read on clk_sys (one M10K pair).
+// 512 x 32 true dual-port RAM (one M10K pair): port a on the bridge clock (TOC push, host-written response structs,
+// bridge reads of the openfile parameter struct), port b on clk_sys (TOC engine, firmware window).
 
 `default_nettype none
 
@@ -7,18 +8,24 @@ module cd_toc_ram (
 	input  wire        we,
 	input  wire [8:0]  wa,
 	input  wire [31:0] wd,
+	output reg  [31:0] wq,                   // word at wa, one clock later
 	input  wire        rclk,
+	input  wire        rwe,
 	input  wire [8:0]  ra,
-	output wire [31:0] rq
+	input  wire [31:0] rwd,
+	output reg  [31:0] rq                    // word at ra, one clock later
 );
 
 (* ramstyle = "M10K" *) reg [31:0] mem [0:511];
 
-always @(posedge wclk) if (we) mem[wa] <= wd;
-// registered read address: the data is the word at ra one clock after ra, as a registered read
-reg [8:0] ra_q;
-always @(posedge rclk) ra_q <= ra;
-assign rq = mem[ra_q];
+always @(posedge wclk) begin
+	if (we) mem[wa] <= wd;
+	wq <= mem[wa];
+end
+always @(posedge rclk) begin
+	if (rwe) mem[ra] <= rwd;
+	rq <= mem[ra];
+end
 
 endmodule
 

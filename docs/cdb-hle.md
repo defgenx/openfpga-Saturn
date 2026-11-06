@@ -83,7 +83,7 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 | 00 | HIRQ | R / W = set bits | |
 | 01-05 | HMASK, CR1-4 | R | host written |
 | 06-09 | RR1-4 | W | RR4 write clears `EV_RRD` |
-| 0A | EV | R | bit0 cmd, 1 results read, 2 sector done, 3 disc change, 4 FIFO empty, 5 seg1 free, 6 xfer idle, 7 lk busy, 8 disc ok, 9 pf ready, 10 feed busy, 11 engine busy, 12 sink overrun, 13 host timeout, 14 armed |
+| 0A | EV | R | bit0 cmd, 1 results read, 2 sector done, 3 disc change, 4 FIFO empty, 5 seg1 free, 6 xfer idle, 7 lk busy, 8 disc ok, 9 pf ready, 10 feed busy, 11 engine busy, 12 sink overrun, 13 host timeout, 14 armed, 15-17 target command result, 18 target command busy |
 | 0B | EVCLR | W | bit0 cmd, 1 sector, 2 disc change, 3 timeout |
 | 0C | TICKS | R | counts `CDD_CE` (176.4 kHz) |
 | 10-14 | XF_MODE, A, B, CNT, HCNT | W, W, W, W (commit), R | mode 0 stop/flush, 1 read, 2 write, 3 copy, 4 zero-fill |
@@ -91,6 +91,7 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 | 1C-1E | SK_BASE (arm), HDR_A, HDR_B | | sector base, latched header |
 | 20-26 | LK_X, LK_IDX, LK_CTL, LK_R0, LK_START, NTR, TOCEND | | `cd_stream` lookup |
 | 28-2C | PF_FAD, PF_CTL, SD_CTL, SD_HDR, OVR_CLR | | prefetch, sector issue (arm; bit 5 disarms) |
+| 30-33 | FW_OFF, FW_CMD, TOC_A, TOC_D | W | `cd_stream` firmware port: target commands and TOC RAM words (docs/cd.md section 3a) |
 
 ## 4. CPU choice
 
@@ -109,7 +110,7 @@ the 16.6 ms periodic report and one sector per 6.7 ms (2x data) or 13.3 ms (audi
 including the testbench's 20 us poll granularity: median 129 us, worst 917 us (Copy of a 1,176-word sector with
 the DRAM copy engine). A status request is about 100 us of firmware time. The sector path is estimated at about 1,000
 instructions per sector (filter evaluation, buffer lists), under 1 ms of 6.7 ms (estimate). RVC (`-march=rv32ic`) is used:
-12,136 bytes of code as RV32IC (15,240 as RV32I, which is what is built: the compressed decoder and the aligner of SERV are 72 ALMs, the 3 KB of code are 4 M10K blocks), 1,580 bytes of RAM, ROM 16 KB. A faster CPU was not needed.
+12,136 bytes of code as RV32IC (15,240 as RV32I: the compressed decoder and the aligner of SERV are 72 ALMs, the 3 KB of code are 4 M10K blocks), 1,580 bytes of RAM, ROM 16 KB. RV32IC is built since the cue-sheet code (docs/cd.md section 3a): 14,380 bytes, 1,900 bytes of RAM. A faster CPU was not needed.
 
 ## 5. Command coverage
 

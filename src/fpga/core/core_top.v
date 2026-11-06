@@ -398,8 +398,8 @@ wire            osnotify_inmenu;
 // by the host reading slots 3 and 4 (bk_rd_data), so there is none.
 wire            target_dataslot_read;
 wire            target_dataslot_write = 1'b0;
-wire            target_dataslot_getfile = 1'b0;
-wire            target_dataslot_openfile = 1'b0;
+wire            target_dataslot_getfile;
+wire            target_dataslot_openfile;
 
 wire            target_dataslot_ack;
 wire            target_dataslot_done;
@@ -410,8 +410,10 @@ wire    [31:0]  target_dataslot_slotoffset;
 wire    [31:0]  target_dataslot_bridgeaddr;
 wire    [31:0]  target_dataslot_length;
 
-wire    [31:0]  target_buffer_param_struct = 32'h0;
-wire    [31:0]  target_buffer_resp_struct = 32'h0;
+// 0x0190 / 0x0192 struct: TOC RAM word 384 (cd_stream; the same buffer for the response and the next parameter)
+wire    [31:0]  target_buffer_param_struct = 32'h6000_0600;
+wire    [31:0]  target_buffer_resp_struct = 32'h6000_0600;
+wire    [31:0]  toc_rd_q;
 wire    [31:0]  target_dbg;
 
 // bridge data slot access
@@ -582,6 +584,9 @@ always @(*) begin
     32'h4xxxxxxx, 32'h5xxxxxxx: begin
         bridge_rd_data <= bk_rd_data;
     end
+    32'h6xxxxxxx: begin
+        bridge_rd_data <= toc_rd_q;
+    end
     32'h80xxxxxx: begin
         bridge_rd_data <= cfg_bridge_rd_data;
     end
@@ -669,6 +674,9 @@ saturn_pocket saturn (
     .ld_data        ( ld_data ),
 
     .target_dataslot_read       ( target_dataslot_read ),
+    .target_dataslot_getfile    ( target_dataslot_getfile ),
+    .target_dataslot_openfile   ( target_dataslot_openfile ),
+    .toc_rd_q                   ( toc_rd_q ),
     .target_dataslot_id         ( target_dataslot_id ),
     .target_dataslot_slotoffset ( target_dataslot_slotoffset ),
     .target_dataslot_bridgeaddr ( target_dataslot_bridgeaddr ),

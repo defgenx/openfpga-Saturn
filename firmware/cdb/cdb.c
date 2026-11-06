@@ -10,6 +10,7 @@
  * port, the CPU only does bookkeeping. docs/cdb-hle.md lists every deviation.
  */
 #include "hw.h"
+#include "cue.h"
 
 #define NBUF   200
 #define NFILT  24
@@ -1141,7 +1142,9 @@ static void do_boot(void)
 
 int main(void)
 {
-	u32 t0 = now() + BOOT_TICKS;
+	u32 t0;
+	disc_init();
+	t0 = now() + BOOT_TICKS;
 	while (!due(t0)) ;
 	MM(R_EVCLR) = CLR_DCHG;
 	pos.status = S_OPEN;

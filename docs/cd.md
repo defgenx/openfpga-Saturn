@@ -68,22 +68,15 @@ FIFO has drained.
 |---|---|---|
 | 0 | Game (.json) | first slot: a game's instance JSON (parameters `0x113`: reloadable, core-specific, instance JSON, full reload of core), optional; binds the TOC and the track files |
 | 1 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
-| 16 | Disc image | the disc as one `.img`/`.bin` (mktoc's merged image), picked directly, optional; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
+| 16 | Disc image | the disc, picked directly, optional: a `.cue` (section 3a) or one `.img`/`.bin` with its `.toc`; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
 | 2 | Disc TOC | the disc's 2048-byte `.toc`, picked directly (reloadable) or bound by the JSON, **pushed** at load to bridge `0x60000000` |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
-| 17..39 | CD file 01..23 | `deferload`, `secondary` (filled only from a JSON), served once slot 0 has the full-reload bit (below) |
+| 17..39 | CD file 01..23 | `deferload`, `secondary`: bound by a JSON (file f of mktoc's TOC in slot 16 + f) or opened by the core for a picked `.cue` (cue file f in slot 17 + f) |
 
-**Hardware evidence (v0.2.18, 2026-11-06).** With the disc files bound by an instance JSON (slot 1, parameters
-`0x11` or `0x13`, the layout up to v0.2.18) the Pocket pushes the TOC but never answers a single `0x0180` read of the
-deferload track slots: the BIOS shows "Disc unsuitable for this system". With the disc image as the first slot,
-picked directly, defined as the PSX core defines its disc (deferload, required, an `address`, a 1 GB
-`size_maximum`), Hyper Duel and Panzer Dragoon boot. Only the picked file is served, so a disc must be one file:
-`mktoc.py` merges the tracks by default (section 4). Separate track files would need the core to open them itself
-(target `0x0192` openfile); not implemented.
-
-**Hardware evidence (2026-11-06, later).** With slot 0 parameters `0x113` (bit 8, "full reload of core", added to
-`0x13`) and the track slots `deferload` + `secondary`, the Pocket serves the JSON's track files: a game picked as its
-`.json`, with separate track files, boots. Without bit 8 no read of a JSON-bound deferload slot is ever answered.
+**Hardware evidence (2026-11-06).** With the disc files bound by an instance JSON whose slot has parameters `0x11`
+or `0x13` the Pocket pushes the TOC but never answers a `0x0180` read of the deferload track slots ("Disc unsuitable
+for this system"). With parameters `0x113` (bit 8 added) it serves them and the JSON route boots. A disc image
+picked directly in slot 16 is served too (Hyper Duel, Panzer Dragoon boot with CD audio).
 
 The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets. The core
 decodes the pushed slots by bridge address and reads only ids 16..39 by id, so the slot order needs no RTL change.
@@ -98,13 +91,48 @@ is not applied (`tools/check_json.py` does not check it). Analogue's instance JS
 folder plus `data_path`, and `mktoc.py` refuses a JSON for which that does not hold (section 4). **Untested** on
 hardware: a JSON in another folder with a non-empty `data_path` (`mktoc.py --card --json-dir`).
 
-## 4. Why no cue parser on the Pocket
+## 3a. A cue sheet picked as the disc
+
+When no TOC is loaded at start-up and slot 16 holds a file whose name ends in `.cue`, the CD block firmware
+(`firmware/cdb/cue.h`) builds the TOC itself, then commits it like a pushed one (boot header replay, Saturn reset):
+
+1. `0x0190` on slot 16 gives the cue's full path; its folder is the base of every `FILE` name (`\` becomes `/`).
+2. The cue size is found by 1-byte `0x0180` reads (a read past the end fails with code 2, binary search); the cue
+   is read in 256-byte pieces.
+3. Each `FILE` is opened into slot `17 + f` with `0x0192` (flags 0); at its first `TRACK` its size in sectors of
+   that track's mode is found the same way (about 20 reads).
+4. The parse is `LoadCUE` as `tools/mktoc.py` ports it, and the TOC is the one mktoc writes with `--merge never`,
+   with file index `f + 1`. Not done on the Pocket: RAM cart database (byte 256 is 0; the cart setting of the menu
+   still applies), WWF / Road Rash flags, more than 23 files or 99 tracks (the disc is refused). Tabs before a
+   keyword are not skipped (as in mktoc).
+5. Boot header: 256 bytes of track 1's file at offset 16 (0 for MODE1/2048), straight into the TOC.
+
+A parse that fails leaves the drive without a disc. The `.img` + `.toc` and `.json` routes do not use this path
+(a TOC is loaded before the CD block starts).
+
+Hardware: the firmware reaches `cd_stream` through MMIO 0x30..0x33 (offset, command, TOC word address, TOC word
+write); the target command handshake and the TOC RAM are shared with the sector fetcher, so the firmware uses them
+only under `lk_hold` before any prefetch. The TOC RAM (true dual port, still 2 M10K) is the buffer: words 4..67
+cue window / boot header, 72.. records, 384..449 the `0x0190` response and `0x0192` parameter struct
+(`core_top` points both struct pointers at `0x6000_0600`, and bridge reads of `0x6xxxxxxx` return the RAM), 510
+the probe target. A word the firmware reads lands in `lk_idx1`/`lk_start`. Path byte order is taken from the
+leading `/` of the `0x0190` response (unknown on the Pocket; big-endian like file data is assumed in sim).
+
+Cost: SERV with the compressed decoder (`COMPRESSED=1`, 72 ALMs per section 4 of `docs/cdb-hle.md`), firmware
+RV32IC 14,380 bytes (14,336 with `-msave-restore`, which would allow a 14 KB ROM, 2 M10K less), cd_stream
+~+77 ALMs (yosys estimate, conservative: enable muxes counted as LUTs), bridge read mux ~+20; no M10K.
+
+Tests: `sim/cue/host_cue.cpp` (the firmware's `cue.h` against a C++ model of the port and the host; compared with
+mktoc by `sim/sys/gen_cue.py check` on five cues: one file per track, one `.img`, 12 files with a cooked first
+track, REM/CATALOG lines and unquoted names, MODE2, CRLF) and `sim/sys` with `PLUSARGS="+CARD=<dir> +CUE=<path>"`
+(tb_sys answers `0x0190`/`0x0192` from a file table).
+
+## 4. Cue sheets on a PC
 
 The cue is interpreted by `tools/mktoc.py`, which ports `LoadCUE` from `saturncdd.cpp` quirk for quirk (start/end
 per track, INDEX 00/01 handling, PREGAP, one file per track or one file for all) and writes the `.toc` and the
-instance JSON. The core then needs no string handling, no file-name opening (`0x0192`) and no large buffers: only
-arithmetic on a fixed table. Cost of that choice: a PC tool has to run over the discs (the install scripts run
-`mktoc.py --card`, below); CHD is not supported (the same as the PSX core).
+instance JSON. It is still the route for the RAM cart database, the game hacks and discs with more than 23 files
+(merged); the install scripts run `mktoc.py --card` (below). CHD is not supported.
 
 ```
 mktoc.py game.cue -o out/ [--data-path P] [--ramcart-db saturn_ramcart.txt] [--merge auto|always|never] [--wwf] [--road-rash]

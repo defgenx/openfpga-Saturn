@@ -77,7 +77,12 @@ module cdb_hle #(
 	output reg  [23:0] sd_hdr = 24'd0,
 	input  wire        fd_busy,
 	input  wire [17:0] cd_data,
-	input  wire        cd_ck
+	input  wire        cd_ck,
+	// cd_stream firmware port (MMIO 0x30..0x33 are decoded there), status in EV bits 15..18
+	output wire        fw_wr,
+	output wire [7:0]  fw_a,
+	output wire [31:0] fw_d,
+	input  wire [3:0]  fw_st
 );
 
 assign ARQT_N = 1'b1;
@@ -89,7 +94,7 @@ wire [3:0]  dsel;
 reg  [31:0] drd;
 reg         iack = 1'b0, dack = 1'b0;
 
-serv_rf_top #(.COMPRESSED(0), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
+serv_rf_top #(.COMPRESSED(1), .WITH_CSR(0), .RESET_STRATEGY("MINI")) cpu (
 	.clk(CLK), .i_rst(!RST_N || !RES_N), .i_timer_irq(1'b0),
 	.o_ibus_adr(ia), .o_ibus_cyc(ic), .i_ibus_rdt(ird), .i_ibus_ack(iack),
 	.o_dbus_adr(da), .o_dbus_dat(dd), .o_dbus_sel(dsel), .o_dbus_we(dwe), .o_dbus_cyc(dc),
@@ -149,6 +154,7 @@ reg  [31:0] cpu_wd = 32'd0;
 reg  [7:0]  mm_a = 8'd0;
 reg         mm_wr = 1'b0;
 wire        hirq_set = mm_wr && mm_a == 8'h00;
+assign fw_wr = mm_wr; assign fw_a = mm_a; assign fw_d = cpu_wd;
 
 // CR / RR: four words each (SH-2 word 0x18, 0x1C, 0x20, 0x24 and MMIO 0x02..0x05 / 0x06..0x09 map to index 0..3 as x + 2).
 // Not cleared by reset: the firmware reads CR only after a command (ev_cmd) and writes RR before the host reads it.
@@ -277,7 +283,7 @@ wire [15:0] cr_q;
 CDB_FERAM #(2,16) cr_ram(CLK, cr_we, bus_w[1:0] + 2'd2, ADI, mi[1:0] + 2'd2, cr_q);
 
 reg sk_overrun_r = 1'b0;
-wire [31:0] ev_word = {17'd0, armed, ev_to, sk_overrun_r, !eng_idle, fd_busy, pf_ready, disc_ok, lk_busy, xf_idle, seg1_free, f_empty,
+wire [31:0] ev_word = {13'd0, fw_st, armed, ev_to, sk_overrun_r, !eng_idle, fd_busy, pf_ready, disc_ok, lk_busy, xf_idle, seg1_free, f_empty,
                        ev_dchg, ev_sec, ev_rrd, ev_cmd};
 
 // Read-data select: one-hot, registered from the data address (stable for the whole bus access) and used in the

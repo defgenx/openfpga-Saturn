@@ -141,11 +141,42 @@ endtask
 // track files (data slots 16..19, read on demand with $fseek/$fread, so a full image is fine). After Reset Exit the host polls the
 // target command register (core_bridge_cmd 0xF8001000), answers "ready to run" and every dataslot read the core issues, writing the
 // sector words to the bridge address like the APF.
+// File table for 0x0190 get filename / 0x0192 open file (docs/cd.md section 3a): +CARD=<dir> is the card's
+// Assets/saturn/common/, +CUE=<path below it> is the file picked in slot 16 (a cue sheet). Paths are written and read
+// as big-endian byte strings (+PATH_LE: little-endian words). A read past the end of a file fails with code 2.
 string    toc_path = "";
 string    disc_path [0:3];
 integer   disc_fd [0:3];
 integer   n_ds_reads = 0, n_ds_err = 0, n_rtr = 0, rtr_late = 0, rtr_always = 0, no_dsread = 0;
 reg [7:0] sec [0:4095];
+localparam string CARD_PREFIX = "/Assets/saturn/common/";
+string    card_dir = "";
+string    slot_path [0:47];
+integer   slot_fd [0:47];
+integer   slot_size [0:47];
+integer   path_le = 0, n_gf = 0, n_of = 0;
+
+function automatic integer fsize(input integer fd);
+	integer s;
+	void'($fseek(fd, 0, 2)); s = $ftell(fd); void'($fseek(fd, 0, 0));
+	return s;
+endfunction
+
+task automatic slot_bind(input integer id, input string path);
+	integer fd;
+	string host;
+	begin
+		fd = 0;
+		if (path.len() > CARD_PREFIX.len() && path.substr(0, CARD_PREFIX.len() - 1) == CARD_PREFIX) begin
+			host = {card_dir, "/", path.substr(CARD_PREFIX.len(), path.len() - 1)};
+			fd = $fopen(host, "rb");
+		end
+		if (fd != 0) begin
+			if (slot_fd[id] != 0) $fclose(slot_fd[id]);
+			slot_fd[id] = fd; slot_path[id] = path; slot_size[id] = fsize(fd);
+		end
+	end
+endtask
 
 task automatic bridge_read(input [31:0] a, output [31:0] d);
 	begin
@@ -163,8 +194,15 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 	reg [31:0] w;
 	begin
 		n_ds_reads++;
-		fd = (id >= 16 && id < 20) ? disc_fd[id - 16] : 0;
+		fd = (id < 48 && slot_fd[id] != 0) ? slot_fd[id] : (id >= 16 && id < 20) ? disc_fd[id - 16] : 0;
 		got = 0;
+		if (id < 48 && slot_fd[id] != 0 && off + len > slot_size[id]) begin   // out of range: no data, code 2
+			bridge_write(32'hF8001000, 32'h62750000);
+			repeat (40) @(posedge clk_74a);
+			bridge_write(32'hF8001000, 32'h6F6B0002);
+			$fdisplay(ftrace, "%0t DISC dataslot read id=%0d off=%0d len=%0d out of range", $time, id, off, len);
+			return;
+		end
 		if (fd != 0) begin
 			void'($fseek(fd, off, 0));
 			got = $fread(sec, fd, 0, len);
@@ -173,6 +211,7 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 		bridge_write(32'hF8001000, 32'h62750000);                 // ack: data follows
 		repeat (dslat_us * 74) @(posedge clk_74a);
 		for (i = 0; i < len; i = i + 4) begin
+			if (len - i < 4) for (n = len - i; n < 4; n++) sec[i + n] = 8'hEE;   // tail of a short read: host garbage
 			bridge_write(baddr + i, {sec[i], sec[i+1], sec[i+2], sec[i+3]});
 			repeat (gap) @(posedge clk_74a);
 		end
@@ -180,6 +219,32 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 		if (got < len) n_ds_err++;
 		bridge_write(32'hF8001000, got < len ? 32'h6F6B0002 : 32'h6F6B0000);   // done, err 2 on a short read
 		$fdisplay(ftrace, "%0t DISC dataslot read id=%0d off=%0d baddr=%08h len=%0d got=%0d", $time, id, off, baddr, len, got);
+	end
+endtask
+
+task automatic path_write(input [31:0] a, input string s);
+	integer k;
+	reg [7:0] b [0:3];
+	begin
+		for (k = 0; k < 256; k = k + 4) begin
+			for (int j = 0; j < 4; j++) b[j] = (k + j < s.len()) ? s[k + j] : 8'h00;
+			bridge_write(a + k, path_le ? {b[3], b[2], b[1], b[0]} : {b[0], b[1], b[2], b[3]});
+		end
+	end
+endtask
+
+task automatic path_read(input [31:0] a, output string s);
+	integer k;
+	reg [31:0] w;
+	reg [7:0] c;
+	begin
+		s = "";
+		for (k = 0; k < 256; k++) begin
+			if ((k & 3) == 0) bridge_read(a + k, w);
+			c = path_le ? w[8*(k&3) +: 8] : w[24 - 8*(k&3) +: 8];
+			if (c == 8'h00) break;
+			s = {s, string'(c)};
+		end
 	end
 endtask
 
@@ -202,6 +267,32 @@ task automatic poll_target();
 						if (n_ds_reads == 0) $fdisplay(ftrace, "%0t HOST dataslot read id=%0d off=%0d not answered (+NO_DSREAD)", $time, p0, p1);
 						n_ds_reads = 1;                                                     // seen; polled again, never answered
 					end else serve_dataslot(p0, p1, p2, p3);
+				end else if (t0[15:0] == 16'h0190) begin                                    // get filename
+					bridge_read(32'hF8001020, p0); bridge_read(32'hF8001024, p1);
+					n_gf++;
+					bridge_write(32'hF8001000, 32'h62750000);
+					if (p0 >= 48) bridge_write(32'hF8001000, 32'h6F6B0001);
+					else begin
+						path_write(p1, slot_path[p0]);
+						$fdisplay(ftrace, "%0t HOST getfile id=%0d -> \"%s\"", $time, p0, slot_path[p0]);
+						bridge_write(32'hF8001000, 32'h6F6B0000);
+					end
+				end else if (t0[15:0] == 16'h0192) begin                                    // open file
+					string pth;
+					bridge_read(32'hF8001020, p0); bridge_read(32'hF8001024, p1);
+					n_of++;
+					bridge_write(32'hF8001000, 32'h62750000);
+					path_read(p1, pth);
+					bridge_read(p1 + 32'h100, p2);
+					if (p0 >= 48) p3 = 2;
+					else if (pth.len() == 0 || pth[0] != "/") p3 = 4;
+					else begin
+						slot_bind(p0, pth);
+						p3 = (slot_path[p0] == pth) ? 0 : 3;
+					end
+					$fdisplay(ftrace, "%0t HOST openfile id=%0d \"%s\" flags=%08h -> %0d size %0d", $time, p0, pth, p2, p3,
+					          p3 == 0 ? slot_size[p0] : 0);
+					bridge_write(32'hF8001000, {16'h6F6B, p3[15:0]});
 				end else bridge_write(32'hF8001000, 32'h6F6B0001);                         // unsupported: error
 			end
 			repeat (400) @(posedge clk_74a);
@@ -220,6 +311,15 @@ initial begin : host
 	rtr_always = $test$plusargs("RTR_ALWAYS");
 	no_dsread = $test$plusargs("NO_DSREAD");
 	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
+	for (i = 0; i < 48; i++) begin slot_fd[i] = 0; slot_path[i] = ""; slot_size[i] = 0; end
+	path_le = $test$plusargs("PATH_LE");
+	if ($value$plusargs("CARD=%s", card_dir)) begin : cue_pick
+		string rel;
+		if ($value$plusargs("CUE=%s", rel)) begin
+			slot_bind(16, {CARD_PREFIX, rel});
+			$display("tb_sys: slot 16 = %s (%0d bytes)", slot_path[16], slot_size[16]);
+		end
+	end
 	if ($value$plusargs("DISC0=%s", disc_path[0])) disc_fd[0] = $fopen(disc_path[0], "rb");
 	if ($value$plusargs("DISC1=%s", disc_path[1])) disc_fd[1] = $fopen(disc_path[1], "rb");
 	if ($value$plusargs("DISC2=%s", disc_path[2])) disc_fd[2] = $fopen(disc_path[2], "rb");
@@ -277,6 +377,17 @@ initial begin : host
 end
 
 // ------------------------------------------------------------------ probes
+// the TOC in the cd_stream TOC RAM when the disc becomes ready (sim/sys/gen_cue.py check compares it with mktoc's)
+initial begin : toc_dump
+	integer fd, k;
+	@(posedge dut.saturn.disc_ok);
+	fd = $fopen("toc_ram.hex", "w");
+	for (k = 0; k < 512; k++) $fdisplay(fd, "%08h", dut.saturn.stream.toc_ram.mem[k]);
+	$fclose(fd);
+	$fdisplay(ftrace, "%0t DISC ready: %0d tracks, lead-out FAD %0d, getfile %0d openfile %0d reads %0d", $time,
+	          dut.saturn.ntracks, dut.saturn.toc_end, n_gf, n_of, n_ds_reads);
+	$display("%0t DISC ready: %0d tracks, lead-out FAD %0d (toc_ram.hex)", $time, dut.saturn.ntracks, dut.saturn.toc_end);
+end
 `define SAT dut.saturn.saturn
 wire        clk_sys = dut.saturn.clk_sys;
 wire        sys_ce_r = `SAT.SYS_CE_R;
