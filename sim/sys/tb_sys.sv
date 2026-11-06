@@ -1124,6 +1124,19 @@ always @(posedge video_vs) if (frame_no == fbdump) begin : fbd
 	$display("tb_sys: dumped both VDP1 framebuffers at frame %0d", frame_no);
 end
 
+// VDP1 frame buffer writes lost to a full FIFO (SRAM too slow for the write rate), logged when the count changes
+initial begin : fbdrop_log
+	reg [7:0] q;
+	q = 8'd0;
+	forever begin
+		#(64'd10000000000);
+		if (dut.saturn.mem.fb.wf_drop !== q) begin
+			$display("%0t FBDROP %0d", $time, dut.saturn.mem.fb.wf_drop);
+			q = dut.saturn.mem.fb.wf_drop;
+		end
+	end
+end
+
 // ------------------------------------------------------------------ run control and summary
 longint max_cycles = 20000000;
 initial begin
