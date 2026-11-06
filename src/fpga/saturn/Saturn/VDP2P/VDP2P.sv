@@ -2967,15 +2967,17 @@ module VDP2P import VDP2P_PKG::*; (
 	wire SW_EN     =   WinTest(TW0_HIT ^ REGS.WCTLC.SPW0A,TW1_HIT ^ REGS.WCTLC.SPW1A,SDOT.WN ^ REGS.WCTLC.SPSWA,REGS.WCTLC.SPW0E,REGS.WCTLC.SPW1E,REGS.WCTLC.SPSWE & REGS.SPCTL.SPWINEN,REGS.WCTLC.SPLOG);
 	wire CCW_EN    =   WinTest(TW0_HIT ^ REGS.WCTLD.CCW0A,TW1_HIT ^ REGS.WCTLD.CCW1A,SDOT.WN ^ REGS.WCTLD.CCSWA,REGS.WCTLD.CCW0E,REGS.WCTLD.CCW1E,REGS.WCTLD.CCSWE & REGS.SPCTL.SPWINEN,REGS.WCTLD.CCLOG);
 							 
-	//The golden's ranked dots DOT_FST..DOT_FTH are LDR[IX_*]: the rank network registers a source index per position, and
-	//the source records at the same event. LDR 0 sprite, 1 RBG0, 2-5 NBG0-3, 6 back screen, 7 line colour (DOT_SEC only;
-	//index 7 in DOT_FTH is its '0 record, whose colour the CRAM slot 3 selector forces to 0 and whose flags are unused).
-	ScreenDot_t  LDR[8];
+	//DOT_FST..DOT_FTH carry the flags only: their colour (CAOS, P, DC) is the layer record LDR[IX_*] registered at the same
+	//event, read through one selector per CE_R slot in the colour stage. LDR 0 sprite, 1 RBG0, 2-5 NBG0-3, 6 back screen,
+	//7 line colour (slot 1) or the zero record (slot 3: DOT_FTH <= '0).
+	typedef struct packed {
+		bit [ 2: 0] CAOS;
+		bit         P;
+		bit [23: 0] DC;
+	} LDot_t;
+	ScreenDot_t DOT_FST, DOT_SEC, DOT_THD, DOT_FTH;
+	LDot_t       LDR[8];
 	bit  [ 2: 0] IX_FST, IX_SEC, IX_THD, IX_FTH;
-	ScreenDot_t  DOT_FST, DOT_SEC, DOT_THD;
-	assign DOT_FST = LDR[IX_FST];
-	assign DOT_SEC = LDR[IX_SEC];
-	assign DOT_THD = LDR[IX_THD];
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [ 2: 0] I0, I1, I2;
 		bit         SON, R0ON, N0ON, N1ON, N2ON, N3ON;
@@ -2990,16 +2992,18 @@ module VDP2P import VDP2P_PKG::*; (
 		bit         SSDEN, R0SDEN, N0SDEN, N1SDEN, N2SDEN, N3SDEN, BKSDEN;
 		bit         SBOKEN, R0BOKEN, N0BOKEN, N1BOKEN, N2BOKEN, N3BOKEN;
 		bit         SLCEN, R0LCEN, N0LCEN, N1LCEN, N2LCEN, N3LCEN;
+		ScreenDot_t FST, SEC, THD, FTH;
 		ScreenDot_t BACKD, LAY[6];
 		bit   [2:0] LPRI[6];
 		bit         LON[6];
-		bit   [5:0] BT, R0, R1, R2;   //BT: the layers that beat layer i; R0/R1/R2: layer of rank 0/1/2
-		bit         B0, B1, L0;       //BOKEN of the first and second, LCEN of the first
-		bit   [2:0] NB;
+		int         RK;
 		
 		if (!RST_N) begin
 			// synopsys translate_off
-			LDR <= '{8{SD_NULL}};
+			DOT_FST <= SD_NULL;
+			DOT_SEC <= SD_NULL;
+			DOT_THD <= SD_NULL;
+			DOT_FTH <= SD_NULL;
 			// synopsys translate_on
 		end
 		else if (DOT_CE_R || (DOT_CE_F & HRES[1])) begin
@@ -3106,6 +3110,10 @@ module VDP2P import VDP2P_PKG::*; (
 			N3LCEN = REGS.LNCLEN.N3LCEN;
 			
 			BACKD = {3'b000,1'b0,1'b0,BKCCRT,BKCOEN,BKCOSL,BKSDEN,1'b0,1'b0,1'b0,BACK_DC};
+			FST = BACKD;
+			SEC = BACKD;
+			THD = BACKD;
+			I0 = 3'd6; I1 = 3'd6; I2 = 3'd6;
 			
 			//Layers in insertion order: sprite, RBG0, NBG0..3. The three highest priorities win; equal priorities keep insertion order.
 			LAY[0] = {SCAOS,SCCEN,SCCM3,SCCRT,SCOEN,SCOSL,SSDEN,SBOKEN,SLCEN,SDOT.P,SDOT.DC};         LPRI[0] = SPRIN;  LON[0] = SON  && |SPRIN;
@@ -3114,39 +3122,44 @@ module VDP2P import VDP2P_PKG::*; (
 			LAY[3] = {N1CAOS,N1CCEN,N1CCM3,N1CCRT,N1COEN,N1COSL,N1SDEN,N1BOKEN,N1LCEN,N1DOT.P,N1DOT.DC}; LPRI[3] = N1PRIN; LON[3] = N1ON && |N1PRIN;
 			LAY[4] = {N2CAOS,N2CCEN,N2CCM3,N2CCRT,N2COEN,N2COSL,N2SDEN,N2BOKEN,N2LCEN,N2DOT.P,N2DOT.DC}; LPRI[4] = N2PRIN; LON[4] = N2ON && |N2PRIN;
 			LAY[5] = {N3CAOS,N3CCEN,N3CCM3,N3CCRT,N3COEN,N3COSL,N3SDEN,N3BOKEN,N3LCEN,N3DOT.P,N3DOT.DC}; LPRI[5] = N3PRIN; LON[5] = N3ON && |N3PRIN;
-			//The order (priority, then insertion order) is strict, so each rank has at most one layer: the selects are one-hot
-			//and the indices OR-encoded; no layer of a rank is the back screen (6).
-			for (int i=0; i<6; i++) begin
-				for (int j=0; j<6; j++) BT[j] = j != i && LON[j] && (LPRI[j] > LPRI[i] || (LPRI[j] == LPRI[i] && j < i));
-				R0[i] = DISP && LON[i] && BT == 6'd0;
-				NB = 3'(BT[0]) + 3'(BT[1]) + 3'(BT[2]) + 3'(BT[3]) + 3'(BT[4]) + 3'(BT[5]);
-				R1[i] = DISP && LON[i] && NB == 3'd1;
-				R2[i] = DISP && LON[i] && NB == 3'd2;
-			end
-			I0 = |R0 ? 3'd0 : 3'd6; I1 = |R1 ? 3'd0 : 3'd6; I2 = |R2 ? 3'd0 : 3'd6;
-			B0 = 0; B1 = 0; L0 = 0;
-			for (int i=0; i<6; i++) begin
-				I0 = I0 | ({3{R0[i]}} & 3'(i));
-				I1 = I1 | ({3{R1[i]}} & 3'(i));
-				I2 = I2 | ({3{R2[i]}} & 3'(i));
-				B0 = B0 | (R0[i] & LAY[i].BOKEN);
-				B1 = B1 | (R1[i] & LAY[i].BOKEN);
-				L0 = L0 | (R0[i] & LAY[i].LCEN);
+			if (DISP) begin
+				for (int i=0; i<6; i++) begin
+					RK = 0;
+					for (int j=0; j<6; j++) begin
+						if (j != i && LON[j] && (LPRI[j] > LPRI[i] || (LPRI[j] == LPRI[i] && j < i))) RK = RK + 1;
+					end
+					if (LON[i]) begin
+						case (RK)
+							0: begin FST = LAY[i]; I0 = 3'(i); end
+							1: begin SEC = LAY[i]; I1 = 3'(i); end
+							2: begin THD = LAY[i]; I2 = 3'(i); end
+							default:;
+						endcase
+					end
+				end
 			end
 			
-			for (int i=0; i<6; i++) LDR[i] <= LAY[i];
-			LDR[6] <= BACKD;
-			LDR[7] <= {3'b000,LCCCEN,1'b0,LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}};
+			for (int i=0; i<6; i++) LDR[i] <= {LAY[i].CAOS,LAY[i].P,LAY[i].DC};
+			LDR[6] <= {3'b000,1'b0,BACK_DC};
+			LDR[7] <= {3'b000,1'b1,{13'b0000000000000,LINE_PAL}};
 			
-			IX_FST <= I0;
-			if (B0) begin
-				IX_SEC <= I0; IX_THD <= I0; IX_FTH <= I0;
-			end else if (B1) begin
-				IX_SEC <= I1; IX_THD <= I1; IX_FTH <= I1;
-			end else if (L0) begin
-				IX_SEC <= 3'd7; IX_THD <= I1; IX_FTH <= I2;
+			DOT_FST <= FST; IX_FST <= I0;
+			if (FST.BOKEN) begin
+				DOT_SEC <= FST; IX_SEC <= I0;
+				DOT_THD <= FST; IX_THD <= I0;
+				DOT_FTH <= FST; IX_FTH <= I0;
+			end else if (SEC.BOKEN) begin
+				DOT_SEC <= SEC; IX_SEC <= I1;
+				DOT_THD <= SEC; IX_THD <= I1;
+				DOT_FTH <= SEC; IX_FTH <= I1;
+			end else if (FST.LCEN) begin
+				DOT_SEC <= {3'b000,LCCCEN,1'b0,LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}}; IX_SEC <= 3'd7;
+				DOT_THD <= SEC; IX_THD <= I1;
+				DOT_FTH <= THD; IX_FTH <= I2;
 			end else begin
-				IX_SEC <= I1; IX_THD <= I2; IX_FTH <= 3'd7;
+				DOT_SEC <= SEC; IX_SEC <= I1;
+				DOT_THD <= THD; IX_THD <= I2;
+				DOT_FTH <= '0;  IX_FTH <= 3'd7;
 			end
 		end
 	end
@@ -3155,8 +3168,8 @@ module VDP2P import VDP2P_PKG::*; (
 	//SM: the record of the slot's dot (FST, SEC, THD, FTH as the golden's CRAM slots); it only changes at the events.
 	wire [ 1: 0] SLOT = DOTCLK_DIV & {~HRES[1],1'b1};
 	wire [ 2: 0] IXS = SLOT == 2'd0 ? IX_FST : SLOT == 2'd1 ? IX_SEC : SLOT == 2'd2 ? IX_THD : IX_FTH;
-	ScreenDot_t  SM;
-	assign SM = (IXS == 3'd7 && SLOT[1]) ? SD_NULL : LDR[IXS];
+	LDot_t       SM;
+	assign SM = (IXS == 3'd7 && SLOT[1]) ? LDot_t'('0) : LDR[IXS];
 	wire [10: 0] PAL_N = {SM.CAOS,8'b00000000} + SM.DC[10:0];
 	//CRAM colour; read only at CE_R clocks (the golden holds it between them)
 	bit  [23: 0] DC;
@@ -3218,7 +3231,7 @@ module VDP2P import VDP2P_PKG::*; (
 			if (!HRES[1] && DOT_CE_R) begin
 				CFST <= DC_FST_LATCH;
 				CSEC <= CSEC_ECC;
-				CCRT <= LDR[!REGS.CCCTL.CCRTMD ? IX_FST : IX_SEC].CCRT;
+				CCRT <= !REGS.CCCTL.CCRTMD ? DOT_FST.CCRT : DOT_SEC.CCRT;
 				CCENFST <= !DOT_FST.CCM3 ? DOT_FST.CCEN : DOT_FST.CCEN & (CC_FST | ~DOT_FST.P);
 				COEN <= DOT_FST.COEN; 
 				COSL <= DOT_FST.COSL;
@@ -3230,7 +3243,7 @@ module VDP2P import VDP2P_PKG::*; (
 			else if (HRES[1] && (DOT_CE_R || DOT_CE_F)) begin
 				CFST <= DC_FST_LATCH;
 				CSEC <= SMDC;
-				CCRT <= LDR[!REGS.CCCTL.CCRTMD ? IX_FST : IX_SEC].CCRT;
+				CCRT <= !REGS.CCCTL.CCRTMD ? DOT_FST.CCRT : DOT_SEC.CCRT;
 				CCENFST <= |REGS.RAMCTL.CRMD && DOT_SEC.P ? 1'b0 : !DOT_FST.CCM3 ? DOT_FST.CCEN : DOT_FST.CCEN & (CC_FST | ~DOT_FST.P);
 				COEN <= DOT_FST.COEN; 
 				COSL <= DOT_FST.COSL;
