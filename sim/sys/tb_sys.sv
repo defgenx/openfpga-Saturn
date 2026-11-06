@@ -104,7 +104,7 @@ sdram_model sdmodel (.t_ref(t_ref), .clk(sd_clk), .cke(dram_cke), .ras_n(sd_ras_
 	.ba(sd_ba), .a(sd_a), .dqm(sd_dqm), .dq(sd_dq), .errors(sd_err), .dq_drive(sd_drive), .n_act(sd_act), .n_rd(sd_rd), .n_wr(sd_wr));
 
 wire [31:0] sr_err, sr_rd, sr_wr;
-sram_model #(.T_AA(0)) srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_n(sram_we_n), .ub_n(sram_ub_n), .lb_n(sram_lb_n), .errors(sr_err), .n_rd(sr_rd), .n_wr(sr_wr));
+sram_model srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_n(sram_we_n), .ub_n(sram_ub_n), .lb_n(sram_lb_n), .errors(sr_err), .n_rd(sr_rd), .n_wr(sr_wr));
 
 // ------------------------------------------------------------------ host (bridge) side
 reg [7:0] bios [0:524287];
@@ -144,7 +144,7 @@ endtask
 string    toc_path = "";
 string    disc_path [0:3];
 integer   disc_fd [0:3];
-integer   n_ds_reads = 0, n_ds_err = 0, n_rtr = 0, rtr_late = 0, rtr_always = 0;
+integer   n_ds_reads = 0, n_ds_err = 0, n_rtr = 0, rtr_late = 0, rtr_always = 0, no_dsread = 0;
 reg [7:0] sec [0:4095];
 
 task automatic bridge_read(input [31:0] a, output [31:0] d);
@@ -198,7 +198,10 @@ task automatic poll_target();
 				else if (t0[15:0] == 16'h0180) begin
 					bridge_read(32'hF8001020, p0); bridge_read(32'hF8001024, p1);
 					bridge_read(32'hF8001028, p2); bridge_read(32'hF800102C, p3);
-					serve_dataslot(p0, p1, p2, p3);
+					if (no_dsread) begin                                                    // +NO_DSREAD: never answer, as seen on the Pocket
+						if (n_ds_reads == 0) $fdisplay(ftrace, "%0t HOST dataslot read id=%0d off=%0d not answered (+NO_DSREAD)", $time, p0, p1);
+						n_ds_reads = 1;                                                     // seen; polled again, never answered
+					end else serve_dataslot(p0, p1, p2, p3);
 				end else bridge_write(32'hF8001000, 32'h6F6B0001);                         // unsupported: error
 			end
 			repeat (400) @(posedge clk_74a);
@@ -215,6 +218,7 @@ initial begin : host
 	if (!$value$plusargs("DSLAT_US=%d", dslat_us)) dslat_us = 0;
 	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";
 	rtr_always = $test$plusargs("RTR_ALWAYS");
+	no_dsread = $test$plusargs("NO_DSREAD");
 	for (i = 0; i < 4; i++) begin disc_fd[i] = 0; disc_path[i] = ""; end
 	if ($value$plusargs("DISC0=%s", disc_path[0])) disc_fd[0] = $fopen(disc_path[0], "rb");
 	if ($value$plusargs("DISC1=%s", disc_path[1])) disc_fd[1] = $fopen(disc_path[1], "rb");

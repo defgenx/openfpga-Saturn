@@ -60,7 +60,7 @@ Roles swap every frame, so both buffers must take display + erase and draw.
 | both buffers cropped to 352x240 | `OUT_Y` is 8 bit and the PAL modes show 256 lines, so 256 rows are addressable and can be displayed; 240 rows would cut 6% (9 blocks) and break PAL | no |
 | 8 bit per pixel | VDP1 16 bit pixel mode needs all 16 bits, and the buffer mode is per frame | no |
 | part of a buffer in SDRAM spare slots | no bank has time to spare (above) | no |
-| SRAM, 256 KB asynchronous | read 4 clk_ram (35 ns) = 28.6 M/s, write 3 clk_ram (26 ns) = 38 M/s, dedicated pins | holds one buffer (176 KB cropped) and still takes 28.6 M/s writes |
+| SRAM, 256 KB asynchronous (AS6C2016-55) | read 8 clk_ram (70 ns) = 14.3 M/s, write 8 clk_ram (70 ns) = 14.3 M/s, dedicated pins | holds one buffer (176 KB cropped); too slow for VBlank erase (below) |
 
 Choice: **FB0 in the Pocket SRAM, FB1 split: columns 0-191 in M10K (49,152 words, 96 blocks), columns 192-351 in the
 rest of the SRAM (40,960 words, the whole SRAM is framebuffer pixels); both cropped to the first 352 columns** (index =
@@ -78,7 +78,25 @@ high for two clk_sys or more, which `ram_reset` gives) and FB_RDY goes low while
 draw is held back and the erase (which cannot stall) keeps room. A draw read of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read
 tracks `FB1_A` in the tail like `FB0_A`. The cost is the second tracker and FIFO in `vdp1_fb_pocket` (+50 ALMs).
 
-Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
+**The Pocket's SRAM is an AS6C2016-55BIN** (Analogue, https://www.analogue.co/developer/docs/external-hardware):
+tAA 55 ns, tWP 45 ns, tAW / tBW 50 ns, tDW 25 ns, tWC 55 ns (Alliance datasheet v1.1). Up to v0.2.18 `sram_pocket` ran it
+as a 10 ns part (read sampled at 35 ns, WE# low 8.7 ns), so on hardware every SRAM pixel was wrong: FB1 columns 192 and
+up and all of FB0 (the BIOS CD player screen drawn wrong right of column 192). `sram_model` now defaults to the 55 ns
+grade and `sram_pocket` takes 8 clk_ram per read and per write.
+
+Measured in `sim/mem/tb_fb` with the 55 ns model and RD_CYC = WR_CYC = 8:
+
+| | Result |
+|---|---|
+| draw into FB0 (SRAM), with the VDP1 handshake | 63 ns per pixel (34 ns before), 0 errors |
+| draw into FB1 (M10K + tail) | 34 ns per pixel, 0 errors |
+| display read, FB0 and FB1 across column 192, erase at DCE_R | pixel valid within 6 clk_sys, 0 errors |
+| VBlank erase, 1 write per 2 clk_sys (C), and with the other buffer drawing (D) | **fails**: 255 FIFO drops; the SRAM takes 1 write per 4 clk_sys |
+| SRAM model timing checks | 0 errors |
+
+VBlank erase (FBCR VBE) therefore leaves part of the area unerased on the Pocket until a buffer moves off the SRAM.
+
+Previous measurements (SRAM model with tAA 10 ns, the old 4 / 3 cycle controller, not valid for the Pocket's chip):
 
 | | Result |
 |---|---|
@@ -90,8 +108,8 @@ Measured in `sim/mem/tb_fb` (SRAM model with tAA 10 ns):
 | SRAM with tAA 30 ns (-DSRAMAA_PS=30000) | fails: reads return X, as expected for the 35 ns read cycle |
 
 If M10K cannot spare 96 blocks the other buffer has to go to PSRAM1 (not implemented): drawing into it runs at about
-a third of the speed and VBlank erase on it loses writes. The SRAM part number is not known (`docs/pocket-platform.md`
-2.1); `RD_CYC` and `WR_CYC` in `sram_pocket.sv` are the two knobs (write needs WE# low 8.7 ns at WR_CYC = 3).
+a third of the speed and VBlank erase on it loses writes. `RD_CYC` and `WR_CYC` in `sram_pocket.sv` are the two knobs
+(WE# is low WR_CYC - 2 cycles).
 
 ## 3. VDP2 VRAM and SCSP RAM on the SDRAM (`sdram_pocket.sv`)
 

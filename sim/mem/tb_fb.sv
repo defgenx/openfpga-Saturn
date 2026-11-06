@@ -6,7 +6,7 @@
 //               hold the pre-erase pixel; latency from address change to valid FB0_Q
 //   C  vberase  VBlank erase: one FB0 write every 2 clk_sys for a whole region; no write may be lost
 //   B2, D       FB1 display across the M10K / SRAM tail boundary, concurrent erase and draw on both SRAM streams
-//   -DSRAMAA_PS=n  SRAM access time in the model (default 10000; 30000 makes the controller fail)
+//   -DSRAMAA_PS=n  SRAM access time in the model (default 55000, the Pocket's AS6C2016-55)
 //   +N=count    operations in test A
 
 `timescale 1ps/1ps
@@ -71,7 +71,7 @@ assign sram_dq_i = dq_in_r;
 
 wire [31:0] s_err, s_rd, s_wr;
 `ifndef SRAMAA_PS
-`define SRAMAA_PS 10000
+`define SRAMAA_PS 55000
 `endif
 sram_model #(.T_AA(`SRAMAA_PS)) smem (.a(a_d), .dq(dq), .oe_n(oen_d), .we_n(wen_d), .ub_n(ub_d), .lb_n(lb_d), .errors(s_err), .n_rd(s_rd), .n_wr(s_wr));
 

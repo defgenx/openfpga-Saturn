@@ -1,16 +1,16 @@
 // Behavioural 128K x 16 asynchronous SRAM with access/pulse checks. Simulation only.
-// T_AA is the address/OE#/byte-enable to data time; the part on the Pocket is not known (docs/memory.md).
+// Defaults: the Pocket's AS6C2016-55 (Alliance datasheet v1.1, AC characteristics, 55 ns grade).
 // As on every x16 asynchronous SRAM, a byte is driven on a read only while its enable (LB# for DQ[7:0], UB# for
 // DQ[15:8]) is low; with the enable high that byte stays high impedance.
 
 `timescale 1ps/1ps
 
 module sram_model #(
-	parameter integer T_AA = 10000,
-	parameter integer T_WP = 8000,      // minimum WE# low
-	parameter integer T_AW = 8000,      // address valid to WE# rising
-	parameter integer T_BW = 8000,      // LB#/UB# low to WE# rising
-	parameter integer T_DW = 5000,      // data valid to WE# rising
+	parameter integer T_AA = 55000,
+	parameter integer T_WP = 45000,     // minimum WE# low
+	parameter integer T_AW = 50000,     // address valid to WE# rising
+	parameter integer T_BW = 50000,     // LB#/UB# low to WE# rising
+	parameter integer T_DW = 25000,     // data valid to WE# rising
 	parameter integer T_WR = 0          // address hold after WE# rising
 ) (
 	input  wire [16:0] a,
