@@ -1242,7 +1242,6 @@ module VDP2P import VDP2P_PKG::*; (
 						VRAMA1_A <= {VRAM_WA[16:2],1'b0};
 						VRAMB0_A <= {VRAM_WA[17:2],1'b0};
 						VRAMB1_A <= {VRAM_WA[16:2],1'b0};
-						VRAMA_D <= VRAM_D;
 						VRAMA_WE <= WrLane(VRAM_WE) & VRAM_WE & {8{~VRAM_WA[18]}};
 						VRAMB_WE <= WrLane(VRAM_WE) & VRAM_WE & {8{ VRAM_WA[18]}};
 						VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
@@ -1278,7 +1277,6 @@ module VDP2P import VDP2P_PKG::*; (
 						if (((VRAM_READ_PEND && (VRAMA0_READ || VRAMA1_READ)) || (VRAM_WRITE_PEND && !VRAM_WA[18])) && (VRAMA_ALLOW || !REGS.RAMCTL.VRAMD || VA_PIPE[1].AxNA)) begin
 							if (VRAM_WRITE_PEND) begin
 								VRAMA0_A <= {VRAM_WA[17:2],1'b0};
-								VRAMA_D <= VRAM_D;
 								VRAMA_WE <= WrLane(VRAM_WE) & VRAM_WE;
 								VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
 								VRAM_WRITE_PEND_CLR = (VRAM_WE & ~WrLane(VRAM_WE)) == 8'h00;
@@ -1309,7 +1307,6 @@ module VDP2P import VDP2P_PKG::*; (
 						if (((VRAM_READ_PEND && (VRAMB0_READ || VRAMB1_READ)) || (VRAM_WRITE_PEND && VRAM_WA[18])) && (VRAMB_ALLOW || !REGS.RAMCTL.VRBMD || VA_PIPE[1].BxNA)) begin
 							if (VRAM_WRITE_PEND) begin
 								VRAMB0_A <= {VRAM_WA[17:2],1'b0};
-								VRAMA_D <= VRAM_D;//////////////////////
 								VRAMB_WE <= WrLane(VRAM_WE) & VRAM_WE;
 								VRAM_WE <= VRAM_WE & ~WrLane(VRAM_WE);
 								VRAM_WRITE_PEND_CLR = (VRAM_WE & ~WrLane(VRAM_WE)) == 8'h00;
@@ -1498,6 +1495,10 @@ module VDP2P import VDP2P_PKG::*; (
 `endif
 		end
 	end
+	
+	//Every DOT_CE_F that sets a write enable also loads VRAM_D here; at the others the bus data is unused (RA_D/RB_D
+	//are read with RA_WE/RB_WE only: sdram_pocket, and the harness compares them so), so the load is unconditional.
+	always @(posedge CLK) if (DOT_CE_F) VRAMA_D <= VRAM_D;
 	
 	bit         FIFO_WRREQ;
 	bit         FIFO_RDREQ;
@@ -1838,10 +1839,38 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2P_SDPR #(1,32) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, CE_R, DIV_N[1], YP_Q);
 	VDP2P_SDPR #(1,32) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, CE_R, DIV_N[1], SPX_Q);
 	VDP2P_SDPR #(1,32) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, CE_R, DIV_N[1], SPY_Q);
-	always @(posedge CLK or negedge RST_N) begin
-		bit  [31: 0] RP_WD,RCT_WD;
+	//Coefficient table data: one decoder shared by the table fetch words (RCTA/RCTB, never in the same dot)
+	//and the per-dot coefficient reads (RAM or color RAM). Own block: the two loads are plain clock enables.
+	CT_t         CT_D;
+	bit          CTD_WE[2];
+	always_comb begin
+		bit  [31: 0] RCT_WD;
 		bit          CT_RP, CT_USE, CT_SEL;
-		CT_t         CT_D;
+		
+		CT_USE = RB2.RxCT[0] || RB2.RxCRCT[0];
+		CT_RP = R0RP_PIPE[2];
+		if (RB2.RxCT[0]) 
+			if (RBG_PIPE[1].RxCT_EN[0]) 
+				case (RB2.RxCTS[0])
+					2'd0: RCT_WD = RA0_BUF;
+					2'd1: RCT_WD = RA1_BUF;
+					2'd2: RCT_WD = RB0_BUF;
+					2'd3: RCT_WD = RB1_BUF;
+				endcase
+			else
+				RCT_WD = '0;
+		else
+			RCT_WD = CT_CRAM_Q;
+		CT_SEL = CT_USE ? CT_RP : VA2.RCTB;
+		CT_D = CTData(RPxREG[CT_SEL].KMD, RPxREG[CT_SEL].KDBS, CT_USE ? RCT_WD : RPW_WD);
+		CTD_WE[0] = CT_USE | VA2.RCTA;
+		CTD_WE[1] = CT_USE ? CT_RP : VA2.RCTB;
+	end
+	always @(posedge CLK) begin
+		if (DOT_CE_R && CTD_WE[0]) CTD[0] <= CT_D;
+		if (DOT_CE_R && CTD_WE[1]) CTD[1] <= CT_D;
+	end
+	always @(posedge CLK or negedge RST_N) begin
 		RotCoord_t   ADD1;
 		RotCoord_t   MULT1,MULT2;
 		RotCoord_t   RES;
@@ -1855,38 +1884,6 @@ module VDP2P import VDP2P_PKG::*; (
 		else begin
 			if (DOT_CE_R) begin
 				N = RPN;
-				case (VRAM_BANK_2)
-					2'b00: RP_WD = RA0_BUF;
-					2'b01: RP_WD = RA1_BUF;
-					2'b10: RP_WD = RB0_BUF;
-					2'b11: RP_WD = RB1_BUF;
-				endcase
-				
-				//Coefficient table data: one decoder shared by the table fetch words (RCTA/RCTB, never in the same dot)
-				//and the per-dot coefficient reads (RAM or color RAM)
-				CT_USE = RB2.RxCT[0] || RB2.RxCRCT[0];
-				CT_RP = R0RP_PIPE[2];
-				if (RB2.RxCT[0]) 
-					if (RBG_PIPE[1].RxCT_EN[0]) 
-						case (RB2.RxCTS[0])
-							2'd0: RCT_WD = RA0_BUF;
-							2'd1: RCT_WD = RA1_BUF;
-							2'd2: RCT_WD = RB0_BUF;
-							2'd3: RCT_WD = RB1_BUF;
-						endcase
-					else
-						RCT_WD = '0;
-				else
-					RCT_WD = CT_CRAM_Q;
-				CT_SEL = CT_USE ? CT_RP : VA2.RCTB;
-				CT_D = CTData(RPxREG[CT_SEL].KMD, RPxREG[CT_SEL].KDBS, CT_USE ? RCT_WD : RP_WD);
-				if (CT_USE) begin
-					CTD[0] <= CT_D;
-					if (CT_RP) CTD[1] <= CT_D;
-				end else begin
-					if (VA2.RCTA) CTD[0] <= CT_D;
-					if (VA2.RCTB) CTD[1] <= CT_D;
-				end
 				
 				ACCX <= SUMX;
 				ACCY <= SUMY;
