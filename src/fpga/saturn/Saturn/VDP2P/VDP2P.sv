@@ -1029,27 +1029,64 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	wire [10: 0] NC_X = VA4.NxX[{UL[1],UL[0]}];
 	wire [10: 0] NC_Y = VA4.NxY[{UL[1],UL[0]}];
-	wire [19: 1] N_CH01 = !NSxREG[{1'b0,UL[0]}].BMEN ? NxCHAddr(NC_PN, NBG_CH_CNT[{1'b0,UL[0]}], NC_X, NC_Y, NSxREG[{1'b0,UL[0]}].CHCN, NSxREG[{1'b0,UL[0]}].CHSZ, NSxREG[{1'b0,UL[0]}].ZMHF, NSxREG[{1'b0,UL[0]}].ZMQT) :
-	                                                            NxBMAddr(NSxREG[{1'b0,UL[0]}].MP, NBG_CH_CNT[{1'b0,UL[0]}], NBG_BM_CNT[{1'b0,UL[0]}], NC_X, NC_Y, NSxREG[{1'b0,UL[0]}].CHCN, NSxREG[{1'b0,UL[0]}].BMSZ, NSxREG[{1'b0,UL[0]}].ZMHF, NSxREG[{1'b0,UL[0]}].ZMQT);
+	wire [19: 1] N_BMA = NxBMAddr(NSxREG[{1'b0,UL[0]}].MP, NBG_CH_CNT[{1'b0,UL[0]}], NBG_BM_CNT[{1'b0,UL[0]}], NC_X, NC_Y, NSxREG[{1'b0,UL[0]}].CHCN, NSxREG[{1'b0,UL[0]}].BMSZ, NSxREG[{1'b0,UL[0]}].ZMHF, NSxREG[{1'b0,UL[0]}].ZMQT);
 	PN_t         NC_PN23[2];
 	always_comb begin
 		NC_PN23[0] = UL[0] ? NBG3_PN_PIPE[0] : NBG2_PN_PIPE[0];
 		NC_PN23[1] = UL[0] ? NBG3_PN_PIPE[1] : NBG2_PN_PIPE[1];
 	end
-	wire [19: 1] N_CH23 = NxCHAddr2(NC_PN23, NBG_CH_CNT[{1'b1,UL[0]}], NC_X, NC_Y, NSxREG[{1'b1,UL[0]}].CHCN, NSxREG[{1'b1,UL[0]}].CHSZ, 1'b0, 1'b0);
 	wire         R_CSET = UR1 ? 1'b1 : VA4.R0RP;
 	wire [11: 0] R_CX = VA4.RxX[R_CSET][11:0];
 	wire [11: 0] R_CY = VA4.RxY[R_CSET][11:0];
-	wire [19: 1] R_CHA = (!UR1 && RSxREG[0].BMEN) ? RxBMAddr(RPxREG[R_CSET].MP, R_CX, R_CY, RSxREG[0].CHCN, RSxREG[0].BMSZ) :
-	                                                RxCHAddr(RBG_PN_PIPE[1][UR1], R_CX, R_CY, RSxREG[UR1].CHCN, RSxREG[UR1].CHSZ);
+	wire [19: 1] R_BMA = RxBMAddr(RPxREG[R_CSET].MP, R_CX, R_CY, RSxREG[0].CHCN, RSxREG[0].BMSZ);
+	//One character address adder (NxCHAddr, NxCHAddr2, RxCHAddr) on the inputs of the access UO takes: RBG over NBG.
+	//CA_W is the word index inside the cell row: the NBG word count, or the RBG dot x, both flipped by HF.
+	PN_t         CA_PN;
+	bit  [ 3: 0] CA_X, CA_Y;
+	bit  [ 2: 0] CA_CHCN, CA_W;
+	bit          CA_CHSZ;
+	always_comb begin
+		bit [ 1: 0] zm;
+		bit [ 2: 0] cnt, x;
+		bit         t;
+		cnt = NBG_CH_CNT[UL];
+		zm = UL[1] ? 2'b00 : {NSxREG[UL].ZMQT, NSxREG[UL].ZMQT | NSxREG[UL].ZMHF};
+		if (UR.CH) begin
+			CA_PN = RBG_PN_PIPE[1][UR1];
+			CA_CHCN = RSxREG[UR1].CHCN; CA_CHSZ = RSxREG[UR1].CHSZ;
+			CA_X = R_CX[3:0]; CA_Y = R_CY[3:0];
+			x = R_CX[2:0] ^ {3{CA_PN.HF}};
+			CA_W = CA_CHCN == 3'b001 ? {2'b00,x[2]} : CA_CHCN[1] ? {1'b0,x[2:1]} : x;
+		end else begin
+			CA_CHCN = NSxREG[UL].CHCN; CA_CHSZ = NSxREG[UL].CHSZ;
+			if (UL[1]) CA_PN = CA_CHCN == 3'b001 ? NC_PN23[cnt[0]] : NC_PN23[0];
+			else       CA_PN = CA_CHCN == 3'b000 ? NC_PN[cnt[1:0] & zm] : CA_CHCN == 3'b001 ? NC_PN[{1'b0,cnt[1] & zm[0]}] : NC_PN[0];
+			t = CA_CHCN == 3'b000 ? cnt[0] & zm[0] : CA_CHCN == 3'b001 ? cnt[1] & zm[0] : 1'b0;   //bit 3 of x + the reduction cell offset
+			CA_X = {NC_X[3] ^ t, NC_X[2:0]}; CA_Y = NC_Y[3:0];
+			CA_W = cnt ^ {3{CA_PN.HF}};
+		end
+	end
+	wire [ 3: 0] CA_XO = CA_X ^ {4{CA_PN.HF}};
+	wire [ 3: 0] CA_YO = CA_Y ^ {4{CA_PN.VF}};
+	wire [ 4: 0] CA_CELL = CA_CHSZ ? {CA_YO[3],CA_XO[3],CA_YO[2:0]} : {2'b00,CA_YO[2:0]};
+	bit  [ 9: 1] CA_OFS;
+	always_comb begin
+		case (CA_CHCN)
+			3'b000:        CA_OFS = {3'b000,CA_CELL,1'b0};
+			3'b001:        CA_OFS = {2'b00,CA_CELL,CA_W[0],1'b0};
+			3'b010,3'b011: CA_OFS = {1'b0,CA_CELL,CA_W[1:0],1'b0};
+			default:       CA_OFS = {CA_CELL,CA_W[2:0],1'b0};
+		endcase
+	end
+	wire [19: 1] CHA = CA_CHCN <= 3'b100 ? {CA_PN.CHRN[14:0],4'b0000} + {10'b0000000000,CA_OFS} : 19'h00000;
 	bit  [19: 1] UO;
 	always_comb begin
 		UO = '0;
 		if (UN.PN) UO = N_PNA;
-		if (UN.CH) UO = UL[1] ? N_CH23 : N_CH01;
+		if (UN.CH) UO = (UL[1] || !NSxREG[{1'b0,UL[0]}].BMEN) ? CHA : N_BMA;
 		if (UN.VS) UO = NxVS_ADDR;
 		if (UR.PN) UO = R_PNA;
-		if (UR.CH) UO = R_CHA;
+		if (UR.CH) UO = (!UR1 && RSxREG[0].BMEN) ? R_BMA : CHA;
 		if (UR.CT) UO = RxCT_ADDR[UR1];
 	end
 	wire         UMATCH = UO[18:17] == USEL;
