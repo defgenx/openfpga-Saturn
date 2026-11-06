@@ -1701,16 +1701,8 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 	end
 	always @(posedge CLK or negedge RST_N) begin
-		bit  [31: 0] LS_WD;
-		bit          LS_RD;
-		bit          N2;
-		bit          SCYN_UPD[4];
-		
 		if (!RST_N) begin
 			// synopsys translate_off
-			NY <= '{4{'0}};
-			NSY <= '{4{'0}};
-			LZMX <= '{2{'0}};
 			MOSAIC_VCNT <= '0;
 			// synopsys translate_on
 		end
@@ -1732,66 +1724,65 @@ module VDP2P import VDP2P_PKG::*; (
 					CX[3] <= '0;
 				end
 				NVCSY <= NVCSY_D;
-				NMOSY[0] <= NMOSY_D[0];
-				NMOSY[1] <= NMOSY_D[1];
 				
-				N2 = VA2.LS_POS[2];
-				if (VA2.LS) begin
-					if (VA2.LS_POS == 3'b000) begin
-						MOSAIC_VCNT <= MOSAIC_VCNT + 4'd1;
-						if (MOSAIC_VCNT == REGS.MZCTL.MZSZV || IS_LAST_LINE) begin
-							MOSAIC_VCNT <= '0;
-						end
+				if (VA2.LS && VA2.LS_POS == 3'b000) begin
+					MOSAIC_VCNT <= MOSAIC_VCNT + 4'd1;
+					if (MOSAIC_VCNT == REGS.MZCTL.MZSZV || IS_LAST_LINE) begin
+						MOSAIC_VCNT <= '0;
 					end
-					
-					case (VRAM_BANK_2)
-						2'b00: LS_WD = RA0_BUF;
-						2'b01: LS_WD = RA1_BUF;
-						2'b10: LS_WD = RB0_BUF;
-						2'b11: LS_WD = RB1_BUF;
-					endcase
-					
-					LS_RD = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,N2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
-					case (VA2.LS_POS[1:0])
-						2'b00: begin
-							end
-						2'b01: begin
-							if (NSxREG[{1'b0,N2}].LSCY && LS_RD)      begin NSY[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCY + LS_WD[26:8]; 
-							                                                NY[{1'b0,N2}]  <= '0; end
-							else 
-							if (IS_LAST_LINE || SCYN_UPD[{1'b0,N2}])  begin NSY[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCY;
-							                                                NY[{1'b0,N2}]  <= (!DDI || ODD ? '0 : NSxREG[{1'b0,N2}].ZMY); end
-							else                                      begin NY[{1'b0,N2}]  <= NY[{1'b0,N2}] + (!DDI ? NSxREG[{1'b0,N2}].ZMY : NSxREG[{1'b0,N2}].ZMY<<1); end
-							SCYN_UPD[{1'b0,N2}] <= 0;
-							
-							if (IS_LAST_LINE || SCYN_UPD[{1'b1,N2}])  begin NSY[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCY;
-							                                                NY[{1'b1,N2}]  <= (!DDI || ODD ? '0 : 19'h00100); end
-					      else                                      begin NY[{1'b1,N2}]  <= NY[{1'b1,N2}] + (!DDI ? 19'h00100 : 19'h00200); end
-							SCYN_UPD[{1'b1,N2}] <= 0;
-						end
-						2'b10: begin
-							if (!NSxREG[{1'b0,N2}].LZMX)              begin LZMX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].ZMX; end
-							else if (LS_RD)                           begin LZMX[{1'b0,N2}] <= LS_WD[18:8]; end
-							
-							if (!MOSAIC_VCNT || !NSxREG[{1'b1,N2}].MZE || IS_LAST_LINE) begin
-								NMOSY[{1'b1,N2}] <= NMOSYN[1];
-							end
-						end
-					endcase
 				end
 			end
-			
-			if (RW_E) begin
-				case ({RW_A,1'b0})
-//					9'h074: SCYN_UPD[0] <= 1;
-//					9'h076: SCYN_UPD[0] <= 1;
-//					9'h084: SCYN_UPD[1] <= 1;
-//					9'h086: SCYN_UPD[1] <= 1;
-					9'h092: SCYN_UPD[2] <= 1;
-					9'h096: SCYN_UPD[3] <= 1;
-					default:;
-				endcase
+		end
+	end
+	//Vertical scroll (NY, NSY), line zoom (LZMX) and mosaic y (NMOSY) with one enable each: the line scroll steps
+	//LS_POS 1 and 2 of the layer pair LS_POS[2] (one shared adder per pair as before), NMOSY 0/1 at every DOT_CE_R.
+	ScrollData_t NY_D[4], NSY_D[4];
+	bit          NY_E[4], NSY_E[4], NMOSY_E[4], SCYN_CLR[4], LZMX_E[2];
+	CoordInc_t   LZMX_D;
+	bit          SCYN_UPD[4];
+	always_comb begin
+		bit          n2, ls1, ls2, rd, l, rl;
+		bit  [31: 0] wd;
+		ScrollData_t sumy, ny01, ny23;
+		n2  = VA2.LS_POS[2];
+		ls1 = VA2.LS && VA2.LS_POS[1:0] == 2'b01;
+		ls2 = VA2.LS && VA2.LS_POS[1:0] == 2'b10;
+		wd  = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
+		rd  = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,n2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
+		sumy = NSxREG[{1'b0,n2}].SCY + wd[26:8];
+		ny01 = NY[{1'b0,n2}] + (!DDI ? NSxREG[{1'b0,n2}].ZMY : NSxREG[{1'b0,n2}].ZMY<<1);
+		ny23 = NY[{1'b1,n2}] + (!DDI ? 19'h00100 : 19'h00200);
+		for (int i = 0; i < 4; i++) begin
+			l  = ls1 && n2 == i[0];
+			rl = IS_LAST_LINE || SCYN_UPD[i];
+			SCYN_CLR[i] = l;
+			NY_E[i] = l;
+			NSY_D[i] = NSxREG[i].SCY;
+			if (i < 2) begin
+				if (NSxREG[i].LSCY && rd) begin NSY_D[i] = sumy; NSY_E[i] = l; NY_D[i] = '0; end
+				else if (rl)              begin NSY_E[i] = l; NY_D[i] = (!DDI || ODD) ? '0 : NSxREG[i].ZMY; end
+				else                      begin NSY_E[i] = 1'b0; NY_D[i] = ny01; end
+				NMOSY_E[i] = 1'b1;
+			end else begin
+				NSY_E[i] = l && rl;
+				NY_D[i] = rl ? ((!DDI || ODD) ? '0 : 19'h00100) : ny23;
+				NMOSY_E[i] = ls2 && n2 == i[0] && (!MOSAIC_VCNT || !NSxREG[i].MZE || IS_LAST_LINE);
 			end
+		end
+		LZMX_D = !NSxREG[{1'b0,n2}].LZMX ? NSxREG[{1'b0,n2}].ZMX : wd[18:8];
+		for (int i = 0; i < 2; i++) LZMX_E[i] = ls2 && n2 == i[0] && (!NSxREG[i].LZMX || rd);
+	end
+	always @(posedge CLK) begin
+		if (RST_N) begin
+			for (int i = 0; i < 4; i++) begin
+				if (DOT_CE_R && NY_E[i]) NY[i] <= NY_D[i];
+				if (DOT_CE_R && NSY_E[i]) NSY[i] <= NSY_D[i];
+				if (DOT_CE_R && NMOSY_E[i]) NMOSY[i] <= i < 2 ? NMOSY_D[i[0]] : NMOSYN[1];
+				if (DOT_CE_R && SCYN_CLR[i]) SCYN_UPD[i] <= 1'b0;
+			end
+			for (int i = 0; i < 2; i++) if (DOT_CE_R && LZMX_E[i]) LZMX[i] <= LZMX_D;
+			if (RW_E && {RW_A,1'b0} == 9'h092) SCYN_UPD[2] <= 1'b1;
+			if (RW_E && {RW_A,1'b0} == 9'h096) SCYN_UPD[3] <= 1'b1;
 		end
 	end
 	
