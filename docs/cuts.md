@@ -152,8 +152,6 @@ MLAB/timing risk to the cache path; marked not recommended.
 
 ## POCKET_CUT_SH2_DIVU_SHARED
 
-Set in `ap_core.qsf` from v0.2.19: it makes room for the frame buffer lazy erase and the `.cue` loader.
-
 One divide datapath (R/D/Q/R64/D64 registers, the 65-bit adders, step counter) serves both CPUs
 (`SH/SH7604/DIVU_SHARED.sv`: `SH7604_DIVU_SHR` shared, `SH7604_DIVU_CL` per CPU with DVSR/DVDNT/DVCR/VCRDIV/mirror
 registers and the bus side). `Saturn.sv` instantiates the shared unit between MSH and SSH and `SH7604` gets two ports
