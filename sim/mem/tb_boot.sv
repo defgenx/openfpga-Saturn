@@ -1,8 +1,8 @@
 // tb_boot: the BIOS load as the Pocket does it. `reset` is high (power-up, then BIOS not loaded) for
 // the whole load; ram_reset -> load_pocket -> ddram_pocket -> psram -> model, then the SH-2 side reads
 // the image back through raml (big endian words, LD_LITTLE = 0 as core_top). +OLD uses the previous
-// rst_ram (held while reset is high), which must lose the BIOS. Then the backup read-back port (ld_rd) reads the blank
-// backup images load_pocket wrote (MiSTer's save_blank).
+// rst_ram (held while reset is high), which must lose the BIOS. Then the backup read-back port (ld_rd) and the SH-2's
+// raml port read the blank backup images load_pocket wrote (MiSTer's save_blank).
 //
 //   BIOS word 0x00 reads {file[0], file[1]}: the reset vector at address 0 comes out as written.
 
@@ -136,7 +136,14 @@ initial begin
 		repeat (60) @(posedge clk);
 		if (t_rdata !== e) begin rb_bad = rb_bad + 1; if (rb_bad < 6) $display("read-back %h: got %h exp %h", a, t_rdata, e); end
 	end
-	$display("tb_boot: backup read-back mismatches %0d of 80", rb_bad);
+	for (i = 0; i < 80; i = i + 1) begin : sh2view                  // the SH-2 side (SRAM_CS_N: raml {0, 1, 0, MEM_A[18:1]})
+		reg [7:0] c; string h;
+		h = "BackUpRam Format";
+		c = i < 64 ? h[i & 15] : 8'h00;
+		raml_read({3'b010, 18'(i < 64 ? i : 32000 + i)});
+		if (raml_dout !== {8'h00, c}) begin rb_bad = rb_bad + 1; if (rb_bad < 6) $display("SH-2 backup word %0d: got %h exp 00%h", i, raml_dout, c); end
+	end
+	$display("tb_boot: backup read-back mismatches %0d of 80 + 80 (ld_rd, SH-2 raml)", rb_bad);
 	if (rb_bad != 0) bad = bad + 1;
 	if (old_mode) begin if (bad != 0) $display("tb_boot OLD: BIOS lost as expected"); else $display("tb_boot OLD: UNEXPECTED PASS"); end
 	else begin if (bad == 0 && ovf == 0 && rst_max < 300) $display("tb_boot: PASS"); else $display("tb_boot: FAIL"); end
