@@ -2921,8 +2921,19 @@ module VDP2P import VDP2P_PKG::*; (
 	wire SW_EN     =   WinTest(TW0_HIT ^ REGS.WCTLC.SPW0A,TW1_HIT ^ REGS.WCTLC.SPW1A,SDOT.WN ^ REGS.WCTLC.SPSWA,REGS.WCTLC.SPW0E,REGS.WCTLC.SPW1E,REGS.WCTLC.SPSWE & REGS.SPCTL.SPWINEN,REGS.WCTLC.SPLOG);
 	wire CCW_EN    =   WinTest(TW0_HIT ^ REGS.WCTLD.CCW0A,TW1_HIT ^ REGS.WCTLD.CCW1A,SDOT.WN ^ REGS.WCTLD.CCSWA,REGS.WCTLD.CCW0E,REGS.WCTLD.CCW1E,REGS.WCTLD.CCSWE & REGS.SPCTL.SPWINEN,REGS.WCTLD.CCLOG);
 							 
+	//DOT_FST..DOT_FTH carry the flags only: their colour (CAOS, P, DC) is the layer record LDR[IX_*] registered at the same
+	//event, read through one selector per CE_R slot in the colour stage. LDR 0 sprite, 1 RBG0, 2-5 NBG0-3, 6 back screen,
+	//7 line colour (slot 1) or the zero record (slot 3: DOT_FTH <= '0).
+	typedef struct packed {
+		bit [ 2: 0] CAOS;
+		bit         P;
+		bit [23: 0] DC;
+	} LDot_t;
 	ScreenDot_t DOT_FST, DOT_SEC, DOT_THD, DOT_FTH;
+	LDot_t       LDR[8];
+	bit  [ 2: 0] IX_FST, IX_SEC, IX_THD, IX_FTH;
 	always @(posedge CLK or negedge RST_N) begin
+		bit  [ 2: 0] I0, I1, I2;
 		bit         SON, R0ON, N0ON, N1ON, N2ON, N3ON;
 		bit   [2:0] SCAOS, R0CAOS, N0CAOS, N1CAOS, N2CAOS, N3CAOS;
 		bit         R0SFC, N0SFC, N1SFC, N2SFC, N3SFC;
@@ -3056,6 +3067,7 @@ module VDP2P import VDP2P_PKG::*; (
 			FST = BACKD;
 			SEC = BACKD;
 			THD = BACKD;
+			I0 = 3'd6; I1 = 3'd6; I2 = 3'd6;
 			
 			//Layers in insertion order: sprite, RBG0, NBG0..3. The three highest priorities win; equal priorities keep insertion order.
 			LAY[0] = {SCAOS,SCCEN,SCCM3,SCCRT,SCOEN,SCOSL,SSDEN,SBOKEN,SLCEN,SDOT.P,SDOT.DC};         LPRI[0] = SPRIN;  LON[0] = SON  && |SPRIN;
@@ -3072,50 +3084,59 @@ module VDP2P import VDP2P_PKG::*; (
 					end
 					if (LON[i]) begin
 						case (RK)
-							0: FST = LAY[i];
-							1: SEC = LAY[i];
-							2: THD = LAY[i];
+							0: begin FST = LAY[i]; I0 = 3'(i); end
+							1: begin SEC = LAY[i]; I1 = 3'(i); end
+							2: begin THD = LAY[i]; I2 = 3'(i); end
 							default:;
 						endcase
 					end
 				end
 			end
 			
-			DOT_FST <= FST;
+			for (int i=0; i<6; i++) LDR[i] <= {LAY[i].CAOS,LAY[i].P,LAY[i].DC};
+			LDR[6] <= {3'b000,1'b0,BACK_DC};
+			LDR[7] <= {3'b000,1'b1,{13'b0000000000000,LINE_PAL}};
+			
+			DOT_FST <= FST; IX_FST <= I0;
 			if (FST.BOKEN) begin
-				DOT_SEC <= FST;
-				DOT_THD <= FST;
-				DOT_FTH <= FST;
+				DOT_SEC <= FST; IX_SEC <= I0;
+				DOT_THD <= FST; IX_THD <= I0;
+				DOT_FTH <= FST; IX_FTH <= I0;
 			end else if (SEC.BOKEN) begin
-				DOT_SEC <= SEC;
-				DOT_THD <= SEC;
-				DOT_FTH <= SEC;
+				DOT_SEC <= SEC; IX_SEC <= I1;
+				DOT_THD <= SEC; IX_THD <= I1;
+				DOT_FTH <= SEC; IX_FTH <= I1;
 			end else if (FST.LCEN) begin
-				DOT_SEC <= {3'b000,LCCCEN,1'b0,LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}};
-				DOT_THD <= SEC;
-				DOT_FTH <= THD;
+				DOT_SEC <= {3'b000,LCCCEN,1'b0,LCCCRT,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,{13'b0000000000000,LINE_PAL}}; IX_SEC <= 3'd7;
+				DOT_THD <= SEC; IX_THD <= I1;
+				DOT_FTH <= THD; IX_FTH <= I2;
 			end else begin
-				DOT_SEC <= SEC;
-				DOT_THD <= THD;
-				DOT_FTH <= '0;
+				DOT_SEC <= SEC; IX_SEC <= I1;
+				DOT_THD <= THD; IX_THD <= I2;
+				DOT_FTH <= '0;  IX_FTH <= 3'd7;
 			end
 		end
 	end
 	
 	//Dots color
-	bit [10:0] PAL_N;
+	//SM: the record of the slot's dot (FST, SEC, THD, FTH as the golden's CRAM slots); it only changes at the events.
+	wire [ 1: 0] SLOT = DOTCLK_DIV & {~HRES[1],1'b1};
+	wire [ 2: 0] IXS = SLOT == 2'd0 ? IX_FST : SLOT == 2'd1 ? IX_SEC : SLOT == 2'd2 ? IX_THD : IX_FTH;
+	LDot_t       SM;
+	assign SM = (IXS == 3'd7 && SLOT[1]) ? LDot_t'('0) : LDR[IXS];
+	wire [10: 0] PAL_N = {SM.CAOS,8'b00000000} + SM.DC[10:0];
+	//CRAM colour; read only at CE_R clocks (the golden holds it between them)
+	bit  [23: 0] DC;
+	bit          CC;
 	always_comb begin
-		bit [10: 0] PAL;
-		bit [ 2: 0] CAOS;
-		
-		case (DOTCLK_DIV & {~HRES[1],1'b1})
-			2'b00: {CAOS,PAL} = {DOT_FST.CAOS,DOT_FST.DC[10:0]};
-			2'b01: {CAOS,PAL} = {DOT_SEC.CAOS,DOT_SEC.DC[10:0]};
-			2'b10: {CAOS,PAL} = {DOT_THD.CAOS,DOT_THD.DC[10:0]};
-			2'b11: {CAOS,PAL} = {DOT_FTH.CAOS,DOT_FTH.DC[10:0]};
+		case (REGS.RAMCTL.CRMD)
+			2'b00: begin DC = Color555To888(PAL0_Q);                       CC =              PAL0_Q[15]; end
+			2'b01: begin DC = Color555To888(!PAL_N[10] ? PAL0_Q : PAL1_Q); CC = !PAL_N[10] ? PAL0_Q[15] : PAL1_Q[15]; end
+			default: begin DC = {PAL0_Q[7:0],PAL1_Q};                      CC =              PAL0_Q[15]; end
 		endcase
-		PAL_N = {CAOS,8'b00000000} + PAL;
 	end
+	//the slot's colour resolved as the golden does at the event (palette dot: CRAM, else its own colour)
+	wire [23: 0] SMDC = !SM.P ? SM.DC : DC;
 	
 	DotColor_t CFST, CSEC;
 	bit  [4:0] CCRT;
@@ -3125,9 +3146,7 @@ module VDP2P import VDP2P_PKG::*; (
 	bit        SDEN;
 	bit        HB_INT2;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [23:0] DC;
-		bit        CC;
-		DotColor_t DC_FST_LATCH, DC_SEC_LATCH, DC_THD_LATCH;
+		DotColor_t DC_FST_LATCH, DC_SEC_LATCH, DC_THD_LATCH;   //resolved colours of FST, SEC, THD
 		bit        CC_FST;
 		bit        BOKEN_PREV1,BOKEN_PREV2;
 		DotColor_t CSEC_PREV1, CSEC_PREV2;
@@ -3151,25 +3170,20 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 		else begin
 			if (CE_R) begin
-				case (REGS.RAMCTL.CRMD)
-					2'b00: begin DC = Color555To888(PAL0_Q);                       CC =              PAL0_Q[15]; end
-					2'b01: begin DC = Color555To888(!PAL_N[10] ? PAL0_Q : PAL1_Q); CC = !PAL_N[10] ? PAL0_Q[15] : PAL1_Q[15]; end
-					default: begin DC = {PAL0_Q[7:0],PAL1_Q};                      CC =              PAL0_Q[15]; end
-				endcase
-				case (DOTCLK_DIV & {~HRES[1],1'b1})
-					2'd0: {CC_FST,DC_FST_LATCH} <= {CC,DC};
-					2'd1: DC_SEC_LATCH <= DC;
-					2'd2: DC_THD_LATCH <= DC;
+				case (SLOT)
+					2'd0: {CC_FST,DC_FST_LATCH} <= {CC,SMDC};
+					2'd1: DC_SEC_LATCH <= SMDC;
+					2'd2: DC_THD_LATCH <= SMDC;
 					2'd3: ;
 				endcase
 			end
 			
-			CSEC_DC = !DOT_SEC.P ? DOT_SEC.DC : DC_SEC_LATCH;
-			CTHD_DC = BOKEN_PREV1 ? CSEC_PREV1 : !DOT_THD.P ? DOT_THD.DC : DC_THD_LATCH;
-			CFTH_DC = BOKEN_PREV2 ? CSEC_PREV2 : !DOT_FTH.P ? DOT_FTH.DC : DC;
+			CSEC_DC = DC_SEC_LATCH;
+			CTHD_DC = BOKEN_PREV1 ? CSEC_PREV1 : DC_THD_LATCH;
+			CFTH_DC = BOKEN_PREV2 ? CSEC_PREV2 : SMDC;
 			CSEC_ECC = ExtColorCalc(CSEC_DC, DOT_SEC.CCEN, CTHD_DC, DOT_THD.P, DOT_THD.CCEN, CFTH_DC, DOT_FST.LCEN, DOT_SEC.BOKEN, REGS.RAMCTL.CRMD, REGS.CCCTL.EXCCEN & ~REGS.CCCTL.BOKEN);
 			if (!HRES[1] && DOT_CE_R) begin
-				CFST <= !DOT_FST.P ? DOT_FST.DC : DC_FST_LATCH;
+				CFST <= DC_FST_LATCH;
 				CSEC <= CSEC_ECC;
 				CCRT <= !REGS.CCCTL.CCRTMD ? DOT_FST.CCRT : DOT_SEC.CCRT;
 				CCENFST <= !DOT_FST.CCM3 ? DOT_FST.CCEN : DOT_FST.CCEN & (CC_FST | ~DOT_FST.P);
@@ -3177,12 +3191,12 @@ module VDP2P import VDP2P_PKG::*; (
 				COSL <= DOT_FST.COSL;
 				SDEN <= DOT_FST.SDEN;
 				
-				CSEC_PREV2 <= CSEC_PREV1; CSEC_PREV1 <= !DOT_SEC.P ? DOT_SEC.DC : DC_SEC_LATCH;
+				CSEC_PREV2 <= CSEC_PREV1; CSEC_PREV1 <= DC_SEC_LATCH;
 				BOKEN_PREV2 <= BOKEN_PREV1; BOKEN_PREV1 <= DOT_SEC.BOKEN;
 			end
 			else if (HRES[1] && (DOT_CE_R || DOT_CE_F)) begin
-				CFST <= !DOT_FST.P ? DOT_FST.DC : DC_FST_LATCH;
-				CSEC <= !DOT_SEC.P ? DOT_SEC.DC : DC;
+				CFST <= DC_FST_LATCH;
+				CSEC <= SMDC;
 				CCRT <= !REGS.CCCTL.CCRTMD ? DOT_FST.CCRT : DOT_SEC.CCRT;
 				CCENFST <= |REGS.RAMCTL.CRMD && DOT_SEC.P ? 1'b0 : !DOT_FST.CCM3 ? DOT_FST.CCEN : DOT_FST.CCEN & (CC_FST | ~DOT_FST.P);
 				COEN <= DOT_FST.COEN; 
