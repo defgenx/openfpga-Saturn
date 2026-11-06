@@ -366,7 +366,7 @@ integer part when only parameter set B is in mode 3, so `MULT1` needs 32 bits); 
 `make -C sim vdp2 SEEDS=200`: seeds 61, 149 and 165 fail with VRAM content mismatches (CPU write path, dot output mism=0)
 on the unmodified VDP2P too; they are outside the default 60 and not caused by these commits.
 
-## 11. Applied: SH7604P and SCUP2 (branch `area-cpu`, 2026-11-06)
+## 12. Applied: SH7604P and SCUP2 (branch `area-cpu`, 2026-11-06)
 
 Measured with `quartus_map` on the whole design (`raetro/quartus:21.1`, base `f9aaa26`: 17,826 ALMs needed). Entity
 numbers are ALUTs / registers of the map report. MSH and SSH carry the same RTL, and their difference (up to about 50 ALUTs per
