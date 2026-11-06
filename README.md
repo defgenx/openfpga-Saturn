@@ -88,8 +88,7 @@ Other ways to load a disc, from the core's menu:
 * **One merged image**: `python3 Saturn-mktoc.py --merge always` also writes `Game.img`, all the tracks in one
   file; load it in the **Disc image** slot and `Game.toc` in the **Disc TOC** slot. Discs with more than 24 track
   files are merged this way automatically.
-* **The `.cue` directly** (from the next release, not yet tested on hardware): pick the game's `.cue` in the **Disc
-  image** slot; the core reads it and opens its track files itself, no script needed.
+* **The `.cue` directly** is not in the builds yet: it works in simulation but needs room on the FPGA first.
 
 If something goes wrong:
 
