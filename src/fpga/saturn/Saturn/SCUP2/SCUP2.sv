@@ -588,6 +588,23 @@ module SCUP2
 	
 	bit  [31:0] ABUS_BUF;
 	bit  [31:0] BBUS_BUF;
+	bit         ABUS_LONG;
+	bit         BBUS_READ_PROCESS;
+	bit  [ 5:0] ABUS_WAIT_CNT;
+	//A/B-bus read buffers: the load conditions of the bus FSM states, one enable per half
+	wire        AB_EV  = RST_N && RES_N && CE_R && AWAIT_N && !ABUS_WAIT_CNT && (ABUS_ST == ABUS_WAIT || ABUS_ST == ABUS_DMA_READ_WAIT);
+	wire        AB_LDH = AB_EV && !ABUS_A1;
+	wire        AB_LDL = AB_EV && (ABUS_A1 || (ABUS_ST == ABUS_WAIT && !ABUS_LONG));
+	wire        BB_EV  = RST_N && RES_N && CE_R && ((BBUS_ST == BBUS_READ16_WAIT && BBUS_RDY) || BBUS_ST == BBUS_READ8_L);
+	wire        BB_DM  = RST_N && RES_N && CE_R && BBUS_ST == BBUS_DMA_READ && BBUS_RDY;
+	wire        BB_LDH = (BB_EV || BB_DM) && BBUS_WORD[1];
+	wire        BB_LDL = (BB_EV && !BBUS_WORD[1]) || (BB_DM && !BBUS_WORD[1] && !DMA_BUF_SIZE[2] && BBUS_READ_PROCESS);
+	always @(posedge CLK) begin
+		if (AB_LDH) ABUS_BUF[31:16] <= ADI;
+		if (AB_LDL) ABUS_BUF[15: 0] <= ADI;
+		if (BB_LDH) BBUS_BUF[31:16] <= BDI;
+		if (BB_LDL) BBUS_BUF[15: 0] <= BDI;
+	end
 	//Indirect table word source: B-bus buffer or C-bus data
 	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
 	
@@ -677,7 +694,6 @@ module SCUP2
 	end
 	
 	//A-bus wait count: one load value for the four places that start an access
-	bit  [ 5:0] ABUS_WAIT_CNT;
 	bit         ABUS_RFS;
 	wire        aw_cpu_i = DMA_BUS_EN && ABUS_ST == ABUS_IDLE && CPU_ABUS_REQ;
 	wire        aw_cpu_h = DMA_BUS_EN && ABUS_ST == ABUS_ADDR_H;
@@ -730,6 +746,22 @@ module SCUP2
 		end
 	end
 	
+	//DSP DMA addresses (the original updates of the DMA block, later ones win)
+	wire        dsp_ce  = RST_N && RES_N && CE_R;
+	wire        dsp_end = dsp_ce && DMA_ST == DMA_STOP && DMA_DSP &&
+	                      ((DMA_READ_A && ABUS_ST == ABUS_DMA_END) || ((DMA_READ_B || DMA_WRITE_B) && BBUS_ST == BBUS_DMA_END) ||
+	                       ((DMA_READ_C || DMA_WRITE_C) && CBUS_ST == CBUS_RELEASE));
+	always @(posedge CLK) begin
+		if (dsp_ce) begin
+			if (DSP_RA0_SET) DSP_DR <= DSP_DSO[24:0];
+			else if (dsp_end && !DSP_DMA_WE && !DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DSP_DR + 25'd1;
+			else if (dm_rack && DMA_DSP && DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DMA_RA_NEW[26:2];
+			if (DSP_WA0_SET) DSP_DW <= {DSP_DSO[24:0],2'b00};
+			else if (dsp_end && DSP_DMA_WE && !DSP_HOLD) DSP_DW <= DSP_DW + 27'd4;
+			else if (dm_dack && DMA_DSP && |DMA_WADD && !DSP_HOLD && !DSP_DMA_END) DSP_DW <= DMA_WA_NEW;
+		end
+	end
+
 	//Capture of CPU writes to DR/DW/DC; they land in the clk after the CE_R cycle that processes REG_WWAIT
 	wire        CW_STB = CE_R && RES_N && REG_WWAIT;
 	always @(posedge CLK or negedge RST_N) begin
@@ -769,12 +801,10 @@ module SCUP2
 		bit         CPU_BBUS_PEND;
 		bit         CPU_ABUS_ACT;
 		bit         CPU_BBUS_ACT;
-		bit         ABUS_LONG;
 		bit  [ 9:0] ABUS_RFS_CNT;
 		bit         BBUS_RD;
 		bit         CPU_ABUS_WAIT_CLR;
 		bit         CPU_BBUS_WAIT_CLR;
-		bit         BBUS_READ_PROCESS;
 		bit         ABUS_WRITE_PROCESS;
 		bit         BBUS_WRITE_PROCESS;
 		bit  [ 2:0] CBUS_IND_POS;
@@ -1093,13 +1123,7 @@ module SCUP2
 						ACS0_N <= 1;
 						ACS1_N <= 1;
 						ACS2_N <= 1;
-						if (!ABUS_A1) begin
-							ABUS_BUF[31:16] <= ADI;
-							if (!ABUS_LONG) ABUS_BUF[15: 0] <= ADI;
-						end else begin
-							ABUS_BUF[15: 0] <= ADI;
-						end
-						ABUS_ST <= ABUS_NEXT;
+						ABUS_ST <= ABUS_NEXT;   //ABUS_BUF: AB_LDH / AB_LDL
 					end
 				end
 				
@@ -1145,11 +1169,9 @@ module SCUP2
 						ACS2_N <= 1;
 						
 						if (!ABUS_A1) begin
-							ABUS_BUF[31:16] <= ADI;
 							ABUS_A1 <= 1;
 							ABUS_ST <= ABUS_DMA_READ_NEXT;
 						end else begin
-							ABUS_BUF[15: 0] <= ADI;
 							ABUS_A1 <= 0;
 							ABUS_READ_DONE <= 1;
 							ABUS_WRITE_DONE = ABUS_WRITE_PROCESS;
@@ -1406,10 +1428,7 @@ module SCUP2
 					if (BBUS_RDY) begin
 						BCS1_N <= 1;
 						BCS2_N <= 1;
-						if (BBUS_WORD[1]) BBUS_BUF[31:16] <= BDI;
-						else              BBUS_BUF[15: 0] <= BDI;
-						
-						BBUS_WORD[1] <= 0;
+						BBUS_WORD[1] <= 0;   //BBUS_BUF: BB_LDH / BB_LDL
 						if (BBUS_WORD[1] && BBUS_WORD[0]) begin
 							BBUS_A1 <= 1;
 							BBUS_ST <= BBUS_CA_INNER[22] && BBUS_CA_INNER[21] ? BBUS_READ_NEXT : BBUS_READ_NEXT2;
@@ -1542,10 +1561,7 @@ module SCUP2
 				
 				BBUS_READ8_L: if (CE_R) begin
 					BCSS_N <= 1;
-					if (BBUS_WORD[1]) BBUS_BUF[31:16] <= BDI;
-					else              BBUS_BUF[15: 0] <= BDI;
-					
-					BBUS_WORD[1] <= 0;
+					BBUS_WORD[1] <= 0;   //BBUS_BUF: BB_LDH / BB_LDL
 					if (BBUS_WORD[1] && BBUS_WORD[0]) begin
 						BBUS_A1 <= 1;
 						BBUS_ST <= BBUS_READ_NEXT2;
@@ -1599,12 +1615,10 @@ module SCUP2
 				BBUS_DMA_READ: if (CE_R) begin
 					if (BBUS_RDY) begin
 						if (BBUS_WORD[1]) begin
-							BBUS_BUF[31:16] <= BDI;
 							BREQ_N <= 0;
 							BBUS_WORD[1] <= 0;
 						end else if (!DMA_BUF_SIZE[2]) begin
 							if (BBUS_READ_PROCESS) begin
-								BBUS_BUF[15: 0] <= BDI;
 								if (!DMA_IND) BBUS_READ_DONE <= 1;
 								if ( DMA_IND) BBUS_IND_DONE <= 1;
 								BBUS_IND_POS <= BBUS_IND_POS + 2'd1;
@@ -2393,7 +2407,6 @@ module SCUP2
 						
 					end else begin
 						if (DMA_WADD) ;
-						if (DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DMA_RA_NEW[26:2];
 					end 
 				end
 				
@@ -2402,7 +2415,6 @@ module SCUP2
 						if (DMA_WADD) ;
 					end else begin
 						if (DMA_WADD) ;
-						if (DMA_WADD && !DSP_HOLD) DSP_DW <= DSP_DMA_END ? DSP_DW : DMA_WA_NEW;
 					end 
 				end
 				
@@ -2411,8 +2423,6 @@ module SCUP2
 				end
 				
 				if (DMA_END && DMA_DSP) begin
-					if (!DSP_DMA_WE && !DMA_WADD[1] && !DSP_HOLD) DSP_DR <= DSP_DR + 25'd1;
-					if ( DSP_DMA_WE                 && !DSP_HOLD) DSP_DW <= DSP_DW + 27'd4;
 				end
 			end
 			
@@ -2505,12 +2515,6 @@ module SCUP2
 					endcase
 				end
 			
-				if (DSP_RA0_SET) begin
-					DSP_DR <= DSP_DSO[24:0];
-				end
-				if (DSP_WA0_SET) begin
-					DSP_DW <= {DSP_DSO[24:0],2'b00};
-				end
 				if (DSP_DMA_SET) begin
 					DSP_ADD <= DSP_DMAC[3:1];
 					DSP_HOLD <= DSP_DMAC[0];
