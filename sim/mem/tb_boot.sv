@@ -1,7 +1,8 @@
 // tb_boot: the BIOS load as the Pocket does it. `reset` is high (power-up, then BIOS not loaded) for
 // the whole load; ram_reset -> load_pocket -> ddram_pocket -> psram -> model, then the SH-2 side reads
 // the image back through raml (big endian words, LD_LITTLE = 0 as core_top). +OLD uses the previous
-// rst_ram (held while reset is high), which must lose the BIOS.
+// rst_ram (held while reset is high), which must lose the BIOS. Then the backup read-back port (ld_rd) reads the blank
+// backup images load_pocket wrote (MiSTer's save_blank).
 //
 //   BIOS word 0x00 reads {file[0], file[1]}: the reset vector at address 0 comes out as written.
 
@@ -30,10 +31,13 @@ reg         ld_wr = 0;
 reg   [2:0] ld_sel = 0;
 reg  [23:0] ld_addr = 0;
 reg  [31:0] ld_data = 0;
-wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy; wire [7:0] ovf;
+wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy, ld_go; wire [7:0] ovf;
 load_pocket #(.LD_LITTLE(1'b0)) ldr (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
-	.clk(clk), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(ovf));
+	.rd_t(1'b0), .rd_cart(1'b0), .rd_off(18'd0),
+	.clk(clk), .go(ld_go), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy),
+	.r_addr(), .r_rd(), .loading(loading), .dbg_overflow(ovf));
+reg  [23:2] t_raddr = 0;  reg t_rd = 0;  wire [31:0] t_rdata;
 
 reg  [21:1] raml_addr = 0;  wire [15:0] raml_dout;  reg raml_rd = 0;  wire raml_busy;
 wire p0_busy, p0_rd, p0_we, p0_rlast, p0_rvalid, p1_busy, p1_rd, p1_we, p1_rlast, p1_rvalid;
@@ -41,6 +45,7 @@ wire [22:0] p0_addr, p1_addr;  wire [9:0] p0_cnt, p1_cnt;  wire [3:0] p0_be, p1_
 wire [15:0] p0_rdata, p1_rdata;
 wire [31:0] m0_err, m0_rd, m0_wr, m0_bursts, m0_cel, m0_xrow, m1_err, m1_rd, m1_wr, m1_bursts, m1_cel, m1_xrow;
 wire i0, i1;
+assign ld_go = i0 & i1 & ~rst_ram;
 
 ddram_pocket dut (
 	.clk(clk), .rst(rst_ram),
@@ -55,7 +60,7 @@ ddram_pocket dut (
 	.cart_addr(25'd0), .cart_dout(), .cart_din(16'd0), .cart_rd(1'b0), .cart_wr(2'b0), .cart_busy(),
 	.bios_addr(26'd0), .bios_din(16'd0), .bios_wr(2'b00), .bios_busy(),
 	.bsram_addr(20'd0), .bsram_dout(), .bsram_din(16'd0), .bsram_rd(1'b0), .bsram_wr(2'b0), .bsram_busy(),
-	.ld_addr(l_addr), .ld_data(l_data), .ld_wr(l_wr), .ld_busy(l_busy),
+	.ld_addr(l_addr), .ld_data(l_data), .ld_wr(l_wr), .ld_busy(l_busy), .ld_raddr(t_raddr), .ld_rd(t_rd), .ld_rdata(t_rdata),
 	.cdbuf_waddr(13'd0), .cdbuf_wdata(16'd0), .cdbuf_wwr(1'b0), .cdbuf_wbusy(),
 	.ringw_addr(13'd0), .ringw_data(32'd0), .ringw_wr(1'b0), .ringw_busy(),
 	.ring_addr(14'd0), .ring_dout(), .ring_rd(1'b0), .ring_busy()
@@ -71,7 +76,7 @@ psram_bench #(.INIT_US(20)) ps1 (
 	.m_err(m1_err), .m_rd(m1_rd), .m_wr(m1_wr), .m_bursts(m1_bursts), .m_cel(m1_cel), .m_xrow(m1_xrow));
 
 reg [7:0] f_bios [0:NBYTES-1];
-integer i, bad = 0, rst_cycles = 0, rst_max = 0;
+integer i, bad = 0, rst_cycles = 0, rst_max = 0, rb_bad = 0;
 
 // longest run of rst_ram high
 always @(posedge clk_sys) begin
@@ -109,6 +114,7 @@ initial begin
 	for (i = 0; i < NBYTES; i = i + 4) bridge_word(i, {f_bios[i], f_bios[i+1], f_bios[i+2], f_bios[i+3]});
 	repeat (200) @(posedge clk_74a);
 	reset = 0;                                 // all slots complete
+	while (loading) @(posedge clk);            // the blank backup images
 	#(60_000_000);
 	for (i = 0; i < NBYTES / 2; i = i + 1) begin
 		raml_read(i);
@@ -119,11 +125,24 @@ initial begin
 	end
 	$display("tb_boot%s: FIFO overflows %0d, rst_ram longest run %0d clk_sys, BIOS word mismatches %0d of %0d",
 	         old_mode ? " (OLD)" : "", ovf, rst_max, bad, NBYTES / 2);
+	for (i = 0; i < 80; i = i + 1) begin : rb
+		reg [23:2] a; reg [31:0] e; reg [15:0] c; integer w;
+		w = i < 40 ? i : 16384 - 80 + i;                 // bridge word of the image: header, then the end
+		a = i[0] ? {4'h8, 4'h0, w[13:0]} : {8'h10, w[13:0]};
+		case (w[2:0]) 0: c = "Ba"; 1: c = "ck"; 2: c = "Up"; 3: c = "Ra"; 4: c = "m "; 5: c = "Fo"; 6: c = "rm"; default: c = "at"; endcase
+		e = w < 32 ? {8'h00, c[15:8], 8'h00, c[7:0]} : 32'h0;
+		@(posedge clk); t_raddr <= a; t_rd <= 1'b1;
+		@(posedge clk); t_rd <= 1'b0;
+		repeat (60) @(posedge clk);
+		if (t_rdata !== e) begin rb_bad = rb_bad + 1; if (rb_bad < 6) $display("read-back %h: got %h exp %h", a, t_rdata, e); end
+	end
+	$display("tb_boot: backup read-back mismatches %0d of 80", rb_bad);
+	if (rb_bad != 0) bad = bad + 1;
 	if (old_mode) begin if (bad != 0) $display("tb_boot OLD: BIOS lost as expected"); else $display("tb_boot OLD: UNEXPECTED PASS"); end
 	else begin if (bad == 0 && ovf == 0 && rst_max < 300) $display("tb_boot: PASS"); else $display("tb_boot: FAIL"); end
 	$finish;
 end
 
-initial begin #(2_000_000_000); $display("tb_boot: TIMEOUT"); $finish; end
+initial begin #(200_000_000_000); $display("tb_boot: TIMEOUT"); $finish; end
 
 endmodule

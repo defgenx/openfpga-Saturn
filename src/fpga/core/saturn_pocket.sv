@@ -35,6 +35,10 @@ module saturn_pocket #(
 	input  wire  [2:0] ld_sel,
 	input  wire [23:0] ld_addr,
 	input  wire [31:0] ld_data,
+	input  wire        bk_rd_t,                    // backup read-back (bridge_loader), see mem/load_pocket.sv
+	input  wire        bk_rd_cart,
+	input  wire [19:2] bk_rd_off,
+	output wire [31:0] bk_rd_data,
 
 	// APF target commands for disc reads (clk_74a)
 	output wire        target_dataslot_read,
@@ -783,6 +787,7 @@ mem_pocket #(.LD_LITTLE(LD_LITTLE)) mem (
 
 	.clk_74a(clk_74a),
 	.ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
+	.bk_rd_t(bk_rd_t), .bk_rd_cart(bk_rd_cart), .bk_rd_off(bk_rd_off), .bk_rd_data(bk_rd_data),
 	.loading(loading),
 	.mem_ready(mem_ready),
 	.dbg_sdram_ready(dbg_sdram_ready), .dbg_psram_ready(dbg_psram_ready), .dbg_ld_ovf(dbg_ld_ovf), .dbg_chk_done(dbg_chk_done), .dbg_chk_ok(dbg_chk_ok)

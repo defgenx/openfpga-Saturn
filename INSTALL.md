@@ -70,7 +70,15 @@ would change), or for one disc `python3 Saturn-mktoc.py "Game (USA).cue" -o "Gam
 folder of the `.cue` and its tracks, so the `.toc` and `.json` land next to them. `Saturn-mktoc.py` is at the
 root of the card; in this repository it is `tools/mktoc.py`. CHD is not supported.
 
-Backup RAM is not saved to the card yet: saves last until the core is closed.
+## Saves
+
+The Saturn's internal backup RAM is saved when the core is closed, the Pocket sleeps or is turned off, in
+`Saves/saturn/defgenx.Saturn/`. A game started from its `.json` gets its own file, named after the `.json`
+(`Game (USA).sav`). For a disc picked directly as the disc image the Pocket has no `.json` to name the file after;
+it should then use `saturn_bram.sav`, shared by those games (the BIOS keeps each game's saves apart inside it, as on
+a real Saturn). This is not yet checked on a Pocket. A new file starts formatted and empty. The file is
+MiSTer's 64 KB layout, so a MiSTer `.sav` (of a game run without a backup cartridge) can be copied over it. With
+Cartridge set to Backup, the cartridge is saved next to it as a 1 MB `.cart` file.
 
 ## 4. Start it
 

@@ -183,10 +183,61 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 	end
 endtask
 
+// ------------------------------------------------------------------ backup RAM: push at boot, save at exit
+// +BRAM=<file> is pushed to slot 3 (0x40000000) before the slots complete, and the ID/size table gets entries for slots 1, 3
+// (the file size, 0 without +BRAM) and 4 (0). +BRAM_OUT=<file>: at the end of the run (time or cycle limit) the host
+// stops polling, reads the table size of slot 3 and saves that many bytes from 0x40000000 as the Pocket does at exit, with
+// the bridge peripheral's timing: each transaction samples bridge_rd_data 4 clocks after its address and then strobes
+// bridge_rd, so the word read by strobe k arrives in transaction k + 1 (+RDGAP clocks apart, default 86).
+string    bram_path = "", bram_out = "";
+integer   bram_len = 0, rdgap = 86;
+reg [7:0] bram_in [0:65535];
+bit       host_quit = 0, host_idle = 0;
+initial if (!$value$plusargs("RDGAP=%d", rdgap)) rdgap = 86;
+
+task automatic bram_save();
+	integer fo, k, nbad, ndiff, size;
+	reg [31:0] w, sz;
+	reg [7:0]  ob [0:65535];
+	string     hdr;
+	begin
+		host_quit = 1;
+		wait (host_idle);
+		bridge_read(32'hF800200C, sz);                     // entry 1 size (slot 3); the table read is one read behind
+		bridge_read(32'hF800200C, sz);
+		size = sz > 65536 ? 65536 : sz;
+		$display("tb_sys: BRAM table size of slot 3 = %0d (loaded %0d)", sz, bram_len);
+		for (k = 0; k <= size; k = k + 4) begin
+			@(posedge clk_74a);
+			bridge_addr <= 32'h40000000 + (k < size ? k : size - 4);
+			repeat (4) @(posedge clk_74a);
+			w = bridge_rd_data;                             // the word of the previous strobe
+			if (k > 0) {ob[k-4], ob[k-3], ob[k-2], ob[k-1]} = bridge_endian_little ? {w[7:0], w[15:8], w[23:16], w[31:24]} : w;
+			bridge_rd <= 1'b1;
+			@(posedge clk_74a);
+			bridge_rd <= 1'b0;
+			repeat (rdgap - 6) @(posedge clk_74a);
+		end
+		hdr = "BackUpRam Format";
+		nbad = 0;
+		for (k = 0; k < 128; k++) if (ob[k] != ((k & 1) ? hdr[(k >> 1) & 15] : 8'h00)) nbad++;
+		ndiff = 0;
+		if (bram_len > 0) for (k = 0; k < size && k < bram_len; k++) if (ob[k] != bram_in[k]) ndiff++;
+		$display("tb_sys: BRAM saved %0d bytes: header %s (%0d bytes differ from MiSTer's blank), %0d bytes differ from +BRAM",
+		         size, nbad == 0 ? "formatted" : "NOT formatted", nbad, ndiff);
+		if (bram_out != "") begin
+			fo = $fopen(bram_out, "wb");
+			for (k = 0; k < size; k++) $fwrite(fo, "%c", ob[k]);
+			$fclose(fo);
+		end
+	end
+endtask
+
 task automatic poll_target();
 	reg [31:0] t0, p0, p1, p2, p3;
 	begin
 		forever begin
+			if (host_quit) begin host_idle = 1; wait (0); end
 			bridge_read(32'hF8001000, t0);
 			if (t0[31:16] == 16'h636D) begin
 				if (t0[15:0] == 16'h0140) begin                                             // ready to run
@@ -269,6 +320,19 @@ initial begin : host
 			repeat (gap) @(posedge clk_74a);
 		end
 	end
+	if ($value$plusargs("BRAM=%s", bram_path)) begin : brampush
+		integer fb, k;
+		fb = $fopen(bram_path, "rb"); bram_len = $fread(bram_in, fb); $fclose(fb);
+		$fdisplay(ftrace, "%0t HOST BRAM push %0d bytes", $time, bram_len);
+		for (k = 0; k < bram_len; k = k + 4) begin
+			bridge_write(32'h40000000 + k, {bram_in[k], bram_in[k+1], bram_in[k+2], bram_in[k+3]});
+			repeat (gap) @(posedge clk_74a);
+		end
+	end
+	void'($value$plusargs("BRAM_OUT=%s", bram_out));
+	bridge_write(32'hF8002000, 32'd1); bridge_write(32'hF8002004, bios_len);   // ID/size table: BIOS, backup RAM, cart
+	bridge_write(32'hF8002008, 32'd3); bridge_write(32'hF800200C, bram_len);
+	bridge_write(32'hF8002010, 32'd4); bridge_write(32'hF8002014, 32'd0);
 	host_cmd(16'h008F, 0, 0);                              // all slots complete
 	host_cmd(16'h0011, 0, 0);                              // Reset Exit
 	$fdisplay(ftrace, "%0t HOST Reset Exit", $time);
@@ -315,7 +379,7 @@ reg  [3:0]  cy_be;
 integer     cy_len = 0;
 bit         trace_all = 0;
 longint     n_cycles = 0;
-integer     n_unmapped = 0;
+integer     n_unmapped = 0, n_bk_rd = 0, n_bk_wr = 0;
 integer     wait_report = 0;
 integer     scu_irq_n = 0;
 reg [31:0]  last_flag = 32'hFFFFFFFF;
@@ -326,6 +390,10 @@ task automatic log_cycle();
 	r = region(cy_a);
 	n_cycles++;
 	bra[bri] = cy_a; brd[bri] = cy_d; bwr[bri] = cy_wr; bri = (bri + 1) % 64;
+	if (r == "BACKUP") begin                                   // internal backup RAM: data on the odd bytes
+		if (cy_wr) n_bk_wr++; else n_bk_rd++;
+		if (n_bk_wr + n_bk_rd <= 200) $fdisplay(ftrace, "%0t BACKUP %s A=%07h be=%b D=%08h", $time, cy_wr ? "WR" : "RD", cy_a, cy_be, cy_d);
+	end
 	if (r == "UNMAPPED") begin
 		n_unmapped++;
 		if (n_unmapped < 50) $fdisplay(ftrace, "%0t UNMAPPED %s A=%07h data=%08h", $time, cy_wr ? "WR" : "RD", cy_a, cy_d);
@@ -1159,6 +1227,7 @@ initial begin : tlimit
 	if ($value$plusargs("MAXUS=%d", max_us)) begin
 		#(max_us * 1000000);
 		$display("tb_sys: time limit %0d us reached", max_us);
+		if (bram_out != "" || bram_path != "") bram_save();
 		summary();
 		$finish;
 	end
@@ -1167,7 +1236,7 @@ end
 task automatic summary();
 	report_pc("final");
 	$display("---- summary ----");
-	$display("clk_sys cycles (CE_R, out of reset) %0d, MSH bus cycles %0d, unmapped %0d", cyc, n_cycles, n_unmapped);
+	$display("clk_sys cycles (CE_R, out of reset) %0d, MSH bus cycles %0d, unmapped %0d, backup RAM reads %0d writes %0d", cyc, n_cycles, n_unmapped, n_bk_rd, n_bk_wr);
 	$display("TVMD.DISP set at: %0t ps, VBL toggles %0d, SH-2 IRL changes %0d, SSH bus toggles %0d", t_disp, vbl_toggles, irl_changes, sshbs_toggles);
 	$display("audio: SCSP samples %0d (%0d non-zero), pocket_audio %0d (%0d), I2S %0d (%0d); SCSP key-on events %0d", n_scsp, n_scsp_nz, n_poc, n_poc_nz, n_i2s, n_i2s_nz, n_kyonex);
 	$fflush();
@@ -1190,6 +1259,7 @@ endtask
 always @(posedge clk_sys) begin
 	if (cyc >= max_cycles) begin
 		$display("tb_sys: cycle limit reached");
+		if (bram_out != "" || bram_path != "") bram_save();
 		summary();
 		$finish;
 	end
@@ -1197,6 +1267,7 @@ always @(posedge clk_sys) begin
 	if (!`SAT.RAMH_CS_N && `SAT.MEM_RD_N && (&`SAT.MEM_DQM_N == 1'b0) && `SAT.MEM_A[19:0] == 20'h00F00 && `SAT.MEM_DO[31:16] == 16'h00FF) begin
 		$display("tb_sys: ROM finished: %0d failed steps", `SAT.MEM_DO[15:0]);
 		repeat (4) @(posedge clk_sys);
+		if (bram_out != "" || bram_path != "") bram_save();
 		summary();
 		$finish;
 	end

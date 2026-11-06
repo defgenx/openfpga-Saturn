@@ -391,10 +391,10 @@ The figures predate the cuts: the sibling branches (VDP2, VDP1, SCSP, SCU, SH-1,
 
 * Does not fit (section 7), so there is no timing report. The SDC I/O values are starting points; the SDRAM capture
   edge, PSRAM `READ_ADJ`/`WRITE_ADJ` and the SRAM cycle counts need hardware.
-* Backup RAM and backup cartridge: loaded from the bridge, but the read-back for saving (`bk_rd_data` at `0x4xxxxxxx` /
-  `0x5xxxxxxx`) is still zero, so nothing is saved. Cartridge ROM has no data slot.
+* Backup RAM and backup cartridge: blank, loaded and read back for the host's save (docs/memory.md section 7), in
+  simulation only. Cartridge ROM has no data slot.
 * Pads: Digital only. No 3D/analog pad, mouse, or six-button remap beyond core_top's `pad2saturn`; player 2 uses `cont2`.
-* `cfg_cart` Backup selects the backup cart type, but its save file cannot be written (above). No "CD speed" setting
+* `cfg_cart` Backup selects the backup cart type and gives its save file (slot 4) 1 MB. No "CD speed" setting
   (the old interact entry was replaced by Cartridge): with the HLE CD block data is always read at 2x and CD-DA at 1x,
   the speed bit of Init is ignored (docs/cdb-hle.md section 7).
 * Video: field-per-frame for interlaced content; the slot word position and 90 degree clock handling are untested on a scaler.

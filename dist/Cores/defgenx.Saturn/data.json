@@ -52,8 +52,12 @@
         "id": 3,
         "required": false,
         "parameters": "0x4",
+        "nonvolatile": true,
         "filename": "saturn_bram.sav",
-        "size_maximum": 32768,
+        "extensions": [
+          "sav"
+        ],
+        "size_maximum": 65536,
         "address": "0x40000000"
       },
       {
@@ -61,8 +65,12 @@
         "id": 4,
         "required": false,
         "parameters": "0x4",
-        "filename": "saturn_cart.sav",
-        "size_maximum": 524288,
+        "nonvolatile": true,
+        "filename": "saturn_cart.cart",
+        "extensions": [
+          "cart"
+        ],
+        "size_maximum": 1048576,
         "address": "0x50000000"
       },
       {

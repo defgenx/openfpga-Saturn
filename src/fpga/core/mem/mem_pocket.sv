@@ -83,6 +83,8 @@ module mem_pocket #(
 	// ---- bridge loader (clk_74a)
 	input  wire        clk_74a,
 	input  wire        ld_wr, input wire [2:0] ld_sel, input wire [23:0] ld_addr, input wire [31:0] ld_data,
+	input  wire        bk_rd_t, input wire bk_rd_cart, input wire [19:2] bk_rd_off,   // backup read-back request
+	output wire [31:0] bk_rd_data,          // the word asked for (clk_ram register, read by the host on clk_74a)
 	output wire        loading,
 
 	output wire        mem_ready,           // SDRAM initialised and both PSRAM controllers idle (clk_ram)
@@ -128,11 +130,14 @@ psram_sync #(.LATENCY(4), .CLK_KHZ(CLK_KHZ), .INIT_US(0)) psram1 (
 	.cram_oe_n(cram1_oe_n), .cram_we_n(cram1_we_n), .cram_ub_n(cram1_ub_n), .cram_lb_n(cram1_lb_n));
 
 // ---------------------------------------------------------------- loader and client side
-wire [23:2] l_addr; wire [31:0] l_data; wire l_wr, l_busy; wire [7:0] l_ovf;
+wire [23:2] l_addr, l_raddr; wire [31:0] l_data, l_rdata; wire l_wr, l_busy, l_rd; wire [7:0] l_ovf;
 assign dbg_ld_ovf = |l_ovf;
+assign bk_rd_data = LD_LITTLE ? {l_rdata[7:0], l_rdata[15:8], l_rdata[23:16], l_rdata[31:24]} : l_rdata;   // file byte order, as loaded
 load_pocket #(.LD_LITTLE(LD_LITTLE)) loader (
 	.clk_74a(clk_74a), .ld_wr(ld_wr), .ld_sel(ld_sel), .ld_addr(ld_addr), .ld_data(ld_data),
-	.clk(clk_ram), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy), .loading(loading), .dbg_overflow(l_ovf));
+	.rd_t(bk_rd_t), .rd_cart(bk_rd_cart), .rd_off(bk_rd_off),
+	.clk(clk_ram), .go(mem_ready), .o_addr(l_addr), .o_data(l_data), .o_wr(l_wr), .o_busy(l_busy),
+	.r_addr(l_raddr), .r_rd(l_rd), .loading(loading), .dbg_overflow(l_ovf));
 
 ddram_pocket ddram (
 	.clk(clk_ram), .rst(rst_ram),
@@ -147,7 +152,7 @@ ddram_pocket ddram (
 	.cart_addr(cart_addr), .cart_dout(cart_dout), .cart_din(cart_din), .cart_rd(cart_rd), .cart_wr(cart_wr), .cart_busy(cart_busy),
 	.bios_addr(26'd0), .bios_din(16'd0), .bios_wr(2'b00), .bios_busy(),
 	.bsram_addr(bsram_addr), .bsram_dout(bsram_dout), .bsram_din(bsram_din), .bsram_rd(bsram_rd), .bsram_wr(bsram_wr), .bsram_busy(bsram_busy),
-	.ld_addr(l_addr), .ld_data(l_data), .ld_wr(l_wr), .ld_busy(l_busy),
+	.ld_addr(l_addr), .ld_data(l_data), .ld_wr(l_wr), .ld_busy(l_busy), .ld_raddr(l_raddr), .ld_rd(l_rd), .ld_rdata(l_rdata),
 	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy),
 	.ringw_addr(ringw_addr), .ringw_data(ringw_data), .ringw_wr(ringw_wr), .ringw_busy(ringw_busy),
 	.ring_addr(ring_addr), .ring_dout(ring_dout), .ring_rd(ring_rd), .ring_busy(ring_busy));

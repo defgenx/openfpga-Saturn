@@ -421,6 +421,7 @@ wire            datatable_wren;
 wire    [31:0]  datatable_data;
 wire    [31:0]  datatable_q;
 
+
 core_bridge_cmd icb (
 
     .clk                ( clk_74a ),
@@ -514,6 +515,8 @@ wire  [2:0] ld_sel;
 wire [23:0] ld_addr;
 wire [31:0] ld_data;
 wire        ld_active;
+wire        bk_rd_t, bk_rd_cart;
+wire [19:2] bk_rd_off;
 
 bridge_loader loader (
     .clk            ( clk_74a ),
@@ -524,7 +527,11 @@ bridge_loader loader (
     .ld_sel         ( ld_sel ),
     .ld_addr        ( ld_addr ),
     .ld_data        ( ld_data ),
-    .ld_active      ( ld_active )
+    .ld_active      ( ld_active ),
+    .bridge_rd      ( bridge_rd ),
+    .rd_t           ( bk_rd_t ),
+    .rd_cart        ( bk_rd_cart ),
+    .rd_off         ( bk_rd_off )
 );
 
 // All slots loaded: the system may leave reset.
@@ -534,8 +541,9 @@ always @(posedge clk_74a) begin
     else if (dataslot_allcomplete) bios_loaded <= 1'b1;
 end
 
-// Backup RAM read-back for saving (0x4xxxxxxx, 0x5xxxxxxx). Zero until saturn_top provides it.
-wire [31:0] bk_rd_data = 32'h0;
+// Backup read-back for the host's save at exit (0x4xxxxxxx, 0x5xxxxxxx): each read asks mem_pocket for the word, which
+// is in bk_rd_data well before the host's next read takes it (docs/memory.md section 7).
+wire [31:0] bk_rd_data;
 
 
 /* ------------------------------------------------------------------------------ */
@@ -571,6 +579,21 @@ end
 
 // core-wide reset, active low: host reset, the Reset action, BIOS not yet loaded
 wire sys_reset_n = reset_n && (reset_stretch == 0) && bios_loaded;
+
+// Save sizes. The host writes a nonvolatile slot back at the size in its ID/size table entry, which is 0 when no file
+// existed. Entries are matched by ID (the APF docs give no order); after all slots are loaded each entry is checked every
+// 4 clocks: slot 3 is set to 64 KB, slot 4 to 1 MB while the Cartridge setting is Backup (docs/memory.md section 7).
+reg     [4:0]   dt_i = 5'd0;
+reg     [1:0]   dt_ph = 2'd0;
+wire            dt_bram = datatable_q[15:0] == 16'd3;
+wire            dt_cart = datatable_q[15:0] == 16'd4 && cfg_cart == 3'd5;
+assign datatable_addr = {4'd0, dt_i, &dt_ph};          // ID word, then the size word in the write phase
+assign datatable_wren = bios_loaded && &dt_ph && (dt_bram || dt_cart);
+assign datatable_data = dt_cart ? 32'h00100000 : 32'h00010000;
+always @(posedge clk_74a) begin
+    if (bios_loaded) dt_ph <= dt_ph + 1'b1;            // q (2 clocks behind the address) shows the ID word in phase 3
+    if (&dt_ph) dt_i <= dt_i + 1'b1;
+end
 
 // for bridge write data, we just broadcast it to all bus devices
 // for bridge read data, we have to mux it
@@ -667,6 +690,10 @@ saturn_pocket saturn (
     .ld_sel         ( ld_sel ),
     .ld_addr        ( ld_addr ),
     .ld_data        ( ld_data ),
+    .bk_rd_t        ( bk_rd_t ),
+    .bk_rd_cart     ( bk_rd_cart ),
+    .bk_rd_off      ( bk_rd_off ),
+    .bk_rd_data     ( bk_rd_data ),
 
     .target_dataslot_read       ( target_dataslot_read ),
     .target_dataslot_id         ( target_dataslot_id ),

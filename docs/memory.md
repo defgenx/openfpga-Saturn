@@ -556,12 +556,36 @@ during boot wait there (docs/integration.md, "Host handshake"). A bridge word is
 | Slot (`ld_sel`) | Destination | Conversion |
 |---|---|---|
 | [0] BIOS 512 KB | PSRAM0 0x000000 | two image words per write, as the file reads (big endian words: word = {byte0, byte1}) |
-| [1] backup RAM 32 KB | PSRAM0 0x100000 | each byte becomes `{8'hFF, byte}` (the 64 KB image of MiSTer): one bridge word = two writes |
-| [2] backup cart 512 KB | PSRAM0 0x800000 (cartridge window base) | same expansion |
+| [1] backup RAM 64 KB | PSRAM0 0x100000 | none: the file is MiSTer's image (byte 2n+1 = backup byte n, byte 2n the unused high byte) |
+| [2] backup cart 1 MB | PSRAM0 0x800000 (cartridge window base) | none, same layout |
 
 `LD_LITTLE` (default 1) says whether `ld_data[7:0]` is the first file byte. `loading` (clk_ram) is high while words are
-in flight: hold the Saturn in reset with it. The save-out direction (APF `0x0184` writes of backup RAM) and a cartridge
-ROM slot are not implemented; the loader port is address-agnostic, so a cart slot needs only a `ld_sel` code.
+in flight or the blank images below are unfinished: hold the Saturn in reset with it. A cartridge ROM slot is not
+implemented; the loader port is address-agnostic, so a cart slot needs only a `ld_sel` code.
+
+**Backup RAM (data slots 3 and 4).** As on MiSTer, the save file is the 64 KB image the SH-2 sees at 0x00180000 (data on
+the odd bytes), so a MiSTer `.sav` of a game without a backup cart loads as is. The backup cart is a separate 1 MB file
+(slot 4, MiSTer's sectors 128-2175). Three parts:
+
+* Blank. Main_MiSTer feeds the core `save_blank` (`support/saturn/saturn.cpp`) for a save file that does not exist yet:
+  "BackUpRam Format" four times on the data bytes of the first 128 bytes, zero elsewhere: a formatted, empty memory.
+  Without it (PSRAM contents at power-up) Hyper Duel reports the backup RAM unusable, on hardware and in `tb_sys`.
+  `load_pocket` writes the same blank into both images once per core start, 64 mem_ready clocks after the
+  RAM is ready (so `ever_ready` has seen it), in the clocks the FIFO is empty: 16 K + 256 K writes, about 60 ms, inside
+  the BIOS push (128 K words at 88 clk_74a or more, 155 ms). A save file is written over it. The first file word of a
+  slot ends that slot's blank, so a file the host pushes before the blank is done is never overwritten; only the part
+  past the file's end can then be left unblanked.
+* Save. The host reads a nonvolatile slot back at exit, sleep and power-off. Each bridge read in 0x4/0x5
+  (`bridge_loader`) toggles a request with the word offset; `load_pocket` synchronises it and `ddram_pocket` reads that
+  word (2 halfwords) ahead of every other PSRAM0 request into `ld_rdata`, which is `bridge_rd_data`. The APF bridge
+  takes `bridge_rd_data` 4 clk_74a after the next transaction's address and then strobes `bridge_rd`
+  (`io_bridge_peripheral.v`), so the word asked for by strobe k is sent in transaction k+1: the core has the time
+  between two reads, at least about 60 clk_74a (0.8 us). Worst case here: one 16-word PSRAM0 read in progress, the
+  2-word read, and the synchronisers, about 50 clk_ram + 3 clk_74a (0.5 us).
+* Size. The host writes the file back at the size in the slot's ID/size table entry (`0xF8002000`), 0 for a file that
+  did not exist. `core_top` scans the table by ID after all slots are loaded and keeps slot 3 at 64 KB, and slot 4 at
+  1 MB while the Cartridge setting is Backup. Slot 4 without that setting keeps the size it was loaded with (the
+  read-back then returns the cart window, which a RAM cart overwrites).
 
 ## 8. Resources (Quartus 21.1, 5CEBA4F23C8, area profile, `sizing/mem/run.sh`)
 
@@ -620,7 +644,7 @@ for the measured slack.
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3); again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
-| `tb_load` | 2048 loader writes from 4096 + 1024 + 1024 bridge bytes (backup cart at PSRAM0 0x800000) | pass |
+| `tb_load` | BIOS 4 KB, both blank backup images (all 64 KB + 1 MB checked), 1 KB backup and cart files over them, 8 read-back requests (address and one `r_rd` each) | pass |
 | `mem-long` | 66 ms retention with the 512 row scrub of bank 3 | pass |
 | `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
 | `tb_ddram` ring | 3 sectors of 588 bridge words written and read back while the other clients run | 0 errors |
@@ -657,7 +681,9 @@ gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
-10. Cartridge ROM loading and backup save-out are not implemented; the 64 KB backup image conversion assumes `{FF, byte}`.
+10. Cartridge ROM loading is not implemented. The backup save depends on host behaviour the APF docs do not state: the
+    read timing above (taken from `io_bridge_peripheral.v`), a table entry for a slot whose file does not exist, and the
+    save name when slot 0 (the game `.json`) is empty.
 11. SDC: the pin paths are constrained (sections 3, 4, 5 and `core_constraints.sdc`) against clocks defined on the pins;
     board trace delays are assumed (0.5 ns per PSRAM trace, 1 ns SRAM round trip), not measured. The `clk_sys` to
     `clk_ram` crossings are ordinary single-cycle paths of one clock family, timed as such.

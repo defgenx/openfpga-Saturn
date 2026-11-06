@@ -27,8 +27,8 @@ Tested on a Pocket:
   priority and colour calculation, line colour screen, rotation zoom, rotation parameter B, mosaic, sprite window and
   line window ([docs/cuts.md](docs/cuts.md), [docs/game-impact.md](docs/game-impact.md)). Their cost is measured;
   they come back as room is made on the FPGA.
-* **Saves**: the backup RAM is not formatted or saved to the card yet. Games warn that saving is unavailable and
-  carry on without it.
+* **Saves**: the backup RAM starts formatted and is saved to the card at exit ([INSTALL.md](INSTALL.md#saves));
+  checked in simulation, not yet on a Pocket.
 * **Picking a `.cue` directly** is not supported yet (in progress): a disc is picked as the `.json` that
   `Saturn-mktoc.py` writes for it (below). CHD is not supported.
 * Only a few games have been tried.

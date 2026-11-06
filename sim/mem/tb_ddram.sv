@@ -57,7 +57,7 @@ ddram_pocket dut (
 	.cart_addr(cart_addr), .cart_dout(cart_dout), .cart_din(cart_din), .cart_rd(cart_rd), .cart_wr(cart_wr), .cart_busy(cart_busy),
 	.bios_addr(bios_addr), .bios_din(bios_din), .bios_wr(bios_wr), .bios_busy(bios_busy),
 	.bsram_addr(bsram_addr), .bsram_dout(bsram_dout), .bsram_din(bsram_din), .bsram_rd(bsram_rd), .bsram_wr(bsram_wr), .bsram_busy(bsram_busy),
-	.ld_addr(ld_addr), .ld_data(ld_data), .ld_wr(ld_wr), .ld_busy(ld_busy),
+	.ld_addr(ld_addr), .ld_data(ld_data), .ld_wr(ld_wr), .ld_busy(ld_busy), .ld_raddr(22'd0), .ld_rd(1'b0), .ld_rdata(),
 	.cdbuf_waddr(cdbuf_waddr), .cdbuf_wdata(cdbuf_wdata), .cdbuf_wwr(cdbuf_wwr), .cdbuf_wbusy(cdbuf_wbusy),
 	.ringw_addr(ringw_addr), .ringw_data(ringw_data), .ringw_wr(ringw_wr), .ringw_busy(ringw_busy),
 	.ring_addr(ring_addr), .ring_dout(ring_dout), .ring_rd(ring_rd), .ring_busy(ring_busy)

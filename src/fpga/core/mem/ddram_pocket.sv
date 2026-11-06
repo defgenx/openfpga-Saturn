@@ -124,6 +124,11 @@ module ddram_pocket
 	input  wire [31: 0] ld_data,
 	input  wire         ld_wr,
 	output wire         ld_busy,
+	// backup read-back for the host: a ld_rd edge reads the 32 bit word at ld_raddr (PSRAM0 byte address bits 23:2) into
+	// ld_rdata (first word in [31:16]), ahead of every other chip A request: the bridge needs it before its next read
+	input  wire [23: 2] ld_raddr,
+	input  wire         ld_rd,
+	output reg  [31: 0] ld_rdata,
 
 	// CD sector buffer write (16 bit, word address like cdbuf_addr)
 	input  wire [13: 1] cdbuf_waddr,
@@ -153,7 +158,7 @@ reg  [22: 0] a_addr, b_addr;
 reg  [31: 0] a_wd, b_wd;                    // word 0 in [31:16]
 reg  [ 3: 0] a_be, b_be;                    // byte enables of word 0 {hi, lo}, word 1 {hi, lo}
 reg          a_read = 0, a_write = 0, b_read = 0, b_write = 0;
-reg  [ 2: 0] a_chan;                        // 0 ramh 1 raml 2 cart 3 bsram 4 loader
+reg  [ 2: 0] a_chan;                        // 0 ramh 1 raml 2 cart 3 bsram 4 loader 5 loader read
 reg  [ 2: 0] b_chan;                        // 0 cdram 1 vdp1vram 2 cdbuf 3 cdbuf write 4 ring read
 reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read words
 reg  [ 3: 0] a_cw;                          // cache word index of the next read word
@@ -226,13 +231,13 @@ reg  [ 15:  0] bsram_write_data;
 reg  [  1:  0] bsram_be;
 reg            bsram_read_busy,bsram_write_busy;
 
-reg            ld_write_busy;
+reg            ld_write_busy, ld_read_busy;
 assign ld_busy = ld_write_busy;
 assign cdbuf_wbusy = cdbuf_wwrite_busy;
 assign ringw_busy = ringw_write_busy;
 
-// words of the request: writes 2 (WRAM-H, loader, ring) or 1, reads 8 (backup RAM) or 16 (a line), VDP1 bursts blen
-assign a_cnt = a_write ? ((a_chan == 3'd0 || a_chan == 3'd4) ? 10'd2 : 10'd1) : (a_chan == 3'd3 ? 10'd8 : 10'd16);
+// words of the request: writes 2 (WRAM-H, loader, ring) or 1, reads 8 (backup RAM), 2 (loader) or 16 (a line), VDP1 bursts blen
+assign a_cnt = a_write ? ((a_chan == 3'd0 || a_chan == 3'd4) ? 10'd2 : 10'd1) : (a_chan == 3'd3 ? 10'd8 : a_chan == 3'd5 ? 10'd2 : 10'd16);
 assign b_cnt = b_write ? (b_chan == 3'd5 ? 10'd2 : 10'd1) : (b_chan == 3'd1 && vdp1vram_rcache_blen != 0) ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
 reg            old_rst;
 reg            ramh_rd_old,ramh_wr_old;
@@ -242,7 +247,7 @@ reg            raml_rd_old,raml_wr_old;
 reg            vdp1vram_rd_old,vdp1vram_wr_old;
 reg            cart_rd_old,cart_wr_old;
 reg            bsram_rd_old,bsram_wr_old;
-reg            ld_wr_old;
+reg            ld_wr_old, ld_rd_old;
 always @(posedge clk) begin
 	{ramh_rd_old,ramh_wr_old} <= {ramh_rd,|ramh_wr};
 	{cdram_rd_old,cdram_wr_old} <= {cdram_rd,|cdram_wr};
@@ -253,6 +258,7 @@ always @(posedge clk) begin
 	{cart_rd_old,cart_wr_old} <= {cart_rd,|cart_wr};
 	{bsram_rd_old,bsram_wr_old} <= {bsram_rd,|bsram_wr};
 	ld_wr_old <= ld_wr;
+	ld_rd_old <= ld_rd;
 	old_rst <= rst;
 end
 wire           rst_pulse = (rst && !old_rst);
@@ -360,7 +366,7 @@ always @(posedge clk) begin
 	end
 
 	if (rst_pulse) begin
-		{raml_write_busy,cart_write_busy,bsram_write_busy,ld_write_busy} <= 0;
+		{raml_write_busy,cart_write_busy,bsram_write_busy,ld_write_busy,ld_read_busy} <= 0;
 	end
 	else begin
 		if (|ramh_wr && !ramh_wr_old) begin
@@ -400,6 +406,9 @@ always @(posedge clk) begin
 		if (ld_wr && !ld_wr_old) begin
 			ld_write_busy <= 1;
 		end
+		if (ld_rd && !ld_rd_old) begin
+			ld_read_busy <= 1;
+		end
 	end
 
 	if (rst_pulse) begin
@@ -415,7 +424,13 @@ always @(posedge clk) begin
 			case (a_state)
 			0: begin
 				a_cw  <= '0;
-				if (!ramh_fifo_empty) begin
+				if (ld_read_busy) begin
+					a_addr  <= {ld_raddr, 1'b0};
+					a_read  <= 1;
+					a_chan  <= 3'd5;
+					a_state <= 2'd2;
+				end
+				else if (!ramh_fifo_empty) begin
 					a_addr  <= {4'b0011, ramh_write_addr[19:2], 1'b0};
 					a_wd    <= ramh_write_data;
 					a_be    <= ramh_write_be;
@@ -495,11 +510,13 @@ always @(posedge clk) begin
 
 		if (a_state == 2'd2) begin
 			if (p0_rvalid) a_cw <= a_cw + 4'd1;
+			if (p0_rvalid && a_chan == 3'd5) ld_rdata <= {ld_rdata[15:0], p0_rdata};
 			if (p0_rlast) begin
 				if (a_chan == 3'd0) ramh_read_busy <= 0;
 				if (a_chan == 3'd1) begin raml_read_busy <= 0; raml_rcache_busy <= 1; end
 				if (a_chan == 3'd2) begin cart_read_busy <= 0; cart_rcache_busy <= 1; end
 				if (a_chan == 3'd3) begin bsram_read_busy <= 0; bsram_rcache_busy <= 1; end
+				if (a_chan == 3'd5) ld_read_busy <= 0;
 				a_state <= 0;
 			end
 		end
