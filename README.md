@@ -39,16 +39,14 @@ Tested on a Pocket:
    unzip it onto the root of the SD card.
 2. Put your Saturn BIOS image (any name, `.bin` or `.rom`, 512 KB, not included) in `Assets/saturn/defgenx.Saturn/`;
    the core asks which one to use the first time it starts.
-3. Copy each game's `.cue` and `.bin` tracks into `Assets/saturn/common/`, directly or in a folder per game.
-4. Prepare the discs once, with the card mounted on a computer (needs [Python 3](https://www.python.org/downloads/)):
-
-   ```
-   python3 Saturn-mktoc.py --card /Volumes/POCKET
-   ```
-
-   For every `.cue` this writes `Game.json` and `Game.toc` next to the tracks. Run it again after adding games; it
-   only rewrites what changed. The repository's installer (`install.sh`, `install.bat`) copies the core and does
-   the same.
+3. Copy each game's `.cue` and `.bin` tracks onto the card: at its root, or in `Assets/saturn/common/` (directly or
+   in a folder per game).
+4. With the card in a computer, double-click **`Saturn-prepare-card.command`** (macOS) or
+   **`Saturn-prepare-card.bat`** (Windows) at the root of the card (needs [Python 3](https://www.python.org/downloads/);
+   on macOS, the first time, right-click it and choose Open). It moves games and a BIOS left at the card root (or in
+   `Assets/saturn/`) to their folders, then writes each game's `Game.json` and `Game.toc` next to its tracks. Run it
+   again after adding games; it only changes what is new. From a terminal: `python3 Saturn-mktoc.py` at the root of
+   the card (`--dry-run` shows what it would do).
 5. On the Pocket, open the Saturn core and pick the game's `Game.json`.
 
 A disc can also be loaded as one merged image: `--merge always` writes `Game.img`; load it in the **Disc image**

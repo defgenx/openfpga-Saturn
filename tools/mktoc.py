@@ -7,8 +7,13 @@ support/saturn/saturncdd.cpp (LoadCUE) and writes:
   <name>.toc   2048 bytes, big-endian 32-bit words (layout in docs/cd.md)
   <name>.json  APF instance JSON binding the TOC and the track files to the core's data slots
 
-Usage: mktoc.py game.cue [-o outdir] [--data-path PATH] [--ramcart-db saturn_ramcart.txt] [--merge auto|always|never]
-       mktoc.py --card SD_ROOT [--dry-run]   every disc on a Pocket card (what the install scripts run)
+Usage: mktoc.py                         at the root of the SD card: tidy the card, then prepare every disc
+       mktoc.py --card SD_ROOT [--dry-run]   the same for a card mounted elsewhere
+       mktoc.py game.cue [-o outdir] [--data-path PATH] [--ramcart-db saturn_ramcart.txt] [--merge auto|always|never]
+
+Tidying (card mode): a .cue at the card root or in Assets/saturn/ moves, with the files it lists, into
+Assets/saturn/common/<cue name>/; a 512 KB BIOS image (.bin/.rom named like a BIOS) at the card root moves into
+Assets/saturn/<core>/. Nothing already in place is moved, and nothing is overwritten.
 """
 import argparse
 import json
@@ -558,6 +563,62 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
     return 1 if failed else 0
 
 
+BIOS_NAME = re.compile(r"(sega|saturn|bios|mpr-1|hitachi|ip\.bin|boot)", re.I)
+
+
+def tidy(root, dry=False):
+    """Move loose discs and BIOS images to where the core looks for them. Returns the number of problems."""
+    saturn = os.path.join(root, "Assets", "saturn")
+    common = os.path.join(saturn, "common")
+    core = os.path.join(saturn, CORE)
+    moves, bad, used = [], 0, set()
+    for d in (root, saturn):
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            p = os.path.join(d, f)
+            if f.startswith(".") or not f.lower().endswith(".cue") or not os.path.isfile(p):
+                continue
+            try:
+                _, _, files = parse_cue(p)
+            except (CueError, OSError) as e:
+                print(f"  {f}: not moved ({e})")
+                bad += 1
+                continue
+            dst = os.path.join(common, os.path.splitext(f)[0])
+            group = [p] + [q for q, _ in files]
+            if any(os.path.dirname(os.path.abspath(q)) != os.path.abspath(d) for q in group):
+                print(f"  {f}: not moved (its files are in other folders)")
+                bad += 1
+                continue
+            clash = [q for q in group if os.path.exists(os.path.join(dst, os.path.basename(q)))]
+            if clash:
+                print(f"  {f}: not moved ({os.path.basename(clash[0])} already exists in common/{os.path.basename(dst)})")
+                bad += 1
+                continue
+            for q in group:
+                used.add(os.path.abspath(q))
+                moves.append((q, os.path.join(dst, os.path.basename(q))))
+    for f in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+        p = os.path.join(root, f)
+        if (f.startswith(".") or os.path.abspath(p) in used or not os.path.isfile(p)
+                or os.path.splitext(f)[1].lower() not in (".bin", ".rom") or os.path.getsize(p) != 524288
+                or not BIOS_NAME.search(f)):
+            continue
+        if os.path.exists(os.path.join(core, f)):
+            print(f"  {f}: not moved (already in Assets/saturn/{CORE})")
+            continue
+        moves.append((p, os.path.join(core, f)))
+    for src, dst in moves:
+        print(f"  move {os.path.relpath(src, root)} -> {os.path.relpath(dst, root)}")
+        if not dry:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(src, dst)
+    if not moves:
+        print("  nothing to move")
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cue", nargs="?")
@@ -579,11 +640,22 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="with --card: show what would change, write nothing")
     a = ap.parse_args()
 
+    if not a.cue and not a.card:
+        # run with no arguments: the card is the folder this script is in (or the current folder)
+        for c in (os.path.dirname(os.path.abspath(__file__)), os.getcwd()):
+            if os.path.isdir(os.path.join(c, "Assets")):
+                a.card = c
+                break
+        else:
+            ap.error("run this at the root of the SD card (next to its Assets folder), or give --card SD_ROOT or a .cue")
     if a.card:
         if a.cue:
             ap.error("give either a .cue or --card")
         if hasattr(sys.stdout, "reconfigure"):     # a Windows console cannot print every disc name
             sys.stdout.reconfigure(errors="replace")
+        print(f"Card: {os.path.abspath(a.card)}{' (dry run, nothing is moved or written)' if a.dry_run else ''}")
+        print("Tidying:")
+        tidy(a.card, a.dry_run)
         sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
