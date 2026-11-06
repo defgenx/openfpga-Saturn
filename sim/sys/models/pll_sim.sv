@@ -19,7 +19,7 @@ module pll_lite #(
 	output wire [63:0] reconfig_to_pll,
 	input  wire [63:0] reconfig_from_pll
 );
-	assign reconfig_to_pll = NO_RECONFIG ? 64'h0000_0000_3000_0002 : {24'd0, 1'b1, 36'd0, dotsel, pal, 1'b0};
+	assign reconfig_to_pll = NO_RECONFIG ? 64'h0000_0000_3000_0002 : {24'd0, 1'b1, 35'd0, reapply, dotsel, pal, 1'b0};
 endmodule
 
 module pll_sys (
@@ -41,26 +41,46 @@ module pll_sys (
 	localparam COMP_DOT = 1'b1;
 `endif
 	wire pal = rcfg ? reconfig_to_pll[1] : 1'b0, dotsel = rcfg ? reconfig_to_pll[2] : COMP_DOT;
-	// clk_sys period in ps (multiple of 4 so that the clk_ram half period is an integer)
+	wire reap = rcfg & reconfig_to_pll[3];
+	// app = {dotsel, pal} the PLL runs at: the compiled mode until the first write after the first lock, then each
+	// mode pll_lite asks for. clk_sys period in ps (multiple of 4 so that the clk_ram half period is an integer);
+	// while slewing to a new mode the PLL runs at the M_new + K_old intermediate, 48 MHz (docs/integration.md).
+	reg  [1:0] app = {COMP_DOT, 1'b0};
+	reg        slew = 1'b0;
 	integer per;
-	always @* per = !pal ? (!dotsel ? 18604 : 17460) : (!dotsel ? 18736 : 17584);
-	initial #1 $display("pll_sim: %0s, clk_sys period %0d ps at 1 ps", rcfg ? "pll_lite reconfigures" :
-	                    "no reconfiguration (compiled mode)", per);
+	always @* per = slew ? 20832 : !app[0] ? (!app[1] ? 18604 : 17460) : (!app[1] ? 18736 : 17584);
+	// +PLL_LOCK_US: lock time after power-up and after every reconfiguration (default 1000, the Cyclone V tLOCK
+	// maximum); +PLL_SLEW_NS: time at the intermediate rate after a mode change (default 2000)
+	integer lock_us = 1000, slew_ns = 2000;
+	initial begin
+		void'($value$plusargs("PLL_LOCK_US=%d", lock_us));
+		void'($value$plusargs("PLL_SLEW_NS=%d", slew_ns));
+		#1 $display("pll_sim: %0s, clk_sys period %0d ps at 1 ps, lock %0d us, slew %0d ns", rcfg ? "pll_lite reconfigures" :
+		            "no reconfiguration (compiled mode)", per, lock_us, slew_ns);
+	end
 
 	assign reconfig_from_pll = {47'd0, locked, 16'd0};
 
 	integer n = 0;
 	reg [1:0] vdiv = 2'd0;
-	// lock 200 ns after start (short, to keep runs fast), and a relock on every mode change: pll_lite rewrites M and K
-	// and the lock flag drops for the relock (20 us here) while the clocks keep running at the new rate
-	reg lk = 1'b0;
-	initial begin
-		#200000 lk = 1'b1;
-	end
-	reg [1:0] mode_q = 2'b00;
-	always @(pal or dotsel) if ({dotsel, pal} !== mode_q) begin
-		mode_q = {dotsel, pal};
-		if (lk) begin lk = 1'b0; #20000000 lk = 1'b1; end
+	// first lock lock_us after start; then every new mode or reapply (pll_lite rewrites M and K on a host reset too)
+	// drops the lock for lock_us, with slew_ns at the intermediate rate first. The clocks keep running throughout.
+	reg lk = 1'b0, reap_pend = 1'b0;
+	always @(posedge reap) reap_pend = 1'b1;
+	initial begin : ctl
+		#1;
+		#(64'd1000000 * lock_us) lk = 1'b1;
+		forever begin
+			if ({dotsel, pal} === app && !reap_pend) @(dotsel or pal or reap_pend);
+			#1;
+			if ({dotsel, pal} !== app || reap_pend) begin
+				lk = 1'b0;
+				if ({dotsel, pal} !== app) begin slew = 1'b1; #(64'd1000 * slew_ns); slew = 1'b0; end
+				$display("pll_sim: %0t relock to dotsel %b pal %b%0s", $time, dotsel, pal, reap_pend ? " (reapply)" : "");
+				app = {dotsel, pal}; reap_pend = 1'b0;
+				#(64'd1000000 * lock_us) lk = 1'b1;
+			end
+		end
 	end
 	// +FLICKER_US=<period> +FLICKER_LOW_US=<low> [+FLICKER_END_US=<t>]: the lock flag also drops for <low> us every
 	// <period> us after the first lock, until <t> us (0 or absent: forever); the clocks keep running
@@ -102,8 +122,11 @@ module pll_sys (
 		if (!q[0]) outclk_0 <= ~outclk_0;
 		if (q[2:0] == 3'd0) outclk_2 <= ~outclk_2;
 	end
-	// 90 degrees of clk_vid = one clk_sys period
-	assign #(17460) outclk_3 = outclk_2;
-	// clk_ram + 90 degrees (read capture clock of sdram_pocket)
-	assign #(2182) outclk_4 = outclk_1;
+	// 90 degrees of clk_vid = one clk_sys period; clk_ram + 90 degrees (read capture clock of sdram_pocket). Both are
+	// counter phases on the PLL, so they scale with the period.
+	reg c3 = 1'b0, c4 = 1'b0;
+	always @(outclk_2) c3 <= #(per) outclk_2;
+	always @(outclk_1) c4 <= #(per / 8) outclk_1;
+	assign outclk_3 = c3;
+	assign outclk_4 = c4;
 endmodule

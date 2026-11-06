@@ -614,6 +614,41 @@ always @(posedge video_rgb_clock) begin : scl
 	end
 end
 
+// ---- APF scaler rules (docs/pocket-platform.md 4.1), checked on the pins: VS and HS one clock wide, HS at least 3
+// clocks after VS, no VS while HS is high, RGB 0 while DE is low except the slot word {8'h00, slot, 13'h0} on the
+// first clock after a line, refresh 47..62 Hz. Mode changes (line or pixel count) are counted, not errors.
+integer apf_err = 0, apf_modechg = 0, a_vsw = 0, a_hsw = 0, a_sincevs = 99999, a_lines = 0, a_lines_q = -1;
+longint a_tvs = 0;
+reg     a_de_q = 1'b0;
+task automatic apf_fail(input string what);
+	apf_err++;
+	if (apf_err <= 30) $fdisplay(ftrace, "%0t APF-SCALER %s", $time, what);
+endtask
+always @(posedge video_rgb_clock) begin : apfchk
+	a_de_q <= video_de;
+	a_sincevs = a_sincevs + 1;
+	a_vsw = video_vs ? a_vsw + 1 : 0;
+	a_hsw = video_hs ? a_hsw + 1 : 0;
+	if (a_vsw == 2) apf_fail("VS wider than one clock");
+	if (a_hsw == 2) apf_fail("HS wider than one clock");
+	if (video_vs && video_hs) apf_fail("VS and HS on the same clock");
+	if (video_hs && a_sincevs < 3) apf_fail($sformatf("HS %0d clocks after VS", a_sincevs));
+	if (!video_de && video_rgb != 24'h0 && !(a_de_q && video_rgb[23:16] == 8'h00 && video_rgb[12:0] == 13'h0))
+		apf_fail($sformatf("RGB %06h while DE is low", video_rgb));
+	if (video_hs) a_lines++;
+	if (video_vs) begin
+		if (a_tvs != 0 && frame_no > 2) begin
+			longint p; p = $time - a_tvs;
+			if (p > 64'd21276595744 || p < 64'd16129032258) apf_fail($sformatf("frame period %0d ns (%0d Hz x100)", p / 1000, 64'd100000000000000 / p));
+		end
+		if (a_lines_q >= 0 && a_lines != a_lines_q) begin
+			apf_modechg++;
+			if (apf_modechg <= 30) $fdisplay(ftrace, "%0t APF-SCALER line count %0d -> %0d", $time, a_lines_q, a_lines);
+		end
+		a_lines_q = a_lines; a_lines = 0; a_tvs = $time; a_sincevs = 0;
+	end
+end
+
 // ---- VDP2 VRAM write groups seen by sdram_pocket (one 16 bit lane is written per slot)
 longint wg_total = 0, wg_multi = 0;
 reg [7:0] wa_q = 0, wb_q = 0;
@@ -1110,6 +1145,7 @@ task automatic summary();
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);
 	$display("model errors: psram0 %0d psram1 %0d sdram %0d sram %0d", m0_err, m1_err, sd_err, sr_err);
+	$display("APF scaler rule violations %0d (first 30 in the trace as APF-SCALER), line count changes %0d", apf_err, apf_modechg);
 	$display("sdram: read words cut by a WRITE %0d, READ-interrupted bursts %0d, PRECHARGE %0d, tRP below 18 ns %0d",
 	         sdmodel.n_trunc, sdmodel.n_rint, sdmodel.n_pre, sdmodel.n_trp_short);
 	$display("load FIFO overflow %0d, SDRAM ready %b PSRAM ready %b", dut.saturn.dbg_ld_ovf, dut.saturn.dbg_sdram_ready, dut.saturn.dbg_psram_ready);
