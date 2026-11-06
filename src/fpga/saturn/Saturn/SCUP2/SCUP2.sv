@@ -605,6 +605,27 @@ module SCUP2
 		if (BB_LDH) BBUS_BUF[31:16] <= BDI;
 		if (BB_LDL) BBUS_BUF[15: 0] <= BDI;
 	end
+	//A-bus address and write data: one AND-OR of the four forms of the A-bus FSM (CPU high/low half, DMA read, DMA write)
+	wire        a_en   = RES_N && CE_R;
+	wire        a_cpu  = a_en && ABUS_ST == ABUS_IDLE && CPU_ABUS_REQ;
+	wire        a_hi   = a_cpu && (!(&ACACHE_CDQMN[3:2]) || !ACACHE_CRDN);
+	wire        a_lo   = (a_cpu && !(!(&ACACHE_CDQMN[3:2]) || !ACACHE_CRDN)) || (a_en && ABUS_ST == ABUS_ADDR_H);
+	wire        a_dr   = a_en && ABUS_ST == ABUS_DMA_READ && !DMA_BUF_SIZE[2];
+	wire        a_dw   = a_en && ABUS_ST == ABUS_DMA_WRITE && !((!DMA_DSP && !DMA_WTN) || (DMA_DSP && DMA_LAST && !DMA_BUF_SIZE)) &&
+	                     |DMA_BUF_SIZE && (DMA_BUF_SIZE[2:1] || DMA_WA[0] || (DMA_WTN_LESS2 && DMA_WTN[0]));
+	wire [25:0] aa_n   = ({26{a_hi | a_lo}} & {~ACACHE_CCS1N, ACACHE_CA[24:2], a_lo, 1'b0}) |
+	                     ({26{a_dr}} & {DMA_RA[25:2], ABUS_A1, 1'b0}) | ({26{a_dw}} & DMA_WA[25:0]);
+	wire [15:0] ado_n  = ({16{a_hi}} & ACACHE_CDI[31:16]) | ({16{a_lo}} & ACACHE_CDI[15:0]) | ({16{a_dw}} & {DMA_P0,DMA_P1});
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) begin
+			AA <= '0;
+			ADO <= '0;
+		end else begin
+			if (a_hi | a_lo | a_dr | a_dw) AA <= aa_n;
+			if (a_hi | a_lo | a_dw) ADO <= ado_n;
+		end
+	end
+	
 	//Indirect table word source: B-bus buffer or C-bus data
 	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
 	
@@ -824,8 +845,6 @@ module SCUP2
 			DMD <= '{'0,'0,'0};
 //			DSTP <= DSTP_INIT;
 
-			AA <= '0;
-			ADO <= '0;
 			AAS_N <= 1;
 			ARD_N <= 1;
 			AWRL_N <= 1;
@@ -1058,15 +1077,11 @@ module SCUP2
 						
 						AAS_N <= 0;
 						if (!(&ABUS_CDQMN_INNER[3:2]) || !ABUS_CRDN_INNER) begin
-							AA <= !ABUS_CCS1N_INNER ? {1'b1,ABUS_CA_INNER[24:2],2'b00} : {1'b0,ABUS_CA_INNER[24:2],2'b00};
-							ADO <= ABUS_CDI_INNER[31:16];
 							ARD_N <= ABUS_CRDN_INNER;
 							AWRL_N <= ABUS_CDQMN_INNER[2];
 							AWRU_N <= ABUS_CDQMN_INNER[3];
 							ABUS_LONG <= ~&ABUS_CDQMN_INNER[1:0] | (ABUS_CA_INNER[24:20] == 5'h18 & ~ABUS_CA_INNER[19] & ~ABUS_CCS2N_INNER & ~ABUS_CRDN_INNER) | (ABUS_CA_INNER[24:20] < 5'h18 & ~ABUS_CCS2N_INNER & ~ABUS_CRDN_INNER) | (~ABUS_CCS1N_INNER & ~ABUS_CRDN_INNER);
 						end else begin //end else if (!(&ABUS_CDQMN_INNER[1:0])) begin
-							AA <= !ABUS_CCS1N_INNER ? {1'b1,ABUS_CA_INNER[24:2],2'b10} : {1'b0,ABUS_CA_INNER[24:2],2'b10};
-							ADO <= ABUS_CDI_INNER[15:0];
 							ARD_N <= ABUS_CRDN_INNER;
 							AWRL_N <= ABUS_CDQMN_INNER[0];
 							AWRU_N <= ABUS_CDQMN_INNER[1];
@@ -1103,8 +1118,6 @@ module SCUP2
 					else                    ACS2_N <= 0;
 					
 					AAS_N <= 0;
-					AA <= !ABUS_CCS1N_INNER ? {1'b1,ABUS_CA_INNER[24:2],2'b10} : {1'b0,ABUS_CA_INNER[24:2],2'b10};
-					ADO <= ABUS_CDI_INNER[15:0];
 					ARD_N <= ABUS_CRDN_INNER;
 					AWRL_N <= ABUS_CDQMN_INNER[0];
 					AWRU_N <= ABUS_CDQMN_INNER[1];
@@ -1149,7 +1162,6 @@ module SCUP2
 							3'b100: ACS1_N <= 0;
 							default: ACS2_N <= 0;
 						endcase
-						AA <= {DMA_RA[25:2],ABUS_A1,1'b0};
 						AAS_N <= 0;
 						ARD_N <= 0;
 						;
@@ -1199,8 +1211,6 @@ module SCUP2
 							3'b100: ACS1_N <= 0;
 							default: ACS2_N <= 0;
 						endcase
-						AA <= DMA_WA[25:0];
-						ADO <= {DMA_P0,DMA_P1};
 						AAS_N <= 0;
 						AWRL_N <= 0;
 						AWRU_N <= 0;
