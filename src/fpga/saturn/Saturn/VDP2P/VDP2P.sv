@@ -1033,7 +1033,6 @@ module VDP2P import VDP2P_PKG::*; (
 	end
 	wire [10: 0] NC_X = VA4.NxX[{UL[1],UL[0]}];
 	wire [10: 0] NC_Y = VA4.NxY[{UL[1],UL[0]}];
-	wire [19: 1] N_BMA = NxBMAddr(NSxREG[{1'b0,UL[0]}].MP, NBG_CH_CNT[{1'b0,UL[0]}], NBG_BM_CNT[{1'b0,UL[0]}], NC_X, NC_Y, NSxREG[{1'b0,UL[0]}].CHCN, NSxREG[{1'b0,UL[0]}].BMSZ, NSxREG[{1'b0,UL[0]}].ZMHF, NSxREG[{1'b0,UL[0]}].ZMQT);
 	PN_t         NC_PN23[2];
 	always_comb begin
 		NC_PN23[0] = UL[0] ? NBG3_PN_PIPE[0] : NBG2_PN_PIPE[0];
@@ -1042,7 +1041,42 @@ module VDP2P import VDP2P_PKG::*; (
 	wire         R_CSET = UR1 ? 1'b1 : VA4.R0RP;
 	wire [11: 0] R_CX = VA4.RxX[R_CSET][11:0];
 	wire [11: 0] R_CY = VA4.RxY[R_CSET][11:0];
-	wire [19: 1] R_BMA = RxBMAddr(RPxREG[R_CSET].MP, R_CX, R_CY, RSxREG[0].CHCN, RSxREG[0].BMSZ);
+	//One bitmap address adder (NxBMAddr, RxBMAddr): map base + the shifted dot offset (+ the NBG word count)
+	bit  [19: 1] BMA;
+	always_comb begin
+		bit [15: 0] no;
+		bit [17: 0] ro;
+		bit [19: 1] t1, t2;
+		bit [ 2: 0] mp, chcn;
+		bit [ 1: 0] bc;
+		case (NSxREG[{1'b0,UL[0]}].BMSZ)
+			2'b00: no = {2'b00,NC_Y[7:0],NC_X[8:3]};
+			2'b01: no = {1'b0, NC_Y[8:0],NC_X[8:3]};
+			2'b10: no = {      NC_Y[7:0],NC_X[9:3]};
+			2'b11: no = {      NC_Y[8:0],NC_X[9:3]};
+		endcase
+		ro = RSxREG[0].BMSZ ? {R_CY[8:0],R_CX[8:0]} : {1'b0,R_CY[7:0],R_CX[8:0]};
+		if (UR.CH) begin
+			mp = RPxREG[R_CSET].MP; chcn = RSxREG[0].CHCN; t2 = '0;
+			case (chcn)
+				3'b000:        t1 = {3'b000,ro[17:3],1'b0};
+				3'b001:        t1 = {2'b00,ro[17:2],1'b0};
+				3'b010,3'b011: t1 = {1'b0,ro[17:1],1'b0};
+				default:       t1 = {ro[17:0],1'b0};
+			endcase
+		end else begin
+			mp = NSxREG[{1'b0,UL[0]}].MP; chcn = NSxREG[{1'b0,UL[0]}].CHCN;
+			bc = NBG_BM_CNT[{1'b0,UL[0]}][1:0];
+			t2 = chcn == 3'b100 ? {15'h0000,NBG_BM_CNT[{1'b0,UL[0]}],1'b0} : {16'h0000,bc,1'b0};
+			case (chcn)
+				3'b000:        t1 = {2'b00,no,1'b0};
+				3'b001:        t1 = {1'b0,no,2'b00};
+				3'b010,3'b011: t1 = {no,3'b000};
+				default:       t1 = {no[14:0],4'b0000};
+			endcase
+		end
+		BMA = chcn <= 3'b100 ? {mp,16'h0000} + t1 + t2 : 19'h00000;
+	end
 	//One character address adder (NxCHAddr, NxCHAddr2, RxCHAddr) on the inputs of the access UO takes: RBG over NBG.
 	//CA_W is the word index inside the cell row: the NBG word count, or the RBG dot x, both flipped by HF.
 	PN_t         CA_PN;
@@ -1087,10 +1121,10 @@ module VDP2P import VDP2P_PKG::*; (
 	always_comb begin
 		UO = '0;
 		if (UN.PN) UO = PNA;
-		if (UN.CH) UO = (UL[1] || !NSxREG[{1'b0,UL[0]}].BMEN) ? CHA : N_BMA;
+		if (UN.CH) UO = (UL[1] || !NSxREG[{1'b0,UL[0]}].BMEN) ? CHA : BMA;
 		if (UN.VS) UO = NxVS_ADDR;
 		if (UR.PN) UO = PNA;
-		if (UR.CH) UO = (!UR1 && RSxREG[0].BMEN) ? R_BMA : CHA;
+		if (UR.CH) UO = (!UR1 && RSxREG[0].BMEN) ? BMA : CHA;
 		if (UR.CT) UO = RxCT_ADDR[UR1];
 	end
 	wire         UMATCH = UO[18:17] == USEL;
@@ -2590,40 +2624,34 @@ module VDP2P import VDP2P_PKG::*; (
 		end
 	end
 `endif
+	//Lane network in two steps: W is the word reordered for the visit (nibbles reversed for a flipped 4 bpp cell, bytes
+	//for 8 bpp; the two bytes of a 16 bpp cell and the byte of a 32 bpp cell in bytes 0-1), then each lane takes a fixed
+	//nibble of W per colour depth.
 	bit  [ 3: 0] IL[8], IH[8];
 	bit  [ 7: 0] EL, EH;
 	always_comb begin
-		bit [ 7: 0] B16, B32;
-		bit [ 1: 0] bi;
-		bit [ 2: 0] ni;
+		bit [ 3: 0] w[8], n[8];
+		bit [ 7: 0] b[4];
+		bit         hf4;
+		for (int i = 0; i < 8; i++) n[i] = S_CH[31 - 4*i -: 4];
+		for (int i = 0; i < 4; i++) b[i] = S_CH[31 - 8*i -: 8];
+		hf4 = P_E4H ? P_HFH : P_HFL;
+		for (int i = 0; i < 8; i++) w[i] = n[i];
+		if ((P_E4H || P_E4L) && hf4) for (int i = 0; i < 8; i++) w[i] = n[7 - i];
+		if (P_E8 && P_HFL) for (int i = 0; i < 4; i++) {w[2*i],w[2*i+1]} = b[3 - i];
+		if (P_E16) begin
+			{w[0],w[1]} = !P_CAI[1] ? (P_HF16 ? b[3] : b[1]) : (P_HF16 ? b[2] : b[0]);
+			{w[2],w[3]} = !P_CAI[1] ? (P_HF16 ? b[1] : b[3]) : (P_HF16 ? b[0] : b[2]);
+		end
+		if (P_E32) {w[0],w[1]} = P_CAI == 2'd0 ? b[3] : P_CAI == 2'd1 ? b[1] : P_CAI == 2'd2 ? b[2] : b[0];
 		EL = '0; EH = '0;
 		for (int l = 0; l < 8; l++) begin
 			IL[l] = 4'h0; IH[l] = 4'h0;
-			if (P_E4H) begin
-				EH[l] = 1'b1;
-				ni = 3'(l) ^ {3{P_HFH}};
-				IH[l] = S_CH[31 - 4*ni -: 4];
-			end
-			if (P_E4L) begin
-				EL[l] = 1'b1;
-				ni = 3'(l) ^ {3{P_HFL}};
-				IL[l] = S_CH[31 - 4*ni -: 4];
-			end
-			if (P_E8 && l[2] == P_CNT[0]) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				bi = 2'(l) ^ {2{P_HFL}};
-				{IH[l],IL[l]} = S_CH[31 - 8*bi -: 8];
-			end
-			if (P_E16 && l[2:1] == P_CNT[1:0]) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				B16 = !P_CAI[1] ? ((l[0] ^ P_HF16) ? S_CH[7:0] : S_CH[23:16]) : ((l[0] ^ P_HF16) ? S_CH[15:8] : S_CH[31:24]);
-				{IH[l],IL[l]} = B16;
-			end
-			if (P_E32 && l[2:0] == P_CNT) begin
-				EL[l] = 1'b1; EH[l] = 1'b1;
-				B32 = P_CAI == 2'd0 ? S_CH[7:0] : P_CAI == 2'd1 ? S_CH[23:16] : P_CAI == 2'd2 ? S_CH[15:8] : S_CH[31:24];
-				{IH[l],IL[l]} = B32;
-			end
+			if (P_E4H) begin EH[l] = 1'b1; IH[l] = w[l]; end
+			if (P_E4L) begin EL[l] = 1'b1; IL[l] = w[l]; end
+			if (P_E8 && l[2] == P_CNT[0])     begin EL[l] = 1'b1; EH[l] = 1'b1; IH[l] = w[2*(l&3)]; IL[l] = w[2*(l&3)+1]; end
+			if (P_E16 && l[2:1] == P_CNT[1:0]) begin EL[l] = 1'b1; EH[l] = 1'b1; IH[l] = w[2*(l&1)]; IL[l] = w[2*(l&1)+1]; end
+			if (P_E32 && l[2:0] == P_CNT)     begin EL[l] = 1'b1; EH[l] = 1'b1; IH[l] = w[0];         IL[l] = w[1]; end
 		end
 	end
 	always @(posedge CLK) begin
