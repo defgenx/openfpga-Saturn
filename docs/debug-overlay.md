@@ -73,8 +73,10 @@ one row of 8 hex digits: the master SH-2 program counter.
 ```
 
 - The default row. `POCKET_DEBUG_SNDROW=1` shows the debug6 row instead (below).
-- Releases v0.2.13 to v0.2.16 have no overlay: no squares, no grey fallback frame. v0.2.18 sets `POCKET_DEBUG_OVERLAY=1`
-  with the PC row (seed 4, 1,848 / 1,848 LABs).
+- Releases set neither macro (no squares, no grey fallback frame), except v0.2.18, which set `POCKET_DEBUG_OVERLAY=1`
+  with the PC row (seed 4, 1,848 / 1,848 LABs) to find where the disc boot stopped.
+- `POCKET_DEBUG_TGTROW=1` shows `core_bridge_cmd`'s `target_dbg` in the row instead of the PC:
+  `{tstate, Ready to Run sent, RTR answered, 0x0180 sent (2 digits), target_0[31:24], reads ended ok}`.
 - `POCKET_DEBUG_NOROW=1` leaves the row out (squares only), the fallback when the row does not fit (it also fits at
   seed 6).
 - **PC**: the master SH-2 pipeline's execute-stage PC (`PIPE.EX.PC` in `SH2P_core`, so a loop in the instruction cache
