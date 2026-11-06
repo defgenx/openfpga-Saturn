@@ -284,10 +284,11 @@ VBlank (the generic template does the same), and refresh rate acceptance for PAL
 
 ## 4. Audio
 
-`pocket_audio` runs on `clk_sys`: a 44.1 kHz strobe (`SCSP_CE` / 512) shifts `{prev, cur}`; a 48 kHz phase accumulator
-on `in_clk` triggers outputs, each `prev + (cur - prev) * ph` with `ph` advancing 44100/48000 per output and
+`pocket_audio` runs on `clk_sys`: a 44.1 kHz strobe (`SCSP_CE` / 512) shifts `{prev, cur}`; a 48 kHz strobe (5/4704 of
+`SCSP_2X_CE`, the same timebase as the input, so it follows the PLL mode) triggers outputs, each `prev + (cur - prev) * ph` with `ph` advancing 44100/48000 per output and
 shifted by one per input sample (a late input clamps, so a frequency error cannot run away). `sound_i2s` takes the result
-with `clk_audio = clk_sys`. CD-DA is mixed into the SCSP input inside `Saturn`, so it goes through the same path.
+with `clk_audio = clk_sys`: the sample registers hold for a whole output period, so a toggle synchroniser on the
+strobe copies them into `clk_74a` (no FIFO). CD-DA is mixed into the SCSP input inside `Saturn`, so it goes through the same path.
 `make -C sim platform` (`tb_audio`): 1 kHz in gives 1 kHz out at the right amplitude, residual -65 dB. One 16 x 17
 multiplier, shared by both channels.
 

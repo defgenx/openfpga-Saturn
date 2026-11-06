@@ -338,7 +338,6 @@ function automatic [26:0] mode_sub(input [2:0] m, input [26:0] k, input neg);
 	endcase
 endfunction
 wire [26:0] scsp_thr  = mode_sub(clk_mode, 27'd45158400, 1'b0), scsp_nstp  = mode_sub(clk_mode, 27'd45158400, 1'b1);
-wire [26:0] audio_thr = mode_sub(clk_mode, 27'd48000, 1'b0),    audio_nstp = mode_sub(clk_mode, 27'd48000, 1'b1);
 
 bit MCLK_DIV;
 always @(posedge clk_sys) MCLK_DIV <= ~MCLK_DIV;
@@ -917,7 +916,7 @@ pocket_video video (
 );
 
 pocket_audio audio (
-	.clk(clk_sys), .rst(rst_sys), .scsp_ce(SCSP_CE), .out_thr(audio_thr), .out_nstep(audio_nstp),
+	.clk(clk_sys), .rst(rst_sys), .scsp_ce(SCSP_CE), .scsp2x_ce(SCSP_2X_CE),
 	.in_l($signed(SOUND_L)), .in_r($signed(SOUND_R)),
 	.out_l(audio_l), .out_r(audio_r), .out_stb(audio_stb)
 );

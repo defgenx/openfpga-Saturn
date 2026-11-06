@@ -1,8 +1,9 @@
 // SCSP output (44.1 kHz, signed 16 bit stereo) to 48 kHz, linear interpolation.
 //
-// The 44.1 kHz strobe counts SCSP_CE (22.5792 MHz / 512). The 48 kHz strobe is a phase accumulator on
-// in_clk (clk Hz), given as out_thr = in_clk - 48000 and out_nstep = 48000 - in_clk, so both follow the PLL mode. `ph` is the output position inside [prev, cur] in 1/65536
-// input samples; each output advances it by 44100/48000, each input sample shifts the window by one.
+// The 44.1 kHz strobe counts SCSP_CE (22.5792 MHz / 512). The 48 kHz strobe is 5/4704 of the 45.1584 MHz SCSP_2X_CE
+// (a 13 bit accumulator): the same clock-enable timebase as the input, so both follow the PLL mode. `ph` is the output
+// position inside [prev, cur] in 1/65536 input samples; each output advances it by 44100/48000, each input sample shifts
+// the window by one.
 // Output = prev + (cur - prev) * ph, one multiply-add (DSP block) per channel.
 
 `default_nettype none
@@ -11,8 +12,7 @@ module pocket_audio (
 	input  wire               clk,
 	input  wire               rst,
 	input  wire               scsp_ce,
-	input  wire        [26:0] out_thr,
-	input  wire        [26:0] out_nstep,
+	input  wire               scsp2x_ce,     // 45.1584 MHz enables (SCSP_2X_CE)
 	input  wire signed [15:0] in_l,
 	input  wire signed [15:0] in_r,
 	output reg  signed [15:0] out_l,
@@ -23,12 +23,12 @@ module pocket_audio (
 localparam [15:0] STEP = 16'd60211;        // 65536 * 44100 / 48000
 
 reg [8:0]  scsp_cnt;
-reg [26:0] acc;                            // acc < in_clk < 2^26
+reg [12:0] acc;                            // acc < 4704
 reg signed [15:0] prev_l, prev_r, cur_l, cur_r;
 reg [16:0] ph;
 reg        in_ev, out_ev, out_pend;
 
-wire        acc_ge = acc >= out_thr;                      // acc + 48000 >= in_clk
+wire        acc_ge = acc >= 13'd4699;                     // acc + 5 >= 4704
 
 always @(posedge clk) begin
 	in_ev  <= 1'b0;
@@ -39,12 +39,14 @@ always @(posedge clk) begin
 		if (&scsp_cnt) in_ev <= 1'b1;
 	end
 
-	acc <= acc + (acc_ge ? out_nstep : 27'd48000);
-	if (acc_ge) out_ev <= 1'b1;
+	if (scsp2x_ce) begin
+		acc <= acc + (acc_ge ? 13'(5 - 4704) : 13'd5);
+		if (acc_ge) out_ev <= 1'b1;
+	end
 
 	if (rst) begin
 		scsp_cnt <= 9'd0;
-		acc      <= 27'd0;
+		acc      <= 13'd0;
 	end
 end
 

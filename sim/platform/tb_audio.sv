@@ -7,28 +7,32 @@ module tb_audio;
 	always #(1.0e9 / FSYS / 2.0) clk = ~clk;
 
 	reg rst = 1;
-	reg scsp_ce = 0;
+	reg scsp_ce = 0, scsp2x_ce = 0, half = 0;
 	reg signed [15:0] in_l = 0, in_r = 0;
 	wire signed [15:0] out_l, out_r;
 	integer acc = 0;
 
-	pocket_audio dut (.clk(clk), .rst(rst), .scsp_ce(scsp_ce), .out_thr(27'd57272800 - 27'd48000), .out_nstep(27'd48000 - 27'd57272800), .in_l(in_l), .in_r(in_r), .out_l(out_l), .out_r(out_r));
+	pocket_audio dut (.clk(clk), .rst(rst), .scsp_ce(scsp_ce), .scsp2x_ce(scsp2x_ce), .in_l(in_l), .in_r(in_r), .out_l(out_l), .out_r(out_r));
 
-	// SCSP_CE: 22.5792 MHz from clk_sys, and one new sample per 512 enables
+	// SCSP_2X_CE: 45.1584 MHz from clk_sys, SCSP_CE every second one, and one new sample per 512 SCSP_CE
 	integer n = 0, cnt = 0;
 	real pi = 3.14159265358979;
 	always @(posedge clk) begin
-		scsp_ce <= 0;
-		acc = acc + 22579200;
+		scsp_ce <= 0; scsp2x_ce <= 0;
+		acc = acc + 45158400;
 		if (acc >= 57272800) begin
 			acc = acc - 57272800;
-			scsp_ce <= 1;
-			cnt = cnt + 1;
-			if (cnt == 512) begin
-				cnt = 0;
-				n = n + 1;
-				in_l <= $rtoi(8000.0 * $sin(2.0 * pi * 1000.0 * n / 44100.0));
-				in_r <= $rtoi(-4000.0 * $sin(2.0 * pi * 1000.0 * n / 44100.0));
+			scsp2x_ce <= 1;
+			half = !half;
+			if (half) begin
+				scsp_ce <= 1;
+				cnt = cnt + 1;
+				if (cnt == 512) begin
+					cnt = 0;
+					n = n + 1;
+					in_l <= $rtoi(8000.0 * $sin(2.0 * pi * 1000.0 * n / 44100.0));
+					in_r <= $rtoi(-4000.0 * $sin(2.0 * pi * 1000.0 * n / 44100.0));
+				end
 			end
 		end
 	end

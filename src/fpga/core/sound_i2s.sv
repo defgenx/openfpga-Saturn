@@ -99,19 +99,16 @@ module sound_i2s #(
     end
   endgenerate
 
-  wire        write_en = audio_stb;
-  wire [31:0] audgen_sampdata_s;
-
-  sync_fifo #(
-      .WIDTH(32)
-  ) sync_fifo (
-      .clk_write(clk_audio),
-      .clk_read (clk_74a),
-
-      .write_en(write_en),
-      .data(audgen_sampdata),
-      .data_s(audgen_sampdata_s)
-  );
+  // Held-payload crossing instead of a FIFO: audio_l/audio_r are registers that hold for a whole output sample after
+  // audio_stb (pocket_audio), so a toggle synchroniser says when to copy them; the copy is ~4 clk_74a after the strobe.
+  reg        stb_t = 1'b0;
+  reg  [2:0] stb_s = 3'd0;
+  reg [31:0] audgen_sampdata_s = 32'd0;
+  always @(posedge clk_audio) if (audio_stb) stb_t <= ~stb_t;
+  always @(posedge clk_74a) begin
+    stb_s <= {stb_s[1:0], stb_t};
+    if (stb_s[2] != stb_s[1]) audgen_sampdata_s <= audgen_sampdata;
+  end
 
   reg [31:0] audgen_sampshift;
   reg [4:0] audio_lrck_cnt;
