@@ -365,3 +365,22 @@ integer part when only parameter set B is in mode 3, so `MULT1` needs 32 bits); 
 
 `make -C sim vdp2 SEEDS=200`: seeds 61, 149 and 165 fail with VRAM content mismatches (CPU write path, dot output mism=0)
 on the unmodified VDP2P too; they are outside the default 60 and not caused by these commits.
+
+## 11. Applied: SH7604P and SCUP2 (branch `area-cpu`, 2026-11-06)
+
+Measured with `quartus_map` on the whole design (`raetro/quartus:21.1`, base `f9aaa26`: 17,826 ALMs needed). Entity
+numbers are ALUTs / registers of the map report. MSH and SSH carry the same RTL, and their difference (up to about 50 ALUTs per
+block) is the noise of a single map.
+
+| Change | Result | Kept |
+|---|---|---|
+| `SH7604P`: `IDI = DI`. The BSC samples `DI` only while it owns the bus (data latch and vector fetch states need `!BUS_RLS`), so the `EDO` side of the bus-release mux is never consumed. A sim check in `SH7604P_BSC` prints `MISMATCH` if `DI` is sampled while released. | BSC -23 / -29 ALUTs | yes |
+| `SH7604P`: peripheral read data `IBUS_DI` as one AND-OR (the register windows are disjoint and every `*_DO` but INTC's is 0 outside its window) | top -2 / -30, cache +15 / +12 ALUTs: neutral | yes (no cost) |
+| `SCUP2`: `ABUS_BUF`/`BBUS_BUF` and `DSP_DR`/`DSP_DW` moved out of the bus-FSM block into blocks of their own, one load enable per half, same update priority | SCUP2 own 2,370 -> 2,263 ALUTs (-107) | yes |
+| Together (`488dc47`) | **17,826 -> 17,772 ALMs needed (-54)** | |
+| `SH2P_core`: GBR and VBR as register-file words 17/18 (W1 port, read through RB, which an SCR operand never uses; valid bits for the reset value) and PR in the RAM cleared after `RST_N`. Every `Decode()` output checked: no GBR/VBR write shares an EX step with a GPR write or `BR.BI`. | -93 registers but +33 / +114 ALUTs per CPU (17,913 with the changes above) | no |
+| `SCUP2`: `AA`/`ADO` as one AND-OR block like `BDO` | +8 ALUTs (17,789) | no |
+
+The gain of the SCUP2 change comes from the registers written inside the 1,700-line bus/DMA `always` block: the same
+conditions written as one enable per register group map smaller. The registers still written there are 1 to 4 bits wide
+(B-bus strobes, buffer pointers), the wide ones (`BDO`, `CBUS_A`, DMA address/count, `REG_DO`) already have their own blocks.
