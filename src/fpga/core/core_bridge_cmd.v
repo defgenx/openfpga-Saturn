@@ -90,6 +90,7 @@ input   wire    [31:0]  target_dataslot_length,
 
 input   wire    [31:0]  target_buffer_param_struct, // bus address of the memory region APF will fetch additional parameter struct from
 input   wire    [31:0]  target_buffer_resp_struct,  // bus address of the memory region APF will write its response struct to
+output  wire    [31:0]  target_dbg,                 // {tstate, RTR sent, RTR ok, 0x0180 sent, target_0[31:24], read ok} (docs/debug-overlay.md)
                                                     // this should be mapped by the developer, the buffer is not implemented in this file
 
 input   wire    [9:0]   datatable_addr,
@@ -183,6 +184,9 @@ localparam  [3:0]   TARG_ST_WAITRESULT_DSO  = 'd15;
     
     reg             status_setup_done_1, status_setup_done_queue;
     reg             target_dataslot_read_1, target_dataslot_read_queue;
+    reg     [3:0]   td_rtr = 4'd0, td_rtr_ok = 4'd0, td_ok = 4'd0;   // saturating counters for target_dbg
+    reg     [7:0]   td_rd = 8'd0;
+    assign target_dbg = {tstate, td_rtr, td_rtr_ok, td_rd, target_0[31:24], td_ok};
     reg             target_dataslot_write_1, target_dataslot_write_queue;
     reg             target_dataslot_getfile_1, target_dataslot_getfile_queue;
     reg             target_dataslot_openfile_1, target_dataslot_openfile_queue;
@@ -525,10 +529,12 @@ always @(posedge clk) begin
         end 
     end
     TARG_ST_READYTORUN: begin
+        if (td_rtr != 4'hF) td_rtr <= td_rtr + 4'd1;
         target_0 <= 32'h636D_0140;
         tstate <= TARG_ST_WAITRESULT_RTR;
     end
     TARG_ST_DATASLOTOP: begin
+        if (target_0[15:0] == 16'h0180 && td_rd != 8'hFF) td_rd <= td_rd + 8'd1;
         target_0[31:16] <= 16'h636D;
         
         target_dataslot_done <= 0;
@@ -545,15 +551,20 @@ always @(posedge clk) begin
             target_dataslot_err <= target_0[2:0];
             // assert done
             target_dataslot_done <= 1;
+            if (target_0[2:0] == 3'd0 && td_ok != 4'hF) td_ok <= td_ok + 4'd1;
             tstate <= TARG_ST_IDLE;
         end
     end
     TARG_ST_WAITRESULT_RTR: begin
         if(target_0[31:16] == 16'h6F6B) begin
             // done
+            if (td_rtr_ok != 4'hF) td_rtr_ok <= td_rtr_ok + 4'd1;
+            tstate <= TARG_ST_IDLE;
+        end else if(status_running & target_dataslot_read_queue) begin
+            // Ready to Run still unanswered after Reset Exit: the host has started the core, drop it so that the
+            // dataslot read is not blocked behind it
             tstate <= TARG_ST_IDLE;
         end
-    
     end
     endcase
     

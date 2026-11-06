@@ -94,6 +94,7 @@ module saturn_pocket #(
 	output wire        setup_ready_74a             // clk_74a: PLL locked and the RAM controllers initialised (APF setup done)
 `ifdef POCKET_DEBUG_OVERLAY
 	, input  wire      dbg_dac                     // core_top's audio_dac pin (I2S data, clk_audio), debug overlay square 3
+	, input  wire [31:0] dbg_tgt                   // clk_74a: core_bridge_cmd target_dbg, shown by POCKET_DEBUG_TGTROW
 `endif
 );
 
@@ -887,7 +888,11 @@ wire        dbg_we = dbg_snd[33] | dbg_snd[16];
 reg  [31:0] dbg_pc = 32'd0;
 reg         dbg_wa = 1'b0;
 always @(posedge clk_sys) begin
+`ifdef POCKET_DEBUG_TGTROW
+	if (dbg_tick) dbg_pc <= dbg_tgt;                // display only: a torn sample shows for one window
+`else
 	if (dbg_tick) dbg_pc <= dbg_txt[99:68];
+`endif
 	dbg_wa <= ~dbg_wa;
 end
 wire [15:0] dbg_wd = dbg_wa ? dbg_pc[15:0] : dbg_pc[31:16];

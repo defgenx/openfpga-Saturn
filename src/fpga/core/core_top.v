@@ -412,6 +412,7 @@ wire    [31:0]  target_dataslot_length;
 
 wire    [31:0]  target_buffer_param_struct = 32'h0;
 wire    [31:0]  target_buffer_resp_struct = 32'h0;
+wire    [31:0]  target_dbg;
 
 // bridge data slot access
 // synchronous to clk_74a
@@ -493,6 +494,7 @@ core_bridge_cmd icb (
 
     .target_buffer_param_struct ( target_buffer_param_struct ),
     .target_buffer_resp_struct  ( target_buffer_resp_struct ),
+    .target_dbg                 ( target_dbg ),
 
     .datatable_addr         ( datatable_addr ),
     .datatable_wren         ( datatable_wren ),
@@ -722,6 +724,7 @@ saturn_pocket saturn (
     .setup_ready_74a ( setup_ready_74a )
 `ifdef POCKET_DEBUG_OVERLAY
     , .dbg_dac  ( audio_dac )
+    , .dbg_tgt  ( target_dbg )
 `endif
 );
 

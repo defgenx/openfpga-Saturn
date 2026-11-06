@@ -994,7 +994,8 @@ end
 // debug overlay square states (docs/debug-overlay.md): every change of the green set, checked once per ms
 initial begin : sq_log
 	reg [15:0] sq_q;
-	sq_q = 16'h0000;
+	reg [19:0] tg_q;
+	sq_q = 16'h0000; tg_q = 20'hFFFFF;
 	forever begin
 		#(64'd1000000000);
 		if (dut.saturn.dbg_g !== sq_q) begin
@@ -1002,6 +1003,12 @@ initial begin : sq_log
 			         dut.saturn.dbg_g, dut.saturn.dbg_rd_cnt, dut.saturn.dbg_rd_err, dut.saturn.dbg_rd_ovf, {3'b000, dut.saturn.dbg_fra}, dut.saturn.dbg_arm,
 			         dut.saturn.dbg_pc_q);
 			sq_q = dut.saturn.dbg_g;
+		end
+		if (dut.target_dbg[31:12] !== tg_q) begin
+			$display("%0t TARGET row %08h: tstate %0d, RTR sent %0d ok %0d, 0x0180 sent %0d, status byte %02h, reads ok %0d", $time,
+			         dut.target_dbg, dut.target_dbg[31:28], dut.target_dbg[27:24], dut.target_dbg[23:20], dut.target_dbg[19:12],
+			         dut.target_dbg[11:4], dut.target_dbg[3:0]);
+			tg_q = dut.target_dbg[31:12];
 		end
 	end
 end
