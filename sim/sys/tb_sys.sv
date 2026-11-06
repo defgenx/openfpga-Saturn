@@ -6,7 +6,7 @@
 // dataslot_allcomplete, Reset Exit. All commands go through the real core_bridge_cmd at 0xF8000000. Ready to Run is
 // answered once (+RTR_ALWAYS: every time); the PLL model relocks on every mode change.
 //
-// Plusargs: +BIOS=<file> (image for slot 0), +CYCLES=<clk_sys cycles>, +GAP=<clk_74a per bridge word>,
+// Plusargs: +BIOS=<file> (image for slot 0), +CYCLES=<clk_sys cycles>, +GAP=<clk_74a between bridge words after setup; default 86, the Pocket rate as for LDGAP>,
 //           +LDGAP=<clk_74a between slot 0 words until the core reports setup done; default 86, i.e. one word per
 //           88 clk_74a, the fastest rate of Analogue's io_bridge_peripheral.v>,
 //           +FLICKER_US / +FLICKER_LOW_US / +FLICKER_END_US (PLL lock flag chatter, models/pll_sim.sv),
@@ -109,7 +109,7 @@ sram_model #(.T_AA(0)) srmodel (.a(sram_a), .dq(sram_dq), .oe_n(sram_oe_n), .we_
 // ------------------------------------------------------------------ host (bridge) side
 reg [7:0] bios [0:524287];
 integer   bios_len = 0;
-integer   gap = 32;
+integer   gap = 86;
 integer   ldgap = 86;
 integer   dslat_us = 0;                                          // +DSLAT_US: host delay before each data slot read's data, like the Pocket's SD card
 string    bios_path;
@@ -210,7 +210,7 @@ initial begin : host
 	integer fd, i, n;
 	bit [31:0] w;
 	if (!$value$plusargs("BIOS=%s", bios_path)) bios_path = "";
-	if (!$value$plusargs("GAP=%d", gap)) gap = 32;
+	if (!$value$plusargs("GAP=%d", gap)) gap = 86;
 	if (!$value$plusargs("LDGAP=%d", ldgap)) ldgap = 86;
 	if (!$value$plusargs("DSLAT_US=%d", dslat_us)) dslat_us = 0;
 	if (!$value$plusargs("TOC=%s", toc_path)) toc_path = "";

@@ -51,6 +51,8 @@ module sdram_model #(
 localparam [2:0] NOP = 3'b111, ACT = 3'b011, RD = 3'b101, WR = 3'b100, PRE = 3'b010, REF = 3'b001, MRS = 3'b000;
 
 reg [15:0] mem [0:(4<<19)-1];       // {bank, row[8:0], col[9:0]}
+// +MEMRAND: power-up contents are random, as on the Pocket's chips (the sim otherwise starts them at 0)
+initial if ($test$plusargs("MEMRAND")) for (int mi = 0; mi < (4<<19); mi++) mem[mi] = 16'($urandom);
 
 // rows whose retention is checked: VDP2 rows 0-63 of every bank and the sound RAM rows
 // (bank 3 rows 256-511; +SD_OLDMAP: banks 2/3 rows 128-255, the map of v0.2.4)

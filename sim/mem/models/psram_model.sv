@@ -42,6 +42,8 @@ module psram_model #(
 );
 
 reg [15:0] mem [0:(1<<23)-1];                 // {die, halfword[21:0]}
+// +MEMRAND: power-up contents are random, as on the Pocket's chips (the sim otherwise starts them at 0)
+initial if ($test$plusargs("MEMRAND")) for (int mi = 0; mi < (1<<23); mi++) mem[mi] = 16'($urandom);
 reg [15:0] bcr [0:1], rcr [0:1];
 integer n_cfg_async = 0, n_cfg_sync = 0;
 initial begin

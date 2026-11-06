@@ -20,6 +20,8 @@ module sram_model #(
 	output reg  [31:0] n_rd, n_wr
 );
 reg [15:0] mem [0:131071];
+// +MEMRAND: power-up contents are random, as on the Pocket's chips (the sim otherwise starts them at 0)
+initial if ($test$plusargs("MEMRAND")) for (int mi = 0; mi < 131072; mi++) mem[mi] = 16'($urandom);
 reg [15:0] rd_val;
 reg        drv_lo, drv_hi;
 assign dq[7:0]  = drv_lo ? rd_val[7:0]  : 8'hzz;
