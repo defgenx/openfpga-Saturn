@@ -808,10 +808,11 @@ always @(posedge clk_sys) begin
 	dbg_win    <= dbg_win + 25'd1;
 end
 // boot progress (squares 4-7, 9, 12, 15), sticky from power-up: disc reads completed (1, 16, 64), MSH executed the
-// disc's first-read address (header bytes 0xF0-0xF3, from the header replay; the BIOS itself runs code in WRAM-H
-// above 0x06004000, so no address range works), the SMPC selected the 352 clock, and the two cd_stream error counters
+// disc's first-read address (header bytes 0xF0-0xF3) after a write to that WRAM-H word that followed the first disc
+// read (the BIOS runs its own code there before any disc read), the SMPC selected the 352 clock, and the two
+// cd_stream error counters. docs/debug-overlay.md
 reg  [2:0] dbg_rd_th = 3'd0;
-reg        dbg_game = 1'b0, dbg_d352 = 1'b0, dbg_rerr = 1'b0, dbg_rovf = 1'b0;
+reg        dbg_game = 1'b0, dbg_arm = 1'b0, dbg_d352 = 1'b0, dbg_rerr = 1'b0, dbg_rovf = 1'b0;
 reg [31:0] dbg_pc_q = 32'd0;
 reg [28:0] dbg_fra = 29'h1FFFFFFF;
 always @(posedge clk_sys) begin
@@ -819,7 +820,8 @@ always @(posedge clk_sys) begin
 	dbg_rd_th <= {dbg_rd_cnt >= 8'd64, dbg_rd_cnt >= 8'd16, dbg_rd_cnt != 8'd0};
 	if (boot_busy && boot_wr && boot_addr == 9'h0F0) dbg_fra[28:16] <= {boot_data[4:0], boot_data[15:8]};
 	if (boot_busy && boot_wr && boot_addr == 9'h0F2) dbg_fra[15:0]  <= {boot_data[7:0], boot_data[15:8]};
-	if (dbg_pc_q[28:0] == dbg_fra) dbg_game <= 1'b1;
+	if (!RAMH_CS_N && !(&MEM_DQM_N) && MEM_A[19:2] == dbg_fra[19:2] && dbg_fra[28:20] == 9'h060 && dbg_rd_th[0]) dbg_arm <= 1'b1;
+	if (dbg_arm && dbg_pc_q[28:0] == dbg_fra) dbg_game <= 1'b1;
 	if (SMPC_DOTSEL) dbg_d352 <= 1'b1;
 	dbg_rerr  <= dbg_rd_err != 8'd0;
 	dbg_rovf  <= dbg_rd_ovf != 8'd0;
@@ -863,7 +865,7 @@ wire [15:0] dbg_g = {
 	dbg_tap_q[6],                                        // 10 VDP2 DISP
 	dbg_d352,                                          //  9 SMPC selected the 352 clock (CKCHG352) at least once
 	1'b0,                                              //  8 68K bus (activity)
-	dbg_game,                                          //  7 MSH executed the disc's first-read address (game code)
+	dbg_game,                                          //  7 MSH executed the disc's first-read address after the disc loaded it (game entered)
 	dbg_rd_th[2],                                      //  6 64 disc reads completed
 	dbg_rd_th[1],                                      //  5 16 disc reads completed
 	dbg_rd_th[0],                                      //  4 first disc read completed

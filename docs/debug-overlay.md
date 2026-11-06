@@ -18,7 +18,7 @@ never green). Legend, left to right:
 | 4 | Disc read | sticky level | at least one disc data slot read completed (`cd_stream` `rd_cnt`, counted since power-up) |
 | 5 | 16 reads | sticky level | 16 disc reads completed (the BIOS reads past the disc header) |
 | 6 | 64 reads | sticky level | 64 disc reads completed (a game's files are loading) |
-| 7 | Game code | sticky level | the master SH-2 executed the disc's first-read address (IP.BIN bytes 0xF0-0xF3, taken from the header replay; Hyper Duel: 0x06010000). An address range does not work: the BIOS itself runs code in WRAM-H above 0x06004000 |
+| 7 | Game entered | sticky level | the master SH-2 executed the disc's first-read address (IP.BIN bytes 0xF0-0xF3, from the header replay; Hyper Duel: 0x06010000) after that WRAM-H word was written following the first disc read. The address alone does not work: the BIOS runs its own code there (0x0601184E at 1.17 s in the sim) before reading the disc |
 | 8 | 68K bus | activity | sound 68K address strobe (`SCAS_N`) toggling |
 | 9 | 352 clock | sticky level | the SMPC selected the 352 clock (`SMPC_DOTSEL`, CKCHG352) at least once since power-up |
 | 10 | DISP | level | VDP2 TVMD.DISP set |

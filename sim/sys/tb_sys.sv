@@ -963,8 +963,9 @@ initial begin : sq_log
 	forever begin
 		#(64'd1000000000);
 		if (dut.saturn.dbg_g !== sq_q) begin
-			$display("%0t SQUARES green %016b (16..1) disc reads %0d err %0d lost words %0d", $time, dut.saturn.dbg_g,
-			         dut.saturn.dbg_rd_cnt, dut.saturn.dbg_rd_err, dut.saturn.dbg_rd_ovf);
+			$display("%0t SQUARES green %016b (16..1) disc reads %0d err %0d lost words %0d first-read %08h armed %b MSH PC %08h", $time,
+			         dut.saturn.dbg_g, dut.saturn.dbg_rd_cnt, dut.saturn.dbg_rd_err, dut.saturn.dbg_rd_ovf, {3'b000, dut.saturn.dbg_fra}, dut.saturn.dbg_arm,
+			         dut.saturn.dbg_pc_q);
 			sq_q = dut.saturn.dbg_g;
 		end
 	end
