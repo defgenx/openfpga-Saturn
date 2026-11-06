@@ -332,3 +332,36 @@ PSX repository (`PSX:`): `scripts/prepare_resource_targets.py` (profiles, tie-of
 Release source (`REL:`): `apf_top.qsf` (settings at lines 678-698, 896-898), `pocket.sdc` (multicycle lines 14-16, 111-113, 135-143), `core_top.sv` (PLLs 634-640, memory 682-723), `psx_mister_psx_top_resource.vhd` (option tie-offs 293-340), the patched module directories listed in 2.1.
 
 Saturn (`SAT:`): `Saturn.qsf` (speed profile), `sizing/saturn_full.qsf`, `sizing/output_files_saturn_full/saturn_full.map.rpt` (lines 552-570 summary, 581 onward hierarchy). Existing Saturn docs: `docs/saturn-architecture.md`, `docs/pocket-platform.md`.
+
+---
+
+## 11. Exact savings with the ten VDP2 effects restored (branch `area`, VDP2P / VDP1P)
+
+Base: `f9aaa26` with every `POCKET_CUT_VDP2_*` macro removed (`35f7156`). Measured with `quartus_map ap_core` (21.1, whole
+design, area profile), "ALMs needed" of the map summary; per-block figures are the map entity table (ALUT).
+
+| Build | ALMs (map) | ALUT | Registers |
+|---|---|---|---|
+| `f9aaa26` + all ten effects (`35f7156`) | 18,419 | 29,592 | 18,025 |
+| + the commits below (`08c246c`) | **18,353 (-66)** | 29,525 | 17,988 |
+
+| Commit | Change | Entity ALUT | Bench |
+|---|---|---|---|
+| `22fbdee` | RBG0/RBG1: one `PNData` on a selected word (over pattern name or fetched word) instead of two results selected afterwards; dot byte 0 from one byte select indexed by colour depth, cell x and flip | VDP2P together with the next two: 6,409 -> 6,337 (-72) | `make -C sim vdp2`: 60/60 |
+| `d1ac3d7` | NBG0/NBG1 dot select in the reduction modes: one byte source and one nibble select instead of three case blocks | | 60/60 |
+| `08c246c` | `NBG_CH` read registered at `V_SL` (old data) instead of the asynchronous read at `P_SL`: no read-during-write pass-through (37 registers). An entry is never read in the clock after its write (proof in the RTL); a Verilator monitor counts such reads (0 over 60 seeds) | | 60/60 |
+| `15bc9bd` | VDP1P pattern address: one adder for the base, base + W + ~P in one three-operand adder for a reversed texture (equal to the sign-extended 10-bit W - P - 1 because W, P <= 511) | VDP1P 3,103 -> 3,085 (-18) | `make -C sim vdp1`: PASS, 40 scenarios |
+
+Tried, no gain (reverted or not kept):
+- `ddram_pocket` mirror RAM with an explicit old-data read and written-lane bypass (one address port): Quartus already reduces
+  its pass-through for the tied read/write address to the same netlist (18,419 / 18,025 / 29,592 with and without).
+- `(* ramstyle = "no_rw_check" *)` on an unpacked SystemVerilog array: ignored, the pass-through registers stay. Write the
+  read as `q <= mem[addr]` from the address register's D input instead (old data needs no pass-through).
+
+Looked at, nothing exact to take: the priority rank outputs (`FST/SEC/THD` then the BOKEN/line-colour stage costs the same
+LUTs per bit as one select per output); the rotation multiplier operands (`CTD` holds a mode-3 decode with a 16-bit unsigned
+integer part when only parameter set B is in mode 3, so `MULT1` needs 32 bits); the VDP1P command FSM (encodings tried in
+`vdp1-rewrite.md`).
+
+`make -C sim vdp2 SEEDS=200`: seeds 61, 149 and 165 fail with VRAM content mismatches (CPU write path, dot output mism=0)
+on the unmodified VDP2P too; they are outside the default 60 and not caused by these commits.
