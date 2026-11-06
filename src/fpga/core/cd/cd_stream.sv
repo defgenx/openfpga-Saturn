@@ -107,7 +107,8 @@ module cd_stream #(
 	output wire        cd_audio,
 
 	output reg  [7:0]  err_cnt = 8'd0,       // bridge reads that ended with an error
-	output reg  [7:0]  ovf_cnt = 8'd0        // bridge words lost to a full ring FIFO (saturating)
+	output reg  [7:0]  ovf_cnt = 8'd0,       // bridge words lost to a full ring FIFO (saturating)
+	output reg  [7:0]  rd_cnt = 8'd0         // bridge reads completed, with or without error (saturating)
 );
 
 // ------------------------------------------------------------------ bridge side (clk_74a)
@@ -309,7 +310,11 @@ always @(posedge clk) begin
 			if (discard) discard <= 1'b0;
 		end
 	end
-	if (done_ev) begin dd <= 5'd0; dd_run <= 1'b1; if (err_r) err_cnt <= err_cnt + 8'd1; end
+	if (done_ev) begin
+		dd <= 5'd0; dd_run <= 1'b1;
+		if (err_r) err_cnt <= err_cnt + 8'd1;
+		if (rd_cnt != 8'hFF) rd_cnt <= rd_cnt + 8'd1;
+	end
 	if (commit_ev) commit_pend <= 1'b1;
 
 	n_ready <= n_ready + {3'd0, ring_add} - {3'd0, ring_take};

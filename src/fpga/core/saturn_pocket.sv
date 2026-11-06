@@ -412,6 +412,9 @@ wire [23:0] toc_end, lk_start, sd_hdr, lk_x, pf_fad;
 wire        lk_go, lk_byidx, lk_hold, lk_busy, eng_idle, lk_data, lk_s2048;
 wire        pf_flush, pf_en, pf_ready, sd_go, sd_spd2, sd_synth, fd_busy;
 wire  [1:0] sd_kind;
+`ifdef POCKET_DEBUG_OVERLAY
+wire  [7:0] dbg_rd_err, dbg_rd_ovf, dbg_rd_cnt;   // cd_stream: disc reads ended in error, ring words lost, reads completed
+`endif
 `endif
 wire [18: 1] CD_RAM_A;
 wire [15: 0] CD_RAM_D, CD_RAM_Q;
@@ -650,7 +653,11 @@ cd_stream stream (
 	.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
 	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
 	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
-	.err_cnt(), .ovf_cnt()
+`ifdef POCKET_DEBUG_OVERLAY
+	.err_cnt(dbg_rd_err), .ovf_cnt(dbg_rd_ovf), .rd_cnt(dbg_rd_cnt)
+`else
+	.err_cnt(), .ovf_cnt(), .rd_cnt()
+`endif
 );
 `endif
 `ifndef POCKET_CUT_CDB_LLE
@@ -795,46 +802,46 @@ assign MEM_WAIT_N    = !RAMH_CS_N ? ~ramh_busy : ~raml_busy;
 // 16 status squares over the picture, legend in docs/debug-overlay.md
 `ifdef POCKET_DEBUG_OVERLAY
 reg [1:0]  dbg_pll_s;
-reg  [1:0] dbg_chk_s;
-reg        dbg_wramh = 1'b0;
 reg [24:0] dbg_win = 25'd0;
 always @(posedge clk_sys) begin
 	dbg_pll_s  <= {dbg_pll_s[0], lock_s[1]};
-	dbg_chk_s  <= {dbg_chk_s[0], dbg_chk_done & dbg_chk_ok};
 	dbg_win    <= dbg_win + 25'd1;
-	if (!RAMH_CS_N) dbg_wramh <= 1'b1;
+end
+// boot progress (squares 4-7, 9, 12, 15), sticky from power-up: disc reads completed (1, 16, 64), MSH ran the game
+// (PC in WRAM-H at 0x06004000 or above, the lowest first-read address), the SMPC selected the 352 clock, and the
+// two cd_stream error counters
+reg  [2:0] dbg_rd_th = 3'd0;
+reg        dbg_game = 1'b0, dbg_d352 = 1'b0, dbg_rerr = 1'b0, dbg_rovf = 1'b0;
+reg [31:0] dbg_pc_q = 32'd0;
+always @(posedge clk_sys) begin
+	dbg_pc_q  <= dbg_txt[99:68];
+	dbg_rd_th <= {dbg_rd_cnt >= 8'd64, dbg_rd_cnt >= 8'd16, dbg_rd_cnt != 8'd0};
+	if (dbg_pc_q[28:20] == 9'h060 && dbg_pc_q[19:14] != 6'd0) dbg_game <= 1'b1;
+	if (SMPC_DOTSEL) dbg_d352 <= 1'b1;
+	dbg_rerr  <= dbg_rd_err != 8'd0;
+	dbg_rovf  <= dbg_rd_ovf != 8'd0;
 end
 wire dbg_tick = &dbg_win;
 reg  [6:0] dbg_tap_q = 7'd0;                   // the Saturn taps, registered once before any overlay logic
 always @(posedge clk_sys) dbg_tap_q <= dbg_tap;
-reg        dbg_sndres_q = 1'b0, dbg_scas_q = 1'b1, dbg_vbl_q = 1'b1;   // DBG_68K = {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA}
+reg        dbg_scas_q = 1'b1, dbg_vbl_q = 1'b1;   // DBG_68K = {SNDRES_N, M68K_RESO_N, SCCE_R, SCAS_N, SCA}
 always @(posedge clk_sys) begin
-	dbg_sndres_q <= dbg_68k[26];
 	dbg_scas_q   <= dbg_68k[23];
 	dbg_vbl_q    <= VBL_N;
 end
-wire a_irl, a_cd, a_vs, a_de, a_68k, a_vbl, a_scsp, a_dac;
-// sound probes (squares 2-4): SCSP output parity (toggles when the mixed sample changes, so it was non-zero), the
-// I2S data pin (toggles only with non-zero samples), sound RAM word 0 write vs next read (dbg_snd as debug6 took it,
-// unregistered: event and data are valid in the same cycle; the compare result is registered)
+wire a_cd, a_vs, a_de, a_68k, a_vbl, a_scsp, a_dac;
+// sound probes (squares 2, 3): SCSP output parity (toggles when the mixed sample changes, so it was non-zero), the
+// I2S data pin (toggles only with non-zero samples)
 reg        dbg_sp_q = 1'b0;
 reg  [2:0] dbg_dac_s = 3'd0;
-reg [15:0] dbg_sw = 16'd0;
-reg        dbg_sw_v = 1'b0, dbg_sr_v = 1'b0, dbg_sr_ok = 1'b0;
 always @(posedge clk_sys) begin
 	dbg_sp_q  <= ^{SOUND_L, SOUND_R};
 	dbg_dac_s <= {dbg_dac_s[1:0], dbg_dac};
-	if (dbg_snd[33]) begin                     // {wr_ev, BDO, rd_ev, SCSP_DO}
-		dbg_sw <= dbg_snd[32:17]; dbg_sw_v <= 1'b1; dbg_sr_v <= 1'b0;
-	end else if (dbg_snd[16] && dbg_sw_v) begin
-		dbg_sr_v <= 1'b1; dbg_sr_ok <= (dbg_snd[15:0] == dbg_sw);
-	end
 end
 dbg_act d_scsp (.clk(clk_sys), .tick(dbg_tick), .s(dbg_sp_q), .y(a_scsp));
 dbg_act d_dac  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_dac_s[2]), .y(a_dac));
 dbg_act d_68k  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_scas_q), .y(a_68k));
 dbg_act d_vbl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_vbl_q), .y(a_vbl));
-dbg_act d_irl  (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[3]), .y(a_irl));
 dbg_act d_cd   (.clk(clk_sys), .tick(dbg_tick), .s(dbg_tap_q[4]), .y(a_cd));
 dbg_act d_vs   (.clk(clk_sys), .tick(dbg_tick), .s(VS_N), .y(a_vs));
 dbg_act d_de   (.clk(clk_sys), .tick(dbg_tick), .s(HBL_N & VBL_N), .y(a_de));
@@ -845,24 +852,24 @@ wire dbg_toc = 1'b0;
 `endif
 wire [15:0] dbg_g = {
 	dbg_toc,                                           // 16 TOC loaded
-	dbg_chk_s[1],                                      // 15 SDRAM self-check OK (sound RAM write/read-back)
+	~dbg_rovf,                                         // 15 no disc data word lost (ring FIFO overflow)
 	dbg_tap_q[5],                                        // 14 SMPC released MSH
 	1'b0,                                              // 13 CD block (activity)
-	1'b0,                                              // 12 SCU irq (activity)
+	~dbg_rerr,                                         // 12 no disc read ended in error
 	1'b0,                                              // 11 VBL_N (activity)
 	dbg_tap_q[6],                                        // 10 VDP2 DISP
-	dbg_wramh,                                         //  9 WRAM-H reached
+	dbg_d352,                                          //  9 SMPC selected the 352 clock (CKCHG352) at least once
 	1'b0,                                              //  8 68K bus (activity)
-	dbg_sndres_q,                                      //  7 68K out of reset (SNDRES_N)
-	dbg_psram_ready,                                   //  6 PSRAM init
-	dbg_sdram_ready,                                   //  5 SDRAM init
-	dbg_sr_v & dbg_sr_ok,                              //  4 sound RAM word 0 read back as written (off: no read yet)
+	dbg_game,                                          //  7 MSH ran from WRAM-H >= 0x06004000 (game code)
+	dbg_rd_th[2],                                      //  6 64 disc reads completed
+	dbg_rd_th[1],                                      //  5 16 disc reads completed
+	dbg_rd_th[0],                                      //  4 first disc read completed
 	1'b0,                                              //  3 I2S data pin (activity)
 	1'b0,                                              //  2 SCSP output (activity)
 	dbg_pll_s[1]                                       //  1 PLL locked
 };
-wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, a_irl, a_vbl, 2'b00, a_68k, 1'b0, 3'b000, a_dac, a_scsp, 1'b0};   // yellow: 13 CD, 12 SCU irq, 11 VBL_N, 8 68K bus, 3 I2S, 2 SCSP
-wire [15:0] dbg_o = {12'd0, ~dbg_sr_v, 3'b000};                                       // square not drawn: 4 before the first read
+wire [15:0] dbg_y = {2'b00, 1'b0, a_cd, 1'b0, a_vbl, 2'b00, a_68k, 1'b0, 3'b000, a_dac, a_scsp, 1'b0};   // yellow: 13 CD, 11 VBL_N, 8 68K bus, 3 I2S, 2 SCSP
+wire [15:0] dbg_o = 16'd0;
 wire dbg_alive = a_vs & a_de;
 
 `ifdef POCKET_DEBUG_SNDROW

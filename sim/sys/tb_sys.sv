@@ -955,6 +955,21 @@ initial begin : act_win
 		n_vs = 0; n_de = 0; n_irl = 0; n_cd = 0;
 	end
 end
+`ifdef POCKET_DEBUG_OVERLAY
+// debug overlay square states (docs/debug-overlay.md): every change of the green set, checked once per ms
+initial begin : sq_log
+	reg [15:0] sq_q;
+	sq_q = 16'h0000;
+	forever begin
+		#(64'd1000000000);
+		if (dut.saturn.dbg_g !== sq_q) begin
+			$display("%0t SQUARES green %016b (16..1) disc reads %0d err %0d lost words %0d", $time, dut.saturn.dbg_g,
+			         dut.saturn.dbg_rd_cnt, dut.saturn.dbg_rd_err, dut.saturn.dbg_rd_ovf);
+			sq_q = dut.saturn.dbg_g;
+		end
+	end
+end
+`endif
 always @(posedge clk_sys) begin
 	vs_a <= `SAT.VS_N; de_a <= `SAT.HBL_N & `SAT.VBL_N; irl_a <= &`SAT.MSHIRL_N; cd_a <= `SAT.ACS2_N;
 	if (vs_a != `SAT.VS_N) n_vs++;
