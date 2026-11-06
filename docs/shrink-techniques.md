@@ -384,3 +384,40 @@ block) is the noise of a single map.
 The gain of the SCUP2 change comes from the registers written inside the 1,700-line bus/DMA `always` block: the same
 conditions written as one enable per register group map smaller. The registers still written there are 1 to 4 bits wide
 (B-bus strobes, buffer pointers), the wide ones (`BDO`, `CBUS_A`, DMA address/count, `REG_DO`) already have their own blocks.
+
+## 13. VDP2P structural, exact (branch `vdp2struct`, 2026-11-06)
+
+Base `a82f128` + `1e210b4` (the audio commit): 18,332 ALMs needed (`a82f128` alone: 18,305). Whole-design `quartus_map ap_core`
+(`raetro/quartus:21.1`), VDP2P entity ALUT in brackets; "standalone" is `sizing/vdp2/area.qsf` on VDP2P alone (base 4,551).
+Every row: `make -C sim vdp2` 60/60; `vdp2-ppm` identical and `mc-check` 0 off-CE_R changes at the end.
+
+| Commit | Change | ALMs needed (VDP2P ALUT) |
+|---|---|---|
+| `5766e75` | colour stage by index: the rank network registers a source index per position and the source records at the event; one selector per CE_R slot gives the CRAM address and the resolved colour (latched per slot) | 18,141 (6,059) |
+| `c4e1bad` | `CTD` and `VRAMA_D` through plain clock enables (`VRAMA_D` loads at every DOT_CE_F: RA_D/RB_D are only read with a write enable) | 18,058 (5,872) |
+| `b7d656e` | one character address adder for NBG0/1, NBG2/3 and RBG on the inputs of the access UO takes | |
+| `2486397` | `PN_PIPE` writes in their own block (entry e always from converter e&1); one pattern name address (`NxPNAddr2` = `RxPNAddr2` on x + the reduction offset) | 18,015 (5,731) |
+| `00e7364` | Xp/Yp, dX/dY, Xsp/Ysp each in one RAM, word {Y,table}, read by slot: no X/Y operand selects, one accumulation adder | |
+| `13cbbf2` | revert of `7567e29` (rank flags read by index too: -11 standalone, but +82 whole design, +64 registers) | 17,914 (5,616) |
+| `49b195a` | one bitmap address adder; NBG lane network in two steps (the word reordered once per visit, then a fixed nibble per lane and depth) | 17,882 (5,515) |
+| `51cbe3b`, `90aa55d` | horizontal and vertical scroll registers (XS, NSX, NY, NSY, LZMX, NMOSY) out of the scroll block, next value and enable per layer | 17,827 (5,319) |
+| `be48378` | RBG pattern names, character words and dot bytes out of the BG data block | 17,807 (5,326) |
+| `9e23ca8`, `7341ae2` | coefficient table addresses (KAst/KAy/KAx); window x ranges, one enable per window | **17,781 (5,246)** |
+
+Total -551 ALMs needed (-524 against `a82f128`), VDP2P -1,109 ALUT, registers +46.
+
+The technique that paid most: registers written inside a large multi-purpose `always` block (several branches, blocking
+temporaries, an index that selects the element) map with their hold path in LUTs or with a wider data mux; the same
+next-value and enable written per register in a block of their own map smaller (CTD/VRAMA_D -116 ALUT, XS/NSX -122,
+NY/NSY -65). `sizing` helper: count flops without `.ena` whose D LUT reads their own Q in the `--vqm` netlist. The same
+extraction made the line table addresses (LW/BS/LN, LS offsets) larger (+28 standalone): not kept.
+
+Looked at, not done:
+- E1 serial compositor: not exact. The golden ranks at the event with the priority, window and colour calculation
+  registers of that clock; the CPU may write them at any CE_R edge inside the dot, and those writes must stay exact
+  (vdp2.md deviation 2 covers address-forming registers only). Only the last two edges before the event see final values.
+- E2 line renderer: integrated it is not smaller (vdp2-rewrite.md section 11: 4,774 vs 4,712), and register writes take
+  effect per line there.
+- Register file to MLAB: flip-flops are nearly free in this LUT-bound design (section 9 of vdp2-rewrite.md); not tried.
+- Sharing the two coefficient address adders, the KAx step-23 adder, the X/Y accumulation without a RAM merge, or the
+  two RBG pattern name converters (the last would add a write skew inside a dot): the operand muxes cost as much.

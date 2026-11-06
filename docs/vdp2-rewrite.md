@@ -386,3 +386,18 @@ scan-out clear sharing the insertion write slot gives the numbers above. The 3,5
 `VDP2P_SDP`/`VDP2P_REGRAM` default to ML=2 (M10K, falling-edge read); `VDP2P_CDPRING`, the write FIFO and `whit33` (ML=0) too. `nmp`/`rmp`
 stay MLAB: their address depends on the `cy_*` output, and two chained falling-edge reads fail the sim. `sim/vdp2/tb.cpp` applies the next
 clock enables and evaluates the falling edge before comparing. `make -C sim vdp2` 60 seeds match.
+
+## 12. Colour stage by index, shared address adders (branch `vdp2struct`)
+
+Measured results: [shrink-techniques.md](shrink-techniques.md) section 13. Design changes, all exact against the golden:
+
+- The rank network keeps the golden's ranked records `DOT_FST..DOT_FTH` for their flags only. The colour (CAOS, P, DC)
+  of each position is the source record `LDR[IX_*]`: the six layer records, the back screen and the line colour are
+  registered at the event with a source index per position (7 = line colour in DOT_SEC, the zero record in DOT_FTH).
+  In each CE_R slot one selector (`SM`) gives the CRAM address and, with the CRAM output, the resolved colour that the
+  slot latch keeps; the golden resolves at the event from records that do not change between the slot and the event.
+- The address unit computes one character, one bitmap and one pattern name address on the inputs of the access UO
+  takes (RBG over NBG, as before), instead of one per layer group.
+- dX/dY, Xp/Yp and Xsp/Ysp are one RAM each with word {Y,table}, read by slot (vdp2.md deviation 8).
+- The NBG capture lanes take their nibbles from the visited word reordered once per visit.
+- E1 (serial compositor) cannot be exact: section 13 of shrink-techniques.md.

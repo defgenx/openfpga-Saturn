@@ -660,7 +660,7 @@ registers that now change at CE_R edges and by two read-port classes proved belo
 | Registers | Change at |
 |---|---|
 | everything of the old first row, plus `REGS.*` (all fields), `SCYN_UPD`, the register-RAM `vld` flags, `VAD`, `VCPN`, `VCPQ`, `CYA_N2`, `NYOFS`, `RPPQ`, `ONE`, `CRCT_Q`, `HM3` (`vdp2_ce_r`) | CE_R edges only |
-| M10K reads `tap2`, `tap3`, `tap4`, `whit33` (`VDP2P_DTAP`, read only at its EN) and `r_dx`, `r_dy`, `r_xp`, `r_yp`, `r_spx`, `r_spy` (`VDP2P_SDPR`, read at CE_R) (`vdp2_ce_r_ram`) | CE_R edges only |
+| M10K reads `tap2`, `tap3`, `tap4`, `whit33` (`VDP2P_DTAP`, read only at its EN) and `r_d`, `r_p`, `r_sp` (`VDP2P_SDPR`, read at CE_R) (`vdp2_ce_r_ram`) | CE_R edges only |
 | falling-edge reads `rp_a`, `rp_b`, `rp_m`, `rp_n`, `rp_k`, `rp_d0`, `rp_d1`, `rp_fr`, `rp_ff` (`vdp2_fe_ce_r`) | the falling edge after a CE_R edge |
 | `RW_P`, `RW_A`, `RW_D` (CPU register write strobe), `REG_RA`, `REG_RRDY`, `PAL_DO`, `REG_RD`, `PAL_RD` | CE_F edges |
 | CPU VRAM port, `USL`, `USEL`, `HA`, `HM`, `CSEQ`, `P_*` (cell capture selection), `NBG_CH`, `NBG_CDC`, `CPN`, `C`, `DCOL`, other RAM ports | every clock |
@@ -697,7 +697,7 @@ What changed, per group:
   with `NYOFS` registered every DADD output feeds a CE_R register only.
 - **D, DTAP / SDPR -> CE_R registers.** `VDP2P_DTAP` reads its M10K only at EN (same value: the read address
   `wpn - K` is constant between EN edges and that word is not written until it is read), so the M10K output changes at
-  EN edges only (EN is DOT_CE_R or DOT_CE_R | DOT_CE_F). The rotation per-table words (`r_dx` ... `r_spy`, word
+  EN edges only (EN is DOT_CE_R or DOT_CE_R | DOT_CE_F). The rotation per-table words (`r_dx` ... `r_spy` then, now `r_d`, `r_p`, `r_sp`; word
   `DOTCLK_DIV[1]`) used to be read every clock from an address that changes at CE_R edges, so their output changed
   one clock later, at a CE_F edge, and fed `RES_LATCH` in one clk_sys (-1.0 ns, a real path the multicycle table missed).
   `VDP2P_SDPR` reads at CE_R with the address of the next slot (`DIV_N[1]`), so the word is there from the CE_R edge

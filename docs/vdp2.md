@@ -119,9 +119,12 @@ Details of each technique:
 7. **Register write timing.** A CPU register write is applied at the CE_R edge after the request, one clk_sys after the
    golden's CE_F edge, so the register file changes at CE_R edges only. The harness applies the same timing to the
    golden copy (`sim/vdp2/regwr_patch.py`, as `lane_patch.py` does for the VRAM write drain).
-8. **Rotation per-table words** (`r_dx` ... `r_spy`) are read at the CE_R edge that starts a slot. A word written on
-   that edge (start values at DOT_CE_R, accumulation at the end of slots 0 and 2) reads undefined data in that slot;
-   those slots do not use it (other RAM in slots 1 and 3, RBG_CALC off when the start values are written).
+8. **Rotation per-table words** (`r_d`, `r_p`, `r_sp`: dX/dY, Xp/Yp, Xsp/Ysp, word {Y,table}) are read at the CE_R edge
+   that starts a slot, word {d[0],d[1]} for slot d. A word written on that edge (an X start value at DOT_CE_R, an
+   accumulation at the end of a slot) reads undefined data in that slot; that slot does not use it. The microcode steps
+   that write X and Y (14, 17, 21) write Y one clock later, at the CE_F edge, before its read at the end of slot 0;
+   an accumulation in a step-17 clock would drop the X write (never: RBG_CALC and the parameter fetch are disjoint,
+   a Verilator monitor reports it).
 
 ## Differential simulation
 
