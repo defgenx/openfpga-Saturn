@@ -68,7 +68,7 @@ set vdp2_ce_r {
 }
 # Block RAM read ports that only read at a CE_R-edge enable (VDP2P_DTAP M10K, VDP2P_SDPR): their output changes at
 # CE_R edges only, like the registers above.
-set vdp2_ce_r_ram {tap2 tap3 tap4 whit33 r_dx r_dy r_xp r_yp r_spx r_spy}
+set vdp2_ce_r_ram {tap2 tap3 tap4 whit33 r_d r_p r_sp}
 # Falling-edge reads (VDP2P_FERAM) whose read address and contents change at CE_R edges only: the output changes at the
 # falling edge after a CE_R edge, 1.5 clk_sys before the next one (setup 2 from a falling launch).
 set vdp2_fe_ce_r {rp_a rp_b rp_m rp_n rp_k rp_d0 rp_d1 rp_fr rp_ff}

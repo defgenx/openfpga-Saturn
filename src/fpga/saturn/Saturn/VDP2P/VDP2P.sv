@@ -1834,19 +1834,28 @@ module VDP2P import VDP2P_PKG::*; (
 	assign SUMC = $signed(SUMSY ? ACCY : ACCX) + $signed(MultRC(SUMSY ? MULYA : MULXA, ($signed(SUMSY ? SUBYA : SUBXA) - $signed(SUMSY ? SUBYB : SUBXB))));
 	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd1) SUMX <= SUMC;
 	always @(posedge CLK) if (CE_R && DOTCLK_DIV == 2'd2) SUMY <= SUMC;
-	//Per-table rotation state in block RAM (word = table A/B). Xsp/Ysp accumulate one entry per DOTCLK_DIV slot.
-	wire [31:0]  XYST_Q, XP_Q, YP_Q, DX_Q, DY_Q, SPX_Q, SPY_Q;
-	reg          XST_WE, YST_WE, DX_WE, XP_WE, SPX_WE, SPY_WE;
-	reg  [31:0]  XYST_WD, SPX_WD, SPY_WD;
+	//Per-table rotation state in block RAM. Xp/Yp, dX/dY and Xsp/Ysp each sit in one RAM, word {Y,table}: slot d reads
+	//word {d[0],d[1]} (X in the even slots, Y in the odd ones), read at the CE_R edge that starts the slot (docs/vdp2.md).
+	//Xsp/Ysp accumulate one entry per slot. A microcode step that writes both X and Y writes Y one clock later
+	//(a CE_F edge, before the read of the Y word at the end of slot 0).
+	wire [31:0]  XYST_Q, P_Q, D_Q, SP_Q;
+	reg          XST_WE, YST_WE, SP_WE;
+	reg  [31:0]  XYST_WD, SP_WD;
+	reg  [ 1: 0] SP_WA;
 	wire [31:0]  XST_Q = XYST_Q, YST_Q = XYST_Q;
-	reg          SPX_WA, SPY_WA;
-	wire         ACC_X = CE_R && RBG_CALC && !DOTCLK_DIV[0];
-	wire         ACC_Y = CE_R && RBG_CALC &&  DOTCLK_DIV[0];
+	wire         ACC_XY = CE_R && RBG_CALC;
 	wire         RPST_W = DOT_CE_R && (VA2.RPA || VA2.RPB);
+	bit          YW_D, YW_P, YW_SP, YW_N;   //the Y half of step 14 (D), 21 (P), 17 (SP) of table YW_N, one clock late
+	always @(posedge CLK) begin
+		YW_D  <= RPST_W && RPP == 5'd14;
+		YW_P  <= RPST_W && RPP == 5'd21;
+		YW_SP <= RPST_W && RPP == 5'd17;
+		YW_N  <= RPN;
+	end
+	wire [31:0]  SUMXY = (YW_D | YW_P | YW_SP) ? SUMY : SUMX;
 	always_comb begin
-		XST_WE = 0; YST_WE = 0; DX_WE = 0; XP_WE = 0; SPX_WE = 0; SPY_WE = 0;
-		XYST_WD = '0; SPX_WD = '0; SPY_WD = '0;
-		SPX_WA = RPN; SPY_WA = RPN;
+		XST_WE = 0; YST_WE = 0;
+		XYST_WD = '0;
 		if (RPST_W) begin
 			case (RPP)
 				5'd04: begin
@@ -1857,29 +1866,26 @@ module VDP2P import VDP2P_PKG::*; (
 					YST_WE = 1;
 					XYST_WD = IS_LAST_LINE ? ScrnStartToRC(PB_Q) : $signed(XYST_Q) + $signed(ScrnIncToRC(PA_Q));
 				end
-				5'd14: DX_WE = 1;
-				5'd17: begin SPX_WE = 1; SPX_WD = SUMX; SPY_WE = 1; SPY_WD = SUMY; end
-				5'd21: XP_WE = 1;
 				default:;
 			endcase
 		end
-		if (ACC_X) begin
-			SPX_WE = 1; SPX_WA = DOTCLK_DIV[1]; SPX_WD = $signed(SPX_Q) + $signed(DX_Q);
-		end
-		if (ACC_Y) begin
-			SPY_WE = 1; SPY_WA = DOTCLK_DIV[1]; SPY_WD = $signed(SPY_Q) + $signed(DY_Q);
+		SP_WE = 0; SP_WA = {YW_SP,YW_SP ? YW_N : RPN}; SP_WD = SUMXY;
+		if (RPST_W && RPP == 5'd17 || YW_SP) SP_WE = 1;
+		if (ACC_XY) begin
+			SP_WE = 1; SP_WA = {DOTCLK_DIV[0],DOTCLK_DIV[1]}; SP_WD = $signed(SP_Q) + $signed(D_Q);
 		end
 	end
 	//start coordinates: word {Y,table}; the microcode reads X at even steps (4, 14) and Y at odd steps (5, 15)
 	VDP2P_SDP #(2,32,0) r_xyst(CLK, XST_WE | YST_WE, {YST_WE,RPN}, XYST_WD, {RPP[0],RPN}, XYST_Q);
-	//word DOTCLK_DIV[1] of the next slot, read at the CE_R edge that starts the slot (docs/vdp2.md)
 	wire [ 1: 0] DIV_N = DOTCLK_DIV + 2'd1;
-	VDP2P_SDPR #(1,32) r_dx (CLK, RPST_W && RPP == 5'd14, RPN, SUMX, CE_R, DIV_N[1], DX_Q);
-	VDP2P_SDPR #(1,32) r_dy (CLK, RPST_W && RPP == 5'd14, RPN, SUMY, CE_R, DIV_N[1], DY_Q);
-	VDP2P_SDPR #(1,32) r_xp (CLK, RPST_W && RPP == 5'd21, RPN, SUMX, CE_R, DIV_N[1], XP_Q);
-	VDP2P_SDPR #(1,32) r_yp (CLK, RPST_W && RPP == 5'd21, RPN, SUMY, CE_R, DIV_N[1], YP_Q);
-	VDP2P_SDPR #(1,32) r_spx(CLK, SPX_WE, SPX_WA, SPX_WD, CE_R, DIV_N[1], SPX_Q);
-	VDP2P_SDPR #(1,32) r_spy(CLK, SPY_WE, SPY_WA, SPY_WD, CE_R, DIV_N[1], SPY_Q);
+	wire [ 1: 0] XY_RA = {DIV_N[0],DIV_N[1]};
+	VDP2P_SDPR #(2,32) r_d (CLK, RPST_W && RPP == 5'd14 || YW_D, {YW_D,YW_D ? YW_N : RPN}, SUMXY, CE_R, XY_RA, D_Q);
+	VDP2P_SDPR #(2,32) r_p (CLK, RPST_W && RPP == 5'd21 || YW_P, {YW_P,YW_P ? YW_N : RPN}, SUMXY, CE_R, XY_RA, P_Q);
+	VDP2P_SDPR #(2,32) r_sp(CLK, SP_WE, SP_WA, SP_WD, CE_R, XY_RA, SP_Q);
+`ifdef VERILATOR
+	int          SP_CLASH = 0;   //an accumulation in the clock of a step 17 write (would drop the X write): never
+	always @(posedge CLK) if (ACC_XY && RPST_W && RPP == 5'd17) begin SP_CLASH <= SP_CLASH + 1; $display("VDP2P r_sp: accumulation and step 17 in one clock"); end
+`endif
 	//Coefficient table data: one decoder shared by the table fetch words (RCTA/RCTB, never in the same dot)
 	//and the per-dot coefficient reads (RAM or color RAM). Own block: the two loads are plain clock enables.
 	CT_t         CT_D;
@@ -2024,36 +2030,36 @@ module VDP2P import VDP2P_PKG::*; (
 				
 			case (DOTCLK_DIV)
 				2'd0: begin
-					ADD1 = XP_Q;
+					ADD1 = P_Q;
 					if (RPxREG[0].KTE && !RPxREG[0].KMD[1])
 						MULT1 = {CTD[0].INT,CTD[0].FRAC};
 					else
 						MULT1 = ScallingToRC(PK_Q);
-					MULT2 = SPX_Q;
+					MULT2 = SP_Q;
 				end
 				2'd1: begin
-					ADD1 = YP_Q;
+					ADD1 = P_Q;
 					if (RPxREG[0].KTE && !RPxREG[0].KMD[0])
 						MULT1 = {CTD[0].INT,CTD[0].FRAC};
 					else
 						MULT1 = ScallingToRC(PK_Q);
-					MULT2 = SPY_Q;
+					MULT2 = SP_Q;
 				end
 				2'd2: begin
-					ADD1 = XP_Q;
+					ADD1 = P_Q;
 					if (RPxREG[1].KTE && !RPxREG[1].KMD[1])
 						MULT1 = {CTD[1].INT,CTD[1].FRAC};
 					else
 						MULT1 = ScallingToRC(PK_Q);
-					MULT2 = SPX_Q;
+					MULT2 = SP_Q;
 				end
 				2'd3: begin
-					ADD1 = YP_Q;
+					ADD1 = P_Q;
 					if (RPxREG[1].KTE && !RPxREG[1].KMD[0])
 						MULT1 = {CTD[1].INT,CTD[1].FRAC};
 					else
 						MULT1 = ScallingToRC(PK_Q);
-					MULT2 = SPY_Q;
+					MULT2 = SP_Q;
 				end
 			endcase
 			RES = $signed(ADD1) + $signed(MultRC(MULT1,MULT2));
