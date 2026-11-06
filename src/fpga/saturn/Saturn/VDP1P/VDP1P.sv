@@ -48,6 +48,7 @@ module VDP1P (
 	output             FB1_RD,
 	input              FB_RDY,
 	output             FB_MODE3,
+	output             FB_DRAW0,          // FB_SEL: 1 = FB0 is drawn, FB1 displayed and erased (Pocket framebuffer, lazy erase)
 	
 	input              FAST,
 	input              BLUR_MESH,
@@ -145,6 +146,7 @@ module VDP1P (
 	assign FB_DISP_Q = FB_SEL ? FB1_Q : FB0_Q;
 	
 	assign FB_MODE3 = (TVMR.TVM[1:0] == 2'b11);
+	assign FB_DRAW0 = FB_SEL;
 	
 	typedef enum bit [5:0] {
 		CMDS_IDLE,  

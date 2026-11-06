@@ -71,6 +71,7 @@ module mem_pocket #(
 
 	// ---- VDP1 framebuffers (VDP1.sv ports)
 	input  wire        FB_MODE3,
+	input  wire        FB_DRAW0,          // VDP1P FB_SEL
 	input  wire [17:1] FB0_A, input wire [15:0] FB0_D, input wire [1:0] FB0_WE, input wire FB0_RD, output wire [15:0] FB0_Q,
 	input  wire [17:1] FB1_A, input wire [15:0] FB1_D, input wire [1:0] FB1_WE, input wire FB1_RD, output wire [15:0] FB1_Q,
 	output wire        FB_RDY,
@@ -163,7 +164,7 @@ sram_pocket sram (
 	.fb_req(fb_req), .fb_we(fb_we), .fb_a(fb_a), .fb_d(fb_d), .fb_be(fb_be), .fb_ready(fb_ready), .fb_q(fb_q), .fb_done(fb_done));
 
 vdp1_fb_pocket fb (
-	.clk_sys(clk_sys), .clk_ram(clk_ram), .rst(rst_ram), .FB_MODE3(FB_MODE3),
+	.clk_sys(clk_sys), .clk_ram(clk_ram), .rst(rst_ram), .FB_MODE3(FB_MODE3), .FB_DRAW0(FB_DRAW0),
 	.FB0_A(FB0_A), .FB0_D(FB0_D), .FB0_WE(FB0_WE), .FB0_RD(FB0_RD), .FB0_Q(FB0_Q),
 	.FB1_A(FB1_A), .FB1_D(FB1_D), .FB1_WE(FB1_WE), .FB1_RD(FB1_RD), .FB1_Q(FB1_Q),
 	.FB_RDY(FB_RDY), .dbg_drop(fb_drop),

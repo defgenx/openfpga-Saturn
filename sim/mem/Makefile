@@ -36,10 +36,15 @@ build/tb_fb: tb_fb.sv $(FBSRC) | build
 	$(IVL) $(FLAGS) -o $@ tb_fb.sv $(FBSRC)
 
 build/tb_fb_slow: tb_fb.sv $(FBSRC) | build
-	$(IVL) $(FLAGS) -DSRAMAA_PS=35000 -o $@ tb_fb.sv $(FBSRC)
+	$(IVL) $(FLAGS) -DSRAMAA_PS=66000 -o $@ tb_fb.sv $(FBSRC)
 
-fb: build/tb_fb
+build/tb_fb_al: tb_fb.sv $(FBSRC) | build
+	$(IVL) $(FLAGS) -DCLK_ALIGNED -o $@ tb_fb.sv $(FBSRC)
+
+# then with the PLL's clock phase and random SRAM power-up contents
+fb: build/tb_fb build/tb_fb_al
 	$(VVP) build/tb_fb
+	$(VVP) build/tb_fb_al +MEMRAND | grep -E 'PASS|FAIL'
 
 build/tb_load: tb_load.sv $(SRC)/load_pocket.sv | build
 	$(IVL) $(FLAGS) -o $@ tb_load.sv $(SRC)/load_pocket.sv
@@ -88,7 +93,7 @@ elab:
 long: build/tb_sdram
 	$(VVP) build/tb_sdram +PROFILE=1 +RUN_US=66000 +TREF_US=64000 $(SDARGS)
 
-# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 35 ns SRAM (read sampled 34.9 ns after the address)
+# runs that must FAIL: always-busy VDP2 never scrubs banks 0/1; a 66 ns SRAM (read sampled 69.8 ns after the address edge, 4.5 ns of pins; 62 ns passes)
 negative: build/tb_sdram build/tb_fb build/tb_fb_slow
 	-$(VVP) build/tb_sdram +PROFILE=0 +RUN_US=3000 +TREF_US=2000 $(SDARGS) | tail -3
 	-$(VVP) build/tb_fb_slow +N=100 | tail -3

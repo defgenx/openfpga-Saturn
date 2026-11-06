@@ -2,7 +2,7 @@
 
 Everything Saturn_MiSTer keeps in SDRAM1, SDRAM2 and HPS DDR3 is mapped onto the Pocket's chips by
 `src/fpga/core/mem/`. `rtl/Saturn/Saturn.sv` is unchanged: the client ports are those of `sdram1.sv` and `ddram.sv`
-(plus a loader and a CD-buffer write port) and the VDP1 framebuffer ports of `VDP1.sv`. `mem_pocket.sv` wires it all
+(plus a loader and a CD-buffer write port) and the VDP1 framebuffer ports of `VDP1.sv` (plus VDP1P's `FB_DRAW0`). `mem_pocket.sv` wires it all
 with Pocket pin names. All of it is simulated (`make -C sim mem`); none of it has run on hardware.
 
 Sections: 1 map, 2 framebuffer decision, 3 SDRAM schedule, 4 PSRAM, 5 SRAM and the CD ring (PSRAM1), 6 bandwidth budget,
@@ -60,7 +60,7 @@ Roles swap every frame, so both buffers must take display + erase and draw.
 | both buffers cropped to 352x240 | `OUT_Y` is 8 bit and the PAL modes show 256 lines, so 256 rows are addressable and can be displayed; 240 rows would cut 6% (9 blocks) and break PAL | no |
 | 8 bit per pixel | VDP1 16 bit pixel mode needs all 16 bits, and the buffer mode is per frame | no |
 | part of a buffer in SDRAM spare slots | no bank has time to spare (above) | no |
-| SRAM, 256 KB asynchronous (AS6C2016-55) | read 8 clk_ram (70 ns) = 14.3 M/s, write 8 clk_ram (70 ns) = 14.3 M/s, dedicated pins | holds one buffer (176 KB cropped); too slow for VBlank erase (below) |
+| SRAM, 256 KB asynchronous (AS6C2016-55) | read 8 clk_ram (70 ns) = 14.3 M/s, write 8 clk_ram (70 ns) = 14.3 M/s, dedicated pins | holds one buffer (176 KB cropped); too slow for VBlank erase as writes, hence the lazy erase (below) |
 
 Choice: **FB0 in the Pocket SRAM, FB1 split: columns 0-191 in M10K (49,152 words, 96 blocks), columns 192-351 in the
 rest of the SRAM (40,960 words, the whole SRAM is framebuffer pixels); both cropped to the first 352 columns** (index =
@@ -70,13 +70,49 @@ them back, or use the rotated frame buffer modes past column 351, are the cases 
 memory that sustains VBlank erase; the M10K part is the only on-chip place for the rest. 49,152 words is the floor for
 this memory plan: both buffers need 180,224 words and the SRAM has 131,072 (the CD ring lives in PSRAM1, section 5).
 
-The SRAM tail makes two SRAM streams possible at once (FB0 draw with FB1 tail erase, and the reverse). They have one FIFO
-each (256 entries, one M10K each, FB0 and FB1 can write in the same clk_sys); the engine drains the fuller one first (the
-occupancy difference is a running register, `dlt`, moved by the push and the pop of each edge: the two subtractions and
-the compare it replaces in front of the pointer update were the longest clk_ram path inside the module; it needs `rst`
-high for two clk_sys or more, which `ram_reset` gives) and FB_RDY goes low while either holds 192 entries or more, so a
-draw is held back and the erase (which cannot stall) keeps room. A draw read of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read
-tracks `FB1_A` in the tail like `FB0_A`. The cost is the second tracker and FIFO in `vdp1_fb_pocket` (+50 ALMs).
+The SRAM tail puts both buffers partly in the SRAM: while one is drawn, the other is displayed and erased. A draw read
+of a tail pixel holds FB_RDY low until the data is in `FB1_Q`, as an FB0 read does; the display read tracks `FB1_A` in
+the tail like `FB0_A`.
+
+### Lazy erase
+
+The SRAM takes one write per 4 clk_sys and a VBlank erase pushes one per 2 (frame erase one per dot, on top of the
+display read), so erase writes never go to the SRAM. `vdp1_fb_pocket` keeps one flag per **erase block** of the SRAM
+pixels: 8 words, the 8 x of one row (index `x*256 + y`: words 256 apart), or 8 consecutive indexes in FB_MODE3. That is
+11,264 FB0 blocks and 5,120 FB1 tail blocks, 16,384 bits: one true dual port 16K x 1 RAM in 2 M10K, port A for FB0, port B
+for FB1 (tail blocks at `x[8:3] + 20`, 44-63). The erase window's X bounds are multiples of 8 (`{EWLR.X1,3'b000}`,
+`{EWRR.X3,3'b000}`) and the scan runs left to right, so an erase writes whole blocks.
+
+The module tells erase writes from draw writes by VDP1P's `FB_SEL` (port `FB_DRAW0`): every write to the displayed
+buffer is an erase (VDP1P drives `EWDR` and the erase strobe there; draw and CPU accesses go to the other buffer).
+
+| Event | Action |
+|---|---|
+| erase write to an SRAM pixel | latches the data as the buffer's erase value; on word 7 of its block, flags the block. Nothing is queued. |
+| display, draw or CPU read of a flagged word | returns the erase value (the display read still runs the SRAM read and replaces its data, so the latency is unchanged) |
+| first draw or CPU write into a flagged block | unflags it and makes it the **open block** (one; it keeps a mask of the words written since and the erase value it was opened with); the write is queued merged with the erase value (byte lanes) |
+| write into the open block | queued as it is, or merged with the erase value if its word is not yet written |
+| read of an open-block word not yet written | returns the erase value |
+| a write opens another block, or the open block's buffer becomes the displayed one | one FIFO entry (`fill`: block, mask, erase value) writes the erase value into the open block's unwritten words (none if all 8 were written) |
+
+A horizontal span that covers whole blocks costs one SRAM write per pixel, as without the erase. The flag is read at
+the strobe (port addressed by FBn_A) and written in the next clk_sys; this relies on VDP1P's FB_ST: draw-side strobes are
+two clk_sys apart and FBn_A holds for the clk_sys after one. All writes are posted one clk_sys after their strobe (two
+for an opening write) into one 256 x 40 FIFO (one M10K, the second FIFO and its arbitration are gone); FB_RDY is low
+while it holds 192 entries or more. A fill carries its erase value because the open block of a buffer is closed at the
+frame change, when the frame erase of that buffer may already latch a new `EWDR`.
+
+The RAM stores 1 for "block in the SRAM", so its power-up zeros flag every block with erase value 0: the SRAM's
+power-up contents are never displayed (`tb_fb +MEMRAND`).
+
+What differs from MiSTer:
+
+* A block flagged by an earlier erase reads the buffer's latest erase value. If `EWDR` changes and the new window does
+  not cover the old one, the blocks outside it change colour with it (they keep their old pixels on MiSTer); the same
+  holds for blocks never erased since power-up (0 until the first erase).
+* A VBlank erase cut short by the end of VBlank leaves the block it was in unerased (MiSTer has its first words erased).
+* Flags are kept per block number, so an FB_MODE3 change reinterprets them until the next erase (and a fill queued
+  before the change writes the wrong words).
 
 **The Pocket's SRAM is an AS6C2016-55BIN** (Analogue, https://www.analogue.co/developer/docs/external-hardware):
 tAA 55 ns, tWP 45 ns, tAW / tBW 50 ns, tDW 25 ns, tWC 55 ns (Alliance datasheet v1.1). Up to v0.2.18 `sram_pocket` ran it
@@ -91,10 +127,11 @@ Measured in `sim/mem/tb_fb` with the 55 ns model and RD_CYC = WR_CYC = 8:
 | draw into FB0 (SRAM), with the VDP1 handshake | 63 ns per pixel (34 ns before), 0 errors |
 | draw into FB1 (M10K + tail) | 34 ns per pixel, 0 errors |
 | display read, FB0 and FB1 across column 192, erase at DCE_R | pixel valid within 6 clk_sys, 0 errors |
-| VBlank erase, 1 write per 2 clk_sys (C), and with the other buffer drawing (D) | **fails**: 255 FIFO drops; the SRAM takes 1 write per 4 clk_sys |
+| VBlank erase, 1 write per 2 clk_sys (C) | 0 drops, 0 errors, 0 SRAM writes (lazy erase; before it: 255 drops, 400 errors) |
+| FB1 tail erase with FB0 drawing, FB0 erase with the FB1 tail drawing (D) | 0 drops, 0 errors (before: 255 drops, 607 errors) |
+| draws into erased blocks: random words, byte lanes, two blocks interleaved, reads in between; every word of 16 rows of both buffers read back; display of erased, drawn and untouched blocks; the same in FB_MODE3 (E) | 0 errors, display valid within 6 clk_sys |
+| the whole bench with the clocks' PLL phase (`-DCLK_ALIGNED`) and random SRAM power-up contents (`+MEMRAND`) | pass (display within 7 clk_sys, 7 also before the lazy erase) |
 | SRAM model timing checks | 0 errors |
-
-VBlank erase (FBCR VBE) therefore leaves part of the area unerased on the Pocket until a buffer moves off the SRAM.
 
 Previous measurements (SRAM model with tAA 10 ns, the old 4 / 3 cycle controller, not valid for the Pocket's chip):
 
@@ -484,7 +521,7 @@ the address edge. Now every SRAM pin register and the read register `dq_r` are I
 `fb_done`, 4 clk_ram (34.9 ns) after the address edge. The pins of the next access change at that edge too and reach the
 chip 3 to 8 ns later, so the sample still sees the word (hold check at that edge, input minimum -`SRAM_SKEW`). `fb_q` is
 don't-care outside `fb_done` (`vdp1_fb_pocket` reads it only then). In `tb_fb` (pin delays 3.5 ns out, 1 ns in) a read
-passes up to tAA 30 ns (was 21 ns); the negative run uses 35 ns. Seed 3 fit: read setup +15.0 ns at slow 85C with tAA
+passed up to tAA 30 ns (was 21 ns). With RD_CYC = 8 a read passes up to tAA 62 ns; the negative run uses 66 ns. Seed 3 fit: read setup +15.0 ns at slow 85C with tAA
 10 ns (so tAA up to about 25 ns), hold +0.23 at fast 0C, pin window +1.28 / +1.27.
 
 ## 6. Bandwidth budget
@@ -494,7 +531,7 @@ passes up to tAA 30 ns (was 21 ns); the negative run uses 35 ns. Seed 3 fit: rea
 | SDRAM | VDP2 8 DQ cycles per 16 = 114.5 MB/s, SCSP up to 5.6 M requests/s (11 MB/s useful, 2 DQ cycles each), writes in the gaps | fixed schedule, 229 MB/s raw | command bus 15/16; bank 3 re-activated every 8 cycles (B1 and SCSP), banks 0-2 every 16; the timing table above: tRCD 8.2 ns (SCSP READ), tRAS 1.9 ns (WRITE), tRP -0.5 ns (bank 3, section 3), tRC 9.8 ns, tRRD 5.5 ns |
 | PSRAM0 | WRAM-H and WRAM-L line fills (32 B in 384-488 ns = 66-83 MB/s when streaming), SCU DMA bursts, posted writes at 130-180 ns | one chip, about 70 MB/s for 32 B lines, 10 M random words/s | a fill is 12 SH-2 bus cycles; no hit-rate data (no software run), see risk 9 |
 | PSRAM1 | VDP1 texture bursts 5-30 MB/s, CD RAM 1-3 MB/s, CD buffer 0.4 MB/s, CD ring 0.8 MB/s (588 words in 250 us when a sector arrives) | same | 3-5x |
-| SRAM | display read 5.1 M/s + erase 5.1 M/s + draw up to 14 M/s typical (28.6 peak), both buffers | read 28.6 M/s, write 38 M/s | active line: 4+3 cycles of 16 for display and erase; draw takes the rest |
+| SRAM | display read 5.1 M/s + draw up to 14 M/s typical (28.6 peak), both buffers; erase none (lazy erase, section 2), a fill of up to 7 words per erased block drawn into partly | 14.3 M accesses/s (8 clk_ram each, read or write) | active line: 8 clk_ram of 16 for the display read; draw takes the rest |
 | M10K FB1 | any | one access per clk_sys | n/a |
 
 ## 7. Load path (`load_pocket.sv`)
@@ -533,11 +570,11 @@ there); the scaled column applies the ratio measured here to those numbers.
 | Total | 1,639 | 1,175 | 200 | 115 | 1,708 | about 1,250 |
 
 `cd_stream` adds the 64 entry ring write FIFO (2 M10K, about 25 ALMs) outside this table; the CD ring left the SRAM
-(section 5) and FB1 is 49,152 words = 96 blocks plus 2 for the write FIFOs.
+(section 5) and FB1 is 49,152 words = 96 blocks, plus 1 for the write FIFO and 2 for the erase flags (section 2; the
+table predates the lazy erase, which also dropped the second FIFO and its arbitration).
 
 The framebuffer is 176 blocks before, not 141: Quartus builds a 16 bit array with byte enables from 512 x 16 blocks
-(8192 bits), so 90,112 words take 176 blocks; the 141 is 1,417 kbit / 10.24. Now FB1 is 49,152 words = 96 blocks, plus 2
-for the write FIFOs. Columns of 5 + 2 + 1 bits per byte lane take the same 128 blocks (tried); 10 bit columns (1K x 10,
+(8192 bits), so 90,112 words take 176 blocks; the 141 is 1,417 kbit / 10.24. Now FB1 is 49,152 words = 96 blocks. Columns of 5 + 2 + 1 bits per byte lane take the same 128 blocks (tried); 10 bit columns (1K x 10,
 10240 bits) would need a read-modify-write for partial byte writes and give 112.
 
 What changed, ALM by ALM (standalone, same flow):
@@ -571,7 +608,7 @@ for the measured slack.
 | `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
-| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase with the CD ring, erase of the tail while FB0 draws and the reverse | pass; negative runs fail as expected |
+| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3); again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
 | `tb_load` | 2048 loader writes from 4096 + 1024 + 1024 bridge bytes (backup cart at PSRAM0 0x800000) | pass |
 | `mem-long` | 66 ms retention with the 512 row scrub of bank 3 | pass |
 | `sim/cd` (`cd`, `cd-real`) with the ring memory model of `tb_cdd` (4 clk write busy, reads 2-40 clk and now and then 500) | | pass |
@@ -580,7 +617,7 @@ for the measured slack.
 
 The SDRAM model follows the AS4C32M16MSA datasheet (section 3). The PSRAM and SRAM models were audited against the
 AS1C4M16PL-70BIN datasheet (Alliance, Rev 1.0 Aug 2018) and the generic x16 asynchronous SRAM truth table (byte enables
-gate reads and writes); the SRAM part and speed are still unknown.
+gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
 
 ## 10. Untested on hardware, and risks
 
@@ -598,11 +635,15 @@ gate reads and writes); the SRAM part and speed are still unknown.
 5. PSRAM synchronous mode at 57.3 MHz / LC4 (the PSX core runs 33.9 MHz). `READ_ADJ` / `WRITE_ADJ` are the bring-up
    knobs. The controller does not park the chips back in asynchronous mode: after this core the chips stay
    synchronous until power-off, which breaks other cores that use them asynchronously (the PSX core parks them).
-6. SRAM part and speed unknown; the framebuffer needs tAA up to about 25 ns (section 5, with the FPGA's own pad delays)
-   and a write cycle of 26 ns with WE# low 8.7 ns.
+6. SRAM: AS6C2016-55 (section 2), run at 8 clk_ram per access; `tb_fb` reads pass up to tAA 62 ns with its pin delays.
 7. A CD ring line fill behind a long VDP1 burst on PSRAM1 can arrive later than one CD word period (section 5).
 8. The framebuffers drop columns 352-511. M10K use of the memory subsystem is 146 blocks (47%) before the CD TOC RAM, SH-2
-   caches, SH-1 and SCSP are counted. FB0 draw with an FB1 tail erase (or the reverse) slows the draw while FB_RDY is held low.
+   caches, SH-1 and SCSP are counted.
+14. VDP1P waits for FB_RDY on CPU accesses only. A draw write is posted without it (into SRAM pixels faster than the
+    SRAM takes them on a long span: drops count in `dbg_drop`), and a draw read takes `FB_DRAW_Q` one clk_sys after its
+    strobe, before an SRAM read returns (only the M10K columns 0-191 of FB1 answer in time). `tb_fb` drives the
+    FB_RDY handshake instead. The engine drains the write FIFO ahead of the display read, so drawing into SRAM pixels
+    can delay display reads of the other buffer.
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.

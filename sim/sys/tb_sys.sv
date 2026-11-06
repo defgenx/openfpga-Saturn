@@ -1111,14 +1111,22 @@ always @(posedge `SAT.VDP1.CLK) if (cmdprobe >= 0 && frame_no >= cmdprobe && fra
 end
 integer fbdump = -1;
 initial if (!$value$plusargs("FBDUMP=%d", fbdump)) fbdump = -1;
+// SRAM words of an erased block (vdp1_fb_pocket flag 0, normal-mode block numbers) are dumped as the erase value
 always @(posedge video_vs) if (frame_no == fbdump) begin : fbd
 	integer f, i;
+	reg [16:0] x; reg [15:0] w;
 	f = $fopen("fb0.bin", "wb");
-	for (i = 0; i < 90112; i++) $fwrite(f, "%c%c", srmodel.mem[40960 + i][15:8], srmodel.mem[40960 + i][7:0]);
+	for (i = 0; i < 90112; i++) begin
+		x = 17'(i); w = dut.saturn.mem.fb.flg[{x[16:11], x[7:0]}] ? srmodel.mem[40960 + i] : dut.saturn.mem.fb.ev0;
+		$fwrite(f, "%c%c", w[15:8], w[7:0]);
+	end
 	$fclose(f);
 	f = $fopen("fb1.bin", "wb");
 	for (i = 0; i < 49152; i++) $fwrite(f, "%c%c", dut.saturn.mem.fb.m1[i][15:8], dut.saturn.mem.fb.m1[i][7:0]);
-	for (i = 0; i < 40960; i++) $fwrite(f, "%c%c", srmodel.mem[i][15:8], srmodel.mem[i][7:0]);
+	for (i = 0; i < 40960; i++) begin
+		x = 17'(49152 + i); w = dut.saturn.mem.fb.flg[{x[16:11] + 6'd20, x[7:0]}] ? srmodel.mem[i] : dut.saturn.mem.fb.ev1;
+		$fwrite(f, "%c%c", w[15:8], w[7:0]);
+	end
 	$fclose(f);
 	$fdisplay(ftrace, "%0t FBDUMP at pocket frame %0d, FB_SEL %b", $time, frame_no, `SAT.VDP1.FB_SEL);
 	$display("tb_sys: dumped both VDP1 framebuffers at frame %0d", frame_no);

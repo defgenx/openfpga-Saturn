@@ -1,7 +1,7 @@
 // vdp1_fb_pocket.sv - the two VDP1 frame buffers on the Pocket.
 //
 // Same FB interface as the VDP1 module (FBn_A/D/WE/RD/Q, FB_RDY, FB_MODE3) with the address
-// translation that Saturn_MiSTer's emu does, so rtl/Saturn/Saturn.sv and VDP1 are unchanged.
+// translation that Saturn_MiSTer's emu does, plus FB_DRAW0 (VDP1P FB_SEL: which buffer is drawn).
 //
 //   FB0  external 128K x 16 SRAM (sram_pocket), words FB0_BASE .. FB0_BASE + 90111 (0xA000 ..)
 //   FB1  index < 49152 (columns 0-191): M10K, 49152 x 16
@@ -9,16 +9,19 @@
 // Both hold the first 352 columns of the 512 x 256 buffer (index = x*256 + y, as MiSTer's M10K part).
 // Writes with x >= 352 are dropped and reads return 0 (MiSTer keeps those columns in DDR3).
 //
-// SRAM access rules, derived from VDP1.sv (they hold for FB0 and for the FB1 tail):
-//   * writes (draw, CPU, erase at DCE_R or at every CE_R in VBlank erase) are posted into 256 entry
-//     FIFOs on clk_sys (one per buffer, FB0 and FB1 can write in the same cycle); the engine on
-//     clk_ram drains them ahead of everything else, the fuller FIFO first. FB_RDY goes low while a
-//     FIFO holds STALL entries or more, so a draw is held back and the (unstoppable) erase keeps
-//     room.
-//   * a read strobe (draw read, CPU read) holds FB_RDY low until the data is in FBn_Q
-//   * the display read has no strobe: whenever FBn_A changes to an address that no write strobe
-//     accompanied, FBn_Q is refreshed from the SRAM (about SRAM_CYC * 2 clk_ram later). An erase
-//     write to the pixel just displayed does not disturb FBn_Q.
+// Lazy erase (docs/memory.md section 2, "Lazy erase"): a write to the displayed buffer is an erase and never reaches
+// the SRAM; it flags its 8 word block (on word 7) and latches the erase value, which flagged words read as. The first
+// draw / CPU write into a flagged block opens it; leaving it queues one fill entry for its unwritten words.
+//
+// SRAM access rules (they hold for FB0 and for the FB1 tail):
+//   * draw and CPU writes are posted into one 256 entry FIFO one clk_sys after the strobe (two for one that opens
+//     a block); the engine on clk_ram drains it ahead of everything else. FB_RDY goes low while it holds STALL
+//     entries or more. Erase writes (FB_DRAW0 says which buffer is displayed) are never queued.
+//   * a read strobe (draw read, CPU read; its rising edge) holds FB_RDY low until the data is in FBn_Q
+//   * the display read has no strobe: whenever FBn_A changes to an address that no write strobe accompanied, FBn_Q is
+//     refreshed (about SRAM_CYC * 2 clk_ram later). An erase write to the pixel just displayed does not disturb FBn_Q.
+//   * draw-side strobes are two clk_sys apart or more, and FBn_A holds for the clk_sys after one (VDP1P FB_ST); the
+//     flag of a block is read at the strobe and written in the next clk_sys.
 //
 `default_nettype none
 
@@ -32,6 +35,7 @@ module vdp1_fb_pocket #(
 	input  wire        rst,
 
 	input  wire        FB_MODE3,
+	input  wire        FB_DRAW0,           // 1: FB0 drawn, FB1 displayed (and erased); 0: the reverse
 	input  wire [17:1] FB0_A,
 	input  wire [15:0] FB0_D,
 	input  wire  [1:0] FB0_WE,
@@ -70,6 +74,13 @@ endfunction
 function automatic [16:0] sram_a1(input [16:0] i);
 	sram_a1 = TAIL_BASE + i;
 endfunction
+// erase block of an index and the word in it. FB_BASE and TAIL_BASE leave SRAM address bits 12:0 as the index's.
+function automatic [13:0] blk(input mode3, input [16:0] i);
+	blk = {i[16:11], mode3 ? i[10:3] : i[7:0]};
+endfunction
+function automatic [2:0] wrd(input mode3, input [16:0] i);
+	wrd = mode3 ? i[2:0] : i[10:8];
+endfunction
 
 wire [16:0] i0 = xlate(FB_MODE3, FB0_A);
 wire [16:0] i1 = xlate(FB_MODE3, FB1_A);
@@ -77,8 +88,6 @@ wire        in0 = i0 < WORDS;
 wire        in1 = i1 < WORDS;
 wire        mm1 = i1 < M1_WORDS;           // FB1 in M10K (always in range)
 wire        t1  = !mm1 && in1;             // FB1 in the SRAM tail
-wire [16:0] sa0 = sram_a0(i0);
-wire [16:0] sa1 = sram_a1(i1);
 
 // The engine (clk_ram) sees the buffer indexes one clk_ram late: VDP1's address logic is too deep for one clk_ram.
 reg  [16:0] i0r, i1r;
@@ -121,104 +130,182 @@ end
 always @(posedge clk_sys) begin m1_sel <= mm1; t1_sel <= t1; end
 assign FB1_Q = m1_sel ? m1_q : t1_sel ? fb1_sq : 16'h0000;
 
-// ---------------------------------------------------------------- SRAM write FIFOs (clk_sys -> clk_ram), 256 entries each:
-// a VBlank erase pushes one write per two clk_sys, the SRAM takes one per SRAM_CYC clk_ram, and the CD ring can hold the bus for a
-// few writes at a time
-reg [34:0] wf0 [0:255];            // {SRAM word, byte enables, data}, one M10K each
-reg [34:0] wf1 [0:255];
-reg  [8:0] wptr0 = 9'd0, wptr1 = 9'd0;     // clk_sys
-reg  [8:0] rptr0 = 9'd0, rptr1 = 9'd0;     // clk_ram
-reg  [8:0] wptr0_d = 9'd0, wptr1_d = 9'd0; // wptr seen one clk_ram late: wf_q has the entry by then
-wire [8:0] occ0 = wptr0 - rptr0, occ1 = wptr1 - rptr1;
-wire       full0 = occ0 >= 9'd255, full1 = occ1 >= 9'd255;
-wire       stall = occ0 >= STALL || occ1 >= STALL;
-// ne0 / ne1 = (wptr*_d != rptr*) as registers: the pick and the pops start from a register instead of a 9 bit
-// compare. Written from wptr* (what wptr*_d takes) and the current rptr*: wrong for the one edge after a pop, when the
-// engine is in es 4 and reads neither; every read (es 0) sees the compare of the pointers as they stand.
-reg        ne0 = 1'b0, ne1 = 1'b0;
-reg  [7:0] wra0, wra1;           // registered read address: the RAM output is the entry one clock after rptr
-wire [34:0] wf0_q = wf0[wra0], wf1_q = wf1[wra1];
-always @(posedge clk_ram) begin
-	wptr0_d <= wptr0; wptr1_d <= wptr1;
-	wra0 <= rptr0[7:0]; wra1 <= rptr1[7:0];
+// ---------------------------------------------------------------- erase flags (clk_sys)
+// 16384 x 1 true dual port, port A = FB0 blocks {x[8:3], y} (0 .. 11263), port B = FB1 tail blocks with x[8:3] + 20
+// (44 .. 63). The RAM holds 1 = "block in the SRAM" (0 = flagged), so the power-up zeros flag every block.
+// Each port is addressed by its FBn_A every clk_sys and writes at most one bit: an erase sets, an opening write clears.
+wire [13:0] k0 = blk(FB_MODE3, i0), k1 = blk(FB_MODE3, i1);
+wire [13:0] fa0 = k0, fa1 = {k1[13:8] + 6'd20, k1[7:0]};
+wire        er0 = |FB0_WE && !FB_DRAW0, er1 = |FB1_WE && FB_DRAW0;
+wire        set0 = er0 && in0 && &wrd(FB_MODE3, i0);
+wire        set1 = er1 && t1  && &wrd(FB_MODE3, i1);
+wire        clr0, clr1;
+wire        fw0 = set0 || clr0, fw1 = set1 || clr1;
+wire        fq0_n, fq1_n;                  // RAM bit of the block FBn_A pointed to at the last clk_sys edge
+wire        fq0 = !fq0_n, fq1 = !fq1_n;    // flagged
+reg         lk0 = 1'b0, lk1 = 1'b0;        // that edge read (did not write) the bit
+always @(posedge clk_sys) begin lk0 <= !fw0; lk1 <= !fw1; end
+`ifdef ALTERA_RESERVED_QIS
+altsyncram #(
+	.operation_mode("BIDIR_DUAL_PORT"), .intended_device_family("Cyclone V"), .ram_block_type("M10K"),
+	.width_a(1), .widthad_a(14), .numwords_a(16384), .width_b(1), .widthad_b(14), .numwords_b(16384),
+	.outdata_reg_a("UNREGISTERED"), .outdata_reg_b("UNREGISTERED"), .address_reg_b("CLOCK0"),
+	.indata_reg_b("CLOCK0"), .wrcontrol_wraddress_reg_b("CLOCK0"),
+	.read_during_write_mode_port_a("NEW_DATA_NO_NBE_READ"), .read_during_write_mode_port_b("NEW_DATA_NO_NBE_READ"),
+	.read_during_write_mode_mixed_ports("DONT_CARE"), .power_up_uninitialized("FALSE"), .lpm_type("altsyncram")
+) flags (
+	.clock0(clk_sys), .address_a(fa0), .data_a(!set0), .wren_a(fw0), .q_a(fq0_n),
+	.address_b(fa1), .data_b(!set1), .wren_b(fw1), .q_b(fq1_n),
+	.aclr0(1'b0), .aclr1(1'b0), .addressstall_a(1'b0), .addressstall_b(1'b0), .byteena_a(1'b1), .byteena_b(1'b1),
+	.clock1(1'b1), .clocken0(1'b1), .clocken1(1'b1), .clocken2(1'b1), .clocken3(1'b1),
+	.eccstatus(), .rden_a(1'b1), .rden_b(1'b1)
+);
+`else
+reg flg [0:16383];
+reg fqa = 1'b0, fqb = 1'b0;
+integer fi;
+initial for (fi = 0; fi < 16384; fi = fi + 1) flg[fi] = 1'b0;
+always @(posedge clk_sys) begin
+	if (fw0) begin flg[fa0] <= !set0; fqa <= !set0; end else fqa <= flg[fa0];
+	if (fw1) begin flg[fa1] <= !set1; fqb <= !set1; end else fqb <= flg[fa1];
 end
+assign fq0_n = fqa;
+assign fq1_n = fqb;
+`endif
+
+reg [15:0] ev0 = 16'h0000, ev1 = 16'h0000;   // erase values
+always @(posedge clk_sys) begin if (er0) ev0 <= FB0_D; if (er1) ev1 <= FB1_D; end
+
+// ---------------------------------------------------------------- draw side, clk_sys: stage 0 = the strobe, stage 1 = the
+// next clk_sys, when the block's flag is known
+reg        rdd0 = 1'b0, rdd1 = 1'b0;
+always @(posedge clk_sys) begin rdd0 <= FB0_RD; rdd1 <= FB1_RD; end
+wire       s0_w0 = |FB0_WE && FB_DRAW0 && in0, s0_w1 = |FB1_WE && !FB_DRAW0 && t1;
+wire       s0_r0 = FB0_RD && !rdd0, s0_r1 = FB1_RD && !rdd1 && t1;   // CPU reads hold FBn_RD until FB_RDY
+wire       s0_b  = !(s0_w0 || s0_r0);
+reg        p_w = 1'b0, p_r = 1'b0, p_def = 1'b0, p_b, p_oor;
+reg [16:0] p_i;
+reg  [1:0] p_be;
+reg [15:0] p_d;
+always @(posedge clk_sys) begin
+	p_w <= !rst && (s0_w0 || s0_w1);
+	p_r <= !rst && (s0_r0 || s0_r1);
+	if (s0_w0 || s0_w1 || s0_r0 || s0_r1) begin
+		p_b <= s0_b; p_i <= s0_b ? i1 : i0; p_be <= s0_b ? FB1_WE : FB0_WE; p_d <= s0_b ? FB1_D : FB0_D; p_oor <= !s0_b && !in0;
+	end
+end
+
+// the open block: its SRAM word without the word-in-block bits (the two buffers' ranges are disjoint), its buffer, the
+// words written since it was opened, the erase value it was opened with (its buffer is not erased while drawn)
+reg        ob_v = 1'b0, ob_b;
+reg [13:0] ob_s;
+reg  [7:0] ob_m;
+reg [15:0] ob_ev;
+
+wire  [2:0] p_k   = wrd(FB_MODE3, p_i);
+wire        p_fl  = p_b ? fq1 : fq0;
+wire [16:0] p_sa  = p_b ? sram_a1(p_i) : sram_a0(p_i);
+wire [13:0] p_s   = blk(FB_MODE3, p_sa);
+wire        hit   = ob_v && ob_s == p_s;
+wire        hitw  = hit && ob_m[p_k];
+wire [15:0] p_ev  = p_b ? ev1 : ev0;
+// first write into a flagged block: its own push follows a clk_sys later (p_def). Not when FB_SEL flipped after the
+// strobe: FBn_A then points at the display address, which the clear would hit.
+wire        p_open = p_w && !hit && p_fl && p_b != FB_DRAW0;
+wire        p_mrg  = p_def || (hit && !hitw);
+wire        pushw  = (p_w && !p_open) || p_def;
+wire        close  = ob_v && (p_open || (ob_b == FB_DRAW0 && !p_w && !p_def));   // opening another, or ob displayed
+assign clr0 = p_open && !p_b;
+assign clr1 = p_open && p_b;
+
+// ---------------------------------------------------------------- SRAM write FIFO (clk_sys -> clk_ram), 256 entries
+// {0, SRAM word, byte enables, 4'h0, data}, one M10K (256 x 40). A fill entry is {1, block (ob_s), 1'b0, words not to
+// write, erase value}: the engine writes the erase value into the others.
+reg [39:0] wf [0:255];
+reg  [8:0] wptr = 9'd0;                    // clk_sys
+reg  [8:0] rptr = 9'd0;                    // clk_ram
+wire [8:0] occ = wptr - rptr;
+wire       full = occ >= 9'd255;
+wire       stall = occ >= STALL;
+// ne = (wptr != rptr) as a register: the pick starts from a register instead of a 9 bit compare. Wrong for the one
+// edge after a pop, when the engine is in es 4 and reads nothing.
+reg        ne = 1'b0;
+reg  [7:0] wra;                            // registered read address: the RAM output is the entry one clock after rptr
+wire [39:0] wq = wf[wra];
+always @(posedge clk_ram) wra <= rptr[7:0];
+
+wire [39:0] wd = close ? {1'b1, ob_s, 1'b0, ob_m, ob_ev}
+                       : {1'b0, p_sa, p_mrg ? 2'b11 : p_be, 4'h0,
+                          p_mrg ? {p_be[1] ? p_d[15:8] : p_ev[15:8], p_be[0] ? p_d[7:0] : p_ev[7:0]} : p_d};
 
 reg  [7:0] wf_drop = 8'd0;
 assign dbg_drop = wf_drop;
 
 reg        rd_t = 1'b0, rd_ack = 1'b0;    // read strobe handshake: toggle on clk_sys, ack on clk_ram
-reg        rd_b = 1'b0, rd_oor = 1'b0;
+reg        rd_b = 1'b0, rd_oor = 1'b0, rd_ev = 1'b0;
 reg [16:0] rd_idx;
-reg [16:0] sup0 = 17'h1FFFF, sup1 = 17'h1FFFF;   // index of the last posted write per buffer
+reg [16:0] sup0 = 17'h1FFFF, sup1 = 17'h1FFFF;   // index of the last write strobe per buffer, cleared at a buffer swap
+reg        dr_q = 1'b0;
 
 always @(posedge clk_sys) begin
-	if (rst) begin wptr0 <= 9'd0; wptr1 <= 9'd0; end
+	p_def <= !rst && p_open;
+	if (rst) begin wptr <= 9'd0; ob_v <= 1'b0; end
 	else begin
-		if (|FB0_WE && in0) begin
-			if (!full0) begin wf0[wptr0[7:0]] <= {sa0, FB0_WE, FB0_D}; wptr0 <= wptr0 + 1'd1; end
+		if (pushw || (close && !(&ob_m))) begin   // a block written in full needs no fill
+			if (!full) begin wf[wptr[7:0]] <= wd; wptr <= wptr + 1'd1; end
 			else if (wf_drop != 8'hFF) wf_drop <= wf_drop + 1'd1;
 		end
-		if (|FB1_WE && t1) begin
-			if (!full1) begin wf1[wptr1[7:0]] <= {sa1, FB1_WE, FB1_D}; wptr1 <= wptr1 + 1'd1; end
-			else if (wf_drop != 8'hFF) wf_drop <= wf_drop + 1'd1;
-		end
+		if (p_open) begin ob_v <= 1'b1; ob_b <= p_b; ob_s <= p_s; ob_ev <= p_ev; ob_m <= 8'd1 << p_k; end
+		else if (close) ob_v <= 1'b0;
+		else if (p_w && hit) ob_m[p_k] <= 1'b1;
 	end
-	if (|FB0_WE) sup0 <= i0;
-	if (|FB1_WE) sup1 <= i1;
-	if (FB0_RD) begin rd_t <= ~rd_t; rd_b <= 1'b0; rd_oor <= !in0; rd_idx <= i0; end
-	else if (FB1_RD && t1) begin rd_t <= ~rd_t; rd_b <= 1'b1; rd_oor <= 1'b0; rd_idx <= i1; end
+	dr_q <= FB_DRAW0;
+	if (|FB0_WE) sup0 <= i0; else if (dr_q != FB_DRAW0) sup0 <= 17'h1FFFF;   // or the display would skip the last drawn pixel
+	if (|FB1_WE) sup1 <= i1; else if (dr_q != FB_DRAW0) sup1 <= 17'h1FFFF;
+	if (p_r) begin rd_t <= ~rd_t; rd_b <= p_b; rd_oor <= p_oor; rd_idx <= p_i; rd_ev <= p_fl || (hit && !hitw); end
 end
 wire rd_busy = (rd_t != rd_ack);
-assign FB_RDY = !(stall || rd_busy);
+assign FB_RDY = !(stall || rd_busy || p_r || (FB0_RD && !rdd0) || (FB1_RD && !rdd1));
 
 // ---------------------------------------------------------------- engine (clk_ram)
 reg        have0 = 1'b0, have1 = 1'b0;
 reg [16:0] last0, last1;
 reg  [2:0] es = 3'd0;
-reg        e_b, trk;
+reg        e_b, trk, e_c = 1'b0, e_fl = 1'b0;
+reg  [2:0] fk;                             // fill: word in the block
 wire       need0 = sr_ready && (!have0 || i0r != last0);
 wire       need1 = sr_ready && t1r && (!have1 || i1r != last1);
-// The fuller FIFO is drained first. The engine's occupancy difference (wptr1_d - rptr1) - (wptr0_d - rptr0) is a running
-// register, dlt, instead of two subtractions and a compare in front of the pointer update: wptr*_d follows wptr* by at
-// most one (one write per clk_sys, seen by its low bit), a pop moves a pointer by one. Under rst the pointers are 0 and
-// wptr*_d take wptr*. rst must be high for two clk_sys or more (ram_reset: 256): a single one clears wptr* at the last
-// reset edge, after which the engine pops entries that were never written in either form of the logic.
-reg  [9:0] dlt = 10'd0;                      // two's complement, |dlt| <= 255
-wire       gt    = !dlt[9] && (|dlt[8:0]);  // occ1e > occ0e
-wire       pick1 = ne1 && (!ne0 || gt);
-wire [34:0] wq = pick1 ? wf1_q : wf0_q;
-wire       psh0 = wptr0[0] != wptr0_d[0], psh1 = wptr1[0] != wptr1_d[0];
-wire       go   = !rst && es == 3'd0 && (ne0 || ne1) && sr_ready;   // the pop below
-wire       pop0 = go && !pick1, pop1 = go && pick1;
-wire [1:0] dlt_up = {1'b0, psh1} + {1'b0, pop0}, dlt_dn = {1'b0, psh0} + {1'b0, pop1};
-wire [2:0] dlt_stp = {1'b0, dlt_up} - {1'b0, dlt_dn};
+wire [16:0] fill_a = FB_MODE3 ? {wq[38:25], fk} : {wq[38:33], fk, wq[32:25]};
 
 always @(posedge clk_ram) begin
 	sr_req <= 1'b0;
-	dlt <= rst ? {1'b0, wptr1} - {1'b0, wptr0} : dlt + {{7{dlt_stp[2]}}, dlt_stp};
-	ne0 <= rst ? |wptr0 : (wptr0 != rptr0);
-	ne1 <= rst ? |wptr1 : (wptr1 != rptr1);
-	if (rst) begin rptr0 <= 9'd0; rptr1 <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; end
+	ne <= rst ? |wptr : (wptr != rptr);
+	if (rst) begin rptr <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; end
 	else case (es)
 	3'd0: begin
-		if ((ne0 || ne1) && sr_ready) begin
-			sr_req <= 1'b1; sr_we <= 1'b1;
-			sr_a <= wq[34:18]; sr_be <= wq[17:16]; sr_d <= wq[15:0];
-			if (pick1) rptr1 <= rptr1 + 1'd1; else rptr0 <= rptr0 + 1'd1;
-			es <= 3'd4;                                // posted: the next write may follow right away
-		end else if (rd_busy && sr_ready) begin
-			if (rd_oor) begin FB0_Q <= 16'h0000; rd_ack <= rd_t; end
+		if (ne && sr_ready) begin
+			if (wq[39]) begin fk <= 3'd0; es <= 3'd5; end   // fill: popped after its last word
 			else begin
+				sr_req <= 1'b1; sr_we <= 1'b1;
+				sr_a <= wq[38:22]; sr_be <= wq[21:20]; sr_d <= wq[15:0];
+				rptr <= rptr + 1'd1;
+				es <= 3'd4;                                // posted: the next write may follow right away
+			end
+		end else if (rd_busy && sr_ready) begin
+			if (rd_b) begin last1 <= rd_idx; have1 <= 1'b1; end else begin last0 <= rd_idx; have0 <= 1'b1; end
+			if (rd_oor || rd_ev) begin
+				if (rd_b) fb1_sq <= ev1; else FB0_Q <= rd_oor ? 16'h0000 : ev0;
+				rd_ack <= rd_t;
+			end else begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= rd_b ? sram_a1(rd_idx) : sram_a0(rd_idx); sr_be <= 2'b11; es <= 3'd2;
 				e_b <= rd_b;
-				if (rd_b) begin last1 <= rd_idx; have1 <= 1'b1; end else begin last0 <= rd_idx; have0 <= 1'b1; end
 			end
 		end else if (need1 && (!need0 || trk)) begin
 			trk <= 1'b0;
 			if (i1r == sup1) begin last1 <= i1r; have1 <= 1'b1; end
 			else begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1r; sr_be <= 2'b11;
-				last1 <= i1r; have1 <= 1'b1; e_b <= 1'b1; es <= 3'd3;
+				last1 <= i1r; have1 <= 1'b1; e_b <= 1'b1; e_c <= 1'b1; es <= 3'd3;
 			end
 		end else if (need0) begin
 			trk <= 1'b1;
@@ -226,13 +313,26 @@ always @(posedge clk_ram) begin
 			else if (!in0r) begin FB0_Q <= 16'h0000; last0 <= i0r; have0 <= 1'b1; end
 			else begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0r; sr_be <= 2'b11;
-				last0 <= i0r; have0 <= 1'b1; e_b <= 1'b0; es <= 3'd3;
+				last0 <= i0r; have0 <= 1'b1; e_b <= 1'b0; e_c <= 1'b1; es <= 3'd3;
 			end
 		end
 	end
 	3'd4: es <= 3'd0;
 	3'd2: if (sr_done) begin if (e_b) fb1_sq <= sr_q; else FB0_Q <= sr_q; rd_ack <= rd_t; es <= 3'd0; end
-	3'd3: if (sr_done) begin if (e_b) fb1_sq <= sr_q; else FB0_Q <= sr_q; es <= 3'd0; end
+	// display read: one clk_ram after the issue the flag RAM output is the bit of this block (both edge phases)
+	3'd3: begin
+		if (e_c) begin e_c <= 1'b0; e_fl <= e_b ? (lk1 && fq1) : (lk0 && fq0); end
+		if (sr_done) begin if (e_b) fb1_sq <= e_fl ? ev1 : sr_q; else FB0_Q <= e_fl ? ev0 : sr_q; es <= 3'd0; end
+	end
+	3'd5: begin
+		if (wq[16 + fk] || sr_ready) begin
+			if (!wq[16 + fk]) begin sr_req <= 1'b1; sr_we <= 1'b1; sr_a <= fill_a; sr_be <= 2'b11; sr_d <= wq[15:0]; end
+			fk <= fk + 1'd1;
+			if (&fk) begin rptr <= rptr + 1'd1; es <= 3'd4; end
+			else if (!wq[16 + fk]) es <= 3'd6;
+		end
+	end
+	3'd6: es <= 3'd5;
 	default: es <= 3'd0;
 	endcase
 end

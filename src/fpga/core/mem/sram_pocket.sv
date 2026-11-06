@@ -2,8 +2,7 @@
 // (vdp1_fb_pocket): one 16 bit access at a time on clk_ram. The chip is an AS6C2016-55 (55 ns; Analogue's external
 // hardware page). Reads take RD_CYC = 8 cycles (70 ns at 114.5 MHz; the data is sampled at the edge that sets fb_done,
 // RD_CYC cycles after the address; tAA 55 ns), writes WR_CYC = 8 (WE# low 6 cycles = 52 ns, tWP 45 ns; address to
-// WE# rising 61 ns, tAW 50 ns). A VBlank erase pushes one write per 4 cycles, faster than this, so it can drop writes
-// (docs/memory.md section 5).
+// WE# rising 61 ns, tAW 50 ns). Erases never reach the SRAM: vdp1_fb_pocket's lazy erase (docs/memory.md section 2).
 // The whole SRAM holds framebuffer pixels (FB1 tail words 0x0000-0x9FFF, FB0 words 0xA000-0x1FFFF).
 //
 // The top level wraps dq in a tri-state: sram_dq = sram_dq_oe ? sram_dq_o : 16'bz.

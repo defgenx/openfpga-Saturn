@@ -56,6 +56,7 @@ module Saturn
 	
 	input              VDP1_FB_RDY,
 	output             VDP1_FB_MODE3,
+	output             VDP1_FB_DRAW0,
 	
 	output     [18: 1] VDP2_RA0_A,
 	output     [16: 1] VDP2_RA1_A,
@@ -978,6 +979,9 @@ module Saturn
 		.FB1_Q(VDP1_FB1_Q),
 		.FB_RDY(VDP1_FB_RDY),
 		.FB_MODE3(VDP1_FB_MODE3),
+`ifdef POCKET_VDP1P
+		.FB_DRAW0(VDP1_FB_DRAW0),
+`endif
 		
 		.FAST(FAST),
 		.BLUR_MESH(BLUR_MESH),
