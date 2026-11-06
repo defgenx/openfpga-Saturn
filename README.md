@@ -29,9 +29,8 @@ Tested on a Pocket:
   they come back as room is made on the FPGA.
 * **Saves**: the backup RAM is not formatted or saved to the card yet. Games warn that saving is unavailable and
   carry on without it.
-* **Picking a `.cue` or a game `.json`** does not read the disc yet: the Pocket does not serve the track files a
-  `.json` lists. Until the core opens the files itself (in progress), a disc must be one merged `.img`/`.bin` with
-  its `.toc` (below). CHD is not supported.
+* **Picking a `.cue` directly** is not supported yet (in progress): a disc is picked as the `.json` that
+  `Saturn-mktoc.py` writes for it (below). CHD is not supported.
 * Only a few games have been tried.
 
 ## Install
@@ -47,14 +46,14 @@ Tested on a Pocket:
    python3 Saturn-mktoc.py --card /Volumes/POCKET
    ```
 
-   For every `.cue` this writes `Game.img` (all the tracks merged into one file) and `Game.toc` next to the tracks.
-   Run it again after adding games; it only rewrites what changed. The repository's installer
-   (`install.sh`, `install.bat`) copies the core and does the same.
-5. On the Pocket, open the Saturn core and load `Game.img` in the **Disc image** slot and `Game.toc` in the
-   **Disc TOC** slot (releases up to v0.2.18 instead take the game's `.json`; see their release notes).
+   For every `.cue` this writes `Game.json` and `Game.toc` next to the tracks. Run it again after adding games; it
+   only rewrites what changed. The repository's installer (`install.sh`, `install.bat`) copies the core and does
+   the same.
+5. On the Pocket, open the Saturn core and pick the game's `Game.json`.
 
-Why the merge: the Pocket gives the core only the file picked as the disc, so a disc split into track files (the
-music of most games) would lose every track but the first. Details: [INSTALL.md](INSTALL.md), [docs/cd.md](docs/cd.md).
+A disc can also be loaded as one merged image: `--merge always` writes `Game.img`; load it in the **Disc image**
+slot and `Game.toc` in the **Disc TOC** slot from the core's menu. Details: [INSTALL.md](INSTALL.md),
+[docs/cd.md](docs/cd.md).
 
 ## How it differs from MiSTer
 
