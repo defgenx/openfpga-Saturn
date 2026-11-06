@@ -2218,35 +2218,13 @@ module VDP2P import VDP2P_PKG::*; (
 	wire         LWE[2] = '{REGS.LWTA0U.WxLWE,REGS.LWTA1U.WxLWE};
 	bit  [ 9: 0] WxSX[2];
 	bit  [ 9: 0] WxEX[2];
-	always @(posedge CLK or negedge RST_N) begin
-		bit          N;
-		bit  [31: 0] LW_WD;
-		
-		if (!RST_N) begin
-			// synopsys translate_off
-			WxSX <= '{2{'0}};
-			WxEX <= '{2{'0}};
-			// synopsys translate_on
-		end
-		else begin
-			if (DOT_CE_R) begin
-				if (VA2.LW) begin
-					N = VA2.LW_POS;
-					case (VRAM_BANK_2)
-						2'b00: LW_WD = RA0_BUF;
-						2'b01: LW_WD = RA1_BUF;
-						2'b10: LW_WD = RB0_BUF;
-						2'b11: LW_WD = RB1_BUF;
-					endcase
-					
-					if (LWE[N]) begin
-						WxSX[N] <= LW_WD[25:16];
-						WxEX[N] <= LW_WD[9:0];
-					end else begin
-						WxSX[N] <= WPSX[N];
-						WxEX[N] <= WPEX[N];
-					end 
-				end
+	//window x ranges of the line: from the line window table (LWE) or the registers, at the table slot of window LW_POS
+	wire [31: 0] LW_WD = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
+	always @(posedge CLK) begin
+		for (int i = 0; i < 2; i++) begin
+			if (RST_N && DOT_CE_R && VA2.LW && VA2.LW_POS == i[0]) begin
+				WxSX[i] <= LWE[i] ? LW_WD[25:16] : WPSX[i];
+				WxEX[i] <= LWE[i] ? LW_WD[ 9: 0] : WPEX[i];
 			end
 		end
 	end
