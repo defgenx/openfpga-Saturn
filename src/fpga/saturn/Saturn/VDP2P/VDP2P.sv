@@ -2338,24 +2338,79 @@ module VDP2P import VDP2P_PKG::*; (
 		for (int e=0; e<8; e++) if (RST_N && PNE[e]) PN_PIPE[0][e] <= PNW[e&1];
 		if (RST_N && DOT_CE_R) PN_PIPE[1] <= PN_PIPE[0];
 	end
+	//RBG pattern names (RB2), character words (RB2) and dot bytes (RB3): next value and enable per register in a block of
+	//their own. Dot byte 0 through one byte select (byte 0 = bits 31:24): 4 bpp byte (x^hf)[2:1] and its nibble by
+	//(x^hf)[0], 8 bpp byte (x^hf)[1:0], 16 bpp byte {(x^hf)[0],1}, 32 bpp byte 3; CHCN 5-7 leave the registers unchanged.
+	bit  [31: 0] RBG_CH[2];
+	PN_t         RPN_D[2];
+	bit  [31: 0] RCH_D[2];
+	bit  [ 7: 0] RDC_D[2][4];
+	bit          RDC_E[2][4], RCDP_E[2], RTP_D[2];
+	CellParam_t  RCDP_D[2];
+	always_comb begin
+		bit         prp, ov, hf, pr, cc, tp;
+		bit [ 1: 0] bi;
+		bit [ 2: 0] cx, chcn;
+		bit [ 6: 0] paln;
+		bit [ 7: 0] b8;
+		bit [31: 0] wd, ch;
+		for (int i = 0; i < 2; i++) begin
+			prp = i == 0 ? VA2.R0RP : 1'b1;
+			case (RB2.RxPNS[i])
+				2'd0: wd = RA0_BUF;
+				2'd1: wd = RA1_BUF;
+				2'd2: wd = RB0_BUF;
+				2'd3: wd = RB1_BUF;
+			endcase
+			//one PNData on the selected word: the over pattern name (OVR 01 outside the plane) or the fetched one-word PN
+			ov = RPxREG[prp].OVR == 2'b01 && RB2.RxOVR[i];
+			RPN_D[i] = (ov || RSxREG[i].PNC.NxPNB) ? PNData(RSxREG[i].PNC, RSxREG[i].CHSZ, RSxREG[i].CHCN, ov ? RPxREG[prp].OVPNR : wd[31:16]) : wd;
+			RTP_D[i] = (RPxREG[prp].OVR[1] && RB2.RxOVR[i]) || RB2.RxCTTP[i];
+			case (RB2.RxCHS[i])
+				2'd0: RCH_D[i] = RA0_BUF;
+				2'd1: RCH_D[i] = RA1_BUF;
+				2'd2: RCH_D[i] = RB0_BUF;
+				2'd3: RCH_D[i] = RB1_BUF;
+			endcase
+			chcn = RSxREG[i].CHCN;
+			cx   = RB3.RxCELLX[i];
+			paln = !RSxREG[i].BMEN ? RPN4E[i].PALN : {RSxREG[i].BMP,4'b0000};
+			hf   = RPN4E[i].HF & ~RSxREG[i].BMEN;
+			pr   = !RSxREG[i].BMEN ? RPN4E[i].PR : RSxREG[i].BMPR;
+			cc   = !RSxREG[i].BMEN ? RPN4E[i].CC : RSxREG[i].BMCC;
+			ch   = RBG_CH[i] & {32{~RTP4[i]}};
+			tp   = RTP4[i];
+			bi   = chcn[2] ? 2'd3 : chcn[1] ? {cx[0] ^ hf, 1'b1} : chcn[0] ? cx[1:0] ^ {2{hf}} : cx[2:1] ^ {2{hf}};
+			b8   = ch[31 - 8*bi -: 8];
+			RDC_D[i][0] = |chcn ? b8 : {4'h0, (cx[0] ^ hf) ? b8[3:0] : b8[7:4]};
+			RDC_D[i][1] = ch[23:16];
+			RDC_D[i][2] = (chcn[2] || (cx[0] ^ hf)) ? ch[15:8] : ch[31:24];
+			RDC_D[i][3] = ch[31:24];
+			RDC_E[i][0] = RB3.RxCH[i] && (!chcn[2] || chcn[1:0] == 2'b00);
+			RDC_E[i][1] = RB3.RxCH[i] && chcn == 3'b100;
+			RDC_E[i][2] = RB3.RxCH[i] && (chcn == 3'b010 || chcn == 3'b011 || chcn == 3'b100);
+			RDC_E[i][3] = RB3.RxCH[i] && chcn == 3'b100;
+			RCDP_E[i]   = RB3.RxCH[i] && chcn <= 3'b100;
+			RCDP_D[i]   = {pr, cc, chcn[2:1] == 2'b00 ? paln : 7'h00, tp};
+		end
+	end
+	always @(posedge CLK) begin
+		if (RST_N && DOT_CE_R) begin
+			for (int i = 0; i < 2; i++) begin
+				if (RB2.RxPN[i]) RBG_PN_PIPE[0][i] <= RPN_D[i];
+				RBG_TP_PIPE[i] <= RTP_D[i];
+				if (RB2.RxCH[i]) RBG_CH[i] <= RCH_D[i];
+				for (int k = 0; k < 4; k++) if (RDC_E[i][k]) RBG_DC[i][k] <= RDC_D[i][k];
+				if (RCDP_E[i]) RBG_CDP[i] <= RCDP_D[i];
+			end
+			RBG_PN_PIPE[1] <= RBG_PN_PIPE[0];
+		end
+	end
 	always @(posedge CLK or negedge RST_N) begin
 		bit [31: 0] VS_WD[2];
 		bit [31: 0] LS_WD[2];
 		bit [ 1: 0] PN_CNT[4];
-		bit [ 2: 0] RCNT[2];
-		bit         RHF[2];
-		bit         RPR[4];
-		bit         RCC[4];
-		bit [ 6: 0] RPALN[2];
-		bit [31: 0] RCH[2];
-		bit         RTP[2];
-		bit [ 2: 0] RCELLX[2];
-		bit [31: 0] RPN_WD[2];
-		bit         RPN_OV[2];
-		bit [ 1: 0] RBI[2];
-		bit [ 7: 0] RB8[2];
 		bit [31: 0] RCT_WD[2];
-		bit [31: 0] RBG_CH[2];
 		bit         PN_RP;
 		bit         CH_RP;
 //		bit         CT_RP;
@@ -2439,72 +2494,9 @@ module VDP2P import VDP2P_PKG::*; (
 				RBG_PIPE[0].RxCELLX[i] = VA4.RxX[CH_RP][2:0];
 				RBG_PIPE[0].RxCT_EN[i] = RBG_CT_EN[i];
 				
-				if (RB2.RxPN[i]) begin
-					case (RB2.RxPNS[i])
-						2'd0: RPN_WD[i] = RA0_BUF;
-						2'd1: RPN_WD[i] = RA1_BUF;
-						2'd2: RPN_WD[i] = RB0_BUF;
-						2'd3: RPN_WD[i] = RB1_BUF;
-					endcase
-					//one PNData on the selected word: the over pattern name (OVR 01 outside the plane) or the fetched one-word PN
-					RPN_OV[i] = RPxREG[PN_RP].OVR == 2'b01 && RB2.RxOVR[i];
-					if (RPN_OV[i] || RSxREG[i].PNC.NxPNB)
-						RBG_PN_PIPE[0][i] <= PNData(RSxREG[i].PNC, RSxREG[i].CHSZ, RSxREG[i].CHCN, RPN_OV[i] ? RPxREG[PN_RP].OVPNR : RPN_WD[i][31:16]);
-					else
-						RBG_PN_PIPE[0][i] <= RPN_WD[i];
-				end
-				
-				RBG_TP_PIPE[i] <= (RPxREG[PN_RP].OVR[1] && RB2.RxOVR[i]) || RB2.RxCTTP[i];
-					
-				if (RB2.RxCH[i]) begin
-					case (RB2.RxCHS[i])
-						2'd0: RBG_CH[i] <= RA0_BUF;
-						2'd1: RBG_CH[i] <= RA1_BUF;
-						2'd2: RBG_CH[i] <= RB0_BUF;
-						2'd3: RBG_CH[i] <= RB1_BUF;
-					endcase
-				end
-				
-				if (RB3.RxCH[i]) begin
-					RCELLX[i] = RB3.RxCELLX[i];
-					RPALN[i] = !RSxREG[i].BMEN ? RPN4E[i].PALN : {RSxREG[i].BMP,4'b0000};
-					RHF[i] = RPN4E[i].HF & ~RSxREG[i].BMEN;
-					RPR[i] = !RSxREG[i].BMEN ? RPN4E[i].PR : RSxREG[i].BMPR;
-					RCC[i] = !RSxREG[i].BMEN ? RPN4E[i].CC : RSxREG[i].BMCC;
-					RCH[i] = RBG_CH[i] & {32{~RTP4[i]}};
-					RTP[i] = RTP4[i];
-					//dot byte 0 through one byte select (byte 0 = bits 31:24): 4 bpp byte (x^hf)[2:1] and its nibble by (x^hf)[0],
-					//8 bpp byte (x^hf)[1:0], 16 bpp byte {(x^hf)[0],1}, 32 bpp byte 3; CHCN 5-7 leave the registers unchanged
-					RBI[i] = RSxREG[i].CHCN[2] ? 2'd3 : RSxREG[i].CHCN[1] ? {RCELLX[i][0] ^ RHF[i], 1'b1} :
-					         RSxREG[i].CHCN[0] ? RCELLX[i][1:0] ^ {2{RHF[i]}} : RCELLX[i][2:1] ^ {2{RHF[i]}};
-					RB8[i] = RCH[i][31 - 8*RBI[i] -: 8];
-					if (!RSxREG[i].CHCN[2] || RSxREG[i].CHCN[1:0] == 2'b00)
-						RBG_DC[i][0] <= |RSxREG[i].CHCN ? RB8[i] : {4'h0, (RCELLX[i][0] ^ RHF[i]) ? RB8[i][3:0] : RB8[i][7:4]};
-					case (RSxREG[i].CHCN)
-						3'b000: begin				//4bits/dot, 16 colors
-							RBG_CDP[i] <= {RPR[i], RCC[i], RPALN[i], RTP[i]};
-						end
-						3'b001: begin				//8bits/dot, 256 colors
-							RBG_CDP[i] <= {RPR[i], RCC[i], RPALN[i], RTP[i]};
-						end
-						3'b010,3'b011: begin		//16bits/dot, 2048/32768 colors
-							RBG_DC[i][2] <= (RCELLX[i][0] ^ RHF[i]) ? RCH[i][15: 8] : RCH[i][31:24];
-							RBG_CDP[i] <= {RPR[i], RCC[i], 7'h00, RTP[i]};
-						end
-						3'b100: begin				//32bits/dot, 16M colors
-									  RBG_DC[i][3] <= {     RCH[i][31:24]};
-									  RBG_DC[i][1] <= {     RCH[i][23:16]};
-									  RBG_DC[i][2] <= {     RCH[i][15: 8]};
-							RBG_CDP[i] <= {RPR[i], RCC[i], 7'h00, RTP[i]};
-						end
-						default:;
-					endcase
-				end
 			end
 			
 			RBG_PIPE[1].RxCT_EN <= RBG_PIPE[0].RxCT_EN;
-			
-			RBG_PN_PIPE[1] <= RBG_PN_PIPE[0];
 			end
 		end
 	end
