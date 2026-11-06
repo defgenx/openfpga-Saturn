@@ -1010,7 +1010,8 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [15: 0] N_MPW;
 	VDP2P_REGRAM #(3,16,1) nmp(CLK, RST_N, RES_N, MP_WR && RW_A[8:4] == 5'b00100, RW_A[3:1], RW_D & 16'h3F3F, {UL, N_MPI[1]}, N_MPW);
 	wire [ 5: 0] N_MPE = N_MPI[0] ? N_MPW[13:8] : N_MPW[5:0];
-	wire [19: 1] N_PNA = NxPNAddr2(N_PCNT, N_X, N_Y, NSxREG[UL].MP, N_MPE, NSxREG[UL].PLSZ, NSxREG[UL].CHSZ, NSxREG[UL].PNC.NxPNB, NSxREG[UL].ZMHF, NSxREG[UL].ZMQT);
+	//NxPNAddr2 is RxPNAddr2 on x + the reduction cell offset
+	wire [10: 0] N_OFFX = N_X + {N_PCNT & {NSxREG[UL].ZMQT, NSxREG[UL].ZMQT | NSxREG[UL].ZMHF},3'b000};
 	wire         R_PSET = UR1 ? 1'b1 : VA_PIPE[0].R0RP;
 	wire [11: 0] R_PX = VA_PIPE[0].RxX[R_PSET][11:0];
 	wire [11: 0] R_PY = VA_PIPE[0].RxY[R_PSET][11:0];
@@ -1018,7 +1019,10 @@ module VDP2P import VDP2P_PKG::*; (
 	wire [15: 0] R_MPW;
 	VDP2P_REGRAM #(4,16,1) rmp(CLK, RST_N, RES_N, MP_WR && (RW_A[8:4] == 5'b00101 || RW_A[8:4] == 5'b00110), {RW_A[5],RW_A[3:1]}, RW_D & 16'h3F3F, {R_PSET,R_MPI[3:1]}, R_MPW);
 	wire [ 5: 0] R_MPE = R_MPI[0] ? R_MPW[13:8] : R_MPW[5:0];
-	wire [19: 1] R_PNA = RxPNAddr2(R_PX, R_PY, RPxREG[R_PSET].MP, R_MPE, RPxREG[R_PSET].PLSZ, RSxREG[UR1].CHSZ, RSxREG[UR1].PNC.NxPNB);
+	//one pattern name address for the access UO takes (RBG over NBG)
+	wire [19: 1] PNA = RxPNAddr2(UR.PN ? R_PX : {1'b0,N_OFFX}, UR.PN ? R_PY : {1'b0,N_Y}, UR.PN ? RPxREG[R_PSET].MP : NSxREG[UL].MP,
+	                             UR.PN ? R_MPE : N_MPE, UR.PN ? RPxREG[R_PSET].PLSZ : NSxREG[UL].PLSZ,
+	                             UR.PN ? RSxREG[UR1].CHSZ : NSxREG[UL].CHSZ, UR.PN ? RSxREG[UR1].PNC.NxPNB : NSxREG[UL].PNC.NxPNB);
 	//character addresses
 	PN_t         NC_PN[4];
 	always_comb begin
@@ -1082,10 +1086,10 @@ module VDP2P import VDP2P_PKG::*; (
 	bit  [19: 1] UO;
 	always_comb begin
 		UO = '0;
-		if (UN.PN) UO = N_PNA;
+		if (UN.PN) UO = PNA;
 		if (UN.CH) UO = (UL[1] || !NSxREG[{1'b0,UL[0]}].BMEN) ? CHA : N_BMA;
 		if (UN.VS) UO = NxVS_ADDR;
-		if (UR.PN) UO = R_PNA;
+		if (UR.PN) UO = PNA;
 		if (UR.CH) UO = (!UR1 && RSxREG[0].BMEN) ? R_BMA : CHA;
 		if (UR.CT) UO = RxCT_ADDR[UR1];
 	end
@@ -1904,8 +1908,8 @@ module VDP2P import VDP2P_PKG::*; (
 		CTD_WE[1] = CT_USE ? CT_RP : VA2.RCTB;
 	end
 	always @(posedge CLK) begin
-		if (DOT_CE_R && CTD_WE[0]) CTD[0] <= CT_D;
-		if (DOT_CE_R && CTD_WE[1]) CTD[1] <= CT_D;
+		if (RST_N && DOT_CE_R && CTD_WE[0]) CTD[0] <= CT_D;
+		if (RST_N && DOT_CE_R && CTD_WE[1]) CTD[1] <= CT_D;
 	end
 	always @(posedge CLK or negedge RST_N) begin
 		RotCoord_t   ADD1;
@@ -2252,10 +2256,36 @@ module VDP2P import VDP2P_PKG::*; (
 	bit  [ 7: 0]    RBG_DC[2][4];
 	CellParam_t     RBG_CDP[2];
 	bit [31: 0]     NBG_CH[4];   //read registered at S_CH (proof and sim check there)
-	always @(posedge CLK or negedge RST_N) begin
-		bit [31: 0] PN_WD[2];
-		PN_t        PNW;
+	//Pattern name pipeline. Layers 0/1 write at DOT_CE_R (DOTCLK_DIV==3), layers 2/3 at DOT_CE_F (DOTCLK_DIV==1), one
+	//converter per pair; entry e always takes converter e&1, so each entry is a plain clock enable (own block).
+	PN_t         PNW[2];
+	bit  [ 7: 0] PNE;
+	always_comb begin
+		bit [31: 0] wd;
+		bit [ 1: 0] cnt;
 		int         x;
+		PNE = '0;
+		for (int j=0; j<2; j++) begin
+			x = (DOTCLK_DIV == 2'd1) ? j + 2 : j;
+			case (BG2.NxPNS[x])
+				2'd0: wd = RA0_BUF;
+				2'd1: wd = RA1_BUF;
+				2'd2: wd = RB0_BUF;
+				2'd3: wd = RB1_BUF;
+			endcase
+			PNW[j] = !NSxREG[x].PNC.NxPNB ? wd : PNData(NSxREG[x].PNC, NSxREG[x].CHSZ, NSxREG[x].CHCN, wd[31:16]);
+			cnt = BG2.NxPN_CNT[j];
+			if (CE_R && BG2.NxPN[x] && BG_PIPE[1].NxPN_EN[x]) begin
+				if (DOTCLK_DIV == 2'd3) PNE[{(NSxREG[j].ZMQT|NSxREG[j].ZMHF)&cnt[0],NSxREG[j].ZMQT&cnt[1],1'b0}|j] = 1'b1;
+				else if (DOTCLK_DIV == 2'd1) PNE[x] = 1'b1;
+			end
+		end
+	end
+	always @(posedge CLK) begin
+		for (int e=0; e<8; e++) if (RST_N && PNE[e]) PN_PIPE[0][e] <= PNW[e&1];
+		if (RST_N && DOT_CE_R) PN_PIPE[1] <= PN_PIPE[0];
+	end
+	always @(posedge CLK or negedge RST_N) begin
 		bit [31: 0] VS_WD[2];
 		bit [31: 0] LS_WD[2];
 		bit [ 1: 0] PN_CNT[4];
@@ -2289,28 +2319,6 @@ module VDP2P import VDP2P_PKG::*; (
 			// synopsys translate_on
 		end
 		else begin
-			if (CE_R) begin
-				//layers 0/1 write at DOT_CE_R (DOTCLK_DIV==3), layers 2/3 at DOT_CE_F (DOTCLK_DIV==1): one converter per pair
-				for (int j=0; j<2; j++) begin
-					x = (DOTCLK_DIV == 2'd1) ? j + 2 : j;
-					if (BG2.NxPN[x] && BG_PIPE[1].NxPN_EN[x]) begin
-						case (BG2.NxPNS[x])
-							2'd0: PN_WD[j] = RA0_BUF;
-							2'd1: PN_WD[j] = RA1_BUF;
-							2'd2: PN_WD[j] = RB0_BUF;
-							2'd3: PN_WD[j] = RB1_BUF;
-						endcase
-						PNW = !NSxREG[x].PNC.NxPNB ? PN_WD[j] : PNData(NSxREG[x].PNC, NSxREG[x].CHSZ, NSxREG[x].CHCN, PN_WD[j][31:16]);
-						if (DOTCLK_DIV == 2'd3) begin
-							PN_CNT[j] = BG2.NxPN_CNT[j];
-							PN_PIPE[0][{(NSxREG[j].ZMQT|NSxREG[j].ZMHF)&PN_CNT[j][0],NSxREG[j].ZMQT&PN_CNT[j][1],1'b0}|j] <= PNW;
-						end else if (DOTCLK_DIV == 2'd1) begin
-							PN_PIPE[0][x] <= PNW;
-						end
-					end
-				end
-			end
-//			
 			if (DOT_CE_R) begin
 				for (int i=0; i<2; i++) begin
 					if (BG2.NxVS[i]) begin
@@ -2333,8 +2341,6 @@ module VDP2P import VDP2P_PKG::*; (
 //				end
 					
 				BG_PIPE[1].NxPN_EN <= BG0.NxPN_EN;
-				
-				PN_PIPE[1] <= PN_PIPE[0];
 				
 				if (BG3.NxPN[0] && NSxREG[0].CHCN[2:1]) begin
 					NBG2_PN_PIPE[0] <= PN_PIPE[1][0];
