@@ -13,8 +13,7 @@
 // PSRAM1 can be busy for a few microseconds with a VDP1 burst.
 //
 // Bridge map (clk_74a):
-//   0x6xxxxxxx  TOC file (2048 bytes, big-endian words, data slot "CD TOC", pushed at load); also the buffer of the
-//               firmware's own target commands (fw_* port, docs/cd.md section 3a), readable by the host (toc_rd_q)
+//   0x6xxxxxxx  TOC file (2048 bytes, big-endian words, data slot "CD TOC", pushed at load)
 //   0x3xxxxxxx  sector ring window, slot n at +n*4096 (written by the dataslot reads issued here)
 //
 // TOC word layout (docs/cd.md): 0 magic, 1 {ver, ntracks BCD, hacks, ntracks}, 2 lead-out FAD,
@@ -42,9 +41,6 @@ module cd_stream #(
 	input  wire [31:0] bridge_addr,
 	input  wire [31:0] bridge_wr_data,
 	output reg         t_read = 1'b0,
-	output reg         t_getf = 1'b0,        // 0x0190 get filename
-	output reg         t_open = 1'b0,        // 0x0192 open file
-	output wire [31:0] toc_rd_q,             // bridge read data for 0x6xxxxxxx (one clock after bridge_addr)
 	output wire [15:0] t_id,
 	output wire [31:0] t_off,
 	output wire [31:0] t_baddr,
@@ -112,13 +108,7 @@ module cd_stream #(
 
 	output reg  [7:0]  err_cnt = 8'd0,       // bridge reads that ended with an error
 	output reg  [7:0]  ovf_cnt = 8'd0,       // bridge words lost to a full ring FIFO (saturating)
-	output reg  [7:0]  rd_cnt = 8'd0,        // bridge reads completed, with or without error (saturating)
-
-	// firmware port: CD block CPU MMIO words 0x30..0x33, used only while the engine is idle under lk_hold
-	input  wire        fw_wr,
-	input  wire [7:0]  fw_a,
-	input  wire [31:0] fw_d,
-	output wire [3:0]  fw_st                 // {busy, result code}; a TOC word read lands in lk_idx1/lk_start
+	output reg  [7:0]  rd_cnt = 8'd0         // bridge reads completed, with or without error (saturating)
 );
 
 // ------------------------------------------------------------------ bridge side (clk_74a)
@@ -139,45 +129,39 @@ always @(posedge clk_74a) begin
 	end
 end
 
-// target command request: fx_* are clk registers, stable while a request is open. A sector fetch reads into the ring;
-// a firmware command (fx_fw) reads into, or names, a buffer in the TOC RAM (word fx_dst, fx_len bytes).
+// dataslot read request: fx_* are clk registers, stable while a request is open
 reg  [31:0] fx_off = 32'd0;
-reg  [5:0]  fx_id = 6'd0;
+reg  [4:0]  fx_file = 5'd0;
 reg  [2:0]  fx_slot = 3'd0;
 reg         fx_s2048 = 1'b0;
 reg         fx_req_t = 1'b0;
-reg         fx_fw = 1'b0;
-reg  [1:0]  fx_kind = 2'd0;              // 0 read, 1 getfile, 2 openfile
-reg  [8:0]  fx_len = 9'd0;
-reg  [8:0]  fx_dst = 9'd0;
 
-assign t_id    = {10'd0, fx_id};
+assign t_id    = TRACK_SLOT_BASE + {11'd0, fx_file};
 assign t_off   = fx_off;
-assign t_baddr = fx_fw ? {4'h6, 17'd0, fx_dst, 2'b00} : {RING_BRIDGE[31:15], fx_slot, 7'd0, fx_s2048, 4'd0};
-assign t_len   = fx_fw ? {23'd0, fx_len} : fx_s2048 ? 32'd2048 : 32'd2352;
+assign t_baddr = {RING_BRIDGE[31:15], fx_slot, 7'd0, fx_s2048, 4'd0};
+assign t_len   = fx_s2048 ? 32'd2048 : 32'd2352;
 
 reg  [2:0]  rq_s = 3'd0;
 reg         rq_seen = 1'b0;
 reg  [1:0]  hs = 2'd0;
 reg  [2:0]  hc = 3'd0;
 reg         done_t = 1'b0;
-reg  [2:0]  err_r = 3'd0;
+reg         err_r = 1'b0;
 
 always @(posedge clk_74a) begin
 	rq_s <= {rq_s[1:0], fx_req_t};
 	case (hs)
 	2'd0: if (rq_s[2] != rq_seen) begin
 		rq_seen <= rq_s[2];
-		t_read <= (fx_kind == 2'd0); t_getf <= (fx_kind == 2'd1); t_open <= (fx_kind == 2'd2);
-		hc <= 3'd0; hs <= 2'd1;
+		t_read <= 1'b1; hc <= 3'd0; hs <= 2'd1;
 	end
 	2'd1: begin
 		hc <= hc + 3'd1;
-		if (hc == 3'd5) begin t_read <= 1'b0; t_getf <= 1'b0; t_open <= 1'b0; hs <= 2'd2; end
+		if (hc == 3'd5) begin t_read <= 1'b0; hs <= 2'd2; end
 	end
 	2'd2: if (t_ack || !t_done) hs <= 2'd3;
 	2'd3: if (t_done) begin
-		err_r <= t_err;
+		err_r <= (t_err != 3'd0);
 		done_t <= ~done_t;
 		hs <= 2'd0;
 	end
@@ -251,7 +235,7 @@ end
 reg  done_pend = 1'b0;
 wire done_ev = done_pend && wq_empty && ss == 4'd0 && !rg_wbusy && !rw_ev;
 always @(posedge clk) begin
-	if (done_sync && !fx_fw) done_pend <= 1'b1;
+	if (done_sync) done_pend <= 1'b1;
 	else if (done_ev) done_pend <= 1'b0;
 end
 
@@ -271,18 +255,10 @@ assign pf_ready = (n_ready != 4'd0);
 // ------------------------------------------------------------------ TOC engine
 reg  [8:0]  ra = 9'd0;
 wire [31:0] toc_q;
-wire        fw_cmd = fw_wr && fw_a == 8'h31;
-wire        fw_ta  = fw_wr && fw_a == 8'h32;       // TOC word address (and read)
-wire        fw_tw  = fw_wr && fw_a == 8'h33;       // TOC word write at ra, then ra + 1
 cd_toc_ram toc_ram (
-	.wclk(clk_74a), .we(bridge_wr && toc_sel), .wa(bridge_addr[10:2]), .wd(bridge_wr_data), .wq(toc_rd_q),
-	.rclk(clk), .rwe(fw_tw), .ra(ra), .rwd(fw_d), .rq(toc_q)
+	.wclk(clk_74a), .we(bridge_wr && toc_sel), .wa(bridge_addr[10:2]), .wd(bridge_wr_data),
+	.rclk(clk), .ra(ra), .rq(toc_q)
 );
-
-// firmware command: busy until the host's 'ok', then the result code in err_r
-reg        fw_busy = 1'b0;
-reg  [1:0] fw_rl = 2'd0;
-assign fw_st = {fw_busy, err_r};
 
 localparam [8:0] REC0 = 9'd72;
 localparam [4:0] E_IDLE = 0, E_WK1 = 1, E_WK2 = 2, E_LD0 = 3, E_LD1 = 4, E_LD2 = 5, E_LD3 = 6, E_LD4 = 7,
@@ -336,26 +312,10 @@ always @(posedge clk) begin
 	end
 	if (done_ev) begin
 		dd <= 5'd0; dd_run <= 1'b1;
-		if (err_r != 3'd0) err_cnt <= err_cnt + 8'd1;
+		if (err_r) err_cnt <= err_cnt + 8'd1;
 		if (rd_cnt != 8'hFF) rd_cnt <= rd_cnt + 8'd1;
 	end
 	if (commit_ev) commit_pend <= 1'b1;
-
-	// firmware port: 0x30 slot offset, 0x31 command {dst word[25:17], len[16:8], slot id[7:2], kind[1:0]} (kind 3:
-	// [2] commit the TOC in the RAM), 0x32 TOC word address (the word lands in lk_idx1/lk_start two
-	// clocks later), 0x33 TOC word write
-	fw_rl <= {fw_rl[0], fw_ta};
-	if (fw_rl[1]) begin lk_idx1 <= toc_q[31:24]; lk_start <= toc_q[23:0]; end
-	if (done_sync && fx_fw) fw_busy <= 1'b0;
-	if (fw_wr && fw_a == 8'h30) fx_off <= fw_d;
-	if (fw_cmd) begin
-		if (fw_d[1:0] == 2'd3) begin
-			if (fw_d[2]) commit_pend <= 1'b1;
-		end else begin
-			fx_fw <= 1'b1; fx_kind <= fw_d[1:0]; fx_id <= fw_d[7:2]; fx_len <= fw_d[16:8]; fx_dst <= fw_d[25:17];
-			fx_req_t <= ~fx_req_t; fw_busy <= 1'b1;
-		end
-	end
 
 	n_ready <= n_ready + {3'd0, ring_add} - {3'd0, ring_take};
 	if (ring_take) rd_ptr <= rd_ptr + 3'd1;
@@ -371,8 +331,6 @@ always @(posedge clk) begin
 
 	case (es)
 	E_IDLE: begin
-		if (fw_ta) ra <= fw_d[8:0];
-		if (fw_tw) ra <= ra + 9'd1;
 		if (commit_pend && !lk_hold) begin
 			commit_pend <= 1'b0;
 			disc_ok <= 1'b0;
@@ -448,8 +406,7 @@ always @(posedge clk) begin
 	// fetch: byte offset = file sector * 2352 (or 2048), issue
 	E_F1: begin fx_off <= fsec[18:0] * fx_mul; es <= E_F4; end        // one DSP multiplier instead of three adds
 	E_F4: begin
-		fx_id    <= TRACK_SLOT_BASE[5:0] + {1'b0, c_file};
-		fx_fw    <= 1'b0; fx_kind <= 2'd0;
+		fx_file  <= c_file;
 		fx_slot  <= wr_ptr;
 		fx_s2048 <= c_s2048;
 		fx_req_t <= ~fx_req_t;

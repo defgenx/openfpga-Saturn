@@ -30,7 +30,6 @@
         "parameters": "0x09",
         "deferload": true,
         "extensions": [
-          "cue",
           "img",
           "bin"
         ],

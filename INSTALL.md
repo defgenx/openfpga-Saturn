@@ -50,13 +50,8 @@ asks which one to use and remembers it; it can be changed from the core's menu.
 
 ## 3. Add discs
 
-Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly or in a subfolder per game.
-
-**Without a PC tool** (untested on hardware): pick the game's `.cue` as the disc image and skip the TOC. The core
-reads the cue and opens its track files itself (up to 23 files). The RAM cartridge is then not chosen from the
-database: set it in the core's menu if the game needs one.
-
-**With the installer:** run it again. For every `.cue` it runs
+Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly or in a subfolder per game,
+then run the installer again. The core does not read `.cue` sheets itself: for every `.cue` the installer runs
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
 - `Game (USA).toc` next to the tracks (and a merged `Game (USA).img` when the disc has more than 24 track files);

@@ -38,9 +38,6 @@ module saturn_pocket #(
 
 	// APF target commands for disc reads (clk_74a)
 	output wire        target_dataslot_read,
-	output wire        target_dataslot_getfile,
-	output wire        target_dataslot_openfile,
-	output wire [31:0] toc_rd_q,                  // bridge read data at 0x6xxxxxxx (cd_stream TOC RAM)
 	output wire [15:0] target_dataslot_id,
 	output wire [31:0] target_dataslot_slotoffset,
 	output wire [31:0] target_dataslot_bridgeaddr,
@@ -416,10 +413,6 @@ wire [23:0] toc_end, lk_start, sd_hdr, lk_x, pf_fad;
 wire        lk_go, lk_byidx, lk_hold, lk_busy, eng_idle, lk_data, lk_s2048;
 wire        pf_flush, pf_en, pf_ready, sd_go, sd_spd2, sd_synth, fd_busy;
 wire  [1:0] sd_kind;
-wire        fw_wr;
-wire  [7:0] fw_a;
-wire [31:0] fw_d;
-wire  [3:0] fw_st;
 `ifdef POCKET_DEBUG_OVERLAY
 wire  [7:0] dbg_rd_err, dbg_rd_ovf, dbg_rd_cnt;   // cd_stream: disc reads ended in error, ring words lost, reads completed
 `endif
@@ -556,7 +549,6 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.PF_FLUSH(pf_flush), .PF_FAD(pf_fad), .PF_EN(pf_en), .PF_READY(pf_ready),
 	.SD_GO(sd_go), .SD_KIND(sd_kind), .SD_SYNTH(sd_synth), .SD_SPD2(sd_spd2), .SD_HDR(sd_hdr), .FD_BUSY(fd_busy),
 	.CD_DATA18(CD_DATA),
-	.FW_WR(fw_wr), .FW_A(fw_a), .FW_D(fw_d), .FW_ST(fw_st),
 `endif
 `ifndef POCKET_CUT_CDB_LLE
 `ifndef POCKET_CUT_CD
@@ -649,8 +641,7 @@ wire [15:0] rg_q;
 cd_stream stream (
 	.clk(clk_sys), .rst_n(~(reset | download | rst_ram)), .ce(CDD_2X_CE),
 	.clk_74a(clk_74a), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
-	.t_read(target_dataslot_read), .t_getf(target_dataslot_getfile), .t_open(target_dataslot_openfile),
-	.toc_rd_q(toc_rd_q), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
+	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
 	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
@@ -665,17 +656,13 @@ cd_stream stream (
 	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
 	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
 `ifdef POCKET_DEBUG_OVERLAY
-	.err_cnt(dbg_rd_err), .ovf_cnt(dbg_rd_ovf), .rd_cnt(dbg_rd_cnt),
+	.err_cnt(dbg_rd_err), .ovf_cnt(dbg_rd_ovf), .rd_cnt(dbg_rd_cnt)
 `else
-	.err_cnt(), .ovf_cnt(), .rd_cnt(),
+	.err_cnt(), .ovf_cnt(), .rd_cnt()
 `endif
-	.fw_wr(fw_wr), .fw_a(fw_a), .fw_d(fw_d), .fw_st(fw_st)
 );
 `endif
 `ifndef POCKET_CUT_CDB_LLE
-assign target_dataslot_getfile = 1'b0;
-assign target_dataslot_openfile = 1'b0;
-assign toc_rd_q = 32'd0;
 `ifndef POCKET_CUT_CD
 cdd_pocket cdd (
 	.CLK(clk_sys),
