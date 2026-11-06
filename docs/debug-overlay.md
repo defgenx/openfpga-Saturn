@@ -7,7 +7,7 @@ When the Saturn produces no sync or DE (no VS and DE activity in the last 0.3 to
 910 x 263 on the 352 clock (59.8 Hz on both), 640 x 224 active, mid-grey background; so the squares show even with
 the Saturn in reset.
 
-Colours: green = condition holds; red = not; a square can also be left out (4); yellow = the signal toggled in the last 0.3 to 0.6 s (activity squares are
+Colours: green = condition holds; red = not; yellow = the signal toggled in the last 0.3 to 0.6 s (activity squares are
 never green). Legend, left to right:
 
 | # | Square | Kind | Meaning when green / yellow |
@@ -15,31 +15,33 @@ never green). Legend, left to right:
 | 1 | PLL | level | system PLL locked |
 | 2 | SCSP out | activity | the SCSP's mixed output sample (`SOUND_L`/`SOUND_R`) changed; tracked by its parity, which toggles only between different samples, so yellow also means a non-zero sample |
 | 3 | I2S out | activity | the I2S data pin `audio_dac` (after `pocket_audio` and `sound_i2s`) toggling; it stays low while every sample is zero |
-| 4 | Sound RAM | level | the last SH-2 read of sound RAM word 0 (0x25A00000) returned the value of the SH-2 write before it: green = match, red = mismatch, not drawn until the first read after a write (debug6 taps `DBG_SND`) |
-| 5 | SDRAM | level | SDRAM init done |
-| 6 | PSRAM | level | both PSRAM controllers idle after init |
-| 7 | 68K reset | level | sound 68K out of reset (`SNDRES_N` high, SMPC SNDON) |
+| 4 | Disc read | sticky level | at least one disc data slot read completed (`cd_stream` `rd_cnt`, counted since power-up) |
+| 5 | 16 reads | sticky level | 16 disc reads completed (the BIOS reads past the disc header) |
+| 6 | 64 reads | sticky level | 64 disc reads completed (a game's files are loading) |
+| 7 | Game code | sticky level | the master SH-2 executed the disc's first-read address (IP.BIN bytes 0xF0-0xF3, taken from the header replay; Hyper Duel: 0x06010000). An address range does not work: the BIOS itself runs code in WRAM-H above 0x06004000 |
 | 8 | 68K bus | activity | sound 68K address strobe (`SCAS_N`) toggling |
-| 9 | WRAM-H | sticky level | the CPU bus has selected WRAM-H (0x06000000) at least once since power-up |
+| 9 | 352 clock | sticky level | the SMPC selected the 352 clock (`SMPC_DOTSEL`, CKCHG352) at least once since power-up |
 | 10 | DISP | level | VDP2 TVMD.DISP set |
 | 11 | VBL | activity | VBL_N toggling (VDP2 vertical blank) |
-| 12 | SCU | activity | SH-2 IRL (SCU interrupt level) changing |
+| 12 | Read errors | sticky level | no disc read has ended with an error (`cd_stream` `err_cnt` zero); red after the first error |
 | 13 | CD | activity | CD block register window (ACS2#) accessed |
 | 14 | SMPC | level | SMPC firmware released the master SH-2 (MSHRES# high) |
-| 15 | SDRAM self-check | level | always red: the self-check in `sdram_pocket` is compiled out (`ifdef POCKET_NEVER`, it did not fit); with it, after SDRAM init `sdram_pocket` writes `A55A` / `5AA5` to sound RAM words 0x100 / 0x20100 and reads both back, green if both match |
+| 15 | Lost words | sticky level | no disc data word was lost to a full ring FIFO (`cd_stream` `ovf_cnt` zero); red after the first loss |
 | 16 | TOC | level | disc TOC loaded (`disc_ok`; wired with `POCKET_CUT_CDB_LLE`, which `ap_core.qsf` sets, else always red) |
 
-Squares 2, 3, 7, 8 and 11 are read from registered copies of their taps (2: the SCSP output parity, 3: the
-I2S pin through a two-flop synchroniser; 7, 8, 11: `SNDRES_N`, `SCAS_N` (the `DBG_68K` tap) and `VBL_N`). Square 4 takes
-`DBG_SND` unregistered, as the debug6 row did (event and data are valid in the same cycle), and registers the compare.
+Squares 2, 3, 8 and 11 are read from registered copies of their taps (2: the SCSP output parity, 3: the
+I2S pin through a two-flop synchroniser; 8, 11: `SCAS_N` (the `DBG_68K` tap) and `VBL_N`). The boot squares (4-7, 9,
+12, 15) are registered in `saturn_pocket`; the `cd_stream` counters are never cleared (a menu Reset keeps them).
 
-Sound path, from the core outward: 8 yellow = the 68K runs; 4 green = the SH-2 reads back what it wrote to sound RAM;
-2 yellow = the SCSP mixes non-zero samples; 3 yellow = non-zero samples reach the DAC pin.
+Sound path, from the core outward: 8 yellow = the 68K runs; 2 yellow = the SCSP mixes non-zero samples; 3 yellow =
+non-zero samples reach the DAC pin.
 
-Reading it: 1 red means no clocks. 14 red means
-the master SH-2 is held by the SMPC. 7 red means the BIOS never released the sound 68K (SMPC SNDON); 7 green with 8 not
-yellow means the 68K is out of reset but not running. 9 green means the BIOS reached its copy of WRAM-H; 10 shows whether the game or BIOS has
-turned the display on.
+Disc boot, in order: 16 TOC loaded, 4 first disc read, 5 sixteen reads, 6 sixty-four reads, 7 game code running, 9
+the game selected the 352 clock (Hyper Duel does this before its first picture). The first red square of that chain
+is where the boot stops. 12 or 15 red means the disc data reaching the core is damaged or incomplete.
+
+Reading it: 1 red means no clocks. 14 red means the master SH-2 is held by the SMPC. 10 shows whether the game or
+BIOS has turned the display on.
 
 Cost: about 60 ALMs (activity detectors, a 25 bit window counter, the generated timing shares the overlay counters).
 

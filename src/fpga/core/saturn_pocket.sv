@@ -807,16 +807,19 @@ always @(posedge clk_sys) begin
 	dbg_pll_s  <= {dbg_pll_s[0], lock_s[1]};
 	dbg_win    <= dbg_win + 25'd1;
 end
-// boot progress (squares 4-7, 9, 12, 15), sticky from power-up: disc reads completed (1, 16, 64), MSH ran the game
-// (PC in WRAM-H at 0x06004000 or above, the lowest first-read address), the SMPC selected the 352 clock, and the
-// two cd_stream error counters
+// boot progress (squares 4-7, 9, 12, 15), sticky from power-up: disc reads completed (1, 16, 64), MSH executed the
+// disc's first-read address (header bytes 0xF0-0xF3, from the header replay; the BIOS itself runs code in WRAM-H
+// above 0x06004000, so no address range works), the SMPC selected the 352 clock, and the two cd_stream error counters
 reg  [2:0] dbg_rd_th = 3'd0;
 reg        dbg_game = 1'b0, dbg_d352 = 1'b0, dbg_rerr = 1'b0, dbg_rovf = 1'b0;
 reg [31:0] dbg_pc_q = 32'd0;
+reg [28:0] dbg_fra = 29'h1FFFFFFF;
 always @(posedge clk_sys) begin
 	dbg_pc_q  <= dbg_txt[99:68];
 	dbg_rd_th <= {dbg_rd_cnt >= 8'd64, dbg_rd_cnt >= 8'd16, dbg_rd_cnt != 8'd0};
-	if (dbg_pc_q[28:20] == 9'h060 && dbg_pc_q[19:14] != 6'd0) dbg_game <= 1'b1;
+	if (boot_busy && boot_wr && boot_addr == 9'h0F0) dbg_fra[28:16] <= {boot_data[4:0], boot_data[15:8]};
+	if (boot_busy && boot_wr && boot_addr == 9'h0F2) dbg_fra[15:0]  <= {boot_data[7:0], boot_data[15:8]};
+	if (dbg_pc_q[28:0] == dbg_fra) dbg_game <= 1'b1;
 	if (SMPC_DOTSEL) dbg_d352 <= 1'b1;
 	dbg_rerr  <= dbg_rd_err != 8'd0;
 	dbg_rovf  <= dbg_rd_ovf != 8'd0;
@@ -860,7 +863,7 @@ wire [15:0] dbg_g = {
 	dbg_tap_q[6],                                        // 10 VDP2 DISP
 	dbg_d352,                                          //  9 SMPC selected the 352 clock (CKCHG352) at least once
 	1'b0,                                              //  8 68K bus (activity)
-	dbg_game,                                          //  7 MSH ran from WRAM-H >= 0x06004000 (game code)
+	dbg_game,                                          //  7 MSH executed the disc's first-read address (game code)
 	dbg_rd_th[2],                                      //  6 64 disc reads completed
 	dbg_rd_th[1],                                      //  5 16 disc reads completed
 	dbg_rd_th[0],                                      //  4 first disc read completed
