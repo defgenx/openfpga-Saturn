@@ -321,14 +321,10 @@ module SH7604P
 		.IBUS_WAIT(IBUS_WAIT)
 	);
 	
-	assign IBUS_DI = INTC_ACT ? INTC_DO : 
-						  DIVU_ACT ? DIVU_DO : 
-						  DMAC_ACT ? DMAC_DO : 
-						  FRT_ACT  ? FRT_DO : 
-						  WDT_ACT  ? WDT_DO : 
-						  SCI_ACT  ? SCI_DO : 
-						  UBC_ACT  ? UBC_DO : 
-						             BSC_IBUS_DO;
+	// The register windows are disjoint and every *_DO except INTC_DO is 0 while its *_ACT is low: one AND-OR.
+	wire   IBUS_ANY = INTC_ACT | DIVU_ACT | DMAC_ACT | FRT_ACT | WDT_ACT | SCI_ACT | UBC_ACT;
+	assign IBUS_DI = ({32{INTC_ACT}} & INTC_DO) | DIVU_DO | DMAC_DO | FRT_DO | WDT_DO | SCI_DO | UBC_DO |
+	                 ({32{~IBUS_ANY}} & BSC_IBUS_DO);
 	assign IBUS_WAIT = INTC_ACT ? INTC_BUSY :
 	                   DIVU_ACT ? DIVU_BUSY :
 						    DMAC_ACT ? 1'b0 : 
@@ -534,7 +530,7 @@ module SH7604P
 	);
 	
 	assign {A,DO}                                 = !BUS_RLS ? {IA,IDO}                                     : {EA,EDO};
-	assign IDI                                    = !BUS_RLS ? DI                                           : EDO;
+	assign IDI                                    = DI;   // the BSC samples DI only while it owns the bus (check in SH7604P_BSC)
 	assign {BS_N,CS0_N,CS1_N,CS2_N,CS3_N}         = !BUS_RLS ? {IBS_N,ICS0_N,ICS1_N,ICS2_N,ICS3_N}          : {EBS_N,ECS0_N,ECS1_N,ECS2_N,ECS3_N};
 	assign {RD_WR_N,CE_N,OE_N,WE_N,RD_N,IVECF_N}  = !BUS_RLS ? {IRD_WR_N,ICE_N,IOE_N,IWE_N,IRD_N,IIVECF_N}  : {ERD_WR_N,ECE_N,EOE_N,EWE_N,ERD_N,EIVECF_N};
 	assign EDI = DI;

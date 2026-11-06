@@ -46,8 +46,7 @@ module SH2P_core
 
 	//CPU registers
 	bit [31: 0] PC;
-	bit [31: 0] GBR;
-	bit [31: 0] VBR;
+	bit         GBR_V, VBR_V;   // GBR / VBR hold a written value (else they read as their reset value 0); the values are register-file words 17 / 18
 	SR_t        SR;
 	
 	PipelineState_t PIPE;
@@ -94,9 +93,11 @@ module SH2P_core
 	bit [31: 0] W2_D;
 	bit         W2_E;
 	
+	// GBR / VBR are read through the RB port: an SCR operand never uses the general register on that port
+	wire [ 4: 0] RB_RN = EX_DI.DP.RSB == SCR ? {3'b100, EX_DI.CTRL.S} : EX_DI.RB.N;
 	SH2P_regfile regfile (.CLK(CLK), .RST_N(RST_N), .CE_R(CE), .EN(EN),
 	                      .W1_ADDR(W1_N), .W1_D(W1_D), .W1_E(W1_E), .W2_ADDR(W2_N), .W2_D(W2_D), .W2_E(W2_E),
-	                      .RA_ADDR(EX_DI.RA.N), .RA_Q(REGS_RAQ), .RB_ADDR(EX_DI.RB.N), .RB_Q(REGS_RBQ), .R0_Q(REGS_R0Q));
+	                      .RA_ADDR(EX_DI.RA.N), .RA_Q(REGS_RAQ), .RB_ADDR(RB_RN), .RB_Q(REGS_RBQ), .R0_Q(REGS_R0Q));
 
 	
 	//**********************************************************
@@ -400,8 +401,8 @@ module SH2P_core
 		
 		case (EX_DI.CTRL.S)
 			SR_:  SCR_VAL = SR & 32'h000003F3;
-			GBR_: SCR_VAL = GBR;
-			VBR_: SCR_VAL = VBR;
+			GBR_: SCR_VAL = REGS_RBQ & {32{GBR_V}};
+			VBR_: SCR_VAL = REGS_RBQ & {32{VBR_V}};
 			default: SCR_VAL = 32'h00000000;
 		endcase
 		
@@ -550,21 +551,21 @@ module SH2P_core
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			SR <= SR_RESET;
-			GBR <= '0;
-			VBR <= '0;
+			GBR_V <= 0;
+			VBR_V <= 0;
 		end
 		else if (!RES_N) begin
 			SR <= SR_RESET;
-			GBR <= '0;
-			VBR <= '0;
+			GBR_V <= 0;
+			VBR_V <= 0;
 		end
 		else if (EN && CE) begin
 			if (!EX_STALL) begin
 				if (EX_DI.CTRL.W) begin
 					case (EX_DI.CTRL.S)
 						SR_:  SR <= SR_NEW & 32'h000003F3;
-						GBR_: GBR <= ALU_RES;
-						VBR_: VBR <= ALU_RES;
+						GBR_: GBR_V <= 1;   // ALU_RES goes to the register file (W1)
+						VBR_: VBR_V <= 1;
 						default:;
 					endcase
 				end
@@ -672,8 +673,10 @@ module SH2P_core
 	wire EX_LD = (EX_DI.MEM.R & ~EX_DI.MAC.W) | (EX_DI.MAC.R & ~EX_DI.MEM.W);
 	wire EX_WA = EX_DI.RA.W & ~EX_LD;
 	wire EX_WB = EX_DI.RB.W & (~EX_DI.RA.W | EX_DI.RA.N != EX_DI.RB.N);
-	assign W1_E = (EX_WA | EX_WB) & ~EX_STALL & RES_N;
-	assign W1_N = EX_WA ? EX_DI.RA.N : EX_DI.RB.N;
+	//GBR / VBR writes (LDC) never share an EX step with a general register write or BR.BI (checked over the decode table)
+	wire EX_WC = EX_DI.CTRL.W & (EX_DI.CTRL.S == GBR_ | EX_DI.CTRL.S == VBR_);
+	assign W1_E = (EX_WA | EX_WB | EX_WC) & ~EX_STALL & RES_N;
+	assign W1_N = EX_WC ? {3'b100, EX_DI.CTRL.S} : EX_WA ? EX_DI.RA.N : EX_DI.RB.N;
 	assign W1_D = EX_DI.BR.BI ? REG_B : ALU_RES;
 	
 	wire LD_KILL = (MA_WA & (PIPE.MA.DI.RA.N == PIPE.WB.DI.RA.N)) | (MA_WB & (PIPE.MA.DI.RB.N == PIPE.WB.DI.RA.N));

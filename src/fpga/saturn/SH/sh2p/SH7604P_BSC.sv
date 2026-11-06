@@ -525,6 +525,9 @@ module SH7604P_BSC
 				default:;
 			endcase
 			
+			// synopsys translate_off
+			if (CE_F && (DATA_LATCH || BUS_STATE == TV2) && BUS_RLS) $display("MISMATCH %m: DI sampled while the bus is released");
+			// synopsys translate_on
 			if (CE_F) begin
 				if (DATA_LATCH) begin
 					case (AREA_SZ)
