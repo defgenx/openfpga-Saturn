@@ -1666,6 +1666,40 @@ module VDP2P import VDP2P_PKG::*; (
 	VDP2P_DADD d_ny0(ONE, NMOSY_D[0], NVCSY_D[0], NYOFS_D[0]);
 	VDP2P_DADD d_ny1(ONE, NMOSY_D[1], NVCSY_D[1], NYOFS_D[1]);
 	always @(posedge CLK) if (DOT_CE_R) NYOFS <= NYOFS_D;
+	//Horizontal scroll (XS = NX + NSX, NSX) in a block of their own with one enable per layer: the cell boundary
+	//step, and the line scroll load (LS_POS 0) of layer pair N2, which wins.
+	ScrollData_t XS_D[4], NSX_D[4];
+	bit          XS_E[4], NSX_E[4];
+	always_comb begin
+		bit          n2, bnd, ls0, rd, l;
+		bit  [31: 0] wd;
+		ScrollData_t sum;
+		n2  = VA2.LS_POS[2];
+		bnd = NPN_FETCH && (CELLX | {HRES[1],2'b00}) == 3'd7;
+		ls0 = VA2.LS && VA2.LS_POS[1:0] == 2'b00;
+		wd  = VRAM_BANK_2 == 2'b00 ? RA0_BUF : VRAM_BANK_2 == 2'b01 ? RA1_BUF : VRAM_BANK_2 == 2'b10 ? RB0_BUF : RB1_BUF;
+		rd  = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,n2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
+		sum = NSxREG[{1'b0,n2}].SCX + wd[26:8];
+		for (int i = 0; i < 4; i++) begin
+			l = ls0 && n2 == i[0];
+			if (i < 2) begin
+				NSX_D[i] = !NSxREG[i].LSCX ? NSxREG[i].SCX : sum;
+				NSX_E[i] = l && (!NSxREG[i].LSCX || rd);
+				XS_D[i]  = l ? (NSX_E[i] ? NSX_D[i] : NSX[i]) : XSN[i];
+			end else begin
+				NSX_D[i] = NSxREG[i].SCX;
+				NSX_E[i] = l;
+				XS_D[i]  = l ? NSxREG[i].SCX : XS[i] + CX[i] + 19'h00100;
+			end
+			XS_E[i] = bnd || l;
+		end
+	end
+	always @(posedge CLK) begin
+		for (int i = 0; i < 4; i++) begin
+			if (RST_N && DOT_CE_R && XS_E[i]) XS[i] <= XS_D[i];
+			if (RST_N && DOT_CE_R && NSX_E[i]) NSX[i] <= NSX_D[i];
+		end
+	end
 	always @(posedge CLK or negedge RST_N) begin
 		bit  [31: 0] LS_WD;
 		bit          LS_RD;
@@ -1674,8 +1708,6 @@ module VDP2P import VDP2P_PKG::*; (
 		
 		if (!RST_N) begin
 			// synopsys translate_off
-			XS <= '{4{'0}};
-			NSX <= '{4{'0}};
 			NY <= '{4{'0}};
 			NSY <= '{4{'0}};
 			LZMX <= '{2{'0}};
@@ -1694,13 +1726,9 @@ module VDP2P import VDP2P_PKG::*; (
 			
 			if (DOT_CE_R) begin
 				if (NPN_FETCH && (CELLX | {HRES[1],2'b00}) == 3'd7) begin
-					XS[0] <= XSN[0];
 					CX[0] <= '0;
-					XS[1] <= XSN[1];
 					CX[1] <= '0;
-					XS[2] <= XS[2] + CX[2] + 19'h00100;
 					CX[2] <= '0;
-					XS[3] <= XS[3] + CX[3] + 19'h00100;
 					CX[3] <= '0;
 				end
 				NVCSY <= NVCSY_D;
@@ -1726,13 +1754,7 @@ module VDP2P import VDP2P_PKG::*; (
 					LS_RD = ((WSCRNY[2:0] & NxLSSMask(NSxREG[{1'b0,N2}].LSS,1'b0) & {2'b11,~DDI}) == 3'b000);
 					case (VA2.LS_POS[1:0])
 						2'b00: begin
-							                                                XS[{1'b0,N2}] <= NSX[{1'b0,N2}];
-							if (!NSxREG[{1'b0,N2}].LSCX)              begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX; end
-							else if (LS_RD)                           begin NSX[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; XS[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCX + LS_WD[26:8]; end
-							
-							                                                XS[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
-					                                                      NSX[{1'b1,N2}] <= NSxREG[{1'b1,N2}].SCX;
-						end
+							end
 						2'b01: begin
 							if (NSxREG[{1'b0,N2}].LSCY && LS_RD)      begin NSY[{1'b0,N2}] <= NSxREG[{1'b0,N2}].SCY + LS_WD[26:8]; 
 							                                                NY[{1'b0,N2}]  <= '0; end
