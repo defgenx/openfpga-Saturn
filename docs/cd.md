@@ -66,12 +66,12 @@ FIFO has drained.
 
 | id | name | use |
 |---|---|---|
-| 0 | Game (.json) | first slot: a game's instance JSON (parameters `0x13`), optional; binds the TOC and the track files |
+| 0 | Game (.json) | first slot: a game's instance JSON (parameters `0x113`: reloadable, core-specific, instance JSON, full reload of core), optional; binds the TOC and the track files |
 | 1 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
 | 16 | Disc image | the disc as one `.img`/`.bin` (mktoc's merged image), picked directly, optional; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
 | 2 | Disc TOC | the disc's 2048-byte `.toc`, picked directly (reloadable) or bound by the JSON, **pushed** at load to bridge `0x60000000` |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
-| 17..39 | CD file 01..23 | `deferload`, `secondary` (filled only from a JSON); the Pocket has not served them so far (below) |
+| 17..39 | CD file 01..23 | `deferload`, `secondary` (filled only from a JSON), served once slot 0 has the full-reload bit (below) |
 
 **Hardware evidence (v0.2.18, 2026-11-06).** With the disc files bound by an instance JSON (slot 1, parameters
 `0x11` or `0x13`, the layout up to v0.2.18) the Pocket pushes the TOC but never answers a single `0x0180` read of the
@@ -79,7 +79,11 @@ deferload track slots: the BIOS shows "Disc unsuitable for this system". With th
 picked directly, defined as the PSX core defines its disc (deferload, required, an `address`, a 1 GB
 `size_maximum`), Hyper Duel and Panzer Dragoon boot. Only the picked file is served, so a disc must be one file:
 `mktoc.py` merges the tracks by default (section 4). Separate track files would need the core to open them itself
-(target `0x0192` openfile, as the PSX and MegaCD cores do); not implemented.
+(target `0x0192` openfile); not implemented.
+
+**Hardware evidence (2026-11-06, later).** With slot 0 parameters `0x113` (bit 8, "full reload of core", added to
+`0x13`) and the track slots `deferload` + `secondary`, the Pocket serves the JSON's track files: a game picked as its
+`.json`, with separate track files, boots. Without bit 8 no read of a JSON-bound deferload slot is ever answered.
 
 The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets. The core
 decodes the pushed slots by bridge address and reads only ids 16..39 by id, so the slot order needs no RTL change.

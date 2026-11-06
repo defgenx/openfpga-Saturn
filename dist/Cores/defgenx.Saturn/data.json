@@ -6,7 +6,7 @@
         "name": "Game (.json)",
         "id": 0,
         "required": false,
-        "parameters": "0x13",
+        "parameters": "0x113",
         "extensions": [
           "json"
         ]
