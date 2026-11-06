@@ -2217,7 +2217,8 @@ module VDP2P import VDP2P_PKG::*; (
 	bit             RBG_TP_PIPE[2];
 	bit  [ 7: 0]    RBG_DC[2][4];
 	CellParam_t     RBG_CDP[2];
-	bit [31: 0]     NBG_CH[4];
+	//no_rw_check: an entry is never read in the clock after its write (proof and sim check at the write, below)
+	(* ramstyle = "no_rw_check" *) bit [31: 0] NBG_CH[4];
 	always @(posedge CLK or negedge RST_N) begin
 		bit [31: 0] PN_WD[2];
 		PN_t        PNW;
@@ -2541,6 +2542,21 @@ module VDP2P import VDP2P_PKG::*; (
 		P_E4H <= S_E4H; P_E4L <= S_E4L; P_E8 <= S_E8; P_E16 <= S_E16; P_E32 <= S_E32;
 	end
 	wire [31: 0] S_CH  = NBG_CH[P_SL];
+	//The clock after a write at CSEQ 3 / 4 (layer 3 / 2) reads for array 1 / 0 (layer 0-1 / 0); after CSEQ 5 / 6 the P
+	//stage is a non-visit (S_V has CVIS). So NBG_CH needs no read-during-write pass-through.
+`ifdef VERILATOR
+	bit          CH_WR_Q;
+	bit  [ 1: 0] CH_WL_Q;
+	int          CH_RAW = 0;               //reads in the clock after a write (any entry)
+	always @(posedge CLK) begin
+		CH_WR_Q <= CSEQ >= 3'd3 && BG2.NxCH[CHL]; CH_WL_Q <= CHL;
+		if (CH_WR_Q && (P_E4H || P_E4L || P_E8 || P_E16 || P_E32)) begin
+			CH_RAW <= CH_RAW + 1;
+			if (CH_RAW == 999) $display("VDP2P NBG_CH: 1000 reads in the clock after a write");
+			if (P_SL == CH_WL_Q) $display("VDP2P NBG_CH: same-entry read after write (no_rw_check violated)");
+		end
+	end
+`endif
 	bit  [ 3: 0] IL[8], IH[8];
 	bit  [ 7: 0] EL, EH;
 	always_comb begin
