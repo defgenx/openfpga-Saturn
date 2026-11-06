@@ -290,7 +290,7 @@ wire           ramh_ram_sel = !ramh_addr[19:12];
 reg            ramh_ram_sel_q = 1'b0;
 always @(posedge clk) ramh_ram_sel_q <= ramh_ram_sel;
 wire [ 31:  0] ramh_ram_q;
-ddp_ram #(10) ramh_ram (clk, ramh_addr[11:2], ramh_din, ramh_wr & {4{ramh_ram_sel_q}}, ramh_addr[11:2], ramh_ram_q);
+ddp_ram #(10) ramh_ram (clk, ramh_addr[11:2], ramh_din, ramh_wr & {4{ramh_ram_sel_q}}, ramh_ram_q);
 
 // WRAM-H line lookup. The valid bit is folded into the tag compare (ramh_hit) and the write invalidation uses it too: a
 // matching dirty line is dirty already, and a read request edge (the clk_ram edge after a clk_sys edge) never meets a
@@ -786,24 +786,29 @@ module ddp_cache_ram #(parameter AW = 4, parameter RB = 16) (
 endmodule
 
 // WRAM-H low 4 KB mirror, byte enables
+// One address for read and write; q is the word at the address of the last edge including that edge's write.
+// The M10K read is old-data; the written lanes come from the registered write data (no generic pass-through).
 module ddp_ram #(parameter wa = 10) (
 	input  wire          clock,
-	input  wire [wa-1:0] wraddress,
+	input  wire [wa-1:0] address,
 	input  wire [31:0]   data,
 	input  wire [ 3:0]   wren,
-	input  wire [wa-1:0] rdaddress,
 	output wire [31:0]   q
 );
 	reg [31:0] mem [0:(1<<wa)-1];
-	reg [wa-1:0] ra;
+	reg [31:0] q_old, d_q;
+	reg [ 3:0] we_q;
 	always @(posedge clock) begin
-		if (wren[0]) mem[wraddress][ 7: 0] <= data[ 7: 0];
-		if (wren[1]) mem[wraddress][15: 8] <= data[15: 8];
-		if (wren[2]) mem[wraddress][23:16] <= data[23:16];
-		if (wren[3]) mem[wraddress][31:24] <= data[31:24];
-		ra <= rdaddress;
+		if (wren[0]) mem[address][ 7: 0] <= data[ 7: 0];
+		if (wren[1]) mem[address][15: 8] <= data[15: 8];
+		if (wren[2]) mem[address][23:16] <= data[23:16];
+		if (wren[3]) mem[address][31:24] <= data[31:24];
+		q_old <= mem[address];
+		we_q  <= wren;
+		d_q   <= data;
 	end
-	assign q = mem[ra];
+	assign q = {we_q[3] ? d_q[31:24] : q_old[31:24], we_q[2] ? d_q[23:16] : q_old[23:16],
+	            we_q[1] ? d_q[15: 8] : q_old[15: 8], we_q[0] ? d_q[ 7: 0] : q_old[ 7: 0]};
 endmodule
 
 // posted write FIFO, 2**l entries of W bits, in an M10K (registered read address: no MLAB, no bypass registers).
