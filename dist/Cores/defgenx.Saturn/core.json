@@ -9,8 +9,8 @@
       "description": "Sega Saturn, port of the Saturn_MiSTer core",
       "author": "defgenx",
       "url": "https://github.com/defgenx/openfpga-Saturn",
-      "version": "0.2.16",
-      "date_release": "2026-11-04"
+      "version": "0.2.18",
+      "date_release": "2026-11-06"
     },
     "framework": {
       "target_product": "Analogue Pocket",
