@@ -67,7 +67,7 @@ FIFO has drained.
 | id | name | use |
 |---|---|---|
 | 16 | Disc image | first slot: the disc as one `.img`/`.bin` (mktoc's merged image), picked by the user; `deferload`, required, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
-| 0 | BIOS | `sega_101.bin`, core-specific (parameters `0x2`), pushed to bridge `0x20000000` |
+| 0 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
 | 2 | Disc TOC | the disc's 2048-byte `.toc`, picked by the user, **pushed** at load to bridge `0x60000000` (no deferload) |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
 | 17..39 | CD file 01..23 | `deferload`; defined for multi-file TOCs, but nothing fills them on the Pocket (below) |

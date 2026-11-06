@@ -30,7 +30,7 @@ SD card root
 ├── Assets/
 │   └── saturn/
 │       ├── common/              <- discs: merged .img and .toc (from the .cue and .bin tracks)
-│       └── defgenx.Saturn/      <- the BIOS (sega_101.bin)
+│       └── defgenx.Saturn/      <- the BIOS image(s), any name
 ├── Cores/
 │   └── defgenx.Saturn/
 │       ├── saturn.rbf_r         <- the core bitstream
@@ -44,8 +44,9 @@ cleanly afterwards.
 
 ## 2. BIOS
 
-The Saturn BIOS is not included. Put a 512 KB BIOS image named `sega_101.bin` (or `mpr-17933.bin`
-renamed to it) in `Assets/saturn/defgenx.Saturn/`. The core does not start without it.
+The Saturn BIOS is not included. Put one or more 512 KB BIOS images (`.bin` or `.rom`, any name, e.g.
+`sega_101.bin` or `mpr-17933.bin`) in `Assets/saturn/defgenx.Saturn/`. The first time the core starts, the Pocket
+asks which one to use and remembers it; it can be changed from the core's menu.
 
 ## 3. Add discs
 

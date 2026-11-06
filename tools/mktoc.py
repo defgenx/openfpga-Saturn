@@ -448,7 +448,7 @@ def name_games(games):
         g.json = n + ".json"
 
 
-def card(root, dry=False, ramcart_db=None, json_dir=None):
+def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="always"):
     """json_dir: one folder (relative to common/) for every JSON; None puts each next to its tracks."""
     saturn = os.path.join(root, "Assets", "saturn")
     common = os.path.join(saturn, "common")
@@ -519,7 +519,7 @@ def card(root, dry=False, ramcart_db=None, json_dir=None):
             if g.cue:
                 tocp = os.path.join(folder, g.stem + ".toc")
                 wwf, rr, cart = toc_options(tocp)
-                toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, wwf=wwf, rr=rr, cart=cart)
+                toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, merge_mode, wwf=wwf, rr=rr, cart=cart)
                 states = []
                 if merged:
                     states.append(f"{g.stem}.img {write_merged(*merged, dry=dry)}")
@@ -584,7 +584,7 @@ def main():
             ap.error("give either a .cue or --card")
         if hasattr(sys.stdout, "reconfigure"):     # a Windows console cannot print every disc name
             sys.stdout.reconfigure(errors="replace")
-        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir))
+        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
 
