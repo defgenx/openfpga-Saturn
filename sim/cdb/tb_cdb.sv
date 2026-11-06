@@ -152,11 +152,14 @@ end else begin : g
 	wire [15:0] CD_SL, CD_SR;
 	wire lk_go, lk_byidx, lk_hold, lk_busy, eng_idle, lk_data, lk_s2048, pf_flush, pf_en, pf_ready, sd_go, sd_synth, sd_spd2, fd_busy, cd_ck, cd_audio, disc_new;
 	wire [23:0] lk_x, lk_start, pf_fad, sd_hdr, toc_end; wire [6:0] lk_idx, lk_track, ntracks; wire [7:0] lk_tbcd, lk_idx1, ntbcd; wire [1:0] sd_kind; wire [17:0] cd_data;
+	wire fw_wr; wire [7:0] fw_a; wire [31:0] fw_d; wire [3:0] fw_st;
 
 	cd_stream stream (
 		.clk(clk), .rst_n(rst_n), .ce(CDD_CE),
 		.clk_74a(clk74), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
-		.t_read(t_read), .t_id(t_id), .t_off(t_off), .t_baddr(t_baddr), .t_len(t_len), .t_ack(t_ack), .t_done(t_done), .t_err(t_err),
+		.t_read(t_read), .t_getf(t_getf), .t_open(t_open), .toc_rd_q(),
+		.t_id(t_id), .t_off(t_off), .t_baddr(t_baddr), .t_len(t_len), .t_ack(t_ack), .t_done(t_done), .t_err(t_err),
+		.fw_wr(fw_wr), .fw_a(fw_a), .fw_d(fw_d), .fw_st(fw_st),
 		.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
 		.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),
 		.disc_ok(disc_ok), .disc_new(disc_new), .boot_busy(), .boot_wr(), .boot_addr(), .boot_data(),
@@ -178,7 +181,7 @@ end else begin : g
 		.lk_track(lk_track), .lk_tbcd(lk_tbcd), .lk_start(lk_start), .lk_idx1(lk_idx1), .lk_data(lk_data), .lk_s2048(lk_s2048),
 		.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
 		.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr), .fd_busy(fd_busy),
-		.cd_data(cd_data), .cd_ck(cd_ck));
+		.cd_data(cd_data), .cd_ck(cd_ck), .fw_wr(fw_wr), .fw_a(fw_a), .fw_d(fw_d), .fw_st(fw_st));
 
 	// ddram_pocket cdram client model: edge-triggered rd/wr, busy two clocks after the edge
 	reg [15:0] dmem [0:262143];
@@ -229,10 +232,16 @@ endtask
 
 integer BR_LAT = 8000, nwords, k2, nreads = 0;
 reg [31:0] c_off, c_len, c_baddr; reg [15:0] c_id;
-reg t_read_d = 0;
+reg t_read_d = 0, t_gf_d = 0;
+wire t_getf, t_open;
 reg [31:0] wv;
 always @(posedge clk74) begin
 	t_read_d <= t_read;
+	t_gf_d <= t_getf | t_open;
+	if ((t_getf | t_open) && !t_gf_d) begin                 // get filename / open file: no file table here, "not defined"
+		t_done <= 0;
+		fork begin repeat (100) @(posedge clk74); t_err <= 3'd1; t_done <= 1; end join_none
+	end
 	if (t_read && !t_read_d) begin
 		c_off = t_off; c_len = t_len; c_baddr = t_baddr; c_id = t_id;
 		t_done <= 0; t_err <= 0;

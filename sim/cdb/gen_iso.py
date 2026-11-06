@@ -68,7 +68,7 @@ def build():
     open(os.path.join(d, "disc.cue"), "w").write(
         'FILE "track01.bin" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n'
         'FILE "track02.bin" BINARY\n  TRACK 02 AUDIO\n    INDEX 00 00:00:00\n    INDEX 01 00:02:00\n')
-    subprocess.check_call([sys.executable, g.MKTOC, os.path.join(d, "disc.cue"), "-o", d])
+    subprocess.check_call([sys.executable, g.MKTOC, os.path.join(d, "disc.cue"), "-o", d, "--merge", "never"])
     out = os.path.join(HERE, "build")
     for i, fn in enumerate(["track01.bin", "track02.bin"]):
         data = open(os.path.join(d, fn), "rb").read()
