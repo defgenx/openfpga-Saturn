@@ -1259,12 +1259,15 @@ module VDP1P (
 	wire [ 1: 0] PAT_SH = (CMD.CMDPMOD.CM[2:1] == 2'b00) ? 2'd2 : (CMD.CMDPMOD.CM[2:1] == 2'b01 || CMD.CMDPMOD.CM == 3'b100) ? 2'd1 : 2'd0;
 	wire [ 8: 0] PAT_W = PAT_SH == 2'd2 ? {2'b00,ORIG_WIDTH[8:2]} : PAT_SH == 2'd1 ? {1'b0,ORIG_WIDTH[8:1]} : ORIG_WIDTH;
 	wire [ 8: 0] PAT_P = PAT_SH == 2'd2 ? {2'b00,PAT_CNT[8:2]}    : PAT_SH == 2'd1 ? {1'b0,PAT_CNT[8:1]}    : PAT_CNT;
-	wire [ 9: 0] PAT_REV = {1'b0,PAT_W} - {1'b0,PAT_P} - 10'd1;   // may go negative: sign-extended below
-	wire [17: 0] PAT_OFF = PAT_PREREAD ? 18'd0 : !TEXT_DIRX ? {9'd0,PAT_P} : {{8{PAT_REV[9]}},PAT_REV};
-	wire [17: 0] PAT_BASE = (CMD.CMDPMOD.CM[2:1] == 2'b00) ? {CMD.CMDSRCA,2'b00} + {3'b000,SPR_OFFSY,1'b0} :
-	                        (CMD.CMDPMOD.CM[2:1] == 2'b01 || CMD.CMDPMOD.CM == 3'b100) ? {CMD.CMDSRCA,2'b00} + {2'b00,SPR_OFFSY,2'b00} :
-	                                                                                      {CMD.CMDSRCA[15:1],3'b000} + {1'b0,SPR_OFFSY,3'b000};
-	wire [18: 1] PAT_VRAM_A = PAT_BASE + PAT_OFF;
+	// Offset PAT_P, or W - P - 1 when reversed: that is W + ~P in 18 bits (W, P <= 511, so the sign-extended 10-bit value is the same),
+	// added with the base in one three-operand adder
+	wire [17: 0] PAT_OFX = (!PAT_PREREAD && TEXT_DIRX) ? {9'd0,PAT_W} : 18'd0;
+	wire [17: 0] PAT_OFY = PAT_PREREAD ? 18'd0 : TEXT_DIRX ? ~{9'd0,PAT_P} : {9'd0,PAT_P};
+	// one adder: the operands are shifted by PAT_SH (2: row offset x2, 1: x4, 0: x8 and the source address bit 0 dropped)
+	wire [17: 0] PAT_BA = PAT_SH == 2'd0 ? {CMD.CMDSRCA[15:1],3'b000} : {CMD.CMDSRCA,2'b00};
+	wire [17: 0] PAT_BB = PAT_SH == 2'd2 ? {3'b000,SPR_OFFSY,1'b0} : PAT_SH == 2'd1 ? {2'b00,SPR_OFFSY,2'b00} : {1'b0,SPR_OFFSY,3'b000};
+	wire [17: 0] PAT_BASE = PAT_BA + PAT_BB;
+	wire [18: 1] PAT_VRAM_A = PAT_BASE + PAT_OFX + PAT_OFY;
 	assign SPR_ADDR = PAT_BASE;
 	
 	bit  [15: 0] FB_DRAW_D;
