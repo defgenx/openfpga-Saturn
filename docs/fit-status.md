@@ -769,3 +769,21 @@ A first fit of the same branch without the registered `USEL` / `HM3` (`vdp2fix-s
 placement left SH-2 paths at -3.07 (SSH `cache.IBADDR` -> `core.RD_SAVE`, +1.23 in integ2-s3), -2.05 (MSH `bsc.VEC_BUF`
 -> `core.PIPE.ID.IR`), VDP1 -0.66, SCU -0.57, ddram -0.21. Those non-VDP2 groups pass in `vdp2fix-s3b` with no change
 to them: they are placement-dependent at this utilization.
+
+## v0.2.19 build (2026-11-06)
+
+All ten VDP2 effects back (no `POCKET_CUT_VDP2_*` macro), with the VDP2P structural rewrite (`docs/vdp2-rewrite.md`
+section 12) and the v0.2.19 fixes (SRAM timing, lazy frame-buffer erase, CD data port, SCU DSP cadence, backup RAM,
+audio glue). Map: 17,781 ALMs needed. Same map, fitted at several seeds:
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 4 | 18,136 | 1,848 / 1,848 | -0.174 (MSH `bsc.A` -> `ramh_din`, counter[1]) | +0.059 |
+| 4, fitter physical synthesis | | 1,865 / 1,848: no fit | | |
+| 1 | 18,167 | 1,848 / 1,848 | -0.625 | +0.046 |
+| 2 | 18,146 | 1,843 / 1,848 | -0.474 | -0.011 |
+| 3 | 18,155 | 1,848 / 1,848 | -0.252 | +0.119 |
+| **5 (release)** | **18,127** | **1,847 / 1,848** | **+0.062** (slow 85C, counter[1]) | **+0.071** |
+
+The failing groups at the other seeds are outside the VDP2: MSH -> WRAM-H write data, VDP1 frame-buffer `sr_a`, SSH
+`SLV_BUS_RLS` -> ddram. They move with the placement, as in the earlier rounds.

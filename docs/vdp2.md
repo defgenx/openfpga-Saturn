@@ -156,6 +156,8 @@ with one clock of read latency (identical contents per copy), behavioural `altsy
 
 ## Optional feature cuts (`POCKET_CUT_VDP2_<NAME>`)
 
+The release build sets none of these macros (from v0.2.19; v0.2.13 to v0.2.18 set the ten low-impact ones).
+
 Without a macro the design is the exact version above (same logic; the masks are constant). Each cut clears the
 register bits that select the feature (`CUT_*` constants in `VDP2_pkg.sv`, applied to the write masks) and, for
 three of them, gates the fetch (COEF) or the sprite shadow bit (SHADOW). `make -C sim vdp2 CUT=<NAME>` builds the

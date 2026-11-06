@@ -23,10 +23,11 @@ Tested on a Pocket:
   a 55 ns AS6C2016-55 that the core drove as a 10 ns part. v0.2.19 gives it the right timing; games that erase the
   frame buffer during vertical blank can still leave parts of it unerased, as the SRAM is too slow for that mode
   ([docs/memory.md](docs/memory.md)).
-* **Some VDP2 effects are cut** to fit the FPGA: extended colour calculation, shadow, back screen per line, special
-  priority and colour calculation, line colour screen, rotation zoom, rotation parameter B, mosaic, sprite window and
-  line window ([docs/cuts.md](docs/cuts.md), [docs/game-impact.md](docs/game-impact.md)). Their cost is measured;
-  they come back as room is made on the FPGA.
+* **VDP2 effects**: all of them are in from v0.2.19. Up to v0.2.18, ten were cut to fit the FPGA (extended colour
+  calculation, shadow, back screen per line, special priority and colour calculation, line colour screen, rotation
+  zoom, rotation parameter B, mosaic, sprite window, line window; [docs/vdp2.md](docs/vdp2.md#optional-feature-cuts-pocket_cut_vdp2_name)).
+  The VDP2 was rewritten for area to make room, with the same output as MiSTer's in simulation; not yet checked on a
+  Pocket.
 * **Saves**: the backup RAM starts formatted and is saved to the card at exit ([INSTALL.md](INSTALL.md#saves));
   checked in simulation, not yet on a Pocket.
 * **Picking a `.cue` directly** is not supported yet (in progress): a disc is picked as the `.json` that
