@@ -2056,21 +2056,7 @@ module VDP2P import VDP2P_PKG::*; (
 						end
 						5'd22: begin 
 						end
-						5'd23: begin
-							KAst[N] <= TblAddrToRC(PB_Q);
-							KAy[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
-							KAx[N] <= $signed(KAy[N]) + $signed(AddrIncToRA(PA_Q));
-							if (IS_LAST_LINE) begin
-								KAy[N] <= '0;
-								KAx[N] <= '0;
-							end
-						end
 					endcase
-				end
-				
-				if (VA_PIPE[0].RxA0CT[0] || VA_PIPE[0].RxA1CT[0] || VA_PIPE[0].RxB0CT[0] || VA_PIPE[0].RxB1CT[0] || VA_PIPE[0].RxCRCT[0]) begin
-					KAx[0] <= $signed(KAx[0]) + $signed(AddrIncToRA(DK0_Q));
-					KAx[1] <= $signed(KAx[1]) + $signed(AddrIncToRA(DK1_Q));
 				end
 				
 			end
@@ -2131,6 +2117,22 @@ module VDP2P import VDP2P_PKG::*; (
 `ifdef DEBUG
 			RPK_DBG = MULT1;
 `endif
+		end
+	end
+	//Coefficient table addresses: microcode step 23 loads the line base (KAy) and KAx; the per-dot step of a coefficient
+	//access adds dKAx to KAx and wins over step 23. One enable per register.
+	always @(posedge CLK) begin
+		bit         st23, ctd;
+		RotAddr_t   kay;
+		st23 = (VA2.RPA || VA2.RPB) && RPP == 5'd23;
+		ctd  = VA_PIPE[0].RxA0CT[0] || VA_PIPE[0].RxA1CT[0] || VA_PIPE[0].RxB0CT[0] || VA_PIPE[0].RxB1CT[0] || VA_PIPE[0].RxCRCT[0];
+		kay  = IS_LAST_LINE ? '0 : $signed(KAy[RPN]) + $signed(AddrIncToRA(PA_Q));
+		if (RST_N && DOT_CE_R) begin
+			if (st23) begin KAst[RPN] <= TblAddrToRC(PB_Q); KAy[RPN] <= kay; end
+			if (ctd) begin
+				KAx[0] <= $signed(KAx[0]) + $signed(AddrIncToRA(DK0_Q));
+				KAx[1] <= $signed(KAx[1]) + $signed(AddrIncToRA(DK1_Q));
+			end else if (st23) KAx[RPN] <= kay;
 		end
 	end
 	assign RxKA[0] = KAx[0];
