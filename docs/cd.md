@@ -66,11 +66,12 @@ FIFO has drained.
 
 | id | name | use |
 |---|---|---|
-| 16 | Disc image | first slot: the disc as one `.img`/`.bin` (mktoc's merged image), picked by the user; `deferload`, required, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
-| 0 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
-| 2 | Disc TOC | the disc's 2048-byte `.toc`, picked by the user, **pushed** at load to bridge `0x60000000` (no deferload) |
+| 0 | Game (.json) | first slot: a game's instance JSON (parameters `0x13`), optional; binds the TOC and the track files |
+| 1 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
+| 16 | Disc image | the disc as one `.img`/`.bin` (mktoc's merged image), picked directly, optional; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
+| 2 | Disc TOC | the disc's 2048-byte `.toc`, picked directly (reloadable) or bound by the JSON, **pushed** at load to bridge `0x60000000` |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
-| 17..39 | CD file 01..23 | `deferload`; defined for multi-file TOCs, but nothing fills them on the Pocket (below) |
+| 17..39 | CD file 01..23 | `deferload`, `secondary` (filled only from a JSON); the Pocket has not served them so far (below) |
 
 **Hardware evidence (v0.2.18, 2026-11-06).** With the disc files bound by an instance JSON (slot 1, parameters
 `0x11` or `0x13`, the layout up to v0.2.18) the Pocket pushes the TOC but never answers a single `0x0180` read of the

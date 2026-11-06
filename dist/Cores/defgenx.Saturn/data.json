@@ -3,21 +3,17 @@
     "magic": "APF_VER_1",
     "data_slots": [
       {
-        "name": "Disc image",
-        "id": 16,
-        "required": true,
-        "parameters": "0x09",
-        "deferload": true,
+        "name": "Game (.json)",
+        "id": 0,
+        "required": false,
+        "parameters": "0x13",
         "extensions": [
-          "img",
-          "bin"
-        ],
-        "size_maximum": "0x40000000",
-        "address": "0x30000000"
+          "json"
+        ]
       },
       {
         "name": "BIOS",
-        "id": 0,
+        "id": 1,
         "required": true,
         "parameters": "0x202",
         "size_maximum": 524288,
@@ -28,10 +24,23 @@
         ]
       },
       {
+        "name": "Disc image",
+        "id": 16,
+        "required": false,
+        "parameters": "0x09",
+        "deferload": true,
+        "extensions": [
+          "img",
+          "bin"
+        ],
+        "size_maximum": "0x40000000",
+        "address": "0x30000000"
+      },
+      {
         "name": "Disc TOC",
         "id": 2,
-        "required": true,
-        "parameters": "0x0",
+        "required": false,
+        "parameters": "0x01",
         "size_maximum": 2048,
         "address": "0x60000000",
         "extensions": [
@@ -66,7 +75,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 02",
@@ -78,7 +89,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 03",
@@ -90,7 +103,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 04",
@@ -102,7 +117,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 05",
@@ -114,7 +131,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 06",
@@ -126,7 +145,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 07",
@@ -138,7 +159,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 08",
@@ -150,7 +173,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 09",
@@ -162,7 +187,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 10",
@@ -174,7 +201,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 11",
@@ -186,7 +215,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 12",
@@ -198,7 +229,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 13",
@@ -210,7 +243,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 14",
@@ -222,7 +257,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 15",
@@ -234,7 +271,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 16",
@@ -246,7 +285,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 17",
@@ -258,7 +299,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 18",
@@ -270,7 +313,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 19",
@@ -282,7 +327,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 20",
@@ -294,7 +341,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 21",
@@ -306,7 +355,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 22",
@@ -318,7 +369,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       },
       {
         "name": "CD file 23",
@@ -330,7 +383,9 @@
           "bin",
           "img"
         ],
-        "size_maximum": "0xFFFFFE00"
+        "size_maximum": "0x40000000",
+        "secondary": true,
+        "address": "0x30000000"
       }
     ]
   }
