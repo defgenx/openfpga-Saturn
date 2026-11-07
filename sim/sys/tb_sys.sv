@@ -45,6 +45,22 @@ wire         audio_mclk, audio_dac, audio_lrck;
 wire [31:0]  bridge_rd_data;
 wire         bridge_endian_little;
 
+// +KEYFILE=<path>: every 10 ms of simulated time the file's first hex word is pad 1's cont1_key (APF bits: 15 Start,
+// 4 A, 5 B, 0-3 d-pad); a missing or empty file leaves it as it was. Lets a run be steered while it goes.
+reg [31:0] tb_key = 32'd0;
+initial begin : keyfile
+	string kf; integer fd, n; reg [31:0] v;
+	if ($value$plusargs("KEYFILE=%s", kf)) forever begin
+		#(64'd10_000_000_000);
+		fd = $fopen(kf, "r");
+		if (fd != 0) begin
+			n = $fscanf(fd, "%h", v);
+			if (n == 1 && v != tb_key) begin tb_key = v; $display("%0t KEY %08h", $time, v); end
+			$fclose(fd);
+		end
+	end
+end
+
 core_top dut (
 	.clk_74a(clk_74a), .clk_74b(clk_74a),
 	.port_ir_rx(1'b0),
@@ -63,7 +79,7 @@ core_top dut (
 	.audio_mclk(audio_mclk), .audio_dac(audio_dac), .audio_lrck(audio_lrck),
 	.bridge_endian_little(bridge_endian_little), .bridge_addr(bridge_addr), .bridge_rd(bridge_rd),
 	.bridge_rd_data(bridge_rd_data), .bridge_wr(bridge_wr), .bridge_wr_data(bridge_wr_data),
-	.cont1_key(32'd0), .cont2_key(32'd0), .cont3_key(32'd0), .cont4_key(32'd0),
+	.cont1_key(tb_key), .cont2_key(32'd0), .cont3_key(32'd0), .cont4_key(32'd0),
 	.cont1_joy(32'd0), .cont2_joy(32'd0), .cont3_joy(32'd0), .cont4_joy(32'd0),
 	.cont1_trig(16'd0), .cont2_trig(16'd0), .cont3_trig(16'd0), .cont4_trig(16'd0)
 );
