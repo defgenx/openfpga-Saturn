@@ -156,7 +156,7 @@ end else begin : g
 
 	cd_stream stream (
 		.clk(clk), .rst_n(rst_n), .ce(CDD_CE),
-		.clk_74a(clk74), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
+		.clk_74a(clk74), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data), .toc_rd(1'b0),
 		.t_read(t_read), .t_id(t_id), .t_off(t_off), .t_baddr(t_baddr), .t_len(t_len), .t_ack(t_ack), .t_done(t_done), .t_err(t_err),
 		.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),
 		.rg_rd(rg_rd), .rg_ra(rg_ra), .rg_q(rg_q), .rg_rbusy(rg_rbusy),

@@ -5,6 +5,7 @@ The core does not parse cue sheets. This tool applies the same cue interpretatio
 support/saturn/saturncdd.cpp (LoadCUE) and writes:
 
   <name>.toc   2048 bytes, big-endian 32-bit words (layout in docs/cd.md)
+  <name>.img   the tracks merged, after one header sector holding the same TOC (the core reads it from there)
   <name>.json  APF instance JSON binding the TOC and the track files to the core's data slots
 
 Usage: mktoc.py                         at the root of the SD card: tidy the card, then prepare every disc
@@ -14,9 +15,10 @@ Usage: mktoc.py                         at the root of the SD card: tidy the car
 Tidying (card mode): a .cue at the card root or in Assets/saturn/ moves, with the files it lists, into
 Assets/saturn/common/<cue name>/; a 512 KB BIOS image (.bin/.rom named like a BIOS) at the card root moves into
 Assets/saturn/<core>/. Nothing already in place is moved, and nothing is overwritten.
-Then, for every .cue under Assets/saturn/common/: <name>.img (the tracks merged; rewritten only when a track file is
-newer) and <name>.toc next to the tracks, and <name>.json in Assets/saturn/<core>/, binding the .toc and the .img,
-with data_path set to the game's folder under common/. Picking the .json loads the disc (one pick).
+Then, for every .cue under Assets/saturn/common/: <name>.img (a header sector with the TOC, then the tracks merged;
+rewritten only when a track file is newer or the TOC changed) and <name>.toc next to the tracks, and <name>.json in
+Assets/saturn/<core>/, binding the .toc and the .img, with data_path set to the game's folder under common/. Picking
+either the .img or the .json loads the disc (one pick).
 """
 import argparse
 import json
@@ -177,8 +179,9 @@ def boot_header(trk, files, ramcart_db):
     return hdr + bytes([cart, 0xA1, 0, 0]), uuid, cart
 
 
-def encode_toc(trk, toc_end, hdr_blob, wwf=False, rr=False, file_map=None, forg_adj=None):
-    """file_map: file index -> slot offset; forg_adj: file index -> sector offset subtracted from the origin."""
+def encode_toc(trk, toc_end, hdr_blob, wwf=False, rr=False, file_map=None, forg_adj=None, lead=0):
+    """file_map: file index -> slot offset; forg_adj: file index -> sector offset subtracted from the origin;
+    lead: sectors in front of the first file (the merged image's header sector)."""
     n = len(trk) - 1
     if n > 99:
         raise CueError("more than 99 tracks")
@@ -204,6 +207,7 @@ def encode_toc(trk, toc_end, hdr_blob, wwf=False, rr=False, file_map=None, forg_
                 forg -= forg_adj[f]
             if forg < 0:
                 raise CueError(f"track {r + 1}: negative file origin")
+            forg -= lead
             idx1 = t["idx"].get(1, 0)
             if not 0 <= idx1 <= 255:
                 raise CueError(f"track {r + 1}: INDEX 01 offset {idx1} out of range")
@@ -252,9 +256,9 @@ def build(cue, outdir, data_path, ramcart_db=None, merge_mode="auto", wwf=False,
                 raise CueError(f"{p} is not a whole number of sectors")
             adj[i] = base_sec
             base_sec += sz // ss
-        toc = encode_toc(trk, toc_end, blob, wwf, rr, file_map={i: 0 for i in adj}, forg_adj=adj)
+        toc = encode_toc(trk, toc_end, blob, wwf, rr, file_map={i: 0 for i in adj}, forg_adj=adj, lead=1)
         slots.append((TRACK_SLOT_BASE, os.path.basename(img)))
-        merged = (img, files)
+        merged = (img, files, toc.ljust(ss, b"\0"))
     else:
         toc = encode_toc(trk, toc_end, blob, wwf, rr)
         for i, (p, _) in enumerate(files):
@@ -274,16 +278,25 @@ def build(cue, outdir, data_path, ramcart_db=None, merge_mode="auto", wwf=False,
     return toc, inst, merged, summary
 
 
-def write_merged(img, files, dry=False):
-    """Concatenate the track files into img unless an image of the right size, newer than them, is there."""
-    total = sum(sz for _, sz in files)
-    if (os.path.isfile(img) and os.path.getsize(img) == total
-            and all(os.path.getmtime(img) >= os.path.getmtime(p) for p, _ in files)):
-        return "unchanged"
+def write_merged(img, files, head, dry=False):
+    """Write img = head (one sector, the TOC) + the track files. An image of the right size, newer than every track,
+    is kept, and only its header sector is rewritten when the TOC differs."""
+    total = len(head) + sum(sz for _, sz in files)
+    keep = (os.path.isfile(img) and os.path.getsize(img) == total
+            and all(os.path.getmtime(img) >= os.path.getmtime(p) for p, _ in files))
+    if keep:
+        with open(img, "rb") as f:
+            if f.read(len(head)) == head:
+                return "unchanged"
     state = "updated" if os.path.exists(img) else "created"
     if dry:
         return "would be " + state
+    if keep:
+        with open(img, "r+b") as out:
+            out.write(head)
+        return state
     with open(img, "wb") as out:
+        out.write(head)
         for p, _ in files:
             with open(p, "rb") as f:
                 while True:

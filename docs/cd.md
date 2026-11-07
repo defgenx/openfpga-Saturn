@@ -68,8 +68,8 @@ FIFO has drained.
 |---|---|---|
 | 0 | Game (.json) | first slot: a game's instance JSON (parameters `0x113`: reloadable, core-specific, instance JSON, full reload of core), optional; binds the TOC and the track files |
 | 1 | BIOS | any `.bin`/`.rom` picked by the user in the core's folder (parameters `0x202`: core-specific, the browsed filename persists), pushed to bridge `0x20000000` |
-| 16 | Disc image | the disc as one `.img`/`.bin` (mktoc's merged image), picked directly, optional; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
-| 2 | Disc TOC | the disc's 2048-byte `.toc`, picked directly (reloadable) or bound by the JSON, **pushed** at load to bridge `0x60000000` |
+| 16 | Disc (.img) | the disc as one `.img` (mktoc's merged image, TOC in its first sector) or `.bin`, picked directly, optional; `deferload`, parameters `0x09` (reloadable, read-only), bridge address `0x30000000`, size up to 1 GB; read on demand |
+| 2 | Disc TOC | the disc's 2048-byte `.toc`, bound by the JSON only (parameters `0x00`: not reloadable, so not in the menu), **pushed** at load to bridge `0x60000000` |
 | 3, 4 | Backup RAM, Cart backup RAM | unchanged ids and addresses |
 | 17..39 | CD file 01..23 | `deferload`, `secondary` (filled only from a JSON), served once slot 0 has the full-reload bit (below) |
 
@@ -84,6 +84,17 @@ picked directly, defined as the PSX core defines its disc (deferload, required, 
 **Hardware evidence (2026-11-06, later).** With slot 0 parameters `0x113` (bit 8, "full reload of core", added to
 `0x13`) and the track slots `deferload` + `secondary`, the Pocket serves the JSON's track files: a game picked as its
 `.json`, with separate track files, boots. Without bit 8 no read of a JSON-bound deferload slot is ever answered.
+
+**TOC from the image.** When the core starts with every slot loaded (`dataslot_allcomplete` while out of reset) and
+after each `0x008A` update of slot 16, `cd_stream` issues one `0x0180` read of slot 16, offset 0, 2048 bytes, to
+bridge `0x60000000`: the image's header sector (section 5) lands in the TOC RAM like a pushed `.toc` and its word
+511 commits it. When word 0 of that read is not the magic (an image without the header sector, a `.bin`), the
+read writes nothing, so a TOC pushed by the JSON stays and without one `disc_ok` stays low. A slot without a file
+answers an error and writes nothing. The JSON route loads the TOC twice (push, then the read): two commits of the
+same bytes, the second resets the Saturn once more right after it starts. **Untested** on hardware: whether the APF
+serves a `0x0180` read whose bridge address is outside the slot's `address`, and whether it sends `0x008A` for a
+slot picked at boot (the core does not rely on it). A runtime swap to an image without the header keeps the
+previous disc's TOC.
 
 The previous scaffold's slot 1 (cue) and 2 (track) are gone: the core does not read cue sheets. The core
 decodes the pushed slots by bridge address and reads only ids 16..39 by id, so the slot order needs no RTL change.
@@ -127,7 +138,8 @@ Card mode, run by `install.sh` / `install.ps1` after the copy (the scripts only 
 
 - every `*.cue` under `Assets/saturn/common/` (hidden and `._` files skipped) gets its `.toc` (and merged `.img`)
   and its JSON (`data_path` empty) next to it. Files are written only when their content changes; a merged `.img`
-  of the right size, newer than every track, is kept as it is. `--json-dir DIR` writes every JSON into
+  of the right size, newer than every track, is kept, and only its header sector is rewritten when the TOC
+  changed. An `.img` without the header sector (one sector shorter) is rewritten, after the overwrite prompt. `--json-dir DIR` writes every JSON into
   `common/DIR` instead, `data_path` then being the tracks' folder relative to it (tracks outside `DIR` are refused).
 - before writing a JSON, every slot filename (and `data_path`) is checked: no `..` or `.` component, no leading
   `/`, no `\` or `:`, and the file exists at the JSON's folder + `data_path` + filename (a `.toc` / `.img` the
@@ -160,7 +172,12 @@ positions are FADs (LBA + 150), 24 bits.
 | 74 + 3r | word C: `[23:0]` FAD of file sector 0 |
 | 511 | last word; its write commits the TOC |
 
-Record N is the lead-out (start = lead-out FAD, flags 0). File index f is data slot `16 + f`. Sector for FAD x of a
+Record N is the lead-out (start = lead-out FAD, flags 0). File index f is data slot `16 + f`.
+
+Merged image (`<Game>.img`): one header sector of the disc's sector size (2352, or 2048 for a MODE1/2048 disc)
+whose first 2048 bytes are this TOC (the same bytes as `<Game>.toc`) and the rest zeros, then the track files in
+cue order. Every word C counts the header: file sector 0 of the image is the header, so C is one less than for the
+tracks alone (149 for a disc whose track 1 starts the first file). Sector for FAD x of a
 track: file sector `max(x, 150) - C` at byte offset `* 2352` (or `* 2048` when bit 25 is set).
 A TOC commit makes the controller Unload + Reset + Load (status goes to stop, the ring is dropped) and replays the
 boot header.

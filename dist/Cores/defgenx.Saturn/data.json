@@ -24,7 +24,7 @@
         ]
       },
       {
-        "name": "Disc image",
+        "name": "Disc (.img)",
         "id": 16,
         "required": false,
         "parameters": "0x09",
@@ -40,7 +40,7 @@
         "name": "Disc TOC",
         "id": 2,
         "required": false,
-        "parameters": "0x01",
+        "parameters": "0x00",
         "size_maximum": 2048,
         "address": "0x60000000",
         "extensions": [

@@ -106,7 +106,7 @@ cdd_ctl ctl (
 cd_stream #(.RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDGE_LITTLE(BRIDGE_LITTLE)) stream (
 	.clk(CLK), .rst_n(RST_N), .ce(CDD_CE),
 	.clk_74a(clk_74a), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
-	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
+	.toc_rd(1'b0), .t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
 	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),

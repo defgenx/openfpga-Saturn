@@ -13,12 +13,14 @@
 // PSRAM1 can be busy for a few microseconds with a VDP1 burst.
 //
 // Bridge map (clk_74a):
-//   0x6xxxxxxx  TOC file (2048 bytes, big-endian words, data slot "CD TOC", pushed at load)
+//   0x6xxxxxxx  TOC file (2048 bytes, big-endian words): pushed at load (slot 2), or read here from the disc image's
+//               first sector (slot 16) on a rising edge of toc_rd
 //   0x3xxxxxxx  sector ring window, slot n at +n*4096 (written by the dataslot reads issued here)
 //
 // TOC word layout (docs/cd.md): 0 magic, 1 {ver, ntracks BCD, hacks, ntracks}, 2 lead-out FAD,
 // 4..68 boot header, 72 + 3*r: record r = {A: end FAD | data | 2048 | file, B: start FAD | index1,
-// C: file origin FAD}; r = ntracks is the lead-out record. Word 511 closes the file (commit).
+// C: file origin FAD}; r = ntracks is the lead-out record. Word 511 closes the file (commit). A TOC read whose word 0
+// is not the magic writes nothing (an image without the header sector): the TOC already loaded, or none, stays.
 //
 // t_* are driven from clk registers that hold still from before the request toggles until the
 // transfer is done; constrain them as false paths.
@@ -40,6 +42,7 @@ module cd_stream #(
 	input  wire        bridge_wr,
 	input  wire [31:0] bridge_addr,
 	input  wire [31:0] bridge_wr_data,
+	input  wire        toc_rd,               // rising edge: read the TOC from slot TRACK_SLOT_BASE, offset 0
 	output reg         t_read = 1'b0,
 	output wire [15:0] t_id,
 	output wire [31:0] t_off,
@@ -115,13 +118,18 @@ module cd_stream #(
 wire toc_sel  = (bridge_addr[31:28] == 4'h6);
 wire ring_sel = (bridge_addr[31:28] == RING_BRIDGE[31:28]);
 
+reg        tk = 1'b0;                  // a TOC read is open
+reg        tblk = 1'b0;                // its word 0 was not the magic
+wire       toc_bad = tk && (tblk || (bridge_addr[10:2] == 9'd0 && bridge_wr_data != 32'h5343_4454));
+wire       toc_we = bridge_wr && toc_sel && !toc_bad;
+
 reg        commit_t = 1'b0;
 reg        rw_t = 1'b0;
 reg [12:0] rw_a = 13'd0;
 reg [31:0] rw_d = 32'd0;
 
 always @(posedge clk_74a) begin
-	if (bridge_wr && toc_sel && bridge_addr[10:2] == 9'd511) commit_t <= ~commit_t;
+	if (toc_we && bridge_addr[10:2] == 9'd511) commit_t <= ~commit_t;
 	if (bridge_wr && ring_sel) begin
 		rw_a <= bridge_addr[14:2];
 		rw_d <= bridge_wr_data;
@@ -136,10 +144,10 @@ reg  [2:0]  fx_slot = 3'd0;
 reg         fx_s2048 = 1'b0;
 reg         fx_req_t = 1'b0;
 
-assign t_id    = TRACK_SLOT_BASE + {11'd0, fx_file};
-assign t_off   = fx_off;
-assign t_baddr = {RING_BRIDGE[31:15], fx_slot, 7'd0, fx_s2048, 4'd0};
-assign t_len   = fx_s2048 ? 32'd2048 : 32'd2352;
+assign t_id    = TRACK_SLOT_BASE + {11'd0, fx_file & {5{~tk}}};
+assign t_off   = tk ? 32'd0 : fx_off;
+assign t_baddr = tk ? 32'h6000_0000 : {RING_BRIDGE[31:15], fx_slot, 7'd0, fx_s2048, 4'd0};
+assign t_len   = (fx_s2048 || tk) ? 32'd2048 : 32'd2352;
 
 reg  [2:0]  rq_s = 3'd0;
 reg         rq_seen = 1'b0;
@@ -147,11 +155,17 @@ reg  [1:0]  hs = 2'd0;
 reg  [2:0]  hc = 3'd0;
 reg         done_t = 1'b0;
 reg         err_r = 1'b0;
+reg         toc_rd_q = 1'b0, toc_pend = 1'b0;
 
+// the TOC read is not a ring sector: it does not toggle done_t
 always @(posedge clk_74a) begin
 	rq_s <= {rq_s[1:0], fx_req_t};
+	toc_rd_q <= toc_rd;
 	case (hs)
-	2'd0: if (rq_s[2] != rq_seen) begin
+	2'd0: if (toc_pend) begin
+		toc_pend <= 1'b0; tblk <= 1'b0;
+		tk <= 1'b1; t_read <= 1'b1; hc <= 3'd0; hs <= 2'd1;
+	end else if (rq_s[2] != rq_seen) begin
 		rq_seen <= rq_s[2];
 		t_read <= 1'b1; hc <= 3'd0; hs <= 2'd1;
 	end
@@ -161,11 +175,16 @@ always @(posedge clk_74a) begin
 	end
 	2'd2: if (t_ack || !t_done) hs <= 2'd3;
 	2'd3: if (t_done) begin
-		err_r <= (t_err != 3'd0);
-		done_t <= ~done_t;
+		if (!tk) begin
+			err_r <= (t_err != 3'd0);
+			done_t <= ~done_t;
+		end
+		tk <= 1'b0;
 		hs <= 2'd0;
 	end
 	endcase
+	if (toc_rd && !toc_rd_q) toc_pend <= 1'b1;
+	if (bridge_wr && toc_sel && toc_bad) tblk <= 1'b1;
 end
 
 // ------------------------------------------------------------------ crossings to clk
@@ -256,7 +275,7 @@ assign pf_ready = (n_ready != 4'd0);
 reg  [8:0]  ra = 9'd0;
 wire [31:0] toc_q;
 cd_toc_ram toc_ram (
-	.wclk(clk_74a), .we(bridge_wr && toc_sel), .wa(bridge_addr[10:2]), .wd(bridge_wr_data),
+	.wclk(clk_74a), .we(toc_we), .wa(bridge_addr[10:2]), .wd(bridge_wr_data),
 	.rclk(clk), .ra(ra), .rq(toc_q)
 );
 

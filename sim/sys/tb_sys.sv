@@ -140,7 +140,8 @@ endtask
 // +TOC=<file> (2048 bytes, tools/mktoc.py) is pushed to bridge 0x60000000 before the slots complete; +DISC0..3=<file> are the
 // track files (data slots 16..19, read on demand with $fseek/$fread, so a full image is fine). After Reset Exit the host polls the
 // target command register (core_bridge_cmd 0xF8001000), answers "ready to run" and every dataslot read the core issues, writing the
-// sector words to the bridge address like the APF.
+// sector words to the bridge address like the APF (0x6xxxxxxx for the TOC read from the image's first sector). A read of a slot
+// without a file answers error 1 with no data.
 string    toc_path = "";
 string    disc_path [0:3];
 integer   disc_fd [0:3];
@@ -168,6 +169,12 @@ task automatic serve_dataslot(input [31:0] id, input [31:0] off, input [31:0] ba
 		if (fd != 0) begin
 			void'($fseek(fd, off, 0));
 			got = $fread(sec, fd, 0, len);
+		end
+		if (fd == 0) begin                                         // no file in the slot: error 1, no data
+			n_ds_err++;
+			bridge_write(32'hF8001000, 32'h6F6B0001);
+			$fdisplay(ftrace, "%0t DISC dataslot read id=%0d off=%0d baddr=%08h len=%0d: slot not defined", $time, id, off, baddr, len);
+			return;
 		end
 		for (i = got; i < len; i++) sec[i] = 8'h00;
 		bridge_write(32'hF8001000, 32'h62750000);                 // ack: data follows
@@ -1242,6 +1249,7 @@ task automatic summary();
 	$fflush();
 	if (pb_en) $display("SCUPROBE-FINAL dmaRD=%0d(nz %0d) dmaWR=%0d(nz %0d) bbusWR_scsp=%0d(nz %0d) sndram50000WR=%0d(nz %0d)", pb_dma_rd, pb_dma_rd_nz, pb_dma_wr, pb_dma_wr_nz, pb_bw_snd, pb_bw_snd_nz, pb_ram, pb_ram_nz);
 	$display("disc: %0d dataslot reads, %0d short; Ready to Run commands %0d; SMPC RTC date %08h", n_ds_reads, n_ds_err, n_rtr, dut.rtc_date_bcd);
+	$display("disc: TOC %s, %0d track(s), lead-out FAD %0d", dut.saturn.disc_ok ? "loaded" : "not loaded", dut.saturn.ntracks, dut.saturn.toc_end);
 	$display("VDP2 VRAM write groups %0d, multi-lane %0d", wg_total, wg_multi);
 	$display("VDP1 FB write FIFO drops %0d", dut.saturn.mem.fb.wf_drop);
 	$display("frames %0d, last frame non-black %0d", frame_no, nnb_total);

@@ -41,6 +41,7 @@ module saturn_pocket #(
 	output wire [31:0] bk_rd_data,
 
 	// APF target commands for disc reads (clk_74a)
+	input  wire        disc_toc_rd,                // rising edge: read the TOC from the disc image (cd_stream)
 	output wire        target_dataslot_read,
 	output wire [15:0] target_dataslot_id,
 	output wire [31:0] target_dataslot_slotoffset,
@@ -644,7 +645,7 @@ wire [15:0] rg_q;
 cd_stream stream (
 	.clk(clk_sys), .rst_n(~(reset | download | rst_ram)), .ce(CDD_2X_CE),
 	.clk_74a(clk_74a), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
-	.t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
+	.toc_rd(disc_toc_rd), .t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),
 	.t_baddr(target_dataslot_bridgeaddr), .t_len(target_dataslot_length),
 	.t_ack(target_dataslot_ack), .t_done(target_dataslot_done), .t_err(target_dataslot_err),
 	.rg_wr(rg_wr), .rg_wa(rg_wa), .rg_wd(rg_wd), .rg_wbusy(rg_wbusy),

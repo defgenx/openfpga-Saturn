@@ -54,13 +54,15 @@ Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly 
 then run the installer again. The core does not read `.cue` sheets itself: for every `.cue` the installer runs
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
-- `Game (USA).img` (all the tracks in one file) and `Game (USA).toc` next to the tracks;
+- `Game (USA).img` (the disc's TOC in a first sector, then all the tracks, in one file) and `Game (USA).toc` next
+  to the tracks;
 - `Game (USA).json` in `Assets/saturn/defgenx.Saturn/`, where the core lists the games: on the Pocket, pick it as
   the game. Its `data_path` names the game's folder under `common/`.
 
-The `.json` binds the `.toc` and the track files, separate tracks included. A disc can also be loaded as one merged
-image: `Game (USA).img` goes in the **Disc image** slot with the `.toc` in the **Disc TOC** slot (core menu); the
-`.json` loads both in one pick. `--merge never` makes the `.json` list the track files instead (no `.img`). A run asks before it overwrites a game's `.img`, `.toc` or `.json` that would change (`--yes` overwrites all; without a terminal they are kept). A WWF / Road Rash flag or RAM
+The `.json` binds the `.toc` and the track files, separate tracks included. A disc can also be loaded as the
+`.img` alone: pick `Game (USA).img` in the **Disc (.img)** slot (core menu); the core reads the TOC from the image's
+first sector. An `.img` written by an older script has no TOC sector: run the script again (it asks before
+rewriting the `.img`; a kept old `.img` still loads from its `.json`). `--merge never` makes the `.json` list the track files instead (no `.img`). A run asks before it overwrites a game's `.img`, `.toc` or `.json` that would change (`--yes` overwrites all; without a terminal they are kept). A WWF / Road Rash flag or RAM
 cart recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
 The v0.2.19 script wrote the `.json` next to the tracks, where the core does not look, and renamed the ones in
 `Assets/saturn/defgenx.Saturn/` to `.json.old`. The new script writes every `.json` there again; the `.json.old`

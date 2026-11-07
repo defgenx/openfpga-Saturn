@@ -79,8 +79,8 @@ SD card
 2. With the card in a computer, double-click **`Saturn-prepare-card.command`** (macOS) or
    **`Saturn-prepare-card.bat`** (Windows) at the root of the card. It needs
    [Python 3](https://www.python.org/downloads/); on macOS, the first time, right-click the file and choose **Open**.
-   It moves games left at the root into `Assets/saturn/common/<game>/`, writes each game's `<game>.img` (all the
-   tracks in one file) and `<game>.toc` next to its tracks, writes the game's `.json` into
+   It moves games left at the root into `Assets/saturn/common/<game>/`, writes each game's `<game>.img` (the
+   disc's TOC, then all the tracks, in one file) and `<game>.toc` next to its tracks, writes the game's `.json` into
    `Assets/saturn/defgenx.Saturn/`, where the core lists the games, and shows what it did. Run it again whenever you
    add games; it only changes what is new, and asks before overwriting a game's `.img`, `.toc` or `.json` that
    would change ([y]es, [n]o, [a]ll, n[o]ne; `--yes` overwrites without asking).
@@ -90,8 +90,8 @@ SD card
 
 Other ways to load a disc, from the core's menu:
 
-* **The image and the TOC by hand**: load `Game.img` in the **Disc image** slot and `Game.toc` in the **Disc TOC**
-  slot (two picks; the `.json` does both).
+* **The image alone**: load `Game.img` in the **Disc (.img)** slot (one pick: the core reads the TOC from the image).
+  An `.img` written by an older script has no TOC in it and does not load this way: run the script again.
 * **The `.cue` directly** is not in the builds yet: it works in simulation but needs room on the FPGA first.
 
 If something goes wrong:

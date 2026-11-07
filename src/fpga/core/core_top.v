@@ -541,6 +541,10 @@ always @(posedge clk_74a) begin
     else if (dataslot_allcomplete) bios_loaded <= 1'b1;
 end
 
+// The disc's TOC is read from the disc image (slot 16) when the core starts and after each reload of that slot
+// (0x008A): cd_stream reads on the rising edge, which a slot 16 update makes once more (docs/cd.md section 3).
+wire disc_toc_rd = bios_loaded & ~(dataslot_update & (dataslot_update_id == 16'd16));
+
 // Backup read-back for the host's save at exit (0x4xxxxxxx, 0x5xxxxxxx): each read asks mem_pocket for the word, which
 // is in bk_rd_data well before the host's next read takes it (docs/memory.md section 7).
 wire [31:0] bk_rd_data;
@@ -695,6 +699,7 @@ saturn_pocket saturn (
     .bk_rd_off      ( bk_rd_off ),
     .bk_rd_data     ( bk_rd_data ),
 
+    .disc_toc_rd                ( disc_toc_rd ),
     .target_dataslot_read       ( target_dataslot_read ),
     .target_dataslot_id         ( target_dataslot_id ),
     .target_dataslot_slotoffset ( target_dataslot_slotoffset ),
