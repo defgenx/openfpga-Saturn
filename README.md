@@ -82,7 +82,8 @@ SD card
    It moves games left at the root into `Assets/saturn/common/<game>/`, writes each game's `<game>.img` (all the
    tracks in one file) and `<game>.toc` next to its tracks, writes the game's `.json` into
    `Assets/saturn/defgenx.Saturn/`, where the core lists the games, and shows what it did. Run it again whenever you
-   add games; it only changes what is new.
+   add games; it only changes what is new, and asks before overwriting a game's `.img`, `.toc` or `.json` that
+   would change ([y]es, [n]o, [a]ll, n[o]ne; `--yes` overwrites without asking).
    From a terminal: `python3 Saturn-mktoc.py` at the root of the card (`--dry-run` shows what it would do).
 3. On the Pocket, open the Saturn core and pick the game's **`.json`**: that one pick loads the `.img` and the
    `.toc`.

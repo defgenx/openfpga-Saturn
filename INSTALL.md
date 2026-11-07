@@ -60,7 +60,7 @@ then run the installer again. The core does not read `.cue` sheets itself: for e
 
 The `.json` binds the `.toc` and the track files, separate tracks included. A disc can also be loaded as one merged
 image: `Game (USA).img` goes in the **Disc image** slot with the `.toc` in the **Disc TOC** slot (core menu); the
-`.json` loads both in one pick. `--merge never` makes the `.json` list the track files instead (no `.img`). The files are rewritten on every run, so they always match the core. A WWF / Road Rash flag or RAM
+`.json` loads both in one pick. `--merge never` makes the `.json` list the track files instead (no `.img`). A run asks before it overwrites a game's `.img`, `.toc` or `.json` that would change (`--yes` overwrites all; without a terminal they are kept). A WWF / Road Rash flag or RAM
 cart recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
 The v0.2.19 script wrote the `.json` next to the tracks, where the core does not look, and renamed the ones in
 `Assets/saturn/defgenx.Saturn/` to `.json.old`. The new script writes every `.json` there again; the `.json.old`

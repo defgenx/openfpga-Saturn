@@ -456,7 +456,35 @@ def name_games(games):
         g.json = n + ".json"
 
 
-def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
+class Overwrite:
+    """Asks before an existing .img, .toc or .json is rewritten: yes / no / all / none. Without a terminal the
+    answer is yes_all (--yes), else no."""
+    def __init__(self, yes_all=False):
+        self.mode = "all" if yes_all else None
+
+    def ok(self, what):
+        if self.mode in ("all", "none"):
+            return self.mode == "all"
+        if not sys.stdin or not sys.stdin.isatty():
+            print(f"  {what} already exist(s) and would change: kept (no terminal to ask; --yes overwrites)")
+            return False
+        while True:
+            try:
+                a = input(f"  {what} already exist(s) and would change. Overwrite? [y]es / [n]o / [a]ll / n[o]ne: ")
+            except EOFError:
+                a = "n"
+            a = a.strip().lower()
+            if a in ("y", "yes"):
+                return True
+            if a in ("n", "no", ""):
+                return False
+            if a in ("a", "all"):
+                self.mode = "all"; return True
+            if a in ("o", "none"):
+                self.mode = "none"; return False
+
+
+def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto", yes_all=False):
     """json_dir: None writes every JSON into Assets/saturn/<core>/, where the core's Game slot (0x113, core-specific)
     looks, with data_path relative to common/; a folder (relative to common/) writes them there instead."""
     saturn = os.path.join(root, "Assets", "saturn")
@@ -513,7 +541,8 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
     if not dry and not os.access(common, os.W_OK):
         print("The card is read-only (check the lock switch on the SD card): no disc prepared.")
         return 1
-    failed = renamed = written = done = 0
+    failed = renamed = written = done = kept = 0
+    ask = Overwrite(yes_all)
     for g in games:
         src = g.cue or g.src
         jdir = core if in_core else os.path.join(common, g.json_folder)
@@ -535,6 +564,16 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
                 if mm == "auto" and os.path.isfile(os.path.join(folder, g.stem + ".img")):
                     mm = "always"       # keep the .toc matching an .img already on the card
                 toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, mm, wwf=wwf, rr=rr, cart=cart)
+                if not dry:
+                    # existing files that this run would rewrite: ask once for the game
+                    chg = [os.path.basename(f) for f, st in
+                           ([(merged[0], write_merged(*merged, dry=True))] if merged else []) +
+                           [(tocp, put(tocp, toc, True)), (dst, put(dst, instance_json(inst), True))]
+                           if st == "would be updated"]
+                    if chg and not ask.ok(f"{rel(src)}: " + ", ".join(chg)):
+                        kept += 1
+                        print(f"  {rel(src)}: kept as it is")
+                        continue
                 states = []
                 if merged:
                     states.append(f"{g.stem}.img {write_merged(*merged, dry=dry)}")
@@ -569,7 +608,7 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
                     print(f"      could not rename {rel(p)}: {e}")
 
     print(f"{done} disc(s) ready, {written} JSON file(s) {'to write' if dry else 'written'}, "
-          f"{renamed} old file(s) renamed, {failed} failed")
+          f"{renamed} old file(s) renamed, {kept} kept as they were, {failed} failed")
     return 1 if failed else 0
 
 
@@ -649,6 +688,8 @@ def main():
                     help="with --card: write every .json into common/DIR instead (data_path then names the tracks' "
                          f"folder relative to it; '.' is common/ itself; JSONs in Assets/saturn/{CORE}/ become .json.old)")
     ap.add_argument("--dry-run", action="store_true", help="with --card: show what would change, write nothing")
+    ap.add_argument("--yes", action="store_true",
+                    help="with --card: overwrite existing .img, .toc and .json files without asking")
     a = ap.parse_args()
 
     if not a.cue and not a.card:
@@ -667,7 +708,7 @@ def main():
         print(f"Card: {os.path.abspath(a.card)}{' (dry run, nothing is moved or written)' if a.dry_run else ''}")
         print("Tidying:")
         tidy(a.card, a.dry_run)
-        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge or "always"))
+        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge or "always", a.yes))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
 
