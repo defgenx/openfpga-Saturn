@@ -14,9 +14,9 @@ Usage: mktoc.py                         at the root of the SD card: tidy the car
 Tidying (card mode): a .cue at the card root or in Assets/saturn/ moves, with the files it lists, into
 Assets/saturn/common/<cue name>/; a 512 KB BIOS image (.bin/.rom named like a BIOS) at the card root moves into
 Assets/saturn/<core>/. Nothing already in place is moved, and nothing is overwritten.
-Then, for every .cue under Assets/saturn/common/: <name>.toc next to the tracks, <name>.img (the tracks merged) when
-the disc has more track files than the core has slots (24) or its .img is already there, and <name>.json in
-Assets/saturn/<core>/ with data_path set to the game's folder under common/.
+Then, for every .cue under Assets/saturn/common/: <name>.img (the tracks merged; rewritten only when a track file is
+newer) and <name>.toc next to the tracks, and <name>.json in Assets/saturn/<core>/, binding the .toc and the .img,
+with data_path set to the game's folder under common/. Picking the .json loads the disc (one pick).
 """
 import argparse
 import json
@@ -637,9 +637,9 @@ def main():
                     help="folder of the track files seen from the JSON's folder (default '': the JSON goes next to them)")
     ap.add_argument("--ramcart-db", help="MiSTer saturn_ramcart.txt for the RAM cartridge request")
     ap.add_argument("--merge", choices=["auto", "always", "never"], default=None,
-                    help="concatenate the track files into one image (auto, the default: only above %d files, or "
-                         "with --card when the game's .img is already there; always: the .json and the disc slot "
-                         "both use the image)" % TRACK_SLOTS)
+                    help="concatenate the track files into one image (always, the default with --card or no "
+                         "argument: the .json and the disc slot both use the image; auto, the default for one .cue: "
+                         "only above %d files; never: the .json lists the track files)" % TRACK_SLOTS)
     ap.add_argument("--wwf", action="store_true", help="WWF TOC hack (reports INDEX 01 start)")
     ap.add_argument("--road-rash", action="store_true", help="Road Rash hack (no seek delay on read)")
     ap.add_argument("--card", metavar="SD_ROOT",
@@ -667,7 +667,7 @@ def main():
         print(f"Card: {os.path.abspath(a.card)}{' (dry run, nothing is moved or written)' if a.dry_run else ''}")
         print("Tidying:")
         tidy(a.card, a.dry_run)
-        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge or "auto"))
+        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge or "always"))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
 

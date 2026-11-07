@@ -54,14 +54,13 @@ Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/`, directly 
 then run the installer again. The core does not read `.cue` sheets itself: for every `.cue` the installer runs
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
-- `Game (USA).toc` next to the tracks (and a merged `Game (USA).img` when the disc has more than 24 track files);
+- `Game (USA).img` (all the tracks in one file) and `Game (USA).toc` next to the tracks;
 - `Game (USA).json` in `Assets/saturn/defgenx.Saturn/`, where the core lists the games: on the Pocket, pick it as
   the game. Its `data_path` names the game's folder under `common/`.
 
 The `.json` binds the `.toc` and the track files, separate tracks included. A disc can also be loaded as one merged
-image: `--merge always` writes `Game (USA).img`, which goes in the **Disc image** slot with the `.toc` in the
-**Disc TOC** slot (core menu). Once a game has its `.img`, every later run keeps using it, so the `.toc` always
-matches it. The files are rewritten on every run, so they always match the core. A WWF / Road Rash flag or RAM
+image: `Game (USA).img` goes in the **Disc image** slot with the `.toc` in the **Disc TOC** slot (core menu); the
+`.json` loads both in one pick. `--merge never` makes the `.json` list the track files instead (no `.img`). The files are rewritten on every run, so they always match the core. A WWF / Road Rash flag or RAM
 cart recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
 The v0.2.19 script wrote the `.json` next to the tracks, where the core does not look, and renamed the ones in
 `Assets/saturn/defgenx.Saturn/` to `.json.old`. The new script writes every `.json` there again; the `.json.old`
