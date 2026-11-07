@@ -61,13 +61,13 @@ single `.bin`). CHD is not supported.
 SD card
 ├── Assets/saturn/
 │   ├── defgenx.Saturn/        BIOS image(s)
+│   │   └── Panzer Dragoon (Japan).json        written by the script: pick this on the Pocket
 │   └── common/
 │       └── Panzer Dragoon (Japan)/
 │           ├── Panzer Dragoon (Japan).cue
 │           ├── Panzer Dragoon (Japan) (Track 01).bin
 │           ├── Panzer Dragoon (Japan) (Track 02).bin
 │           ├── ...
-│           ├── Panzer Dragoon (Japan).json    written by the script
 │           └── Panzer Dragoon (Japan).toc     written by the script
 ├── Saturn-mktoc.py
 ├── Saturn-prepare-card.command   (macOS)
@@ -79,8 +79,10 @@ SD card
 2. With the card in a computer, double-click **`Saturn-prepare-card.command`** (macOS) or
    **`Saturn-prepare-card.bat`** (Windows) at the root of the card. It needs
    [Python 3](https://www.python.org/downloads/); on macOS, the first time, right-click the file and choose **Open**.
-   It moves games left at the root into `Assets/saturn/common/<game>/`, then writes each game's `.json` and `.toc`
-   next to its tracks, and shows what it did. Run it again whenever you add games; it only changes what is new.
+   It moves games left at the root into `Assets/saturn/common/<game>/`, writes each game's `.toc` next to its
+   tracks (and `<game>.img`, the tracks merged, when the disc has more than 24 track files), writes the game's
+   `.json` into `Assets/saturn/defgenx.Saturn/`, where the core lists the games, and shows what it did. Run it again
+   whenever you add games; it only changes what is new.
    From a terminal: `python3 Saturn-mktoc.py` at the root of the card (`--dry-run` shows what it would do).
 3. On the Pocket, open the Saturn core and pick the game's **`.json`**.
 
@@ -88,7 +90,8 @@ Other ways to load a disc, from the core's menu:
 
 * **One merged image**: `python3 Saturn-mktoc.py --merge always` also writes `Game.img`, all the tracks in one
   file; load it in the **Disc image** slot and `Game.toc` in the **Disc TOC** slot. Discs with more than 24 track
-  files are merged this way automatically.
+  files are merged this way automatically. Once a game has its `.img`, the script keeps its `.toc` and `.json`
+  pointing at it.
 * **The `.cue` directly** is not in the builds yet: it works in simulation but needs room on the FPGA first.
 
 If something goes wrong:

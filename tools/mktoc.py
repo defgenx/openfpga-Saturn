@@ -14,6 +14,9 @@ Usage: mktoc.py                         at the root of the SD card: tidy the car
 Tidying (card mode): a .cue at the card root or in Assets/saturn/ moves, with the files it lists, into
 Assets/saturn/common/<cue name>/; a 512 KB BIOS image (.bin/.rom named like a BIOS) at the card root moves into
 Assets/saturn/<core>/. Nothing already in place is moved, and nothing is overwritten.
+Then, for every .cue under Assets/saturn/common/: <name>.toc next to the tracks, <name>.img (the tracks merged) when
+the disc has more track files than the core has slots (24) or its .img is already there, and <name>.json in
+Assets/saturn/<core>/ with data_path set to the game's folder under common/.
 """
 import argparse
 import json
@@ -454,7 +457,8 @@ def name_games(games):
 
 
 def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
-    """json_dir: one folder (relative to common/) for every JSON; None puts each next to its tracks."""
+    """json_dir: None writes every JSON into Assets/saturn/<core>/, where the core's Game slot (0x113, core-specific)
+    looks, with data_path relative to common/; a folder (relative to common/) writes them there instead."""
     saturn = os.path.join(root, "Assets", "saturn")
     common = os.path.join(saturn, "common")
     core = os.path.join(saturn, CORE)
@@ -467,7 +471,9 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
         if json_dir is None:
             print("--json-dir must be a folder inside Assets/saturn/common")
             return 1
-    jf = lambda folder: folder if json_dir is None else json_dir
+    in_core = json_dir is None
+    # in the core folder, data_path is resolved from common/, as for a JSON in common/ itself
+    jf = lambda folder: "." if in_core else json_dir
     rel = lambda p: os.path.relpath(p, saturn).replace(os.sep, "/")
 
     games, moved = [], []
@@ -480,7 +486,7 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
             if ext.lower() == ".cue":
                 folder = os.path.relpath(d, common).replace(os.sep, "/")
                 games.append(Game(folder, stem, jf(folder), cue=os.path.join(d, f)))
-    if os.path.isdir(core):             # v0.2.5 and v0.2.6 wrote the JSONs here (docs/cd.md, section 3)
+    if not in_core and os.path.isdir(core):     # JSONs in the core folder move to json_dir (renamed .json.old)
         for f in sorted(os.listdir(core)):
             p = os.path.join(core, f)
             inst = f.lower().endswith(".json") and not f.startswith(".") and os.path.isfile(p) and read_instance(p)
@@ -510,7 +516,8 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
     failed = renamed = written = done = 0
     for g in games:
         src = g.cue or g.src
-        jdir = os.path.join(common, g.json_folder)
+        jdir = core if in_core else os.path.join(common, g.json_folder)
+        base = common if in_core else jdir      # where the Pocket resolves data_path from
         dst = os.path.join(jdir, g.json)
         jrel = rel(dst)
         folder = os.path.join(common, g.folder)
@@ -524,7 +531,10 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
             if g.cue:
                 tocp = os.path.join(folder, g.stem + ".toc")
                 wwf, rr, cart = toc_options(tocp)
-                toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, merge_mode, wwf=wwf, rr=rr, cart=cart)
+                mm = merge_mode
+                if mm == "auto" and os.path.isfile(os.path.join(folder, g.stem + ".img")):
+                    mm = "always"       # keep the .toc matching an .img already on the card
+                toc, inst, merged, summary = build(g.cue, folder, dp, ramcart_db, mm, wwf=wwf, rr=rr, cart=cart)
                 states = []
                 if merged:
                     states.append(f"{g.stem}.img {write_merged(*merged, dry=dry)}")
@@ -534,8 +544,8 @@ def card(root, dry=False, ramcart_db=None, json_dir=None, merge_mode="auto"):
             else:
                 inst = {"instance": {"magic": "APF_VER_1", "data_path": dp, "data_slots": g.inst["data_slots"]}}
                 summary, states = "no .cue, JSON carried over as it is", []
-            check_paths(jdir, inst, pending)
-            if not dry and not os.path.isdir(jdir):     # only with --json-dir
+            check_paths(base, inst, pending)
+            if not dry and not os.path.isdir(jdir):
                 os.makedirs(jdir)
             js = put(dst, instance_json(inst), dry)
             written += js != "unchanged"
@@ -626,17 +636,18 @@ def main():
     ap.add_argument("--data-path", default="",
                     help="folder of the track files seen from the JSON's folder (default '': the JSON goes next to them)")
     ap.add_argument("--ramcart-db", help="MiSTer saturn_ramcart.txt for the RAM cartridge request")
-    ap.add_argument("--merge", choices=["auto", "always", "never"], default="auto",
-                    help="concatenate the track files into one image (auto: only above %d files; always: for "
-                         "loading the image directly instead of the .json)" % TRACK_SLOTS)
+    ap.add_argument("--merge", choices=["auto", "always", "never"], default=None,
+                    help="concatenate the track files into one image (auto, the default: only above %d files, or "
+                         "with --card when the game's .img is already there; always: the .json and the disc slot "
+                         "both use the image)" % TRACK_SLOTS)
     ap.add_argument("--wwf", action="store_true", help="WWF TOC hack (reports INDEX 01 start)")
     ap.add_argument("--road-rash", action="store_true", help="Road Rash hack (no seek delay on read)")
     ap.add_argument("--card", metavar="SD_ROOT",
-                    help="prepare every .cue under SD_ROOT/Assets/saturn/common: the .toc and .json next to the "
-                         f"tracks (JSONs v0.2.5/v0.2.6 put in Assets/saturn/{CORE}/ become .json.old)")
+                    help="prepare every .cue under SD_ROOT/Assets/saturn/common: the .img and .toc next to the "
+                         f"tracks, the .json in Assets/saturn/{CORE}/ (where the core's Game slot looks)")
     ap.add_argument("--json-dir", metavar="DIR",
                     help="with --card: write every .json into common/DIR instead (data_path then names the tracks' "
-                         "folder relative to it; '.' is common/ itself)")
+                         f"folder relative to it; '.' is common/ itself; JSONs in Assets/saturn/{CORE}/ become .json.old)")
     ap.add_argument("--dry-run", action="store_true", help="with --card: show what would change, write nothing")
     a = ap.parse_args()
 
@@ -656,12 +667,13 @@ def main():
         print(f"Card: {os.path.abspath(a.card)}{' (dry run, nothing is moved or written)' if a.dry_run else ''}")
         print("Tidying:")
         tidy(a.card, a.dry_run)
-        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge))
+        sys.exit(card(a.card, a.dry_run, a.ramcart_db, a.json_dir, a.merge or "auto"))
     if not a.cue:
         ap.error("a .cue file (or --card SD_ROOT) is needed")
 
     try:
-        toc, inst, merged, summary = build(a.cue, a.outdir, a.data_path, a.ramcart_db, a.merge, a.wwf, a.road_rash)
+        toc, inst, merged, summary = build(a.cue, a.outdir, a.data_path, a.ramcart_db, a.merge or "auto", a.wwf,
+                                           a.road_rash)
         os.makedirs(a.outdir, exist_ok=True)
         if merged:
             write_merged(*merged)

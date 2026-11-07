@@ -55,19 +55,22 @@ then run the installer again. The core does not read `.cue` sheets itself: for e
 `Saturn-mktoc.py` (it needs [Python 3](https://www.python.org/downloads/)), which writes
 
 - `Game (USA).toc` next to the tracks (and a merged `Game (USA).img` when the disc has more than 24 track files);
-- `Game (USA).json` in the same folder: on the Pocket, pick it as the game.
+- `Game (USA).json` in `Assets/saturn/defgenx.Saturn/`, where the core lists the games: on the Pocket, pick it as
+  the game. Its `data_path` names the game's folder under `common/`.
 
 The `.json` binds the `.toc` and the track files, separate tracks included. A disc can also be loaded as one merged
 image: `--merge always` writes `Game (USA).img`, which goes in the **Disc image** slot with the `.toc` in the
-**Disc TOC** slot (core menu). It does this on every run, so the files always
-match the core; a `.json` already next to the tracks is rewritten in place. The `.json` files v0.2.5 and v0.2.6
-put in `Assets/saturn/defgenx.Saturn/` do not start a disc: each is renamed `.json.old` once its disc has its
-`.json` next to the tracks. A WWF / Road Rash flag or RAM cart recorded in an existing `.toc` is kept. Without
-Python the installer says how to install it and carries on.
+**Disc TOC** slot (core menu). Once a game has its `.img`, every later run keeps using it, so the `.toc` always
+matches it. The files are rewritten on every run, so they always match the core. A WWF / Road Rash flag or RAM
+cart recorded in an existing `.toc` is kept. Without Python the installer says how to install it and carries on.
+The v0.2.19 script wrote the `.json` next to the tracks, where the core does not look, and renamed the ones in
+`Assets/saturn/defgenx.Saturn/` to `.json.old`. The new script writes every `.json` there again; the `.json.old`
+files, and the `.json` files left next to the tracks, can be deleted.
 
 To do the same by hand: `python3 Saturn-mktoc.py --card /Volumes/POCKET` (add `--dry-run` to only see what it
 would change), or for one disc `python3 Saturn-mktoc.py "Game (USA).cue" -o "Game (USA)/"` with `-o` the
-folder of the `.cue` and its tracks, so the `.toc` and `.json` land next to them. `Saturn-mktoc.py` is at the
+folder of the `.cue` and its tracks, so the `.toc` and `.json` land next to them (then move the `.json` into
+`Assets/saturn/defgenx.Saturn/` and set its `data_path` to the game's folder under `common/`, ending in `/`). `Saturn-mktoc.py` is at the
 root of the card; in this repository it is `tools/mktoc.py`. CHD is not supported.
 
 ## Saves
