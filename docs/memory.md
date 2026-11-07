@@ -124,6 +124,29 @@ compares against that). While FB_RDY stays high the timing is MiSTer's: an M10K 
 per read-modify-write. A draw read waits for the write FIFO to drain (the engine serves writes first), so a
 read-modify-write right after a long write span can wait up to about 190 SRAM writes.
 
+### Display read first
+
+VDP2 takes the displayed pixel (`FBDI`, VDP1P's `VOUTO`) at `DOT_CE_R`, 7 clk_sys after the display address changes,
+so an SRAM pixel on display must be read within that. A read, the bus turnaround after it (tOHZ 20 ns, 3 clk_ram) and
+a write take 19 clk_ram, more than one dot (16 clk_ram): a draw write cannot share a dot with a display read. The
+engine (`vdp1_fb_pocket`) therefore:
+
+* issues the display read of the displayed buffer's SRAM pixel ahead of everything else, from idle and between the
+  words of a fill (the fill resumes after it);
+* holds draw writes, fills and draw reads of the other buffer while SRAM pixels are displayed (a display read less
+  than 20 clk_ram ago), and in the dots just before the display reaches SRAM pixels: FB1 columns 190-191 while its
+  address moves at dot rate (a parked address holds nothing), and FB0 while VDP1P's `FB_DISP_SOON` is high (the 8 dots
+  before `OUT_X` returns to 0, `HTIM_PIPE[8:7]`) plus 4 clk_ram.
+
+Drawing into SRAM pixels thus runs while the M10K columns are displayed (FB1 columns 0-191, when FB0 is drawn) and in
+blanking; drawing into the FB1 tail while FB0 is displayed runs in blanking only. MiSTer's DDR3 has no such limit. The
+FIFO (192 entries) absorbs a line's worth of draw writes, then FB_RDY holds VDP1P. The address compares are registered
+(one more clk_ram), which puts the display latency at 7 clk_sys, the limit.
+
+Up to v0.2.19 the engine served queued writes first: while a game drew, SRAM pixels on display were read late or not
+at all and showed stale colours (FB1 right of column 192 on hardware). `tb_fb` G reproduces it: 1,623 errors before,
+0 after.
+
 **The Pocket's SRAM is an AS6C2016-55BIN** (Analogue, https://www.analogue.co/developer/docs/external-hardware):
 tAA 55 ns, tWP 45 ns, tAW / tBW 50 ns, tDW 25 ns, tWC 55 ns (Alliance datasheet v1.1). Up to v0.2.18 `sram_pocket` ran it
 as a 10 ns part (read sampled at 35 ns, WE# low 8.7 ns), so on hardware every SRAM pixel was wrong: FB1 columns 192 and
@@ -136,11 +159,12 @@ Measured in `sim/mem/tb_fb` with the 55 ns model and RD_CYC = WR_CYC = 8:
 |---|---|
 | draw into FB0 (SRAM), with the VDP1 handshake | 63 ns per pixel (34 ns before), 0 errors |
 | draw into FB1 (M10K + tail) | 34 ns per pixel, 0 errors |
-| display read, FB0 and FB1 across column 192, erase at DCE_R | pixel valid within 6 clk_sys, 0 errors |
+| display read, FB0 and FB1 across column 192, erase at DCE_R | pixel valid within 7 clk_sys, 0 errors |
 | VBlank erase, 1 write per 2 clk_sys (C) | 0 drops, 0 errors, 0 SRAM writes (lazy erase; before it: 255 drops, 400 errors) |
 | FB1 tail erase with FB0 drawing, FB0 erase with the FB1 tail drawing (D) | 0 drops, 0 errors (before: 255 drops, 607 errors) |
-| draws into erased blocks: random words, byte lanes, two blocks interleaved, reads in between; every word of 16 rows of both buffers read back; display of erased, drawn and untouched blocks; the same in FB_MODE3 (E) | 0 errors, display valid within 6 clk_sys |
+| draws into erased blocks: random words, byte lanes, two blocks interleaved, reads in between; every word of 16 rows of both buffers read back; display of erased, drawn and untouched blocks; the same in FB_MODE3 (E) | 0 errors, display valid within 7 clk_sys |
 | VDP1P's draw side (FBD_ST + FB_ST model, FB_RDY honoured, F): 4 rows of 352 writes, 2 read-modify-write passes over them, 3,000 random mixed pixels, both buffers, every pixel read back | 0 drops, 0 errors; FB0 60 ns per write, 231 per read-modify-write; FB1 M10K span 2 / 5 clk_sys per pixel (MiSTer's). Ignoring FB_RDY (`-DFBD_NOWAIT`, `make negative`): 255 drops, 1,245 errors |
+| FB1 tail (rows 200-207 from column 184) displayed every dot while the draw side model fills FB0 with 6,000 pixels (G); FB0 displayed line by line with blanking and `FB_DISP_SOON` while the FB1 tail is drawn (G2); every drawn pixel read back | 0 errors, display valid within 7 clk_sys. With writes served first (v0.2.19 engine): 1,623 errors in G |
 | the whole bench with the clocks' PLL phase (`-DCLK_ALIGNED`) and random SRAM power-up contents (`+MEMRAND`) | pass (display within 7 clk_sys, 7 also before the lazy erase) |
 | SRAM model timing checks | 0 errors |
 
@@ -643,7 +667,7 @@ for the measured slack.
 | `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
-| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3); again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
+| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, display of SRAM pixels while the other buffer is drawn, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3); again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
 | `tb_load` | BIOS 4 KB, both blank backup images (all 64 KB + 1 MB checked), 1 KB backup and cart files over them, 8 read-back requests (address and one `r_rd` each) | pass |
 | `tb_boot` (backup part) | after the BIOS load: 80 words of both blank images through `ld_rd`, 80 words of the internal one through the SH-2's `raml` port (`SRAM_CS_N` mapping) | 0 mismatches |
 | `tb_sys` `+BRAM` / `+BRAM_OUT` (test ROM; BIOS + Hyper Duel 1.5 s) | no file: the table entry becomes 65536 and the save is MiSTer's blank; a 64 KB file pushed at boot and saved at the end with the bridge peripheral's read timing (86 clk_74a per read, Saturn running) | blank saved formatted; round trip byte-identical. The BIOS makes no backup RAM access in its first 1.5 s; Hyper Duel's check (about 13 s in) was not simulated |
@@ -678,8 +702,8 @@ gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
    caches, SH-1 and SCSP are counted.
 14. VDP1P's draw side waits for FB_RDY (section 2, "Draw handshake"); `tb_fb` F checks a model of it, not VDP1P
     itself, and drawing into SRAM pixels is slower than on MiSTer (a read-modify-write after a long span waits for
-    the FIFO). The engine drains the write FIFO ahead of the display read, so drawing into SRAM pixels can delay
-    display reads of the other buffer.
+    the FIFO); it also waits while SRAM pixels are displayed (section 2, "Display read first"), so a game that
+    draws a lot into the FB1 tail while FB0 is displayed draws only in blanking.
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.

@@ -49,6 +49,7 @@ module VDP1P (
 	input              FB_RDY,
 	output             FB_MODE3,
 	output             FB_DRAW0,          // FB_SEL: 1 = FB0 is drawn, FB1 displayed and erased (Pocket framebuffer, lazy erase)
+	output             FB_DISP_SOON,      // the 8 dots before a display line's first pixel (Pocket framebuffer: SRAM kept free)
 	
 	input              FAST,
 	input              BLUR_MESH,
@@ -153,6 +154,7 @@ module VDP1P (
 	
 	assign FB_MODE3 = (TVMR.TVM[1:0] == 2'b11);
 	assign FB_DRAW0 = FB_SEL;
+	assign FB_DISP_SOON = VTIM_N && HTIM_N && !HTIM_PIPE[8];   // OUT_X goes to 0 at HTIM_PIPE[8:7] == 01
 	
 	typedef enum bit [5:0] {
 		CMDS_IDLE,  

@@ -10,6 +10,8 @@
 //               word read back; display reads across erased / untouched / materialised blocks; the same in FB_MODE3
 //   F           VDP1P's draw side (FBD_ST + FB_ST) waiting for FB_RDY: long write spans and read-modify-write passes on
 //               both buffers, every pixel read back; M10K spans keep 2 / 5 clk_sys per pixel
+//   G, G2       FB1 tail (from column 184) / FB0 lines (after blanking, FB_DISP_SOON) displayed every dot while test F's
+//               draw side fills the other buffer's SRAM part: every pixel valid within 7 clk_sys (VDP2 takes it at the 8th)
 //   -DFBD_NOWAIT   test F's VDP1P model ignores FB_RDY (MiSTer's draw timing): must FAIL
 //   -DSRAMAA_PS=n  SRAM access time in the model (default 55000, the Pocket's AS6C2016-55)
 //   -DCLK_ALIGNED  clk_sys rising with every other clk_ram rising edge (the PLL's phase); default half a clk_ram off
@@ -40,6 +42,7 @@ initial if ($value$plusargs("SEED=%d", seed)) seed = $urandom(seed);
 
 // ---------------------------------------------------------------- DUT
 reg         mode3 = 0;
+reg         soon = 0;                       // VDP1P FB_DISP_SOON (test G2)
 reg         fsel = 0;                       // FB_DRAW0 (VDP1P FB_SEL): 1 = FB0 drawn, FB1 displayed
 reg  [17:1] fb0_a = 0, fb1_a = 0;
 reg  [15:0] fb0_d = 0, fb1_d = 0;
@@ -52,7 +55,7 @@ wire        sr_req, sr_we, sr_ready, sr_done;
 wire [16:0] sr_a; wire [15:0] sr_d, sr_q; wire [1:0] sr_be;
 
 vdp1_fb_pocket fb (
-	.clk_sys(clk_sys), .clk_ram(clk_ram), .rst(rst), .FB_MODE3(mode3), .FB_DRAW0(fsel),
+	.clk_sys(clk_sys), .clk_ram(clk_ram), .rst(rst), .FB_MODE3(mode3), .FB_DRAW0(fsel), .FB_DISP_SOON(soon),
 	.FB0_A(fb0_a), .FB0_D(fb0_d), .FB0_WE(fb0_we), .FB0_RD(fb0_rd), .FB0_Q(fb0_q),
 	.FB1_A(fb1_a), .FB1_D(fb1_d), .FB1_WE(fb1_we), .FB1_RD(fb1_rd), .FB1_Q(fb1_q),
 	.FB_RDY(fb_rdy), .dbg_drop(fb_drop),
@@ -546,6 +549,42 @@ initial begin
 	drain;
 	for (t = 48896; t < 50176; t = t + 1) disp(1, t);
 	$display("tb_fb: E FB_MODE3: erase, partial draws, every word read back and displayed (within %0d clk_sys), errors %0d", lat_max, errs - pass);
+
+	// ---- G: FB1 displayed dot by dot across its SRAM tail while VDP1P's draw side (model F) fills FB0 at full rate
+	pass = errs; lat_max = 0; lat_n = 0; w0 = fb_drop;
+	@(posedge clk_sys) begin mode3 <= 0; fsel <= 1; end
+	drain;
+	for (by = 200; by < 208; by = by + 1) for (bx = 184; bx < 352; bx = bx + 1) preload(1, idx_of(bx, by), $urandom);
+	// whole blocks of known content where FB0 is drawn: test E's FB_MODE3 erase flags map to other pixels in mode 0
+	for (by = 120; by < 180; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) preload(0, idx_of(bx, by), $urandom);
+	for (n = 0; n < 6000; n = n + 1) fpush(0, $urandom % 352, 120 + $urandom % 60, $urandom, ($urandom % 4) == 0);
+	fork
+		frun(cy);
+		for (by = 200; by < 208; by = by + 1) for (bx = 184; bx < 352; bx = bx + 1) disp(1, vaddr(bx, by));
+	join
+	for (n = 0; n < 1500; n = n + 1) draw_r(0, $urandom % 352, 120 + $urandom % 60);
+	if (lat_max > 7) begin errs = errs + 1; $display("G display latency %0d clk_sys (more than 7)", lat_max); end
+	$display("tb_fb: G FB1 tail display while FB0 is drawn: valid within %0d clk_sys (worst of %0d), draw %0d clk_sys, drops %0d, errors %0d", lat_max, lat_n, cy, fb_drop - w0, errs - pass);
+
+	// ---- G2: FB0 displayed line by line (352 pixels, 8 out of range, 60 dots of blanking with FB_DISP_SOON in the last
+	// 8) while the draw side fills the FB1 tail
+	pass = errs; lat_max = 0; lat_n = 0; w0 = fb_drop;
+	@(posedge clk_sys) fsel <= 0;
+	drain;
+	for (by = 40; by < 44; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) preload(0, idx_of(bx, by), $urandom);
+	for (by = 120; by < 180; by = by + 1) for (bx = 192; bx < 352; bx = bx + 1) preload(1, idx_of(bx, by), $urandom);
+	for (n = 0; n < 6000; n = n + 1) fpush(1, 192 + $urandom % 160, 120 + $urandom % 60, $urandom, ($urandom % 4) == 0);
+	fork
+		frun(cy);
+		for (by = 40; by < 44; by = by + 1) begin
+			repeat (52 * 8) @(posedge clk_sys);
+			soon <= 1; repeat (8 * 8) @(posedge clk_sys); soon <= 0;
+			for (bx = 0; bx < 360; bx = bx + 1) disp(0, vaddr(bx, by));
+		end
+	join
+	for (n = 0; n < 1500; n = n + 1) draw_r(1, 192 + $urandom % 160, 120 + $urandom % 60);
+	if (lat_max > 7) begin errs = errs + 1; $display("G2 display latency %0d clk_sys (more than 7)", lat_max); end
+	$display("tb_fb: G2 FB0 display with line starts while the FB1 tail is drawn: valid within %0d clk_sys (worst of %0d), draw %0d clk_sys, drops %0d, errors %0d", lat_max, lat_n, cy, fb_drop - w0, errs - pass);
 
 	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes), FIFO drops %0d", s_err, s_rd, s_wr, fb_drop);
 	if (errs == 0 && fb_drop == 0 && s_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");

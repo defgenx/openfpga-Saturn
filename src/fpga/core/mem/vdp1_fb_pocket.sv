@@ -36,6 +36,7 @@ module vdp1_fb_pocket #(
 
 	input  wire        FB_MODE3,
 	input  wire        FB_DRAW0,           // 1: FB0 drawn, FB1 displayed (and erased); 0: the reverse
+	input  wire        FB_DISP_SOON,       // VDP1P: a display line's first pixel within 8 dots
 	input  wire [17:1] FB0_A,
 	input  wire [15:0] FB0_D,
 	input  wire  [1:0] FB0_WE,
@@ -91,11 +92,17 @@ wire        t1  = !mm1 && in1;             // FB1 in the SRAM tail
 
 // The engine (clk_ram) sees the buffer indexes one clk_ram late: VDP1's address logic is too deep for one clk_ram.
 reg  [16:0] i0r, i1r;
-always @(posedge clk_ram) begin i0r <= i0; i1r <= i1; end
+reg         w0r = 1'b0, w1r = 1'b0;         // a write strobe came with that index: no display read
+always @(posedge clk_ram) begin i0r <= i0; i1r <= i1; w0r <= |FB0_WE; w1r <= |FB1_WE; end
 wire        in0r = i0r < WORDS;
 wire        t1r  = !(i1r < M1_WORDS) && (i1r < WORDS);
 wire [16:0] sa0r = sram_a0(i0r);
 wire [16:0] sa1r = sram_a1(i1r);
+// and one more clk_ram for the compares and SRAM words it picks from (setup at 114.5 MHz). d0 / d1 compare against
+// last0 / last1 as they were a clk_ram earlier: right after an issue they can still ask again for one clk_ram, which
+// only repeats a branch that does not leave es 0.
+reg  [16:0] i0q, i1q, sa0q, sa1q;
+reg         in0q = 1'b0, t1q = 1'b0, d0 = 1'b0, d1 = 1'b0, eq0 = 1'b0, eq1 = 1'b0;
 
 // ---------------------------------------------------------------- FB1 M10K part
 // 49152 x 16 simple dual port, byte enables, address registered (read data one clock after the address)
@@ -226,7 +233,8 @@ reg  [8:0] wptr = 9'd0;                    // clk_sys
 reg  [8:0] rptr = 9'd0;                    // clk_ram
 wire [8:0] occ = wptr - rptr;
 wire       full = occ >= 9'd255;
-wire       stall = occ >= STALL;
+reg        stall = 1'b0;                   // a clk_sys late: at most one more push, STALL leaves 63 entries
+always @(posedge clk_sys) stall <= occ >= STALL;
 // ne = (wptr != rptr) as a register: the pick starts from a register instead of a 9 bit compare. Wrong for the one
 // edge after a pop, when the engine is in es 4 and reads nothing.
 reg        ne = 1'b0;
@@ -268,29 +276,72 @@ wire rd_busy = (rd_t != rd_ack);
 assign FB_RDY = !(stall || rd_busy || p_r || (FB0_RD && !rdd0) || (FB1_RD && !rdd1));
 
 // ---------------------------------------------------------------- engine (clk_ram)
+// The displayed buffer's pixel read goes first. Any other access (write, fill word, draw / CPU read, a refresh of the
+// drawn buffer) waits while SRAM pixels are being displayed (a display read less than DFREE clk_ram ago), in the 8
+// dots before an FB0 line, and in FB1's two columns before the tail (docs/memory.md section 2, "Display read first").
+localparam [4:0] DFREE = 5'd20;
 reg        have0 = 1'b0, have1 = 1'b0;
 reg [16:0] last0, last1;
 reg  [2:0] es = 3'd0;
-reg        e_b, trk, e_c = 1'b0, e_fl = 1'b0;
+reg        e_b, trk, e_c = 1'b0, e_fl = 1'b0, e_ret = 1'b0;
 reg  [2:0] fk;                             // fill: word in the block
-wire       need0 = sr_ready && (!have0 || i0r != last0);
-wire       need1 = sr_ready && t1r && (!have1 || i1r != last1);
+reg  [4:0] dph = 5'd31;                    // clk_ram since the last display read of the SRAM (saturates)
+reg  [3:0] sn = 4'd0;                      // FB_DISP_SOON, held 4 clk_ram longer: the first pixel's read is 3 later
+reg  [4:0] age1 = 5'd31;                   // clk_ram since FB1's display address changed (saturates)
+reg        g1 = 1'b0;                      // FB1 displayed at columns 190-191 and moving at dot rate (16 clk_ram)
+always @(posedge clk_ram) begin
+	i0q <= i0r; i1q <= i1r; sa0q <= sa0r; sa1q <= sa1r; in0q <= in0r; t1q <= t1r;
+	d0 <= !have0 || i0r != last0;
+	d1 <= t1r && (!have1 || i1r != last1);
+	eq0 <= w0r || i0r == sup0; eq1 <= w1r || i1r == sup1;
+	sn <= {sn[2:0], FB_DISP_SOON};
+	age1 <= i1r != i1q ? 5'd0 : age1 + {4'd0, age1 != 5'd31};
+	g1 <= i1r[16:9] == 8'd95 && (i1r != i1q || age1 < 5'd18);   // a parked address does not hold writes
+end
+wire       need0 = sr_ready && d0;
+wire       need1 = sr_ready && d1;
+wire       dn1 = need1 && FB_DRAW0, dn0 = need0 && !FB_DRAW0;   // the displayed buffer
+wire       aok = !(FB_DRAW0 ? FB_MODE3 ? 1'b0 : g1 : (FB_DISP_SOON || |sn))   // columns 190-191 / line start
+                 && (!(FB_DRAW0 ? t1q : in0q) || dph >= DFREE);
 wire [16:0] fill_a = FB_MODE3 ? {wq[38:25], fk} : {wq[38:33], fk, wq[32:25]};
 
 always @(posedge clk_ram) begin
 	sr_req <= 1'b0;
 	ne <= rst ? |wptr : (wptr != rptr);
-	if (rst) begin rptr <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; end
-	else case (es)
-	3'd0: begin
-		if (ne && sr_ready) begin
-			if (wq[39]) begin fk <= 3'd0; es <= 3'd5; end   // fill: popped after its last word
-			else begin
-				sr_req <= 1'b1; sr_we <= 1'b1;
-				sr_a <= wq[38:22]; sr_be <= wq[21:20]; sr_d <= wq[15:0];
-				rptr <= rptr + 1'd1;
-				es <= 3'd4;                                // posted: the next write may follow right away
+	if (dph != 5'd31) dph <= dph + 5'd1;
+	if (rst) begin rptr <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; e_ret <= 1'b0; end
+	else if ((es == 3'd0 || es == 3'd5) && (dn0 || dn1)) begin
+		// display read; from a fill (es 5) it returns there, the fill's progress (fk) kept
+		e_ret <= es == 3'd5;
+		if (dn1) begin
+			last1 <= i1q; have1 <= 1'b1;
+			if (!eq1) begin
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1q; sr_be <= 2'b11; e_b <= 1'b1; e_c <= 1'b1; es <= 3'd3;
+				dph <= 5'd0;
 			end
+		end else begin
+			last0 <= i0q; have0 <= 1'b1;
+			if (eq0) ;
+			else if (!in0q) FB0_Q <= 16'h0000;
+			else begin
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0q; sr_be <= 2'b11; e_b <= 1'b0; e_c <= 1'b1; es <= 3'd3;
+				dph <= 5'd0;
+			end
+		end
+	end else case (es)
+	3'd0: begin
+		e_ret <= 1'b0;
+		if (ne) begin
+			if (sr_ready && aok) begin
+				if (wq[39]) begin fk <= 3'd0; es <= 3'd5; end   // fill: popped after its last word
+				else begin
+					sr_req <= 1'b1; sr_we <= 1'b1;
+					sr_a <= wq[38:22]; sr_be <= wq[21:20]; sr_d <= wq[15:0];
+					rptr <= rptr + 1'd1;
+					es <= 3'd4;                                // posted: the next write may follow right away
+				end
+			end
+		end else if (!aok) begin
 		end else if (rd_busy && sr_ready) begin
 			if (rd_b) begin last1 <= rd_idx; have1 <= 1'b1; end else begin last0 <= rd_idx; have0 <= 1'b1; end
 			if (rd_oor || rd_ev) begin
@@ -302,18 +353,18 @@ always @(posedge clk_ram) begin
 			end
 		end else if (need1 && (!need0 || trk)) begin
 			trk <= 1'b0;
-			if (i1r == sup1) begin last1 <= i1r; have1 <= 1'b1; end
+			if (eq1) begin last1 <= i1q; have1 <= 1'b1; end
 			else begin
-				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1r; sr_be <= 2'b11;
-				last1 <= i1r; have1 <= 1'b1; e_b <= 1'b1; e_c <= 1'b1; es <= 3'd3;
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1q; sr_be <= 2'b11;
+				last1 <= i1q; have1 <= 1'b1; e_b <= 1'b1; e_c <= 1'b1; es <= 3'd3;
 			end
 		end else if (need0) begin
 			trk <= 1'b1;
-			if (i0r == sup0) begin last0 <= i0r; have0 <= 1'b1; end
-			else if (!in0r) begin FB0_Q <= 16'h0000; last0 <= i0r; have0 <= 1'b1; end
+			if (eq0) begin last0 <= i0q; have0 <= 1'b1; end
+			else if (!in0q) begin FB0_Q <= 16'h0000; last0 <= i0q; have0 <= 1'b1; end
 			else begin
-				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0r; sr_be <= 2'b11;
-				last0 <= i0r; have0 <= 1'b1; e_b <= 1'b0; e_c <= 1'b1; es <= 3'd3;
+				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0q; sr_be <= 2'b11;
+				last0 <= i0q; have0 <= 1'b1; e_b <= 1'b0; e_c <= 1'b1; es <= 3'd3;
 			end
 		end
 	end
@@ -322,10 +373,10 @@ always @(posedge clk_ram) begin
 	// display read: one clk_ram after the issue the flag RAM output is the bit of this block (both edge phases)
 	3'd3: begin
 		if (e_c) begin e_c <= 1'b0; e_fl <= e_b ? (lk1 && fq1) : (lk0 && fq0); end
-		if (sr_done) begin if (e_b) fb1_sq <= e_fl ? ev1 : sr_q; else FB0_Q <= e_fl ? ev0 : sr_q; es <= 3'd0; end
+		if (sr_done) begin if (e_b) fb1_sq <= e_fl ? ev1 : sr_q; else FB0_Q <= e_fl ? ev0 : sr_q; es <= e_ret ? 3'd5 : 3'd0; end
 	end
 	3'd5: begin
-		if (wq[16 + fk] || sr_ready) begin
+		if (wq[16 + fk] || (sr_ready && aok)) begin
 			if (!wq[16 + fk]) begin sr_req <= 1'b1; sr_we <= 1'b1; sr_a <= fill_a; sr_be <= 2'b11; sr_d <= wq[15:0]; end
 			fk <= fk + 1'd1;
 			if (&fk) begin rptr <= rptr + 1'd1; es <= 3'd4; end
