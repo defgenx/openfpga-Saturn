@@ -504,6 +504,9 @@ def main():
                 norm = lambda b: b.replace(os.path.abspath(top).encode(), b"<TREE>")
                 res[impl] = (code, norm(so), norm(se), snapshot(top))
             (pc, po, pe, pt), (gc, go, ge, gt) = res["python"], res["go"]
+            # intended difference: an overwrite rebuilds the whole .img (Go says "rebuilt"); Python rewrote only
+            # its header sector when the track data looked current ("updated"); the written trees still match
+            go = go.replace(b".img rebuilt", b".img updated")
             msgs = []
             if pc != gc:
                 msgs.append(f"    exit status: python {pc}, go {gc}")

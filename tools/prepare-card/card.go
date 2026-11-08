@@ -376,6 +376,7 @@ type cardOpts struct {
 	jsonDir   *string
 	mergeMode string
 	yesAll    bool
+	rebuild   bool            // rewrite every file of each game from its tracks, even when unchanged
 	ask       bool            // double-click mode: ask even without a terminal
 	only      map[string]bool // double-click mode: the games to prepare, by cue path relative to common/
 }
@@ -535,11 +536,12 @@ func card(root string, o cardOpts) int {
 					return err
 				}
 				inst, summary = in, sum
+				full := o.rebuild // an overwrite rewrites the whole .img, never only its header
 				if !o.dry {
 					// existing files that this run would rewrite: ask once for the game
 					var chg []string
 					if mg != nil {
-						st, err := writeMerged(mg, true)
+						st, err := writeMerged(mg, true, false)
 						if err != nil {
 							return err
 						}
@@ -561,12 +563,15 @@ func card(root string, o cardOpts) int {
 					if st == "would be updated" {
 						chg = append(chg, pyBasename(dst))
 					}
-					if len(chg) > 0 && !ask.ok(rel(src)+": "+strings.Join(chg, ", ")) {
-						return errKept
+					if len(chg) > 0 {
+						if !ask.ok(rel(src) + ": " + strings.Join(chg, ", ")) {
+							return errKept
+						}
+						full = true
 					}
 				}
 				if mg != nil {
-					st, err := writeMerged(mg, o.dry)
+					st, err := writeMerged(mg, o.dry, full)
 					if err != nil {
 						return err
 					}

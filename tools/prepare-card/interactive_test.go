@@ -173,6 +173,12 @@ func TestOverwritePrompt(t *testing.T) {
 	}
 	exe := installBin(t, root)
 	double(t, exe, "\n\n")
+	goodA, _ := os.ReadFile(common(root, "A/A.img"))
+	damaged := append([]byte(nil), goodA...)
+	for i := len(damaged) - 4096; i < len(damaged); i++ {
+		damaged[i] ^= 0xff
+	}
+	writeFile(t, common(root, "A/A.img"), damaged) // same size, newer than the tracks: only a rebuild repairs it
 	before := map[string][]byte{}
 	for _, n := range []string{"A", "B"} { // same tracks, another TOC: the .img header, .toc and .json change
 		p := common(root, n+"/"+n+".cue")
@@ -189,6 +195,9 @@ func TestOverwritePrompt(t *testing.T) {
 	if bytes.Equal(a, before["A"]) || !bytes.Equal(b, before["B"]) {
 		t.Error("the answers were not applied")
 	}
+	if img, _ := os.ReadFile(common(root, "A/A.img")); !bytes.Equal(img[len(img)-4096:], goodA[len(goodA)-4096:]) {
+		t.Error("an overwrite kept the old track data of A.img")
+	}
 }
 
 func TestNothingToDo(t *testing.T) {
@@ -199,7 +208,29 @@ func TestNothingToDo(t *testing.T) {
 	double(t, exe, "\n\n")
 	out := double(t, exe, "\n")
 	has(t, out, "[OK] A: tracks in Assets/saturn/common/A/, A.json in Assets/saturn/defgenx.Saturn/",
-		"Nothing to do: every game that can be prepared already is.", "[OK] Card ready\n")
+		"Every game is prepared.", "Enter = quit", "Nothing changed.", "[OK] Card ready\n")
+}
+
+// A picked game is rebuilt from its tracks: an .img of the right size and date but with other track data is
+// rewritten in full, not kept with a new header.
+func TestRebuildPicked(t *testing.T) {
+	root := newCard(t)
+	biosFile(t, core(root, "bios.bin"))
+	disc(t, common(root, "A"), "A", 40)
+	exe := installBin(t, root)
+	double(t, exe, "\n\n")
+	img := common(root, "A/A.img")
+	good, _ := os.ReadFile(img)
+	bad := append([]byte(nil), good...)
+	for i := len(bad) - 4096; i < len(bad); i++ {
+		bad[i] ^= 0xff
+	}
+	writeFile(t, img, bad) // newer than the tracks, same size, same header
+	out := double(t, exe, "1\n\n")
+	has(t, out, "prepared (pick it to rebuild it)", "A.img rebuilt", "1 disc(s) ready")
+	if now, _ := os.ReadFile(img); !bytes.Equal(now, good) {
+		t.Error("the picked game's .img was not rebuilt from its tracks")
+	}
 }
 
 func TestCheckProblems(t *testing.T) {

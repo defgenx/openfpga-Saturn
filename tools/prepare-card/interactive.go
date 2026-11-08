@@ -120,7 +120,7 @@ func (s *scan) probeGame(g *game) probe {
 	type st struct{ name, state string }
 	var sts []st
 	if mg != nil {
-		x, err := writeMerged(mg, true)
+		x, err := writeMerged(mg, true, false)
 		if err != nil {
 			return fail(err)
 		}
@@ -436,7 +436,7 @@ func interactive(root string) int {
 	for i, g := range all {
 		state := "new (moved from " + s.looseFrom[g] + " first)"
 		if p, ok := s.probes[g]; ok {
-			state = map[string]string{"new": "new", "prepared": "prepared", "outdated": "out of date (" + p.detail + ")",
+			state = map[string]string{"new": "new", "prepared": "prepared (pick it to rebuild it)", "outdated": "out of date (" + p.detail + ")",
 				"error": "cannot be prepared (see above)"}[p.state]
 			if p.state == "new" || p.state == "outdated" {
 				def = append(def, i)
@@ -446,18 +446,21 @@ func interactive(root string) int {
 		}
 		say("  %2d. %-40s %s", i+1, displayName(g), state)
 	}
-	if len(def) == 0 && len(s.plan.moves) == 0 {
-		if len(all) > 0 {
-			say("")
-			say("Nothing to do: every game that can be prepared already is.")
-		}
+	if len(all) == 0 && len(s.plan.moves) == 0 {
 		pause()
 		return 0
+	}
+	idle := len(def) == 0 && len(s.plan.moves) == 0
+	if idle {
+		say("")
+		say("Every game is prepared. A game picked below is rebuilt from its tracks (.img, .toc and .json).")
 	}
 	var pick []int
 	for {
 		dflt := fmt.Sprintf("the %d new or out-of-date game(s)", len(def))
-		if len(def) == 0 {
+		if idle {
+			dflt = "quit"
+		} else if len(def) == 0 {
 			dflt = "only the moves above"
 		}
 		fmt.Fprintf(out, "\nWhich games to prepare? Enter = %s, a = all, numbers (e.g. 1 3), q = quit: ", dflt)
@@ -466,7 +469,7 @@ func interactive(root string) int {
 			say("")
 		}
 		a = strings.ToLower(pyStrip(a))
-		if a == "q" || a == "quit" {
+		if a == "q" || a == "quit" || a == "" && idle {
 			say("Nothing changed.")
 			pause()
 			return 0
@@ -514,7 +517,7 @@ func interactive(root string) int {
 		for _, i := range pick {
 			only[all[i].id()] = true
 		}
-		rc = card(root, cardOpts{mergeMode: "always", ask: true, only: only})
+		rc = card(root, cardOpts{mergeMode: "always", ask: true, only: only, rebuild: true})
 	}
 	say("")
 	after, _ := checkCard(root)

@@ -134,7 +134,9 @@ root (moved) or in other folders, each game's folders, `.cue` files whose tracks
 `.bin`/`.img` files no `.cue` lists, and a folder that is not a card root (no `Cores/` or `Assets/`). A verdict
 line follows ("Card ready" or the numbered problems), then the numbered games with their state (new, prepared,
 out of date, cannot be prepared) and one question: Enter prepares the new and out-of-date ones, `a` all, numbers
-a choice, `q` quits. The moves are done unless `q`; the overwrite prompt below still asks per game. After a
+a choice, `q` quits. A picked game is rebuilt from its tracks (its `.img` copied again in full), so picking a
+prepared game repairs it; with every game prepared, Enter quits. The moves are done unless `q`; the overwrite
+prompt below still asks per game. After a
 summary and a second verdict it waits for Enter. ANSI colours only on a terminal (and a Windows console with VT
 support), not with `NO_COLOR`. `--card SD_ROOT --check` prints the check only (exit status 1 with problems).
 
@@ -170,7 +172,8 @@ nothing but the overwrite question below, and only on a terminal:
   JSON into `common/DIR` instead, `data_path` then being the tracks' folder relative to it (tracks outside `DIR`
   are refused).
 - an existing `.img`, `.toc` or `.json` that would change is overwritten only after `[y]es / [n]o / [a]ll /
-  n[o]ne`, once per game; without a terminal it is kept, `--yes` overwrites.
+  n[o]ne`, once per game; without a terminal it is kept, `--yes` overwrites. An overwrite rewrites the whole
+  `.img` from the tracks, never only its header sector, so no old track data survives it.
 - before writing a JSON, every slot filename (and `data_path`) is checked: no `..` or `.` component, no leading
   `/`, no `\` or `:`, and the file exists at the JSON's folder + `data_path` + filename (a `.toc` / `.img` the
   same run writes counts). A disc that fails is reported and gets no JSON.

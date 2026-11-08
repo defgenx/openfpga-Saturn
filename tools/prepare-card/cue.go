@@ -574,15 +574,16 @@ func slotNames(s []slot) []string {
 	return out
 }
 
-// writeMerged writes img = head (one sector, the TOC) + the track files. An image of the right size, newer
-// than every track, is kept, and only its header sector is rewritten when the TOC differs.
-func writeMerged(m *merged, dry bool) (string, error) {
+// writeMerged writes img = head (one sector, the TOC) + the track files. Unless full, an image of the right
+// size, newer than every track, is kept, and only its header sector is rewritten when the TOC differs; full
+// always rewrites the whole image from the tracks.
+func writeMerged(m *merged, dry, full bool) (string, error) {
 	total := int64(len(m.head))
 	for _, f := range m.files {
 		total += f.size
 	}
 	keep := false
-	if st, err := os.Stat(m.img); err == nil && st.Mode().IsRegular() && st.Size() == total {
+	if st, err := os.Stat(m.img); !full && err == nil && st.Mode().IsRegular() && st.Size() == total {
 		keep = true
 		ti, _ := pyMtime(m.img)
 		for _, f := range m.files {
@@ -611,6 +612,9 @@ func writeMerged(m *merged, dry bool) (string, error) {
 	state := "created"
 	if exists(m.img) {
 		state = "updated"
+		if full {
+			state = "rebuilt"
+		}
 	}
 	if dry {
 		return "would be " + state, nil

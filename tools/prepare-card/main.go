@@ -291,7 +291,7 @@ func single(a args) int {
 		return fail(osErr{err, []string{a.outdir}})
 	}
 	if mg != nil {
-		if _, err := writeMerged(mg, false); err != nil {
+		if _, err := writeMerged(mg, false, false); err != nil {
 			return fail(err)
 		}
 	}
