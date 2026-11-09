@@ -38,7 +38,8 @@ SD card root
 │       ├── saturn.rbf_r         <- the core bitstream
 │       ├── core.json  data.json  input.json  interact.json  video.json ...
 └── Platforms/
-    └── saturn.json
+    ├── saturn.json
+    └── _images/saturn.bin       <- the platform picture (by dyreschlock)
 ```
 
 Don't replace the existing `Assets`, `Cores` or `Platforms` folders; merge into them. Eject the card

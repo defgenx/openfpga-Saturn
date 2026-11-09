@@ -170,7 +170,7 @@ src/fpga/core/       core_top.v, saturn_pocket.sv, mem/ (SDRAM/PSRAM/SRAM), cd/ 
 src/fpga/saturn/     Saturn_MiSTer RTL and the Pocket rewrites (see src/fpga/saturn/UPSTREAM.md)
 sim/                 simulations (make -C sim <target>)
 firmware/cdb/        HLE CD block firmware (RV32, runs on SERV)
-dist/                Cores/defgenx.Saturn (definition files), Platforms/saturn.json, Assets/
+dist/                Cores/defgenx.Saturn (definition files), Platforms/saturn.json and _images/saturn.bin, Assets/
 tools/               prepare-card/ (Saturn-prepare-card: disc TOC, merged image, card check; Go), reverse_bits.py,
                      check_json.py, pllplan.py
 build.sh             compile and package
@@ -201,3 +201,5 @@ license, see the headers there.
   contributors
 * The [MiSTer project](https://github.com/MiSTer-devel) (Sorgelig and contributors) for the framework this core came from
 * Analogue, for the Pocket and the [openFPGA framework](https://www.analogue.co/developer)
+* [dyreschlock](https://github.com/dyreschlock), for the Sega Saturn platform image
+  (`dist/Platforms/_images/saturn.bin`, from [pocket-platform-images](https://github.com/dyreschlock/pocket-platform-images))
