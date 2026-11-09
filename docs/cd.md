@@ -48,7 +48,7 @@ CD_COMREQ_N, CD_COMSYNC_N, CD_DATA[17:0], CD_CK, CD_AUDIO`). The ARM-facing port
 
 | Block | Where | Size |
 |---|---|---|
-| Sector ring | **PSRAM1** through `ddram_pocket` (`rg_*` ports), 8 slots x 4 KB at ring word addr `{slot[2:0], word[10:0]}`, byte 0x108000 | 32 KB |
+| Sector ring | **PSRAM1** through `ddram_pocket` (`rg_*` ports), 128 slots x 4 KB at ring word addr `{slot[6:0], word[10:0]}`, byte 0x180000 (`cd_stream` `RING_SB` = 7; the LLE path keeps 8 slots) | 512 KB |
 | TOC + boot header | `cd_toc_ram`, 512 x 32 dual clock | 2 M10K |
 | Packet RAMs | 2 x 16 x 8 (MLAB) | ~0.5 LAB |
 | Bridge word FIFO | 64 x 45 bit in `cd_stream` (the chip can be busy with a VDP1 burst) | 2 M10K |
@@ -256,15 +256,19 @@ lead-out sectors are generated (LFSR of `MakeSecureRingData`). Both checked agai
 ## 7. Bridge behaviour, stall handling, prefetch
 
 - One `0x0180` read per sector (2352 B, or 2048 B at ring offset 16 for cooked tracks), into the ring slot's 4 KB
-  bridge window; one request open at a time; up to 6 sectors are prefetched (ring 8 slots), starting with the
+  bridge window; one request open at a time; up to 120 sectors are prefetched (ring 128 slots), starting with the
   READ/SEEK command. A flush (new READ/SEEK, new disc) drops ready sectors; the request in flight is discarded when
   it completes.
 - Request handshake on `clk_74a`: `target_dataslot_read` held for 6 clocks, then wait for `ack` or `done` low, then
   `done`. A non-zero error code is counted (`err_cnt`) and the sector is still marked ready (the data is whatever
   arrived).
-- The stall is bounded by the ring: at 2x six sectors are 40 ms, at 1x 80 ms. A 300 ms stall therefore always
-  produces stall ticks; the drive reports `0x22` ticks until the bridge answers, then resumes without losing or
-  repeating a sector. Whether the Saturn firmware tolerates a ~300 ms seek status mid-read is **not known**; real
+- The ring rides out a bridge stall up to its depth: 120 sectors are 0.8 s at 2x, 1.6 s at 1x. Another Pocket CD core
+  documents firmware events that stop the bridge for hundreds of ms, which a 6-sector ring (40 ms) cannot cover:
+  the drive stopped delivering, and streamed video and audio ran dry. Measured on the CD bench (`script_stall.txt`,
+  `+BRSTALL_N=<read> +BRSTALL_MS=400`, Duke Nukem 3D's disc): with 128 slots a 400 ms stall mid-play leaves delivery at
+  150 sectors/s throughout; the 8-slot ring (`make build/hle_small/Vtb_cdb`) stops delivering for the rest of the
+  stall. A stall longer than the ring produces stall ticks; the drive reports `0x22` ticks until the bridge answers,
+  then resumes without losing or repeating a sector. Whether the Saturn firmware tolerates a ~300 ms seek status mid-read is **not known**; real
   seeks across the disc last up to ~0.5 s (`seek_delay` up to 42 ticks).
 - Throughput requirement: 150 reads/s (2x) with a single request in flight, i.e. a round trip below 6.67 ms
   including the 2352-byte transfer. Unmeasured (see `pocket-platform.md` 3.5).

@@ -1226,6 +1226,15 @@ always @(posedge `SAT.VDP1.CLK) if (cmdprobe >= 0 && frame_no >= cmdprobe && fra
 end
 integer fbdump = -1;
 initial if (!$value$plusargs("FBDUMP=%d", fbdump)) fbdump = -1;
+// shadow of both buffers from every write strobe at the vdp1_fb_pocket ports (draw, CPU and erase writes): fb0s.bin /
+// fb1s.bin beside fb0.bin / fb1.bin, same layout; a word that differs was stored or read back wrong by the FB engine
+reg [15:0] fbs0 [0:131071], fbs1 [0:131071];
+always @(posedge dut.saturn.mem.fb.clk_sys) begin
+	if (dut.saturn.mem.fb.FB0_WE[1]) fbs0[dut.saturn.mem.fb.FB0_A][15:8] <= dut.saturn.mem.fb.FB0_D[15:8];
+	if (dut.saturn.mem.fb.FB0_WE[0]) fbs0[dut.saturn.mem.fb.FB0_A][7:0]  <= dut.saturn.mem.fb.FB0_D[7:0];
+	if (dut.saturn.mem.fb.FB1_WE[1]) fbs1[dut.saturn.mem.fb.FB1_A][15:8] <= dut.saturn.mem.fb.FB1_D[15:8];
+	if (dut.saturn.mem.fb.FB1_WE[0]) fbs1[dut.saturn.mem.fb.FB1_A][7:0]  <= dut.saturn.mem.fb.FB1_D[7:0];
+end
 // SRAM words of an erased block (vdp1_fb_pocket flag 0, normal-mode block numbers) are dumped as the erase value
 always @(posedge video_vs) if (frame_no == fbdump) begin : fbd
 	integer f, i;
@@ -1243,8 +1252,47 @@ always @(posedge video_vs) if (frame_no == fbdump) begin : fbd
 		$fwrite(f, "%c%c", w[15:8], w[7:0]);
 	end
 	$fclose(f);
+	f = $fopen("fb0s.bin", "wb");
+	for (i = 0; i < 90112; i++) $fwrite(f, "%c%c", fbs0[i][15:8], fbs0[i][7:0]);
+	$fclose(f);
+	f = $fopen("fb1s.bin", "wb");
+	for (i = 0; i < 90112; i++) $fwrite(f, "%c%c", fbs1[i][15:8], fbs1[i][7:0]);
+	$fclose(f);
 	$fdisplay(ftrace, "%0t FBDUMP at pocket frame %0d, FB_SEL %b", $time, frame_no, `SAT.VDP1.FB_SEL);
 	$display("tb_sys: dumped both VDP1 framebuffers at frame %0d", frame_no);
+end
+
+// ---- +V1VCHK: VDP1 VRAM read integrity. A shadow of VDP1 VRAM from every write VDP1P issues (VRAM_WE); each word
+// VDP1P takes (command, pattern, colour table, Gouraud, CPU read: its state with VRAM_RDY) is compared with it.
+// V1VCHK lines in trace.log (first 300 mismatches, then a count per 100 ms).
+reg  [15:0] vv_sh [0:262143];
+reg         vv_kn [0:262143];
+bit         vv_on = 0;
+longint     vv_ok = 0, vv_bad = 0, vv_bad_q = 0;
+initial vv_on = $test$plusargs("V1VCHK");
+always @(posedge `SAT.VDP1.CLK) if (vv_on) begin : vvchk
+	reg [3:0] st; reg take;
+	if (`SAT.VDP1.VRAM_WE[1]) vv_sh[`SAT.VDP1.VRAM_A][15:8] = `SAT.VDP1.VRAM_D[15:8];
+	if (`SAT.VDP1.VRAM_WE[0]) vv_sh[`SAT.VDP1.VRAM_A][7:0]  = `SAT.VDP1.VRAM_D[7:0];
+	if (|`SAT.VDP1.VRAM_WE) vv_kn[`SAT.VDP1.VRAM_A] = 1;
+	st = `SAT.VDP1.VRAM_ST;
+	take = `SAT.VDP1.VRAM_RDY && !`SAT.VDP1.FRAME_START && (st == 4'd6 || st == 4'd8 || st == 4'd9 ||
+		(st == 4'd7 && `SAT.VDP1.SPR_READ) || (st == 4'd5 && `SAT.VDP1.CE_R));
+	if (take && vv_kn[`SAT.VDP1.VRAM_A]) begin
+		if (`SAT.VDP1.VRAM_Q === vv_sh[`SAT.VDP1.VRAM_A]) vv_ok++;
+		else begin
+			vv_bad++;
+			if (vv_bad <= 300)
+				$fdisplay(ftrace, "%0t V1VCHK st=%0d A=%05h got %04h want %04h blen=%0d pre=%b | b_chan=%0d b_state=%0d ringw=%b rcblen=%0d rca=%05h dirty=%b",
+					$time, st, `SAT.VDP1.VRAM_A, `SAT.VDP1.VRAM_Q, vv_sh[`SAT.VDP1.VRAM_A], `SAT.VDP1.VRAM_BLEN, `SAT.VDP1.PAT_PREREAD,
+					dut.saturn.mem.ddram.b_chan, dut.saturn.mem.ddram.b_state, dut.saturn.mem.ddram.ringw_write_busy,
+					dut.saturn.mem.ddram.vdp1vram_rcache_blen, dut.saturn.mem.ddram.vdp1vram_rcache_addr, dut.saturn.mem.ddram.vdp1vram_rcache_dirty);
+		end
+	end
+end
+initial forever begin
+	#(64'd100000000000);
+	if (vv_on && vv_bad != vv_bad_q) begin $fdisplay(ftrace, "%0t V1VCHK total ok %0d bad %0d", $time, vv_ok, vv_bad); vv_bad_q = vv_bad; end
 end
 
 // VDP1 frame buffer writes lost to a full FIFO (SRAM too slow for the write rate), logged when the count changes
@@ -1285,6 +1333,16 @@ always @(posedge dut.saturn.clk_ram) if (ww_hi != 0 && |dut.saturn.mem.ddram.ram
 		$time, 32'h06000000 | {dut.saturn.mem.ddram.ramh_addr, 2'b00}, dut.saturn.mem.ddram.ramh_din, dut.saturn.mem.ddram.ramh_wr,
 		`SAT.CBREQ_N, `SAT.CBACK_N, `SAT.SSHBREQ_N, `SAT.SSHBACK_N, `SAT.SCU.DMA_ST, `SAT.SCU.DMA_CH, `SAT.SCU.DMA_WA,
 		`SAT.MSH.core.PC, `SAT.SSH.core.PC);
+// +CDBLOG=<file>: every CD block command (CR1-CR4, logged at the CR4 write) with time and HIRQ (docs/sim.md)
+integer cdb_log = 0; reg [15:0] cdb_cr [0:3]; string cdb_log_fn;
+initial if ($value$plusargs("CDBLOG=%s", cdb_log_fn)) cdb_log = $fopen(cdb_log_fn, "w");
+always @(posedge `SAT.cdb.CLK) if (cdb_log != 0 && `SAT.cdb.cr_we) begin
+	cdb_cr[`SAT.cdb.bus_w - 4'd6] = `SAT.cdb.ADI;
+	if (`SAT.cdb.bus_w == 4'd9)
+		$fdisplay(cdb_log, "%.4f CMD %04h %04h %04h %04h HIRQ=%04h", $realtime / 1.0e12,
+			cdb_cr[0], cdb_cr[1], cdb_cr[2], `SAT.cdb.ADI, `SAT.cdb.HIRQ);
+		$fflush(cdb_log);
+end
 integer rh_ok = 0, rh_bad = 0;
 task automatic rh_cmp(input string who, input [31:0] a, input [31:0] d, input [3:0] ba, input string kind);
 	reg [31:0] m, s;
@@ -1404,6 +1462,11 @@ always @(ckpt_reload) begin : reargs
 	void'($value$plusargs("CYCLES=%d", max_cycles));
 	if ($value$plusargs("MAXUS=%d", us)) max_ps = us * 1000000;
 	if ($value$plusargs("BUSLOG=%s", p)) fbus = $fopen(p, "w");
+	if (!$value$plusargs("FBDUMP=%d", fbdump)) fbdump = -1;
+	if (!$value$plusargs("DUMPAT=%d", dumpat)) dumpat = -1;
+	if (!$value$plusargs("CMDPROBE=%d", cmdprobe)) cmdprobe = -1;
+	v1p = $test$plusargs("V1PROBE");
+	vv_on = $test$plusargs("V1VCHK");
 	$fdisplay(ftrace, "%0t CKPT replay starts", $time);
 	$display("%0t CKPT replay starts", $time);
 end

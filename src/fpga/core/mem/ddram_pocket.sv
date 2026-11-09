@@ -23,7 +23,7 @@
 //   0x300000 WRAM-H 1 MB       0x800000-0xFFFFFF cartridge window 8 MB (ROM, RAM carts, backup cart)
 // PSRAM1 map:
 //   0x000000 VDP1 VRAM 512 KB  0x080000 CD block DRAM 512 KB      0x100000 CD sector buffer 16 KB
-//   0x108000 CD sector ring 32 KB (8 slots x 4 KB)
+//   0x180000 CD sector ring 512 KB (128 slots x 4 KB)
 //
 
 `default_nettype none
@@ -138,11 +138,11 @@ module ddram_pocket
 
 	// CD sector ring: one 32 bit write (word pair) per bridge word, and 16 bit reads through a 32 byte line cache
 	// ringw_addr / ringw_data stay unchanged until ringw_busy has fallen (not copied here)
-	input  wire [12: 0] ringw_addr,          // word pair index
+	input  wire [16: 0] ringw_addr,          // word pair index
 	input  wire [31: 0] ringw_data,          // {first word, second word}
 	input  wire         ringw_wr,
 	output wire         ringw_busy,
-	input  wire [13: 0] ring_addr,
+	input  wire [17: 0] ring_addr,
 	output wire [15: 0] ring_dout,
 	input  wire         ring_rd,
 	output wire         ring_busy
@@ -208,7 +208,7 @@ reg  [ 13:  1] cdbuf_rcache_addr;
 reg            cdbuf_rcache_dirty;
 reg            cdbuf_rcache_busy;
 reg            cdbuf_read_busy;
-reg  [ 13:  0] ring_rcache_addr;
+reg  [ 17:  0] ring_rcache_addr;
 reg            ring_rcache_dirty;
 reg            ring_rcache_busy;
 reg            ring_read_busy;
@@ -335,7 +335,6 @@ always @(posedge clk) begin
 			if (ramh_way[1]) ramh_plru[2] <= !ramh_way[0]; else ramh_plru[1] <= !ramh_way[0];
 			if (ramh_miss) begin
 				ramh_alloc[ramh_victim] <= 1'b1;
-				ramh_dirty[ramh_victim] <= 0;
 				ramh_read_busy <= 1;
 			end
 		end
@@ -369,6 +368,8 @@ always @(posedge clk) begin
 		{raml_write_busy,cart_write_busy,bsram_write_busy,ld_write_busy,ld_read_busy} <= 0;
 	end
 	else begin
+		// The allocated line turns valid with its tag; a write at the same edge (below) invalidates it again.
+		for (wi = 0; wi < 4; wi = wi + 1) if (ramh_alloc[wi]) ramh_dirty[wi] <= 1'b0;
 		if (|ramh_wr && !ramh_wr_old) begin
 			for (wi = 0; wi < 4; wi = wi + 1) if (ramh_wmatch[wi]) ramh_dirty[wi] <= 1;
 		end
@@ -576,7 +577,7 @@ always @(posedge clk) begin
 			cdbuf_rcache_dirty <= 0;
 		end
 		if (ring_rd && !ring_rd_old) begin
-			if (ring_addr[13:4] != ring_rcache_addr[13:4] || ring_rcache_dirty) begin
+			if (ring_addr[17:4] != ring_rcache_addr[17:4] || ring_rcache_dirty) begin
 				ring_read_busy <= 1;
 			end
 			ring_rcache_addr <= ring_addr;
@@ -673,14 +674,14 @@ always @(posedge clk) begin
 					b_state <= 2'd2;
 				end
 				else if (ring_read_busy) begin
-					b_addr  <= {4'b0001, 4'b0000, 1'b1, ring_rcache_addr[13:4], 4'b0000};
+					b_addr  <= {4'b0001, 1'b1, ring_rcache_addr[17:4], 4'b0000};
 					b_read  <= 1;
 					b_chan  <= 3'd4;
 					b_state <= 2'd2;
 				end
 				else if (ringw_write_busy) begin
 					ringw_write_busy <= 0;
-					b_addr  <= {4'b0001, 4'b0000, 1'b1, ringw_addr, 1'b0};
+					b_addr  <= {4'b0001, 1'b1, ringw_addr, 1'b0};
 					b_wd    <= ringw_data;
 					b_be    <= 4'hF;
 					b_write <= 1;

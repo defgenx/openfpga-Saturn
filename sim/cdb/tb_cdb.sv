@@ -3,7 +3,8 @@
 //   LLE=1  pruned SH-1 + firmware + YGR019 + cdd_pocket (the real CDD layer)
 //   LLE=0  cdb_hle + cd_stream
 // and logs every command, its results and the transferred data. compare.py diffs the two logs.
-// Plusargs: +SCRIPT=file +LOG=file +DISC=C +CE=<clk per CDD_CE> (+FW=<mif> for LLE, +HEX=<cdb_fw.hex> is the parameter)
+// Plusargs: +SCRIPT=file +LOG=file +DISC=C +CE=<clk per CDD_CE> +IMG=<merged .img> +TOCBIN=<its .toc> (a real disc:
+// slot 16 is read from the image file, the TOC from the .toc) (+FW=<mif> for LLE, +HEX=<cdb_fw.hex> is the parameter)
 module tb_cdb #(parameter LLE = 0);
 
 integer CE_CLKS;
@@ -46,10 +47,10 @@ reg         bridge_wr = 0;
 reg  [31:0] bridge_addr = 0, bridge_wr_data = 0;
 // sector ring memory, ddram_pocket handshake (writes busy 4 clocks, reads 2..10)
 wire        rg_wr, rg_rd;
-wire [12:0] rg_wa;
+wire [16:0] rg_wa;
 wire [31:0] rg_wd;
-wire [13:0] rg_ra;
-reg  [15:0] rmem [0:16383];
+wire [17:0] rg_ra;
+reg  [15:0] rmem [0:262143];
 reg         rg_wbusy = 1'b0, rg_rbusy = 1'b0, rg_rd_d = 1'b0;
 integer     rg_wc = 0, rg_rc = 0;
 wire [15:0] rg_q = rmem[rg_ra];
@@ -154,7 +155,11 @@ end else begin : g
 	wire lk_go, lk_byidx, lk_hold, lk_busy, eng_idle, lk_data, lk_s2048, pf_flush, pf_en, pf_ready, sd_go, sd_synth, sd_spd2, fd_busy, cd_ck, cd_audio, disc_new;
 	wire [23:0] lk_x, lk_start, pf_fad, sd_hdr, toc_end; wire [6:0] lk_idx, lk_track, ntracks; wire [7:0] lk_tbcd, lk_idx1, ntbcd; wire [1:0] sd_kind; wire [17:0] cd_data;
 
+`ifdef RING_SMALL
+	cd_stream #(.RING_SB(3), .PREFETCH_MAX(8'd6)) stream (   // the ring size before the deep prefetch, for comparison
+`else
 	cd_stream stream (
+`endif
 		.clk(clk), .rst_n(rst_n), .ce(CDD_CE),
 		.clk_74a(clk74), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data), .toc_rd(1'b0),
 		.t_read(t_read), .t_id(t_id), .t_off(t_off), .t_baddr(t_baddr), .t_len(t_len), .t_ack(t_ack), .t_done(t_done), .t_err(t_err),
@@ -189,16 +194,21 @@ end else begin : g
 	integer bcnt = 0, dlat = 3;
 	reg [15:0] lf2 = 16'h1D87;
 	reg wr_pend = 0; reg [17:0] wr_a; reg [15:0] wr_d;
+	// +DSTALL=<clocks> +DSTALL_PCT=<n>: n percent of the accesses take DSTALL clocks longer (PSRAM1 behind VDP1 bursts)
+	integer dstall = 0, dstall_pct = 0, sk_ovr = 0;
+	initial begin void'($value$plusargs("DSTALL=%d", dstall)); void'($value$plusargs("DSTALL_PCT=%d", dstall_pct)); end
+	function integer xstall; xstall = (dstall_pct > 0 && ($urandom % 100) < dstall_pct) ? dstall : 0; endfunction
+	always @(posedge clk) if (hle.sink.overrun && sk_ovr == 0) begin sk_ovr = 1; $display("[%0t] SINK OVERRUN", $time); end
 	always @(posedge clk) begin
 		lf2 <= {lf2[14:0], lf2[15] ^ lf2[13] ^ lf2[12] ^ lf2[10]};
 		rd_old <= RAM_RD & RAM_CS; wr_old <= |RAM_WE & RAM_CS;
 		if (bcnt != 0) bcnt <= bcnt - 1;
 		if (RAM_RD && RAM_CS && !rd_old) begin
-			bcnt <= 1 + (lf2[2:0] == 0 ? 20 : 0);
+			bcnt <= 1 + (lf2[2:0] == 0 ? 20 : 0) + xstall();
 			RAM_Q <= dmem[RAM_A];
 		end
 		if (|RAM_WE && RAM_CS && !wr_old) begin
-			bcnt <= 1 + (lf2[3:1] == 0 ? 20 : 0);
+			bcnt <= 1 + (lf2[3:1] == 0 ? 20 : 0) + xstall();
 			dmem[RAM_A] <= RAM_D;
 		end
 		RAM_RDY <= (bcnt <= 1) && !((RAM_RD && RAM_CS && !rd_old) || (|RAM_WE && RAM_CS && !wr_old));
@@ -238,7 +248,13 @@ begin
 end
 endtask
 
-integer BR_LAT = 8000, nwords, k2, nreads = 0;
+integer BR_LAT = 8000, nwords, k2, nreads = 0, img_fd = 0, br_stall_n = -1, br_stall_ms = 0;
+initial begin void'($value$plusargs("BRSTALL_N=%d", br_stall_n)); void'($value$plusargs("BRSTALL_MS=%d", br_stall_ms)); end
+function automatic [31:0] img_word(input integer fd);
+	integer b0, b1, b2, b3;
+	b0 = $fgetc(fd); b1 = $fgetc(fd); b2 = $fgetc(fd); b3 = $fgetc(fd);
+	img_word = {b0[7:0], b1[7:0], b2[7:0], b3[7:0]};
+endfunction
 reg [31:0] c_off, c_len, c_baddr; reg [15:0] c_id;
 reg t_read_d = 0;
 reg [31:0] wv;
@@ -251,10 +267,16 @@ always @(posedge clk74) begin
 		fork : cmd
 			begin
 				repeat (BR_LAT) @(posedge clk74);
+				if (nreads == br_stall_n) begin                  // +BRSTALL_N/+BRSTALL_MS: one long bridge stall
+					$display("[%0t] bridge stall %0d ms at read %0d", $time, br_stall_ms, nreads);
+					repeat (br_stall_ms) repeat (74250) @(posedge clk74);
+				end
 				t_ack <= 1;
 				nwords = c_len / 4;
+				if (img_fd != 0 && c_id == 16) void'($fseek(img_fd, c_off, 0));
 				for (k2 = 0; k2 < nwords; k2 = k2 + 1) begin
-					if (c_id == 16) wv = f0[c_off / 4 + k2]; else wv = f1[c_off / 4 + k2];
+					if (img_fd != 0 && c_id == 16) wv = img_word(img_fd);
+					else if (c_id == 16) wv = f0[c_off / 4 + k2]; else wv = f1[c_off / 4 + k2];
 					@(posedge clk74); bridge_wr <= 1; bridge_addr <= c_baddr + 4 * k2; bridge_wr_data <= wv;
 					@(posedge clk74); bridge_wr <= 0;
 					repeat (22) @(posedge clk74);
@@ -353,7 +375,8 @@ end
 endtask
 
 // ---------------------------------------------------------------- script interpreter
-integer sf, n, a1, a2, a3, a4, a5, w;
+integer sf, n, a1, a2, a3, a4, a5, w, tf;
+string imgname, tocname;
 reg [8*16-1:0] op;
 reg [8*256-1:0] line;
 initial begin
@@ -362,9 +385,17 @@ initial begin
 	if (!$value$plusargs("SCRIPT=%s", scriptname)) scriptname = "script.txt";
 	if (!$value$plusargs("LOG=%s", logname)) logname = "build/run.log";
 	lf = $fopen(logname, "w");
-	$readmemh({"build/", disc, "_f0.hex"}, f0);
-	$readmemh({"build/", disc, "_f1.hex"}, f1);
-	$readmemh({"build/", disc, "_toc.hex"}, tocw);
+	if ($value$plusargs("IMG=%s", imgname)) begin
+		img_fd = $fopen(imgname, "rb");
+		if (!$value$plusargs("TOCBIN=%s", tocname)) $fatal(1, "+IMG needs +TOCBIN");
+		tf = $fopen(tocname, "rb");
+		for (n = 0; n < 512; n = n + 1) tocw[n] = img_word(tf);
+		$fclose(tf);
+	end else begin
+		$readmemh({"build/", disc, "_f0.hex"}, f0);
+		$readmemh({"build/", disc, "_f1.hex"}, f1);
+		$readmemh({"build/", disc, "_toc.hex"}, tocw);
+	end
 	repeat (20) @(posedge clk); rst_n = 1;
 	push_toc;
 	repeat (50) @(posedge clk);
@@ -430,8 +461,19 @@ initial begin
 	$finish;
 end
 
+// +RINGMON: every 10 ms the ring state (ready sectors, request in flight, engine state, sectors taken by the drive)
+integer rm_takes = 0;
+always @(posedge clk) if (g.stream.ring_take) rm_takes = rm_takes + 1;
+initial if ($test$plusargs("RINGMON")) forever begin
+	repeat (10) #1000000;
+	$display("[%0t ms] RING ready=%0d infl=%0d es=%0d fetch_en=%0d held=%0d takes=%0d armed=%0d fd_busy=%0d", $time / 1000000,
+		g.stream.n_ready, g.stream.infl, g.stream.es, g.stream.fetch_en, g.stream.fd_held, rm_takes, g.hle.armed, g.stream.fd_busy);
+end
+// watchdog: +TMAX_MS=<simulated ms> (default 4000)
+integer tmax_ms = 4000;
 initial begin
-	#4000000000;
+	void'($value$plusargs("TMAX_MS=%d", tmax_ms));
+	repeat (tmax_ms) #1000000;
 	$display("TIMEOUT");
 	$finish;
 end

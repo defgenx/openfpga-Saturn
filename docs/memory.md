@@ -28,7 +28,7 @@ is the only crossing (from `clk_74a`).
 | PSRAM1 | VDP1 VRAM 512 KB | 0x000000 |
 | | CD block DRAM 512 KB | 0x080000 |
 | | CD sector buffer (`cdbuf`, 16 KB) | 0x100000 |
-| | CD sector ring, 8 x 4 KB (`cd_stream`) | 0x108000-0x10FFFF |
+| | CD sector ring, 128 x 4 KB (`cd_stream`) | 0x180000-0x1FFFFF |
 | SRAM (128K x 16) | VDP1 framebuffer 1, columns 192-351 (index 0xC000-0x15FFF) | words 0x0000-0x9FFF |
 | | VDP1 framebuffer 0, x < 352, index x*256+y | words 0xA000-0x1FFFF |
 | M10K | VDP1 framebuffer 1, columns 0-191 (index 0x0000-0xBFFF) | 96 blocks |
@@ -529,8 +529,8 @@ since its clocks are aligned the same way.
 The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). A read drives UB# and LB# low: an x16
 asynchronous SRAM drives a byte of DQ only while its enable is low, and with both high it leaves the bus floating (up
 to v0.2.4 reads ran with both enables high, so every SRAM pixel read returned the floating bus; `sram_model` now
-enforces the rule and `tb_fb` fails with the old strobes). The CD sector ring (8 slots x 4 KB, docs/cd.md)
-is in PSRAM1 at byte 0x108000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
+enforces the rule and `tb_fb` fails with the old strobes). The CD sector ring (128 slots x 4 KB, docs/cd.md)
+is in PSRAM1 at byte 0x180000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
 `rg_*` instead of the SRAM pins.
 
 * Write: one 32 bit write (two ring words) per bridge word, `ringw_*`, on the chip B arbiter after the reads. The request

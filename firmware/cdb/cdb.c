@@ -799,6 +799,8 @@ static void cmd_exec(void)
 		else if ((psp & 0x800000) && (pep & 0x800000)) pep = 0x800000 | ((psp + pep) & 0x7FFFFF);
 		if (((psp ^ pep) & 0x800000) && pep != 0) { cdstatus(1, 0); break; }
 		play_cmd_start = psp; play_cmd_end = pep;
+		/* "no pickup change" keeps reading only while the drive plays; paused, it seeks (Mednafen's StartSeek) */
+		if (at_end || pos.status == S_PAUSE) pm &= 0x7F;
 		pos.status = S_BUSY;
 		cdstatus(0, 0);
 		if (!(pm & 0x80)) clear_pending_sec();

@@ -103,7 +103,8 @@ cdd_ctl ctl (
 	.fd_busy(fd_busy), .dbg(DBG), .stall_tick(STALL)
 );
 
-cd_stream #(.RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDGE_LITTLE(BRIDGE_LITTLE)) stream (
+cd_stream #(.RING_SB(3), .PREFETCH_MAX(8'd6),   // the LLE path keeps the 8-slot ring of its own ports
+            .RING_BRIDGE(RING_BRIDGE), .TRACK_SLOT_BASE(TRACK_SLOT_BASE), .BRIDGE_LITTLE(BRIDGE_LITTLE)) stream (
 	.clk(CLK), .rst_n(RST_N), .ce(CDD_CE),
 	.clk_74a(clk_74a), .bridge_wr(bridge_wr), .bridge_addr(bridge_addr), .bridge_wr_data(bridge_wr_data),
 	.toc_rd(1'b0), .t_read(target_dataslot_read), .t_id(target_dataslot_id), .t_off(target_dataslot_slotoffset),

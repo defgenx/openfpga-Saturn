@@ -7,6 +7,7 @@
 //   0x2xxxxxxx  BIOS            512 KB
 //   0x4xxxxxxx  Backup RAM       64 KB (internal; MiSTer's image, file byte 2n+1 = backup byte n)
 //   0x5xxxxxxx  Backup cart       1 MB (same layout)
+//   0x7xxxxxxx  Cartridge ROM     2 MB (MiSTer's "Load cartridge"): the same cart window as the backup cart, never read back
 //
 // The same map is in dist/Cores/defgenx.Saturn/data.json.
 
@@ -52,10 +53,10 @@ always @(posedge clk) begin
 		case (bridge_addr[31:28])
 			4'h2: ld_sel <= 3'b001;
 			4'h4: ld_sel <= 3'b010;
-			4'h5: ld_sel <= 3'b100;
+			4'h5, 4'h7: ld_sel <= 3'b100;
 			default: ld_sel <= 3'b000;
 		endcase
-		if (bridge_addr[31:28] == 4'h2 || bridge_addr[31:28] == 4'h4 || bridge_addr[31:28] == 4'h5) begin
+		if (bridge_addr[31:28] == 4'h2 || bridge_addr[31:28] == 4'h4 || bridge_addr[31:28] == 4'h5 || bridge_addr[31:28] == 4'h7) begin
 			ld_wr   <= 1'b1;
 			idle    <= 13'd0;
 		end

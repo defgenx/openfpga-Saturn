@@ -20,7 +20,7 @@ module saturn_pocket #(
 
 	// interact.json settings (clk_74a)
 	input  wire  [1:0] cfg_region,                 // 0 auto, 1 Japan, 2 USA, 3 Europe
-	input  wire  [2:0] cfg_cart,                   // MiSTer cart_sel: 0 auto, 2 RAM 1M, 3 RAM 4M, 5 backup, 6 none
+	input  wire  [2:0] cfg_cart,                   // MiSTer cart_sel: 0 auto, 1 ROM 2M, 2 RAM 1M, 3 RAM 4M, 5 backup, 6 none
 
 	input  wire [27:0] pad,                        // {pad2, pad1}, MiSTer joystick_0 bit order, clk_74a
 	input  wire [31:0] rtc_date_bcd,
@@ -641,9 +641,9 @@ pad_pocket pads (
 
 // ---------------------------------------------------------------------------------- CD drive
 wire        rg_wr, rg_wbusy, rg_rd, rg_rbusy;
-wire [12:0] rg_wa;
+wire [16:0] rg_wa;   // cd_stream RING_SB = 7: 128 slots of 4 KB in PSRAM1 (docs/memory.md)
 wire [31:0] rg_wd;
-wire [13:0] rg_ra;
+wire [17:0] rg_ra;
 wire [15:0] rg_q;
 
 `ifdef POCKET_CUT_CDB_LLE
@@ -720,10 +720,10 @@ assign target_dataslot_slotoffset = 32'd0;
 assign target_dataslot_bridgeaddr = 32'd0;
 assign target_dataslot_length = 32'd0;
 assign rg_wr = 1'b0;
-assign rg_wa = 13'd0;
+assign rg_wa = 17'd0;
 assign rg_wd = 32'd0;
 assign rg_rd = 1'b0;
-assign rg_ra = 14'd0;
+assign rg_ra = 18'd0;
 assign CD_RAM_Q = 16'd0;
 assign CD_RAM_RDY = 1'b1;
 `endif

@@ -170,7 +170,7 @@ foreach n {0 1} {
 # apart (ramh_rd has to fall and rise again). A missed line's tag is written at the edge after the request edge
 # (ramh_alloc) and the tags reach ramh_alloc, ramh_plru, ramh_curr and ramh_read_busy only through the hit test, so a
 # tag has two clk_ram periods before it can be used. ramh_dirty is not in the set: a write (ramh_wr, registered on
-# clk_ram in saturn_pocket) can invalidate a line at the edge after its allocation.
+# clk_ram in saturn_pocket) can invalidate a line at the edge after its allocation (ramh_dirty: below).
 set ramh_tag [get_registers "*|ddram|ramh_tag*"]
 set ramh_rd_dst [get_registers "*|ddram|ramh_alloc* *|ddram|ramh_plru* *|ddram|ramh_curr* *|ddram|ramh_read_busy*"]
 set_multicycle_path -setup -from $ramh_tag -to $ramh_rd_dst 2
@@ -182,6 +182,14 @@ set_multicycle_path -setup -from [get_clocks $clk_sys] -to $ramh_tag 2
 set_multicycle_path -hold  -from [get_clocks $clk_sys] -to $ramh_tag 1
 set_multicycle_path -setup -from [get_clocks $clk_sys] -to [get_registers "*|ddram|a_addr*"] 2
 set_multicycle_path -hold  -from [get_clocks $clk_sys] -to [get_registers "*|ddram|a_addr*"] 1
+# ramh_dirty takes clk_sys data (ramh_addr through the write match) only at a write edge, which is two clk_ram after the
+# clk_sys edge that launched the address and the strobe (ramh_wr is registered on clk_ram in saturn_pocket); a miss
+# clears it from ramh_alloc, a clk_ram register.
+set_multicycle_path -setup -from [get_clocks $clk_sys] -to [get_registers "*|ddram|ramh_dirty*"] 2
+set_multicycle_path -hold  -from [get_clocks $clk_sys] -to [get_registers "*|ddram|ramh_dirty*"] 1
+# rst_ram (clk_sys) sets it through rst_pulse at the next clk_ram edge: single cycle (a register -from wins over a clock).
+set_multicycle_path -setup -from [get_registers "*|ramrst|rst_ram"] -to [get_registers "*|ddram|ramh_dirty*"] 1
+set_multicycle_path -hold  -from [get_registers "*|ramrst|rst_ram"] -to [get_registers "*|ddram|ramh_dirty*"] 0
 
 # Request registers that capture clk_sys data only at odd clk_ram edges (the edge after a clk_sys edge): the hold check at
 # the coincident edge is moved one clk_ram back. Strobe registers stay out of every -from, so their hold is still timed

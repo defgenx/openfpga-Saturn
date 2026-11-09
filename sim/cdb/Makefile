@@ -20,7 +20,7 @@ ALL    := tb_cdb.sv $(CDRTL) $(HLERTL) $(SH)
 .PHONY: all gen hle lle run-hle run-lle test compare clean
 all: test
 
-# HLE against the disc image (check_hle.py), the no-disc, bulk transfer and pause scripts; about 25 minutes
+# HLE against the disc image (check_hle.py), the no-disc, bulk transfer, pause and no-pickup-change scripts; about 30 minutes
 test: hle gen
 	./build/hle/Vtb_cdb +SCRIPT=script_cmds.txt +LOG=build/hle_script_cmds.log > build/hle_script_cmds.out
 	python3 check_hle.py build/hle_script_cmds.log
@@ -31,6 +31,8 @@ test: hle gen
 	python3 check_hle.py build/hle_bulk.log bulk
 	./build/hle/Vtb_cdb +SCRIPT=script_pause.txt +LOG=build/hle_pause.log > build/hle_pause.out
 	python3 check_hle.py build/hle_pause.log pause
+	./build/hle/Vtb_cdb +SCRIPT=script_npc.txt +LOG=build/hle_npc.log > build/hle_npc.out
+	python3 check_hle.py build/hle_npc.log npc
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test
@@ -45,6 +47,8 @@ build/C_f0.hex: gen_iso.py
 
 build/hle/Vtb_cdb: $(ALL) $(FWHEX)
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=0 -DFWPATH='"$(FWHEX)"' -Mdir build/hle $(ALL)
+build/hle_small/Vtb_cdb: $(ALL) $(FWHEX)
+	verilator $(VFLAGS) --top-module tb_cdb -GLLE=0 -DRING_SMALL -DFWPATH='"$(FWHEX)"' -Mdir build/hle_small $(ALL)
 build/lle/Vtb_cdb: $(ALL)
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=1 -DFWPATH='"$(FWHEX)"' -Mdir build/lle $(ALL)
 

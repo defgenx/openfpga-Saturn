@@ -37,8 +37,8 @@ reg  [26:1] bios_addr = 0;  reg [15:0] bios_din = 0; reg [1:0] bios_wr = 0; wire
 reg  [20:1] bsram_addr = 0; wire [15:0] bsram_dout; reg [15:0] bsram_din = 0; reg bsram_rd = 0; reg [1:0] bsram_wr = 0; wire bsram_busy;
 reg  [23:2] ld_addr = 0;    reg [31:0] ld_data = 0; reg ld_wr = 0; wire ld_busy;
 reg  [13:1] cdbuf_waddr = 0; reg [15:0] cdbuf_wdata = 0; reg cdbuf_wwr = 0; wire cdbuf_wbusy;
-reg  [12:0] ringw_addr = 0; reg [31:0] ringw_data = 0; reg ringw_wr = 0; wire ringw_busy;
-reg  [13:0] ring_addr = 0; wire [15:0] ring_dout; reg ring_rd = 0; wire ring_busy;
+reg  [16:0] ringw_addr = 0; reg [31:0] ringw_data = 0; reg ringw_wr = 0; wire ringw_busy;
+reg  [17:0] ring_addr = 0; wire [15:0] ring_dout; reg ring_rd = 0; wire ring_busy;
 
 wire p0_busy, p0_rd, p0_we, p0_rlast, p0_rvalid, p1_busy, p1_rd, p1_we, p1_rlast, p1_rvalid;
 wire [22:0] p0_addr, p1_addr;  wire [9:0] p0_cnt, p1_cnt;  wire [3:0] p0_be, p1_be;  wire [31:0] p0_din, p1_din;
@@ -304,10 +304,10 @@ task automatic cdb_read(input [13:1] a);
 endtask
 
 // CD ring, as cd_stream drives it: 32 bit writes (one per bridge word) behind a busy poll, sequential 16 bit reads
-reg [15:0] sh_ring [0:16383];  reg sv_ring [0:16383];
+reg [15:0] sh_ring [0:262143];  reg sv_ring [0:262143];
 integer rgk;
-initial for (rgk = 0; rgk < 16384; rgk = rgk + 1) sv_ring[rgk] = 0;
-task automatic ring_write(input [12:0] a, input [31:0] d);
+initial for (rgk = 0; rgk < 262144; rgk = rgk + 1) sv_ring[rgk] = 0;
+task automatic ring_write(input [16:0] a, input [31:0] d);
 	begin
 		@(posedge clk); while (ringw_busy) @(posedge clk);
 		ringw_addr <= a; ringw_data <= d; ringw_wr <= 1'b1;
@@ -316,7 +316,7 @@ task automatic ring_write(input [12:0] a, input [31:0] d);
 		repeat (2) @(posedge clk);
 	end
 endtask
-task automatic ring_read(input [13:0] a);
+task automatic ring_read(input [17:0] a);
 	begin
 		@(posedge clk); ring_addr <= a; ring_rd <= 1'b1;
 		repeat (2) @(posedge clk);
@@ -406,13 +406,16 @@ initial begin
 			done_ld = 1;
 		end
 		// CD ring: a sector (588 bridge words) written into a slot at the bridge pace, then read back word by word at
-		// the CD word rate (a read every 324 clk_sys = 648 clk_ram) while the next slot is being written
-		begin
+		// the CD word rate (a read every 324 clk_sys = 648 clk_ram) while the next slot is being written. Slots 0, 77
+		// and 127 of the 128 (512 KB at PSRAM1 0x180000) cover the low, middle and top address bits.
+		begin : ringtest
+			reg [6:0] sl [0:2];
+			sl[0] = 7'd0; sl[1] = 7'd77; sl[2] = 7'd127;
 			for (rs = 0; rs < 3; rs = rs + 1) begin
 				for (kr = 0; kr < 588; kr = kr + 1) begin
-					ring_write({rs[2:0], 10'd0} + kr, $urandom);
+					ring_write({sl[rs], 10'd0} + kr, $urandom);
 					repeat (36) @(posedge clk);                    // a bridge word every ~25 clk_sys
-					if (rs > 0 && kr % 6 == 0) ring_read({rs[2:0] - 3'd1, 11'd0} + 2 * kr + (kr % 2));
+					if (rs > 0 && kr % 6 == 0) ring_read({sl[rs - 1], 11'd0} + 2 * kr + (kr % 2));
 				end
 			end
 			done_ring = 1;

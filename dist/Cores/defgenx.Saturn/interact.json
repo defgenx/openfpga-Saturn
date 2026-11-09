@@ -51,6 +51,10 @@
             "name": "Auto"
           },
           {
+            "value": 1,
+            "name": "ROM 2 MB"
+          },
+          {
             "value": 6,
             "name": "None"
           },

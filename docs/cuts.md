@@ -112,6 +112,11 @@ Dracula X, Virtual Hydlide, ...) depend on the timings above.
 
 ## POCKET_CUT_SH2_WDT
 
+**In the build** (`ap_core.qsf`), although Duke Nukem 3D (USA) needs the master SH-2 WDT: it runs its CD file loader
+from the WDT interval-timer interrupt (handler 0x0602571C clears WTCSR.OVF), and with the cut it waits forever on the
+SEGA licence screen; Mednafen with only that interrupt blocked stops the same way. With the WDT of both CPUs, or of the
+master only, the v0.1.3 design did not fit at timing on any of 28 seeds (no fit, or setup slack -0.097 to -0.653 ns).
+
 Removes the watchdog timer of both CPUs (macro forces `WDT_DISABLE` for both). WTCSR/WTCNT/RSTCSR read 0, writes are
 ignored, no interval-timer interrupt, no watchdog reset, `WDTOVF_N` stays high. Software standby still ends on NMI:
 without the WDT there is no oscillation-settling count, so `SH7604P_WDT` pulses `OVF` on the NMI request edge while

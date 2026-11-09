@@ -32,7 +32,7 @@ Files (all under `src/fpga/core/` unless noted):
 | `hps_io` BIOS/cart download, `ioctl_wait` | `bridge_loader` -> `load_pocket` FIFO; `mem_pocket.loading` holds the Saturn in reset |
 | `HPS2PAD` | `pad_pocket`: Digital pad only; same `joy1`/`joy2` word as the MiSTer top builds from `joystick_0/1` |
 | `RTC` from `hps_io` | APF `rtc_date_bcd`/`rtc_time_bcd`, MSM6242B layout, toggle bit synchronised |
-| OSD `status[]` | `interact.json`: Reset, Region (Auto/Japan/USA/Europe), Cartridge (Auto/None/RAM 1M/RAM 4M/Backup) |
+| OSD `status[]` | `interact.json`: Reset, Region (Auto/Japan/USA/Europe), Cartridge (Auto/ROM 2M/None/RAM 1M/RAM 4M/Backup) |
 | `video_mixer`, `cofi`, `video_freak`, light guns | `pocket_video` (the APF scaler does the rest) |
 | `AUDIO_L/R` | `pocket_audio` -> `sound_i2s` |
 
@@ -393,7 +393,8 @@ The figures predate the cuts: the sibling branches (VDP2, VDP1, SCSP, SCU, SH-1,
 * Does not fit (section 7), so there is no timing report. The SDC I/O values are starting points; the SDRAM capture
   edge, PSRAM `READ_ADJ`/`WRITE_ADJ` and the SRAM cycle counts need hardware.
 * Backup RAM and backup cartridge: blank, loaded and read back for the host's save (docs/memory.md section 7), in
-  simulation only. Cartridge ROM has no data slot.
+  simulation only. The cartridge ROM (slot 5, bridge 0x70000000, up to 2 MB, user-reloadable with a core reset) loads
+  into the cart window like MiSTer's "Load cartridge"; Cartridge = ROM 2M selects it (Auto never does, as on MiSTer).
 * Pads: Digital only. No 3D/analog pad, mouse, or six-button remap beyond core_top's `pad2saturn`; player 2 uses `cont2`.
 * `cfg_cart` Backup selects the backup cart type and gives its save file (slot 4) 1 MB. No "CD speed" setting
   (the old interact entry was replaced by Cartridge): with the HLE CD block data is always read at 2x and CD-DA at 1x,

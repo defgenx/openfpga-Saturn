@@ -3,7 +3,7 @@
 An openFPGA port of [Saturn_MiSTer](https://github.com/MiSTer-devel/Saturn_MiSTer), the MiSTer project's
 Sega Saturn core, to the Analogue Pocket.
 
-> **Status: v0.1.2.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
+> **Status: v0.1.3.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
 > controls (Hyper Duel plays on a Pocket, and Panzer Dragoon gets past "Episode 1" since v0.1.1). Downloads:
 > [releases](https://github.com/defgenx/openfpga-Saturn/releases). Bugs and test reports:
 > [issues](https://github.com/defgenx/openfpga-Saturn/issues).
@@ -23,32 +23,10 @@ In simulation, with the same output as MiSTer's: all VDP2 effects (extended colo
 line, special priority and colour calculation, line colour screen, rotation zoom, rotation parameter B, mosaic, sprite
 window, line window; [docs/vdp2.md](docs/vdp2.md)).
 
-## What does not work yet
-
-* **Panzer Dragoon** stops on "Episode 1" while its music plays. Right after the stage loads, the master SH-2 reads
-  zeros where the stage code is and takes an illegal-instruction exception. The same crash happens in simulation.
-* **VDP1 frame buffer erase during vertical blank**: games that use that mode can leave parts of the frame buffer
-  unerased, as the Pocket's SRAM is too slow for it ([docs/memory.md](docs/memory.md)).
-* **SH-2 watchdog timer** is cut to fit the FPGA: its registers read 0 and it never interrupts. No game is known to use
-  it ([docs/cuts.md](docs/cuts.md#pocket_cut_sh2_wdt)).
-* **Saves**: the backup RAM starts formatted and is saved to the card at exit ([INSTALL.md](INSTALL.md#saves));
-  checked in simulation, not yet on a Pocket.
-* **Picking a `.cue` directly** is not supported: a disc is picked as the `.json` that `Saturn-prepare-card` writes for it
-  (below). CHD is not supported.
-* Only a few games have been tried.
-
-## Being investigated
-
-* The Panzer Dragoon crash: the CPU gets zeros for one 16-byte line of freshly loaded code. The SH-2 core, cache and
-  bus controller match MiSTer's; the full-system simulation now checks every WRAM-H word the SH-2s read against a
-  shadow copy of memory, to find where the zeros come from.
-
 ## Planned for the next releases
 
-* The Panzer Dragoon fix (next release).
 * Saves checked on a Pocket.
 * Picking a `.cue` directly: it works in simulation and needs room on the FPGA first.
-* The SH-2 watchdog timer back, if room allows.
 * More games tested.
 
 ## Install
@@ -130,7 +108,7 @@ If something goes wrong:
   game's `.json` (not a `.bin`).
 * "ID undefined" when picking a `.json`: the disc has more than 24 track files and was prepared with `--merge never`;
   run `Saturn-prepare-card` again without it.
-* "Backup RAM cannot be used": press Start to continue (see Saves in [What does not work yet](#what-does-not-work-yet)).
+* "Backup RAM cannot be used": press Start to continue (see [Saves](INSTALL.md#saves)).
 
 More details: [INSTALL.md](INSTALL.md), [docs/cd.md](docs/cd.md).
 

@@ -78,8 +78,8 @@ module mem_pocket #(
 	output wire        FB_RDY,
 
 	// ---- CD sector ring in PSRAM1 (cd_stream, clk_sys domain; ddram_pocket handshakes)
-	input  wire [12:0] ringw_addr, input wire [31:0] ringw_data, input wire ringw_wr, output wire ringw_busy,
-	input  wire [13:0] ring_addr, output wire [15:0] ring_dout, input wire ring_rd, output wire ring_busy,
+	input  wire [16:0] ringw_addr, input wire [31:0] ringw_data, input wire ringw_wr, output wire ringw_busy,
+	input  wire [17:0] ring_addr, output wire [15:0] ring_dout, input wire ring_rd, output wire ring_busy,
 
 	// ---- bridge loader (clk_74a)
 	input  wire        clk_74a,

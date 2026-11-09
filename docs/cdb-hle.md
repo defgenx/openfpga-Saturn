@@ -56,7 +56,12 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
   (Mednafen's `ResultsRead`, used to decide whether the periodic report may overwrite the results).
 * **Data path**: bulk sector data never passes through the CPU. `cdb_sink` writes each arriving sector into a DRAM
   slot (byte order as the YGR019 delivers to the SH-1, so a DRAM word is the host-order halfword) and latches
-  header words 6-9 (`m s f mode`, `file chan submode cinfo`) for the CPU. `cdb_xfer` runs one segment
+  header words 6-9 (`m s f mode`, `file chan submode cinfo`) for the CPU. The stream gives no back-pressure (one word
+  per 5.67 us at 2x), and a DRAM write waits behind the transfer engine's access and the VDP1 traffic on PSRAM1, which
+  can take longer than that. So the sink writes through an 8 entry FIFO: with a single write register, a word arriving
+  before the previous write finished replaced it, and the DRAM slot kept that word of the sector it held before
+  (isolated wrong words in DoDonPachi's intro movie stream, whose decoder then stopped). A word dropped on a full FIFO
+  still sets `EV` bit 12, which the firmware does not read. `cdb_xfer` runs one segment
   `{addr, addr2, count}` and holds a second: Get Sector Data queues one segment per buffer, the next one when the
   engine takes the queued one (one segment, about 0.65 ms of host reads, ahead). Every segment but the last of a
   transfer is written with the "more" bit (`XF_CNT` bit 12). A data-port access that finds the FIFO empty (read) or
@@ -153,6 +158,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 | commands rejected while authenticating | Gremlin demo disc | done (E1 is rejected while E0 runs) |
 | status BUSY during seek, pause when buffers are full, resume | Panzer Dragoon Zwei, Gunbird, Steam-Heart's | reproduced as Mednafen does (status PAUSE while the buffers are full, resume when space is freed). Whether this is enough for Panzer Dragoon Zwei is not known |
 | Pause (Seek `0xFFFFFF`) while streaming, then Reset Selector and a Play elsewhere: the sector already issued to the drive must not reach the cleared partition | Panzer Dragoon (every file load after a streamed one) | as Mednafen (its Pause negates `SecPreBuf_In`): the sectors issued but not delivered are dropped and the drive parks on the first of them (`pause_drop`). Before, that sector was filtered into the partition after the clear and the next file came in one sector late (Panzer Dragoon: the stage data in WRAM-L shifted by 2 KB, the crash after EPISODE 1). Test: `script_pause.txt` |
+| Play with "no pickup change" (mode bit 7) while the drive is paused (end of the play range, or buffers full) | games that wait on a screen and then read on, e.g. DoDonPachi (reported to hang when waiting at the ship select; not yet checked on that disc) | as Mednafen's `StartSeek`: the flag keeps reading only while the drive plays; paused, the Play seeks to its start. Before, the drive stayed paused with the prefetch stopped and no sector came. Test: `script_npc.txt` |
 | seek to index 2 and above | NBA Action, Taito Chase H.Q. | **not possible**: the TOC format has INDEX 01 only |
 | BIOS CD player, Tactics Ogre, DJ Wars, World Cup France '98, ... | | not tested, depend on exact status timing; the status values and the flow follow Mednafen, which runs them |
 
@@ -179,7 +185,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 
 ## 8. Tests
 
-`make -C sim cdb` (about 25 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
+`make -C sim cdb` (about 30 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
 
 * `sim/cdb/tb_cdb.sv`: SCU-side host model (`YGR019`-compatible access timing), `cd_stream` with an APF bridge and
   SRAM model, a `ddram_pocket`-style `cdram` model with random latency, script interpreter
@@ -197,10 +203,17 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   delivering sectors; data compared word for word with the image, End Data Transfer counts, and a read 6 words past the
   end of a 1-sector transfer (zeros, count 1024). **8 checks, 0 failed**; the RTL before the "more" bit fails 4 (a
   zero-filled sector each in the stalled transfers, counts 3072 and 38,359).
+* `+DSTALL=<clocks> +DSTALL_PCT=<n>`: n percent of the `cdram` model's accesses take that many clocks longer.
+  `script_bulk.txt` with `+DSTALL=250 +DSTALL_PCT=20` (4.4 us on one access in five): 8 checks, 0 failed; with the
+  single-register sink 2 failed (one word each, `SINK OVERRUN`). At `+DSTALL=600 +DSTALL_PCT=30` the mean DRAM
+  access is slower than the stream and words are lost with any FIFO depth.
 * `script_pause.txt` (`check_hle.py <log> pause`): Play of 64 sectors, then while it streams Reset Selector, Pause,
   Reset Selector, and a Play of 20 sectors elsewhere: the partition is empty after the pause and holds exactly the
   20 new sectors, compared word for word. **3 checks, 0 failed**; the firmware without `pause_drop` fails 2 (one
   stale sector, 21 in the partition).
+* `script_npc.txt` (`check_hle.py <log> npc`): Play of 8 sectors to the end (the drive pauses), then a Play of 8
+  sectors elsewhere with mode bit 7 (no pickup change): 16 sectors, 0..7 then 20..27, compared word for word.
+  **2 checks, 0 failed**; the firmware before the fix delivers nothing after the pause.
 * `+FEEDPC=<dt_feed address from firmware/cdb/build/cdb.lst>` reports the longest firmware main-loop period:
   2,765 us over `script_cmds.txt`.
 * **LLE comparison** (`make -C sim cdb-compare`, same script on pruned SH-1 + cdb105m + YGR019 + `cdd_pocket`):
@@ -226,8 +239,8 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 * Timing closure of the A-bus path (`AWAIT_N` is a register output as in YGR019) and of SERV at `clk_sys`
   is not checked (no fit). The DRAM request interface follows `ddram_pocket` (edge triggered, busy two clocks
   after the edge, tested against a model, not against the real module).
-* Bridge latency: the HLE reads at the speed the ring delivers; the real Pocket round trip is unmeasured
-  (`docs/cd.md`).
+* Bridge latency: the HLE reads at the speed the ring delivers; the real Pocket round trip is unmeasured. The ring
+  holds 120 sectors (0.8 s at 2x) to ride out stalls (`docs/cd.md` section 7).
 * Index >= 2 seeks and Q subcode need a richer TOC.
 * Directory reading is byte-serial in firmware: tens of microseconds per directory record (estimate, not measured), so a typical directory takes milliseconds, but a large directory (hundreds of entries) is slower than Mednafen's.
 * The firmware is the only copy of the logic; it is 12 KB of C in one file. A bug in a rarely used command is

@@ -8,7 +8,7 @@
 //                                        lead-out ring sector) out of cd_data/cd_ck/cd_audio
 // All positions are FADs (LBA + 150), 24 bits.
 //
-// Memory: sector ring in PSRAM1 through ddram_pocket (8 slots x 4 KB, 16 bit words: rg_* ports), TOC in one
+// Memory: sector ring in PSRAM1 through ddram_pocket (2^RING_SB slots x 4 KB, 16 bit words: rg_* ports), TOC in one
 // 512 x 32 dual-clock RAM (cd_toc_ram). The bridge words wait in a 64 entry FIFO (one M10K pair) because
 // PSRAM1 can be busy for a few microseconds with a VDP1 burst.
 //
@@ -28,10 +28,11 @@
 `default_nettype none
 
 module cd_stream #(
-	parameter [31:0] RING_BRIDGE = 32'h3000_0000,   // bits [14:0] must be zero
+	parameter        RING_SB = 7,                   // slot bits: 128 slots (512 KB); PREFETCH_MAX <= 2^RING_SB - 2
+	parameter [31:0] RING_BRIDGE = 32'h3000_0000,   // bits [RING_SB+11:0] must be zero
 	parameter [15:0] TRACK_SLOT_BASE = 16'd16,
 	parameter        BRIDGE_LITTLE = 0,             // bridge_endian_little
-	parameter [3:0]  PREFETCH_MAX = 4'd6
+	parameter [7:0]  PREFETCH_MAX = 8'd120         // about 0.8 s at 2x: rides out bridge stalls (docs/cd.md section 7)
 ) (
 	input  wire        clk,                  // clk_sys
 	input  wire        rst_n,                // feed only; TOC and prefetch state survive a Saturn reset
@@ -56,11 +57,11 @@ module cd_stream #(
 	// pulse taken when !rg_wbusy; a read keeps rg_rd high, waits two clocks, then for !rg_rbusy, and rg_q is valid
 	// in that clock)
 	output reg         rg_wr = 1'b0,
-	output wire [12:0] rg_wa,                // word pair (the FIFO head: stays until rg_wbusy has fallen)
+	output wire [RING_SB+9:0] rg_wa,         // word pair (the FIFO head: stays until rg_wbusy has fallen)
 	output wire [31:0] rg_wd,                // {first word, second word}
 	input  wire        rg_wbusy,
 	output reg         rg_rd = 1'b0,
-	output wire [13:0] rg_ra,
+	output wire [RING_SB+10:0] rg_ra,
 	input  wire [15:0] rg_q,
 	input  wire        rg_rbusy,
 
@@ -125,13 +126,13 @@ wire       toc_we = bridge_wr && toc_sel && !toc_bad;
 
 reg        commit_t = 1'b0;
 reg        rw_t = 1'b0;
-reg [12:0] rw_a = 13'd0;
+reg [RING_SB+9:0] rw_a = '0;
 reg [31:0] rw_d = 32'd0;
 
 always @(posedge clk_74a) begin
 	if (toc_we && bridge_addr[10:2] == 9'd511) commit_t <= ~commit_t;
 	if (bridge_wr && ring_sel) begin
-		rw_a <= bridge_addr[14:2];
+		rw_a <= bridge_addr[RING_SB+11:2];
 		rw_d <= bridge_wr_data;
 		rw_t <= ~rw_t;
 	end
@@ -140,13 +141,13 @@ end
 // dataslot read request: fx_* are clk registers, stable while a request is open
 reg  [31:0] fx_off = 32'd0;
 reg  [4:0]  fx_file = 5'd0;
-reg  [2:0]  fx_slot = 3'd0;
+reg  [RING_SB-1:0] fx_slot = '0;
 reg         fx_s2048 = 1'b0;
 reg         fx_req_t = 1'b0;
 
 assign t_id    = TRACK_SLOT_BASE + {11'd0, fx_file & {5{~tk}}};
 assign t_off   = tk ? 32'd0 : fx_off;
-assign t_baddr = tk ? 32'h6000_0000 : {RING_BRIDGE[31:15], fx_slot, 7'd0, fx_s2048, 4'd0};
+assign t_baddr = tk ? 32'h6000_0000 : {RING_BRIDGE[31:RING_SB+12], fx_slot, 7'd0, fx_s2048, 4'd0};
 assign t_len   = (fx_s2048 || tk) ? 32'd2048 : 32'd2352;
 
 reg  [2:0]  rq_s = 3'd0;
@@ -203,7 +204,7 @@ reg        r_pend = 1'b0;
 reg [3:0]  ss = 4'd0;
 reg        sr_rv = 1'b0;
 reg [15:0] sr_d = 16'd0;
-wire [13:0] fd_sr_a;
+wire [RING_SB+10:0] fd_sr_a;
 wire        fd_sr_rq;
 assign rg_ra = fd_sr_a;
 
@@ -212,8 +213,8 @@ localparam FW = 6;
 reg [FW:0]   wq_w = 0, wq_r = 0;
 wire         wq_empty = (wq_w == wq_r);
 wire         wq_full  = wq_w[FW] && !wq_r[FW] && (wq_w[FW-1:0] == wq_r[FW-1:0]);   // (wq_w - wq_r) == 64 as an integer: no wrap-around case
-wire [44:0]  wq_q;
-cd_fifo_ram #(.W(45), .AW(FW)) wq_ram (.clk(clk), .we(rw_ev && !wq_full), .wa(wq_w[FW-1:0]), .wd({rw_a, rw_d}), .ra(wq_r[FW-1:0]), .q(wq_q));   // the output is the head one clock after wq_r
+wire [RING_SB+41:0] wq_q;
+cd_fifo_ram #(.W(RING_SB+42), .AW(FW)) wq_ram (.clk(clk), .we(rw_ev && !wq_full), .wa(wq_w[FW-1:0]), .wd({rw_a, rw_d}), .ra(wq_r[FW-1:0]), .q(wq_q));   // the output is the head one clock after wq_r
 always @(posedge clk) begin
 	if (rw_ev) begin
 		if (!wq_full) wq_w <= wq_w + 1'd1;
@@ -223,7 +224,7 @@ end
 wire [15:0] w_half0 = BRIDGE_LITTLE ? wq_q[15:0]  : {wq_q[23:16], wq_q[31:24]};
 wire [15:0] w_half1 = BRIDGE_LITTLE ? wq_q[31:16] : {wq_q[7:0],   wq_q[15:8]};
 
-assign rg_wa = wq_q[44:32];
+assign rg_wa = wq_q[RING_SB+41:32];
 assign rg_wd = {w_half0, w_half1};
 
 always @(posedge clk) begin
@@ -259,8 +260,8 @@ always @(posedge clk) begin
 end
 
 // ------------------------------------------------------------------ ring bookkeeping
-reg [2:0]  wr_ptr = 3'd0, rd_ptr = 3'd0;
-reg [3:0]  n_ready = 4'd0;
+reg [RING_SB-1:0] wr_ptr = '0, rd_ptr = '0;
+reg [7:0]  n_ready = 8'd0;
 reg        infl = 1'b0, discard = 1'b0;
 reg [4:0]  dd = 5'd0;
 reg        dd_run = 1'b0;
@@ -269,7 +270,7 @@ reg [23:0] fetch_fad = 24'd0;
 wire       fd_held;
 wire       fd_done;
 
-assign pf_ready = (n_ready != 4'd0);
+assign pf_ready = (n_ready != 8'd0);
 
 // ------------------------------------------------------------------ TOC engine
 reg  [8:0]  ra = 9'd0;
@@ -309,7 +310,7 @@ wire [24:0] fsec_d = {1'b0, fl_pos} - {1'b0, c_forg};
 wire [23:0] fsec = fsec_d[24] ? 24'd0 : fsec_d[23:0];   // a disc has far fewer than 2^19 sectors: the multiplier takes 19 bits
 wire [11:0] fx_mul = c_s2048 ? 12'd2048 : 12'd2352;
 wire can_fetch = fetch_en && !infl && disc_ok && !lk_hold &&
-                 ({1'b0, n_ready} + {3'd0, fd_held} < {1'b0, PREFETCH_MAX}) &&
+                 ({1'b0, n_ready} + {8'd0, fd_held} < {1'b0, PREFETCH_MAX}) &&
                  (fetch_fad < toc_end);
 
 function [7:0] bcd_inc(input [7:0] v);
@@ -336,10 +337,10 @@ always @(posedge clk) begin
 	end
 	if (commit_ev) commit_pend <= 1'b1;
 
-	n_ready <= n_ready + {3'd0, ring_add} - {3'd0, ring_take};
-	if (ring_take) rd_ptr <= rd_ptr + 3'd1;
+	n_ready <= n_ready + {7'd0, ring_add} - {7'd0, ring_take};
+	if (ring_take) rd_ptr <= rd_ptr + 1'd1;
 	if (ring_drop) begin
-		n_ready <= 4'd0;
+		n_ready <= 8'd0;
 		rd_ptr <= wr_ptr;
 		if (infl) discard <= 1'b1;
 	end
@@ -430,7 +431,7 @@ always @(posedge clk) begin
 		fx_s2048 <= c_s2048;
 		fx_req_t <= ~fx_req_t;
 		infl <= 1'b1;
-		wr_ptr <= wr_ptr + 3'd1;
+		wr_ptr <= wr_ptr + 1'd1;
 		fetch_fad <= fetch_fad + 24'd1;
 		es <= E_IDLE;
 	end
@@ -439,7 +440,7 @@ always @(posedge clk) begin
 end
 
 // ------------------------------------------------------------------ feed
-cd_feed feed (
+cd_feed #(.SB(RING_SB)) feed (
 	.clk(clk), .rst_n(rst_n), .ce(ce),
 	.go(sd_go), .slot(rd_ptr), .kind(sd_kind), .synth(sd_synth), .spd2(sd_spd2), .hdr(sd_hdr),
 	.busy(fd_busy), .held(fd_held), .done(fd_done),

@@ -43,7 +43,7 @@ always @(posedge clk) begin
 end
 
 // file contents
-reg [7:0] f_bios [0:4095], f_bk [0:1023], f_bc [0:1023];
+reg [7:0] f_bios [0:4095], f_bk [0:1023], f_bc [0:1023], f_rom [0:1023];
 integer i, bad = 0, w;
 
 task automatic bridge_word(input [2:0] sel, input [23:0] a, input [31:0] d);
@@ -64,7 +64,7 @@ endfunction
 
 initial begin
 	for (i = 0; i < 4096; i = i + 1) f_bios[i] = $urandom;
-	for (i = 0; i < 1024; i = i + 1) begin f_bk[i] = $urandom; f_bc[i] = $urandom; end
+	for (i = 0; i < 1024; i = i + 1) begin f_bk[i] = $urandom; f_bc[i] = $urandom; f_rom[i] = $urandom; end
 	repeat (10) @(posedge clk_74a);
 	for (i = 0; i < 4096; i = i + 4) bridge_word(3'b001, i, {f_bios[i+3], f_bios[i+2], f_bios[i+1], f_bios[i]});
 	// the blank (16 K + 256 K writes) runs while the FIFO is empty; the host pushes the backup files after the BIOS
@@ -73,6 +73,8 @@ initial begin
 	for (i = 0; i < 1048576; i = i + 1) if (img[24'h800000 + i] !== (i < 65536 ? blank_byte(i) : 8'h00)) begin bad = bad + 1; if (bad < 8) $display("blank cart byte %0d: %h", i, img[24'h800000 + i]); end
 	for (i = 0; i < 1024; i = i + 4) bridge_word(3'b010, i, {f_bk[i+3], f_bk[i+2], f_bk[i+1], f_bk[i]});
 	for (i = 0; i < 1024; i = i + 4) bridge_word(3'b100, i, {f_bc[i+3], f_bc[i+2], f_bc[i+1], f_bc[i]});
+	// ROM cart (bridge 0x7xxxxxxx, same cart window): the last 1 KB of the 2 MB window, above the backup cart's 1 MB
+	for (i = 0; i < 1024; i = i + 4) bridge_word(3'b100, 24'h1FF000 + i, {f_rom[i+3], f_rom[i+2], f_rom[i+1], f_rom[i]});
 	repeat (200) @(posedge clk_74a);
 	while (loading) @(posedge clk);
 	repeat (50) @(posedge clk);
@@ -81,6 +83,7 @@ initial begin
 		if (img[24'h100000 + i] !== (i < 1024 ? f_bk[i] : blank_byte(i))) begin bad = bad + 1; if (bad < 8) $display("backup byte %0d: %h", i, img[24'h100000 + i]); end
 		if (img[24'h800000 + i] !== (i < 1024 ? f_bc[i] : blank_byte(i))) begin bad = bad + 1; if (bad < 8) $display("backup cart byte %0d: %h", i, img[24'h800000 + i]); end
 	end
+	for (i = 0; i < 1024; i = i + 1) if (img[24'h9FF000 + i] !== f_rom[i]) begin bad = bad + 1; if (bad < 8) $display("ROM cart byte %0d: %h exp %h", i, img[24'h9FF000 + i], f_rom[i]); end
 	// read-back: one ddram read request per bridge read, at the slot's PSRAM0 address
 	for (i = 0; i < 8; i = i + 1) begin
 		@(posedge clk_74a);
@@ -91,7 +94,7 @@ initial begin
 		repeat (60) @(posedge clk_74a);
 	end
 	$display("tb_load: %0d loader writes, FIFO overflows %0d, mismatches %0d, read requests %0d (%0d bad)", nwr, ovf, bad, nrd, rd_bad);
-	if (bad == 0 && ovf == 0 && nwr == 1024 + 256 + 256 + 16384 + 262144 && nrd == 8 && rd_bad == 0) $display("tb_load: PASS"); else $display("tb_load: FAIL");
+	if (bad == 0 && ovf == 0 && nwr == 1024 + 256 + 256 + 256 + 16384 + 262144 && nrd == 8 && rd_bad == 0) $display("tb_load: PASS"); else $display("tb_load: FAIL");
 	$finish;
 end
 

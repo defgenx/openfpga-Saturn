@@ -9,13 +9,13 @@
 
 `default_nettype none
 
-module cd_feed (
+module cd_feed #(parameter SB = 3) (   // SB: slot bits of the ring
 	input  wire        clk,
 	input  wire        rst_n,
 	input  wire        ce,
 
 	input  wire        go,
-	input  wire [2:0]  slot,
+	input  wire [SB-1:0] slot,
 	input  wire [1:0]  kind,
 	input  wire        synth,       // synthesise sync + header (data)
 	input  wire        spd2,
@@ -26,7 +26,7 @@ module cd_feed (
 	output reg         done = 1'b0, // one-clock pulse
 
 	output reg         sr_rq = 1'b0,
-	output wire [13:0] sr_a,
+	output wire [SB+10:0] sr_a,
 	input  wire        sr_rv,
 	input  wire [15:0] sr_d,
 
@@ -39,7 +39,7 @@ localparam [31:0] POLY = 32'hD8018001;
 localparam [2:0] F_IDLE = 0, F_PREP = 1, F_RD = 2, F_HAVE = 3, F_STEP = 4, F_RDY = 5;
 
 reg [2:0]  fs = F_IDLE;
-reg [2:0]  r_slot;
+reg [SB-1:0] r_slot;
 reg [1:0]  r_kind;
 reg        r_synth, r_spd2;
 reg [10:0] w;

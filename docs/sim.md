@@ -33,3 +33,10 @@ sim/sys/replay.sh <run dir> quit
   new run to the checkpoint. A probe that a plusarg in `reargs` controls works from any checkpoint of its build, so
   keep new probes behind plusargs.
 * Replays are processes like any run: each one costs the same CPU (`THREADS`).
+
+## CD block command log
+
+`+CDBLOG=<file>` writes one line per command the SH-2 gives the CD block, at its CR4 write:
+`<seconds> CMD <CR1> <CR2> <CR3> <CR4> HIRQ=<hirq>`. A game's command sequence from an emulator that logs the same
+fields can then be compared with the core's line by line, and a sequence can be turned into a `sim/cdb` script
+(`docs/cdb-hle.md` section 8) to replay it on the CD block bench in minutes.

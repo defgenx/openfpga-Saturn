@@ -556,7 +556,7 @@ wire [31:0] bk_rd_data;
 
 // interact.json registers at 0x8000_00xx, all read back.
 //   0x00 Reset (any write)   0x04 Region 0 auto 1 JP 2 US 3 EU
-//   0x08 Cartridge (MiSTer cart_sel) 0 auto 2 RAM 1M 3 RAM 4M 5 backup 6 none
+//   0x08 Cartridge (MiSTer cart_sel) 0 auto 1 ROM 2M 2 RAM 1M 3 RAM 4M 5 backup 6 none
 reg [1:0] cfg_region   = 2'd0;
 reg [2:0] cfg_cart     = 3'd0;
 reg [3:0] reset_stretch = 4'd0;

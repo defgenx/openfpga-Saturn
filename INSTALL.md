@@ -104,6 +104,10 @@ a real Saturn). This is not yet checked on a Pocket. A new file starts formatted
 MiSTer's 64 KB layout, so a MiSTer `.sav` (of a game run without a backup cartridge) can be copied over it. With
 Cartridge set to Backup, the cartridge is saved next to it as a 1 MB `.cart` file.
 
+**ROM cartridge** (King of Fighters '95, Ultraman: Hikari no Kyojin Densetsu): set *Core Settings -> Cartridge* to
+*ROM 2 MB*, then load your dump of the cartridge (`.bin` or `.rom`, up to 2 MB) with *Core Settings -> Cartridge ROM*,
+as MiSTer's "Load cartridge". The core restarts with it. Auto never picks the ROM cartridge, as on MiSTer.
+
 ## 4. Start it
 
 On the Pocket: *openFPGA -> Sega Saturn*.

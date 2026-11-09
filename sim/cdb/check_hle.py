@@ -21,6 +21,7 @@ def user(lba):
 COOKED = len(sys.argv) > 2 and sys.argv[2] == "cooked"
 BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
 PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
+NPC = len(sys.argv) > 2 and sys.argv[2] == "npc"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -76,6 +77,14 @@ if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host r
     ok("past end: 1024 words then zeros", d[:1024] == user(40) and all(x == 0 for x in d[1024:]), d[1020:1030])
     r = find_cmd("past_end", "0600")
     ok("past end: count 1024", r is not None and r[1] == 1024, r)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if NPC:   # script_npc.txt: a Play with "no pickup change" after the drive paused at the end of the previous range
+    r = find_cmd("second", "5100")
+    ok("npc: the paused drive seeks and reads 8 more sectors", r is not None and r[3] == 16, r)
+    d = datas("read")[0]
+    ok("npc: sectors 0..7 then 20..27 word for word",
+       d == [w for l in list(range(8)) + list(range(20, 28)) for w in user(l)], "len %d" % len(d))
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if PAUSE:   # script_pause.txt: Reset Selector, Pause, Reset Selector while streaming, then Play elsewhere

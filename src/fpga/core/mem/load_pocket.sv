@@ -1,10 +1,10 @@
 // load_pocket.sv - bridge_loader's ld_* bus (clk_74a) to the ddram_pocket loader port (clk_ram), the blank backup
 // images, and the backup read-back for the host's save at exit.
 //
-// ld_sel (one-hot, as bridge_loader):  [0] BIOS 512 KB, [1] backup RAM 64 KB, [2] backup cart 1 MB.
+// ld_sel (one-hot, as bridge_loader):  [0] BIOS 512 KB, [1] backup RAM 64 KB, [2] cart window: backup cart 1 MB or ROM 2 MB.
 // A 32 bit bridge word crosses in a 256 entry asynchronous FIFO (one M10K) and leaves as one 32 bit write to
 // PSRAM0 (docs/memory.md section 7), the file bytes in order (word = {byte0, byte1}):
-//   BIOS 0x000000 + offset, backup RAM 0x100000 + offset, backup cart 0x800000 + offset.
+//   BIOS 0x000000 + offset, backup RAM 0x100000 + offset, cart (backup or ROM) 0x800000 + offset.
 // LD_LITTLE=1: ld_data[7:0] is the first file byte (bridge_endian_little set); 0: ld_data[31:24] is.
 //
 // Both backup images are written blank first (MiSTer's save_blank), while the FIFO is empty. The first file word of a
@@ -113,7 +113,7 @@ always @(posedge clk) begin
 		if (c_sel[1] && !icp) begin icp <= 1'b1; ic <= '0; end
 		if (c_sel[2]) no_cart <= 1'b1;
 		o_wr   <= 1'b1;
-		o_addr <= c_sel[0] ? c_off[23:2] : c_sel[1] ? {8'h10, c_off[15:2]} : {4'h8, c_off[19:2]};
+		o_addr <= c_sel[0] ? c_off[23:2] : c_sel[1] ? {8'h10, c_off[15:2]} : {3'b100, c_off[20:2]};
 		o_data <= {b0, b1, b2, b3};
 		st <= 2'd0; rbin <= rbin + 1'd1; rgray <= b2g(rbin + 1'd1);
 	end

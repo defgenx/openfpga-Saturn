@@ -74,6 +74,18 @@
         "address": "0x50000000"
       },
       {
+        "name": "Cartridge ROM",
+        "id": 5,
+        "required": false,
+        "parameters": "0x41",
+        "extensions": [
+          "bin",
+          "rom"
+        ],
+        "size_maximum": 2097152,
+        "address": "0x70000000"
+      },
+      {
         "name": "CD file 01",
         "id": 17,
         "required": false,
