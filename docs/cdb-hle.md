@@ -152,6 +152,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 | Get TOC spam during playback | Mass Destruction | TOC is built once per disc and answered from DRAM; Get TOC only waits while another transfer is open |
 | commands rejected while authenticating | Gremlin demo disc | done (E1 is rejected while E0 runs) |
 | status BUSY during seek, pause when buffers are full, resume | Panzer Dragoon Zwei, Gunbird, Steam-Heart's | reproduced as Mednafen does (status PAUSE while the buffers are full, resume when space is freed). Whether this is enough for Panzer Dragoon Zwei is not known |
+| Pause (Seek `0xFFFFFF`) while streaming, then Reset Selector and a Play elsewhere: the sector already issued to the drive must not reach the cleared partition | Panzer Dragoon (every file load after a streamed one) | as Mednafen (its Pause negates `SecPreBuf_In`): the sectors issued but not delivered are dropped and the drive parks on the first of them (`pause_drop`). Before, that sector was filtered into the partition after the clear and the next file came in one sector late (Panzer Dragoon: the stage data in WRAM-L shifted by 2 KB, the crash after EPISODE 1). Test: `script_pause.txt` |
 | seek to index 2 and above | NBA Action, Taito Chase H.Q. | **not possible**: the TOC format has INDEX 01 only |
 | BIOS CD player, Tactics Ogre, DJ Wars, World Cup France '98, ... | | not tested, depend on exact status timing; the status values and the flow follow Mednafen, which runs them |
 
@@ -178,7 +179,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 
 ## 8. Tests
 
-`make -C sim cdb` (about 20 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
+`make -C sim cdb` (about 25 minutes, Verilator, SERV executes the committed firmware image against the real RTL):
 
 * `sim/cdb/tb_cdb.sv`: SCU-side host model (`YGR019`-compatible access timing), `cd_stream` with an APF bridge and
   SRAM model, a `ddram_pocket`-style `cdram` model with random latency, script interpreter
@@ -196,6 +197,10 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   delivering sectors; data compared word for word with the image, End Data Transfer counts, and a read 6 words past the
   end of a 1-sector transfer (zeros, count 1024). **8 checks, 0 failed**; the RTL before the "more" bit fails 4 (a
   zero-filled sector each in the stalled transfers, counts 3072 and 38,359).
+* `script_pause.txt` (`check_hle.py <log> pause`): Play of 64 sectors, then while it streams Reset Selector, Pause,
+  Reset Selector, and a Play of 20 sectors elsewhere: the partition is empty after the pause and holds exactly the
+  20 new sectors, compared word for word. **3 checks, 0 failed**; the firmware without `pause_drop` fails 2 (one
+  stale sector, 21 in the partition).
 * `+FEEDPC=<dt_feed address from firmware/cdb/build/cdb.lst>` reports the longest firmware main-loop period:
   2,765 us over `script_cmds.txt`.
 * **LLE comparison** (`make -C sim cdb-compare`, same script on pruned SH-1 + cdb105m + YGR019 + `cdd_pocket`):

@@ -20,7 +20,7 @@ ALL    := tb_cdb.sv $(CDRTL) $(HLERTL) $(SH)
 .PHONY: all gen hle lle run-hle run-lle test compare clean
 all: test
 
-# HLE against the disc image (check_hle.py), the no-disc script and the bulk transfer script; about 20 minutes
+# HLE against the disc image (check_hle.py), the no-disc, bulk transfer and pause scripts; about 25 minutes
 test: hle gen
 	./build/hle/Vtb_cdb +SCRIPT=script_cmds.txt +LOG=build/hle_script_cmds.log > build/hle_script_cmds.out
 	python3 check_hle.py build/hle_script_cmds.log
@@ -29,6 +29,8 @@ test: hle gen
 	python3 check_hle.py build/hle_cooked.log cooked
 	./build/hle/Vtb_cdb +SCRIPT=script_bulk.txt +LOG=build/hle_bulk.log > build/hle_bulk.out
 	python3 check_hle.py build/hle_bulk.log bulk
+	./build/hle/Vtb_cdb +SCRIPT=script_pause.txt +LOG=build/hle_pause.log > build/hle_pause.out
+	python3 check_hle.py build/hle_pause.log pause
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test

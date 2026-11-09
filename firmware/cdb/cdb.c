@@ -348,6 +348,16 @@ static void pipe_flush(void)
 
 static void clear_pending_sec(void) { pipe_flush(); play_end_irq = 0; play_end_cnt = 0; }
 
+/* pause during play: sectors issued but not delivered never reach a partition, and the drive parks on the first
+   of them (Mednafen's Pause negates SecPreBuf_In). See docs/cdb-hle.md section 6. */
+static void pause_drop(void)
+{
+	u8 i, n = 0;
+	for (i = 0; i < inflight; i++) if (!infl_stale[i]) n++;
+	pipe_flush();
+	cur_sector -= n;
+}
+
 static void start_seek(u32 target, int no_pickup_change)
 {
 	posinfo p;
@@ -809,6 +819,7 @@ static void cmd_exec(void)
 			dphase = D_STOP;
 		} else if (sp == 0xFFFFFF) {
 			if (dphase == D_STOP) { clear_pending_sec(); start_seek(0x800096, 0); }
+			else if (dphase == D_PLAY) pause_drop();
 			play_end_irq = 0; play_end = 0x800000; play_rep = 0; at_end = 0;
 		} else {
 			clear_pending_sec();

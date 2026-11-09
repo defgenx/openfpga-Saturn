@@ -20,6 +20,7 @@ def user(lba):
 
 COOKED = len(sys.argv) > 2 and sys.argv[2] == "cooked"
 BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
+PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -75,6 +76,15 @@ if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host r
     ok("past end: 1024 words then zeros", d[:1024] == user(40) and all(x == 0 for x in d[1024:]), d[1020:1030])
     r = find_cmd("past_end", "0600")
     ok("past end: count 1024", r is not None and r[1] == 1024, r)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if PAUSE:   # script_pause.txt: Reset Selector, Pause, Reset Selector while streaming, then Play elsewhere
+    r = find_cmd("second", "5100")
+    ok("pause: no sector reaches the cleared partition", r is not None and r[3] == 0, r)
+    r = find_cmd("count", "5100")
+    ok("pause: 20 sectors after the new play", r is not None and r[3] == 20, r)
+    d = datas("read")[0]
+    ok("pause: sectors 70..89 word for word", d == [w for i in range(20) for w in user(70 + i)], "len %d" % len(d))
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if COOKED:
