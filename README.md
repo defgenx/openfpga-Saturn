@@ -3,9 +3,8 @@
 An openFPGA port of [Saturn_MiSTer](https://github.com/MiSTer-devel/Saturn_MiSTer), the MiSTer project's
 Sega Saturn core, to the Analogue Pocket.
 
-> **Status: v0.1.1.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
-> controls (Hyper Duel plays on a Pocket). v0.1.1 fixes the CD block bug behind Panzer Dragoon's "Episode 1" crash
-> (checked in simulation, not yet on a Pocket). Downloads:
+> **Status: v0.1.2.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
+> controls (Hyper Duel plays on a Pocket, and Panzer Dragoon gets past "Episode 1" since v0.1.1). Downloads:
 > [releases](https://github.com/defgenx/openfpga-Saturn/releases). Bugs and test reports:
 > [issues](https://github.com/defgenx/openfpga-Saturn/issues).
 
