@@ -24,15 +24,21 @@ package() {
 	python3 tools/reverse_bits.py "$rbf" "dist/Cores/$CORE/saturn.rbf_r"
 	# the Pocket refuses the whole core if any definition file breaks an APF limit
 	python3 tools/check_json.py
-	rm -rf release && mkdir -p release
+	rm -rf release release-tools && mkdir -p release release-tools
 	cp -R dist/Cores dist/Platforms dist/Assets release/
 	cp INSTALL.md release/Saturn-INSTALL.md
-	# the card preparation tool, double-clicked at the card root
-	tools/prepare-card/build.sh release
 	find release -name .keep -delete
 	rm -f "$CORE.zip"
 	(cd release && zip -qr "../$CORE.zip" .)
-	echo "packaged $CORE.zip - unzip it onto the root of the Pocket SD card"
+	# the card preparation tool: separate release assets (install.sh tool_asset knows these names).
+	# Windows builds go bare; macOS and Linux ones each in a zip, which keeps the executable bit a download loses.
+	local b=release-tools/build n=Saturn-prepare-card f
+	tools/prepare-card/build.sh "$b"
+	cp "$b/$n.exe" "$b/$n-others/$n-arm64.exe" "$b/$n-others/$n-x86.exe" release-tools/
+	(cd "$b" && zip -q "../$n-macos.zip" "$n")
+	for f in "$b/$n-others/$n"-linux-*; do (cd "$(dirname "$f")" && zip -q "../../$(basename "$f").zip" "$(basename "$f")"); done
+	rm -rf "$b"
+	echo "packaged $CORE.zip (unzip it onto the root of the Pocket SD card) and the card tool in release-tools/"
 }
 
 case "${1:-all}" in

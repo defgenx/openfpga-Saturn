@@ -104,3 +104,4 @@ sim/sys/build*/
 # per-variant simulation and firmware build directories
 sim/**/build*/
 firmware/**/build/
+release-tools/

@@ -36,18 +36,26 @@ done
 
 say()  { printf '%s\n' "$*"; }
 
-# tool_name: the Saturn-prepare-card build for this system, as the release zip lays it out
+# tool_name: the Saturn-prepare-card build for this system, as it sits at the card root
 tool_name() {
-	local o="Saturn-prepare-card-others/Saturn-prepare-card"
+	local o="Saturn-prepare-card"
 	case "$(uname -s)/$(uname -m)" in
-		Darwin/*) echo "Saturn-prepare-card" ;;
+		Darwin/*) echo "$o" ;;
 		Linux/x86_64|Linux/amd64) echo "$o-linux-x64" ;;
 		Linux/aarch64|Linux/arm64) echo "$o-linux-arm64" ;;
 		Linux/armv7*|Linux/armv8l) echo "$o-linux-armv7" ;;
 		Linux/i?86) echo "$o-linux-x86" ;;
 		MINGW*/aarch64|MSYS*/aarch64|CYGWIN*/aarch64) echo "$o-arm64.exe" ;;
 		MINGW*/i?86|MSYS*/i?86|CYGWIN*/i?86) echo "$o-x86.exe" ;;
-		MINGW*|MSYS*|CYGWIN*) echo "Saturn-prepare-card.exe" ;;
+		MINGW*|MSYS*|CYGWIN*) echo "$o.exe" ;;
+	esac
+}
+# tool_asset NAME: the release asset holding it (build.sh package): .exe bare, the others zipped
+tool_asset() {
+	case "$1" in
+		*.exe) echo "$1" ;;
+		Saturn-prepare-card) echo "Saturn-prepare-card-macos.zip" ;;
+		*) echo "$1.zip" ;;
 	esac
 }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -85,6 +93,16 @@ else
 	curl -fL --progress-bar -o "$TMP/core.zip" "$url" || die "download failed"
 	unzip -q "$TMP/core.zip" -d "$TMP/core"
 	SRC="$TMP/core"
+	# the card tool for this system is a separate asset of the same release; it goes to the card root
+	t="$(tool_name)"
+	if [ -n "$t" ]; then
+		a="$(tool_asset "$t")"
+		if curl -fsSL -o "$TMP/$a" "${url%/*}/$a"; then
+			case "$a" in *.zip) unzip -q -o "$TMP/$a" -d "$SRC" ;; *) cp "$TMP/$a" "$SRC/$t" ;; esac
+		else
+			say "This release has no $a: the discs will not be prepared"
+		fi
+	fi
 fi
 [ -f "$SRC/Cores/$CORE/saturn.rbf_r" ] || die "no core bitstream found in $SRC"
 

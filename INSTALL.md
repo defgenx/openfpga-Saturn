@@ -23,7 +23,8 @@ what differs. The exception is the disc files it generates (section 3), which it
 change. Without a built core next to it, the installer downloads the newest release from GitHub.
 
 **By hand:** copy the contents of `defgenx.Saturn.zip` (or the `release/` folder made by `./build.sh`) to
-the **root** of the card, merging with the folders already there:
+the **root** of the card, merging with the folders already there. The disc tool is a separate download of the
+same release (section 3); put it at the root of the card too:
 
 ```
 SD card root
@@ -31,9 +32,7 @@ SD card root
 │   └── saturn/
 │       ├── common/              <- discs: merged .img and .toc (from the .cue and .bin tracks)
 │       └── defgenx.Saturn/      <- the BIOS image(s), any name, and each game's .json
-├── Saturn-prepare-card          <- prepares the discs: macOS (double-click)
-├── Saturn-prepare-card.exe      <- the same for Windows x64
-├── Saturn-prepare-card-others/  <- the same for Windows arm64/x86 and Linux x64/arm64/armv7/x86
+├── Saturn-prepare-card          <- prepares the discs (separate download): macOS, or the .exe on Windows
 ├── Cores/
 │   └── defgenx.Saturn/
 │       ├── saturn.rbf_r         <- the core bitstream
@@ -56,10 +55,10 @@ Settings** / **BIOS**): the core restarts with the new one.
 
 Copy each game's `.cue` and `.bin` files into `Assets/saturn/common/<game>/` (or at the root of the card: they
 are moved there), then double-click **`Saturn-prepare-card`** (macOS) or **`Saturn-prepare-card.exe`**
-(Windows x64) at the root of the card, or run the installer again, which runs it too. No Python is needed. Other
-systems: `Saturn-prepare-card-others/` holds `Saturn-prepare-card-arm64.exe` (Windows on ARM),
-`Saturn-prepare-card-x86.exe` (32-bit Windows) and `Saturn-prepare-card-linux-x64`, `-linux-arm64`,
-`-linux-armv7`, `-linux-x86` (Linux; run it from a terminal, it finds the card above its folder).
+(Windows x64) at the root of the card, or run the installer again, which downloads it and runs it too. No Python
+is needed. The tool is not in the core zip: each build is a separate asset of the release,
+`Saturn-prepare-card-macos.zip` (unzip it; the zip keeps it executable) and `Saturn-prepare-card.exe` for the
+usual systems, and `Saturn-prepare-card-arm64.exe` and `Saturn-prepare-card-x86.exe` for Windows on ARM and 32-bit Windows, `Saturn-prepare-card-linux-x64.zip`, `-linux-arm64.zip`, `-linux-armv7.zip`, `-linux-x86.zip` for Linux (unzip, put the program at the card root and run it from a terminal).
 
 - macOS, first run: the tool is not notarized; right-click it, choose **Open**, then **Open** again.
 - Windows: if SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**.

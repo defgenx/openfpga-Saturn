@@ -118,14 +118,16 @@ handling, no file-name opening (`0x0192`) and no large buffers: only arithmetic 
 choice: a PC tool has to run over the discs (the install scripts run `Saturn-prepare-card --card`, below); CHD is
 not supported (the same as the PSX core).
 
-The release carries static binaries (`tools/prepare-card/build.sh`, run by `./build.sh package`): at the card root
-`Saturn-prepare-card` (macOS 13 or later, universal, ad-hoc signed, not notarized) and `Saturn-prepare-card.exe`
-(Windows x64); in `Saturn-prepare-card-others/` the Windows arm64 and x86 and the Linux x64, arm64, armv7 and x86
-builds. The tool replaces `mktoc.py`: the command line, the messages and the files are the same, checked by
+The release carries static binaries as separate assets, not in the core zip (`tools/prepare-card/build.sh`, run by
+`./build.sh package` into `release-tools/`): `Saturn-prepare-card-macos.zip` (macOS 13 or later, universal, ad-hoc
+signed, not notarized), `Saturn-prepare-card.exe` (Windows x64), `-arm64.exe` and `-x86.exe`, and the Linux x64,
+arm64, armv7 and x86 builds as `Saturn-prepare-card-linux-*.zip`. The macOS and Linux builds are zipped because a
+browser download drops the executable bit. Each goes to the card root; the installers download the one for the
+system. The tool replaces `mktoc.py`: the command line, the messages and the files are the same, checked by
 `tools/prepare-card/equiv.py` against the last `mktoc.py` in git history (synthetic discs only).
 
 **Double-clicked** (no arguments), it works on the card it sits on: the folder of the executable, symlinks
-resolved, or the card root above `Saturn-prepare-card-others/` (a double-clicked program starts in the home
+resolved, or the card root above a `Saturn-prepare-card-others/` folder (a double-clicked program starts in the home
 folder, not next to itself). It checks the card and marks each item `[OK]` (in place), `[->]` (it moves or
 prepares it) or `[!!]` (a problem to fix by hand, with the fix): the BIOS images in `Assets/saturn/defgenx.Saturn/`
 (512 KB `.bin`/`.rom`; none is a "NO BIOS" problem, a wrong size is flagged), BIOS-named 512 KB files at the card

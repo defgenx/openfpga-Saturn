@@ -30,9 +30,9 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 function Fail([string]$msg) { Write-Host "error: $msg" -ForegroundColor Red; exit 1 }
 
-# The Saturn-prepare-card build for this system, as the release zip lays it out
+# The Saturn-prepare-card build for this system, as it sits at the card root
 function Get-ToolName {
-    $o = "Saturn-prepare-card-others/Saturn-prepare-card"
+    $o = "Saturn-prepare-card"
     if ($IsMacOS) { return "Saturn-prepare-card" }
     if ($IsLinux) {
         switch -Regex (uname -m) {
@@ -51,6 +51,13 @@ function Get-ToolName {
         "x86" { return "$o-x86.exe" }
     }
     return $null
+}
+
+# The release asset holding tool NAME (build.sh package): .exe bare, the others zipped
+function Get-ToolAsset([string]$name) {
+    if ($name -like "*.exe") { return $name }
+    if ($name -eq "Saturn-prepare-card") { return "Saturn-prepare-card-macos.zip" }
+    return "$name.zip"
 }
 
 # Ask PROMPT DEFAULT: without an interactive console the default is used
@@ -83,7 +90,7 @@ try {
             $asset = $r.assets | Where-Object { $_.name -eq "$Core.zip" } | Select-Object -First 1
             if (-not $asset) { continue }
             try { $v = [Version]($r.tag_name.TrimStart("v") -replace "[^0-9.].*$", "") } catch { continue }
-            if (-not $best -or $v -gt $best.Version) { $best = @{ Version = $v; Url = $asset.browser_download_url } }
+            if (-not $best -or $v -gt $best.Version) { $best = @{ Version = $v; Url = $asset.browser_download_url; Release = $r } }
         }
         if (-not $best) { Fail "could not find a release of $Repo" }
         Write-Host "Downloading $($best.Url)"
@@ -91,6 +98,20 @@ try {
         Invoke-WebRequest -Uri $best.Url -OutFile $zip -UseBasicParsing
         Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $Tmp "core")
         $Src = Join-Path $Tmp "core"
+        # the card tool for this system is a separate asset of the same release; it goes to the card root
+        $t = Get-ToolName
+        if ($t) {
+            $a = Get-ToolAsset $t
+            $ta = $best.Release.assets | Where-Object { $_.name -eq $a } | Select-Object -First 1
+            if ($ta) {
+                $f = Join-Path $Tmp $a
+                Invoke-WebRequest -Uri $ta.browser_download_url -OutFile $f -UseBasicParsing
+                if ($a -like "*.zip") {
+                    Expand-Archive -LiteralPath $f -DestinationPath $Src -Force
+                    if (-not $IsWindows -and $PSVersionTable.PSEdition -eq "Core") { & chmod +x (Join-Path $Src $t) }   # Expand-Archive drops the mode
+                } else { Copy-Item -LiteralPath $f -Destination (Join-Path $Src $t) }
+            } else { Write-Host "This release has no $($a): the discs will not be prepared" }
+        }
     }
     if (-not (Test-Path -LiteralPath (Join-Path $Src "Cores/$Core/saturn.rbf_r"))) { Fail "no core bitstream found in $Src" }
 
