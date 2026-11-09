@@ -13,6 +13,7 @@
 //           +MAXUS=<simulated us before the summary and exit>,
 //           +TRACE (every MSH bus cycle in the trace file), +FRAMES=<dir for PPM dumps>,
 //           +KEYFILE / +KEYSCHED (pad 1), +RINGPC=<hex> (dump the PC and bus rings when the MSH reaches it), +DUMPDIR=<dir>
+//           +CKPT_US=<n> (+CKPT_STOP): fork checkpoint at n us, replays from it with sim/sys/replay.sh (docs/sim.md)
 // Outputs:  build/trace.log (events), stdout (summary).
 //
 // Progress markers: a test ROM stores to the mailbox 0x06000F00.. (word 0 = step); every store there is logged.
@@ -1275,6 +1276,15 @@ always @(posedge dut.saturn.clk_ram) if (rh_on && |dut.saturn.mem.ddram.ramh_wr 
 	rh_known[dut.saturn.mem.ddram.ramh_addr] = 1;
 	if (rh_nw++ < 3) $fdisplay(ftrace, "%0t RAMHCHK first-wr A=%05h D=%08h be=%b", $time, dut.saturn.mem.ddram.ramh_addr, dut.saturn.mem.ddram.ramh_din, dut.saturn.mem.ddram.ramh_wr);
 end
+// +WWLO=<hex> +WWHI=<hex>: log every WRAM-H write to byte offsets [WWLO, WWHI) with the bus owners and both PCs
+reg [31:0] ww_lo = 0, ww_hi = 0;
+initial begin void'($value$plusargs("WWLO=%h", ww_lo)); void'($value$plusargs("WWHI=%h", ww_hi)); end
+always @(posedge dut.saturn.clk_ram) if (ww_hi != 0 && |dut.saturn.mem.ddram.ramh_wr && !dut.saturn.mem.ddram.ramh_wr_old
+		&& {dut.saturn.mem.ddram.ramh_addr, 2'b00} >= ww_lo && {dut.saturn.mem.ddram.ramh_addr, 2'b00} < ww_hi)
+	$fdisplay(ftrace, "%0t WW A=%08h D=%08h be=%b cbreq=%b cback=%b sshreq=%b sshack=%b dma=%0d ch=%0d wa=%07h msh=%08h ssh=%08h",
+		$time, 32'h06000000 | {dut.saturn.mem.ddram.ramh_addr, 2'b00}, dut.saturn.mem.ddram.ramh_din, dut.saturn.mem.ddram.ramh_wr,
+		`SAT.CBREQ_N, `SAT.CBACK_N, `SAT.SSHBREQ_N, `SAT.SSHBACK_N, `SAT.SCU.DMA_ST, `SAT.SCU.DMA_CH, `SAT.SCU.DMA_WA,
+		`SAT.MSH.core.PC, `SAT.SSH.core.PC);
 integer rh_ok = 0, rh_bad = 0;
 task automatic rh_cmp(input string who, input [31:0] a, input [31:0] d, input [3:0] ba, input string kind);
 	reg [31:0] m, s;
@@ -1306,6 +1316,48 @@ end
 `RH_MON(SSH, "SSH", rhs)
 final if (rh_on) $display("RAMHCHK summary: %0d ok, %0d mismatches", rh_ok, rh_bad);
 
+// +HITCHK: every WRAM-H word an SH-2 core takes (cache hit, fill or single read, after the cache) vs a shadow updated by
+// the memory writes and by both cores' accepted writes. A mismatch prints the line's shadow words, so a word taken
+// from the wrong offset or line shows. Stale data after another master's write is also reported (class "stale").
+reg  [31:0] hc_sh [0:262143];
+reg         hc_kn [0:262143];
+reg  [31:0] hc_old [0:262143];
+reg         hc_on = 0;
+integer     hc_ok = 0, hc_bad = 0;
+initial hc_on = $test$plusargs("HITCHK");
+task automatic hc_wr(input [17:0] wa, input [31:0] d, input [3:0] be);
+	reg [31:0] w; integer b;
+	w = hc_sh[wa];
+	for (b = 0; b < 4; b++) if (be[b]) w[8*b +: 8] = d[8*b +: 8];
+	if (w != hc_sh[wa]) hc_old[wa] = hc_sh[wa];
+	hc_sh[wa] = w; hc_kn[wa] = 1;
+endtask
+always @(posedge dut.saturn.clk_ram) if (hc_on && |dut.saturn.mem.ddram.ramh_wr && !dut.saturn.mem.ddram.ramh_wr_old)
+	hc_wr(dut.saturn.mem.ddram.ramh_addr, dut.saturn.mem.ddram.ramh_din, dut.saturn.mem.ddram.ramh_wr);
+`define HC_MON(CPU, NAME) \
+always @(posedge clk_sys) if (hc_on && `SAT.CPU.core.EN && `SAT.CPU.core.CE && `SAT.CPU.core.BUS_REQ && !`SAT.CPU.core.BUS_WAIT \
+		&& `SAT.CPU.core.BUS_A[28:25] == 4'b0011 && `SAT.CPU.core.BUS_A[31:29] != 3'b011 && `SAT.CPU.core.BUS_A[31:29] != 3'b010) begin : hcm_``CPU \
+	reg [31:0] m, s, d; reg [17:0] wa; \
+	wa = `SAT.CPU.core.BUS_A[19:2]; \
+	m = {{8{`SAT.CPU.core.BUS_BA[3]}}, {8{`SAT.CPU.core.BUS_BA[2]}}, {8{`SAT.CPU.core.BUS_BA[1]}}, {8{`SAT.CPU.core.BUS_BA[0]}}}; \
+	if (`SAT.CPU.core.BUS_WR) hc_wr(wa, `SAT.CPU.core.BUS_DO, `SAT.CPU.core.BUS_BA); \
+	else if (hc_kn[wa]) begin \
+		d = `SAT.CPU.core.BUS_DI; s = hc_sh[wa]; \
+		if (((d ^ s) & m) == 0) begin hc_ok++; if (hc_ok % 10000000 == 0) $fdisplay(ftrace, "%0t HITCHK progress %0d ok %0d bad", $time, hc_ok, hc_bad); end \
+		else begin \
+			hc_bad++; \
+			if (hc_bad <= 300) $fdisplay(ftrace, "%0t HITCHK %s %s A=%08h got=%08h want=%08h ba=%b %s line=%08h %08h %08h %08h pc=%08h", \
+				$time, NAME, `SAT.CPU.core.BUS_ID ? "if" : "rd", `SAT.CPU.core.BUS_A, d, s, `SAT.CPU.core.BUS_BA, \
+				((d ^ hc_old[wa]) & m) == 0 ? "stale" : "WRONG", \
+				hc_sh[{wa[17:2], 2'd0}], hc_sh[{wa[17:2], 2'd1}], hc_sh[{wa[17:2], 2'd2}], hc_sh[{wa[17:2], 2'd3}], `SAT.CPU.core.PIPE.EX.PC); \
+			if (hc_bad <= 5) $display("%0t HITCHK %s A=%08h got=%08h want=%08h", $time, NAME, `SAT.CPU.core.BUS_A, d, s); \
+		end \
+	end \
+end
+`HC_MON(MSH, "MSH")
+`HC_MON(SSH, "SSH")
+final if (hc_on) $display("HITCHK summary: %0d ok, %0d mismatches", hc_ok, hc_bad);
+
 // ------------------------------------------------------------------ run control and summary
 longint max_cycles = 20000000;
 initial begin
@@ -1314,16 +1366,46 @@ initial begin
 	if ($value$plusargs("FRAMES=%s", frame_dir)) have_dir = 1;
 	if (!$value$plusargs("CYCLES=%d", max_cycles)) max_cycles = 20000000;
 end
-// +MAXUS=<n>: stop after n us of simulated time (the cycle limit counts only out of reset)
+// +MAXUS=<n>: stop after n us of simulated time (the cycle limit counts only out of reset); a replay may move it
+longint max_ps = 0;
 initial begin : tlimit
 	longint max_us;
-	if ($value$plusargs("MAXUS=%d", max_us)) begin
-		#(max_us * 1000000);
-		$display("tb_sys: time limit %0d us reached", max_us);
-		if (bram_out != "" || bram_path != "") bram_save();
-		summary();
-		$finish;
+	if ($value$plusargs("MAXUS=%d", max_us)) max_ps = max_us * 1000000;
+end
+always @(posedge clk_74a) if (max_ps != 0 && $time >= max_ps) begin
+	$display("tb_sys: time limit %0d us reached", max_ps / 1000000);
+	if (bram_out != "" || bram_path != "") bram_save();
+	summary();
+	$finish;
+end
+
+// +CKPT_US=<n>: a fork checkpoint at n us (sim_main.cpp, docs/sim.md "Checkpoints"). A replay starts with its own
+// plusargs ahead of the original ones; the block below reads again the settings a replay may change.
+import "DPI-C" function void ckpt_mark();
+import "DPI-C" function int ckpt_role();
+event ckpt_reload;
+initial begin : ckpt
+	longint us;
+	if ($value$plusargs("CKPT_US=%d", us)) begin
+		#(us * 1000000);
+		ckpt_mark();
+		@(posedge clk_74a);
+		if (ckpt_role() == 2) -> ckpt_reload;
 	end
+end
+always @(ckpt_reload) begin : reargs
+	longint us; string p;
+	rh_on = $test$plusargs("RAMHCHK");
+	hc_on = $test$plusargs("HITCHK");
+	void'($value$plusargs("WWLO=%h", ww_lo)); void'($value$plusargs("WWHI=%h", ww_hi));
+	ring_pc_on = $value$plusargs("RINGPC=%h", ring_pc); ring_dumped = 0;
+	trace_all = $test$plusargs("TRACE");
+	have_dir = $value$plusargs("FRAMES=%s", frame_dir);
+	void'($value$plusargs("CYCLES=%d", max_cycles));
+	if ($value$plusargs("MAXUS=%d", us)) max_ps = us * 1000000;
+	if ($value$plusargs("BUSLOG=%s", p)) fbus = $fopen(p, "w");
+	$fdisplay(ftrace, "%0t CKPT replay starts", $time);
+	$display("%0t CKPT replay starts", $time);
 end
 
 task automatic summary();
