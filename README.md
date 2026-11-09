@@ -3,8 +3,9 @@
 An openFPGA port of [Saturn_MiSTer](https://github.com/MiSTer-devel/Saturn_MiSTer), the MiSTer project's
 Sega Saturn core, to the Analogue Pocket.
 
-> **Status: v0.1.0, first stable release.** Games boot from the SD card and run on the Pocket with picture, CD audio,
-> sound effects and controls (Hyper Duel plays on a Pocket); Panzer Dragoon still stops on "Episode 1". Downloads:
+> **Status: v0.1.1.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
+> controls (Hyper Duel plays on a Pocket). v0.1.1 fixes the CD block bug behind Panzer Dragoon's "Episode 1" crash
+> (checked in simulation, not yet on a Pocket). Downloads:
 > [releases](https://github.com/defgenx/openfpga-Saturn/releases). Bugs and test reports:
 > [issues](https://github.com/defgenx/openfpga-Saturn/issues).
 
@@ -55,9 +56,11 @@ window, line window; [docs/vdp2.md](docs/vdp2.md)).
 
 1. Download `defgenx.Saturn.zip` from the [latest release](https://github.com/defgenx/openfpga-Saturn/releases) and
    unzip it onto the root of the SD card (let it merge with the folders already there).
-2. Add a BIOS and your games (below), then double-click **`Saturn-prepare-card`** (macOS) or
+2. From the same release, download the disc tool for your computer, a separate file: `Saturn-prepare-card-macos.zip`
+   (macOS: unzip it) or `Saturn-prepare-card.exe` (Windows x64), and put it at the root of the card.
+3. Add a BIOS and your games (below), then double-click **`Saturn-prepare-card`** (macOS) or
    **`Saturn-prepare-card.exe`** (Windows) at the root of the card. No Python or other software is needed.
-3. Put the card back in the Pocket and open **Saturn** from the openFPGA menu.
+4. Put the card back in the Pocket and open **Saturn** from the openFPGA menu.
 
 ## Installing the BIOS
 
@@ -89,17 +92,16 @@ SD card
 │           ├── ...
 │           ├── Panzer Dragoon (Japan).img     written by the tool
 │           └── Panzer Dragoon (Japan).toc     written by the tool
-├── Saturn-prepare-card              macOS (Apple silicon and Intel)
-├── Saturn-prepare-card.exe          Windows x64
-└── Saturn-prepare-card-others/      Windows arm64/x86, Linux x64/arm64/armv7/x86
+└── Saturn-prepare-card              the disc tool for your computer (a separate release download): macOS,
+                                     or Saturn-prepare-card.exe and the other builds below
 ```
 
 1. Copy the game's `.cue` and `.bin` files onto the card: at the root, or in `Assets/saturn/common/` (one folder per
    game is tidiest).
 2. With the card in a computer, double-click **`Saturn-prepare-card`** (macOS) or
-   **`Saturn-prepare-card.exe`** (Windows) at the root of the card; nothing else needs installing (no Python). On
-   other systems run the build for it from `Saturn-prepare-card-others/` (`-arm64.exe` and `-x86.exe` for Windows on
-   ARM and 32-bit Windows, `-linux-x64`, `-linux-arm64`, `-linux-armv7`, `-linux-x86` for Linux).
+   **`Saturn-prepare-card.exe`** (Windows) at the root of the card; nothing else needs installing (no Python). Each
+   build is its own release download, kept out of the core zip: `Saturn-prepare-card-arm64.exe` and `Saturn-prepare-card-x86.exe` for Windows on ARM and 32-bit Windows, `Saturn-prepare-card-linux-x64.zip`, `-linux-arm64.zip`, `-linux-armv7.zip`, `-linux-x86.zip` for Linux (unzip, put the program at the
+   card root and run it from a terminal).
    * macOS, first time: the tool is not notarized, so right-click it, choose **Open**, then **Open** again.
    * Windows: if SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**.
 
@@ -153,7 +155,7 @@ The core follows MiSTer's Saturn implementation as closely as possible and devia
 
 ```
 ./build.sh            compile in Docker (raetro/quartus:21.1) and package defgenx.Saturn.zip
-./build.sh package    package an existing bitstream (builds Saturn-prepare-card too: needs Go, and macOS)
+./build.sh package    package an existing bitstream, and Saturn-prepare-card in release-tools/ (needs Go, and macOS)
 make -C sim sys       full-system simulation (Verilator), sim/sys/tb_sys.sv for the options
 ```
 
