@@ -533,14 +533,21 @@ enforces the rule and `tb_fb` fails with the old strobes). The CD sector ring (1
 is in PSRAM1 at byte 0x180000 and reaches it through two `ddram_pocket` channels; `cd_stream` has the ports
 `rg_*` instead of the SRAM pins.
 
-* Write: one 32 bit write (two ring words) per bridge word, `ringw_*`, on the chip B arbiter after the reads. The request
-  is not copied in `ddram_pocket`: `rg_wa`/`rg_wd` stay unchanged until `rg_wbusy` has fallen. `cd_stream` queues the
-  bridge words in a 64 entry FIFO (one M10K pair) because the chip can be busy with a VDP1 burst (up to about 1000
-  clk_ram) while a bridge word arrives every 25 clk_sys. A sector counts as complete (`ring_add`) only when the FIFO is
-  empty and the last write has been issued; `ovf_cnt` counts words lost to a full FIFO (0 in `sim/cd`).
-* Read: `ring_*`, 16 bit words with a 32 byte line cache. A ring write drops the cached line. The feed asks for the next
-  word right after outputting the previous one, so it has one word period (648 clk_ram) for a line fill; a fill behind a
-  full VDP1 burst can be later than that, which delays that word and nothing else.
+* Write: one 32 bit write (two ring words) per bridge word, `ringw_*`, on the chip B arbiter right after the CD RAM
+  port and ahead of VDP1. The request is not copied in `ddram_pocket`: `rg_wa`/`rg_wd` stay unchanged until `rg_wbusy`
+  has fallen. `cd_stream` queues the bridge words in a 64 entry FIFO (one M10K pair) because the chip can be busy with
+  a VDP1 burst (up to about 1000 clk_ram) while a bridge word arrives every 25 clk_sys; the bridge cannot be held, so a
+  word that finds the FIFO full is lost (`ovf_cnt`). A sector counts as complete (`ring_add`) only when the FIFO is
+  empty and the last write has been issued. The feed recomputes the EDC, so a lost word reaches the CD block as a
+  valid sector with the slot's old bytes in it.
+  With the ring write last in the arbiter (up to v0.1.3), back-to-back VDP1 requests during DoDonPachi's intro movie
+  kept it waiting past the 64 entries: the full-system run (`DSLAT_US=5000`) stored a movie sector whose first 64
+  bridge words (256 bytes) were right and whose rest was the ring slot's previous sector, and the movie parser
+  looped on it. Ahead of VDP1 a write waits at most one VDP1 burst.
+* Read: `ring_*`, 16 bit words with a 32 byte line cache, after the ring write and ahead of VDP1. A ring write drops the
+  cached line. The feed asks for the next word right after outputting the previous one, so it has one word period
+  (648 clk_ram) for a line fill; a fill behind a full VDP1 burst can be later than that, which delays that word and
+  nothing else.
 * `ddram_pocket` +40 ALMs for the two channels, `sram_pocket` -20 (no arbitration), `vdp1_fb_pocket` gets 16,384 more
   tail words (32 M10K blocks fewer).
 

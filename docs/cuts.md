@@ -112,10 +112,21 @@ Dracula X, Virtual Hydlide, ...) depend on the timings above.
 
 ## POCKET_CUT_SH2_WDT
 
-**In the build** (`ap_core.qsf`), although Duke Nukem 3D (USA) needs the master SH-2 WDT: it runs its CD file loader
-from the WDT interval-timer interrupt (handler 0x0602571C clears WTCSR.OVF), and with the cut it waits forever on the
-SEGA licence screen; Mednafen with only that interrupt blocked stops the same way. With the WDT of both CPUs, or of the
-master only, the v0.1.3 design did not fit at timing on any of 28 seeds (no fit, or setup slack -0.097 to -0.653 ns).
+**Not in the build.** Duke Nukem 3D (USA) needs the master SH-2 WDT: it runs its CD file loader from the WDT
+interval-timer interrupt (handler 0x0602571C clears WTCSR.OVF), and with the cut it waits forever on the SEGA licence
+screen; Mednafen with only that interrupt blocked stops the same way. With MiSTer's WDT on both CPUs, or on the master
+only, the v0.1.3 design did not fit at timing on any of 28 seeds (no fit, or setup slack -0.097 to -0.653 ns).
+
+With the two options below, v0.1.4 fits at timing (seed 3, `docs/fit-status.md` "v0.1.4 timing").
+
+The build uses two smaller options instead (`ap_core.qsf`, `sim/sys/macros_qsf.f`):
+
+- `POCKET_CUT_SSH2_WDT`: the slave SH-2's WDT only is cut (`WDT_DISABLE` on the SSH instance, behaviour as below).
+- `POCKET_SH2_WDT_LITE`: the master's WDT is `SH7604P_WDT` with `LITE=1`, the interval timer only. WTCNT, WTCSR
+  (OVF, WT/IT, TME, CKS) and the ITI interrupt behave as MiSTer's; watchdog-timer mode never resets the CPU
+  (`WDTOVF_N` stays high, RSTCSR reads 0x1F, writes to it are ignored), the open-bus byte reads 0xFF, and software
+  standby ends on the NMI edge as with the cut (no settling count). `sim/sh2` (`CUTS=POCKET_SH2_WDT_LITE`): `t_intc`,
+  the interval-timer test, matches.
 
 Removes the watchdog timer of both CPUs (macro forces `WDT_DISABLE` for both). WTCSR/WTCNT/RSTCSR read 0, writes are
 ignored, no interval-timer interrupt, no watchdog reset, `WDTOVF_N` stays high. Software standby still ends on NMI:

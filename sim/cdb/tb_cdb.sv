@@ -443,6 +443,7 @@ initial begin
 				for (w = 0; w < a1; w = w + 1) host_wr(8'h00, (a2 + w * 16'h0101) & 16'hFFFF);
 				$fwrite(lf, "PUTDATA %0d %04h\n", a1, a2);
 			end
+			else if (op == "time") $fwrite(lf, "TIME %0d us\n", $time / 1000);
 			else if (op == "mark") begin n = $sscanf(line, " %s %s", op, op); $fwrite(lf, "MARK %0s\n", op); end
 			else if (op == "dram") begin
 				n = $sscanf(line, " %s %h %d", op, a1, a2);

@@ -1,5 +1,5 @@
 module SH7604P_WDT
-#(parameter bit DISABLE=0)
+#(parameter bit DISABLE=0, bit LITE=0)   // LITE: interval timer only (no watchdog reset, RSTCSR, open bus), docs/cuts.md
 (
 	input             CLK,
 	input             RST_N,
@@ -47,6 +47,7 @@ module SH7604P_WDT
 	reg        OVF_Q;
 	
 	wire RUN = EN & CE_R & ~DISABLE;
+	wire FAST_WAKE = DISABLE | LITE;   // no settling count: the NMI edge ends standby
 	wire CNT_FF = &WTCNT;
 	
 	reg WT_CE;
@@ -72,7 +73,7 @@ module SH7604P_WDT
 			WDTOVF_N <= 1;
 			WRES <= 0;
 		end
-		else if (RUN) begin
+		else if (RUN && !LITE) begin
 			if (WT_CE && CNT_FF && S_WTIT) begin
 				WDTOVF_N <= 0;
 				WRES <= S_RSTE;
@@ -93,7 +94,7 @@ module SH7604P_WDT
 		else if (!RES_N) begin
 			SBY_TME <= 0;
 		end
-		else if (RUN) begin
+		else if (RUN && !LITE) begin
 			if (NMI && !NMI_OLD && SBY) SBY_TME <= 1;
 			if (OVF_Q) SBY_TME <= 0;
 		end
@@ -103,12 +104,12 @@ module SH7604P_WDT
 		else if (RUN && RES_N) NMI_OLD <= NMI;
 	end
 
-	// DISABLE: no settling count, the NMI edge itself ends software standby (else SLEEP with SBYCR.SBY never returns:
+	// DISABLE or LITE: no settling count, the NMI edge itself ends software standby (else SLEEP with SBYCR.SBY never returns:
 	// the BIOS clock change SYS_CHGSYSCK sleeps in standby until the SMPC's NMI). docs/cuts.md POCKET_CUT_SH2_WDT.
 	reg SBY_WAKE, NMI_D;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin SBY_WAKE <= 0; NMI_D <= 0; end
-		else if (EN && CE_R) begin NMI_D <= NMI; SBY_WAKE <= DISABLE && SBY && NMI && !NMI_D; end
+		else if (EN && CE_R) begin NMI_D <= NMI; SBY_WAKE <= FAST_WAKE && SBY && NMI && !NMI_D; end
 	end
 	assign OVF = OVF_Q | SBY_WAKE;
 	
@@ -153,7 +154,7 @@ module SH7604P_WDT
 				if (CNT_FF) begin
 					if (SBY_TME) OVF_Q <= 1;
 					else if (!S_WTIT) S_OVF <= 1;
-					else begin
+					else if (!LITE) begin
 						S_WOVF <= 1;
 						S_OVF <= 0; S_WTIT <= 0; S_TME <= 0; S_CKS <= 3'b000;
 					end
@@ -169,13 +170,13 @@ module SH7604P_WDT
 					end
 				end
 				if (IBUS_A[2:0] == 3'h2) begin
-					if (IBUS_DI[15:8] == 8'h5A) begin S_RSTE <= IBUS_DI[6]; S_RSTS <= IBUS_DI[5]; end
+					if (IBUS_DI[15:8] == 8'h5A && !LITE) begin S_RSTE <= IBUS_DI[6]; S_RSTS <= IBUS_DI[5]; end
 					else if (IBUS_DI[15:8] == 8'hA5 && !IBUS_DI[7]) S_WOVF <= 0;
 				end
 			end
-			if (WR_DONE) OPEN_BUS <= IBUS_A[2:0] == 3'h4 ? IBUS_DI[15:8] : IBUS_DI[7:0];
+			if (WR_DONE && !LITE) OPEN_BUS <= IBUS_A[2:0] == 3'h4 ? IBUS_DI[15:8] : IBUS_DI[7:0];
 			if (RD_DONE) begin
-				if (IBUS_A[2:0] != 3'h4) OPEN_BUS <= REG_DO;
+				if (IBUS_A[2:0] != 3'h4 && !LITE) OPEN_BUS <= REG_DO;
 				if (IBUS_A[2:0] == 3'h0 && S_OVF) OVF_SET <= 1;
 			end
 		end
@@ -197,8 +198,8 @@ module SH7604P_WDT
 				case (IBUS_A[2:0])
 					3'h0: REG_DO <= {S_OVF,S_WTIT,S_TME,2'b11,S_CKS};
 					3'h1: REG_DO <= WTCNT;
-					3'h3: REG_DO <= {S_WOVF,S_RSTE,S_RSTS,5'h1F};
-					3'h4: REG_DO <= OPEN_BUS;
+					3'h3: REG_DO <= LITE ? 8'h1F : {S_WOVF,S_RSTE,S_RSTS,5'h1F};
+					3'h4: REG_DO <= LITE ? 8'hFF : OPEN_BUS;
 					default: REG_DO <= 8'hFF;
 				endcase
 			end

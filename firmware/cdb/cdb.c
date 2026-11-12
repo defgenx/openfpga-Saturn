@@ -174,13 +174,6 @@ static void hdr_dram(u8 b, shdr *h)
 	w = dr_rd(); h->sub = w >> 8; h->ci = (u8)w;
 }
 
-static void hdr_latch(shdr *h)
-{
-	u32 a = MM(R_HDR_A), b = MM(R_HDR_B);
-	h->m = a >> 24; h->s = a >> 16; h->f = a >> 8; h->mode = (u8)a;
-	h->file = b >> 24; h->chan = b >> 16; h->sub = b >> 8; h->ci = (u8)b;
-}
-
 static u32 hdr_fad(const shdr *h) { return (unbcd(h->m) * 60 + unbcd(h->s)) * 75 + unbcd(h->f); }
 
 static void filt_reset_cond(u8 i)
@@ -418,7 +411,7 @@ static void sector_complete(void)
 			if (infl_stale[0]) { if (!infl_audio[0]) buf_free(b); }
 			else if (!infl_audio[0]) {
 				shdr h;
-				hdr_latch(&h);
+				hdr_dram(b, &h);
 				pos.is_cdrom = 1;
 				last_dest = filter_buf(cd_conn, b, &h);
 				irq(H_CSCT);
@@ -430,7 +423,7 @@ static void sector_complete(void)
 		}
 	}
 	if (at_end || !(ev & EV_DISC)) return;
-	if (inflight >= 2 || (inflight && (pos.ctrl & 0x40))) return;
+	if (inflight >= 2) return;
 	pos_of(cur_sector, &p);
 	data = p.ctrl & 0x40;
 	if (play_end_met(&p)) {
@@ -448,7 +441,6 @@ static void sector_complete(void)
 		return;
 	}
 	play_rep_ctr &= ~0x80;
-	if (inflight && data) return;               /* header latch holds one data sector */
 	if (data && !free_cnt) { pos.status = S_PAUSE; return; }
 	{
 		u32 f = cur_sector;

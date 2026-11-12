@@ -262,9 +262,9 @@ lead-out sectors are generated (LFSR of `MakeSecureRingData`). Both checked agai
 - Request handshake on `clk_74a`: `target_dataslot_read` held for 6 clocks, then wait for `ack` or `done` low, then
   `done`. A non-zero error code is counted (`err_cnt`) and the sector is still marked ready (the data is whatever
   arrived).
-- The ring rides out a bridge stall up to its depth: 120 sectors are 0.8 s at 2x, 1.6 s at 1x. Another Pocket CD core
-  documents firmware events that stop the bridge for hundreds of ms, which a 6-sector ring (40 ms) cannot cover:
-  the drive stopped delivering, and streamed video and audio ran dry. Measured on the CD bench (`script_stall.txt`,
+- The ring rides out a bridge stall up to its depth: 120 sectors are 0.8 s at 2x, 1.6 s at 1x. A bridge stall of
+  hundreds of ms is more than a 6-sector ring (40 ms) can cover: the drive stops delivering, and streamed video and
+  audio run dry. Measured on the CD bench (`script_stall.txt`,
   `+BRSTALL_N=<read> +BRSTALL_MS=400`, Duke Nukem 3D's disc): with 128 slots a 400 ms stall mid-play leaves delivery at
   150 sectors/s throughout; the 8-slot ring (`make build/hle_small/Vtb_cdb`) stops delivering for the rest of the
   stall. A stall longer than the ring produces stall ticks; the drive reports `0x22` ticks until the bridge answers,

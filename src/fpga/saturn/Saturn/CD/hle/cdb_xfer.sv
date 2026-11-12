@@ -41,7 +41,10 @@ module cdb_xfer (
 
 reg [2:0]  wp = 3'd0, rp = 3'd0;
 reg [3:0]  n = 4'd0;
-assign f_empty = (n == 4'd0);
+reg        pushed = 1'b0;
+// the head entry written at the last edge is hidden for one clock: its first falling-edge read coincides with the
+// M10K write, which reads unknown data (docs/cdb-hle.md, "Data path")
+assign f_empty = (n == 4'd0) || (n == 4'd1 && pushed);
 assign f_full  = (n == 4'd8);
 
 reg [17:0] hc = 18'd0;
@@ -66,12 +69,12 @@ wire pop_eng  = (mode == 3'd2) && ph == 2'd0 && c0 != 12'd0 && !rq && !f_empty;
 wire do_push  = push_eng || f_push;
 wire do_pop   = pop_eng || f_pop;
 
-// an entry is read only after n counts it; M10K with the read address (rp, a register) taken on the falling edge
+// M10K with the read address (rp, a register) taken on the falling edge
 CDB_FERAM #(3,16) fifo(clk, do_push && rst_n && !mode_we, wp, push_eng ? dq : f_wd, rp, f_q);
 
 always @(posedge clk) begin
 	if (!rst_n || (mode_we)) begin
-		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0; more <= 1'b0;
+		wp <= 3'd0; rp <= 3'd0; n <= 4'd0; pushed <= 1'b0; c0 <= 12'd0; v1 <= 1'b0; rq <= 1'b0; ph <= 2'd0; hc <= 18'd0; more <= 1'b0;
 		if (mode_we) mode <= mode_d; else mode <= 3'd0;
 	end else begin
 		if (a_we) a_t <= wd;
@@ -88,6 +91,7 @@ always @(posedge clk) begin
 		if (do_push) wp <= wp + 3'd1;
 		if (do_pop)  rp <= rp + 3'd1;
 		n <= n + {3'd0, do_push} - {3'd0, do_pop};
+		pushed <= do_push;
 
 		case (mode)
 		3'd1: if (!rq && c0 != 12'd0 && n < 4'd8) begin

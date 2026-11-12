@@ -188,10 +188,16 @@ reg  [ 18:  1] vdp1vram_rcache_addr;
 reg  [  2:  1] vdp1vram_rcache_addr_lsb;
 reg  [  8:  0] vdp1vram_rcache_blen;
 // vdp1vram_addr inside the cached burst [start, start + blen - 1] (valid while blen != 0); a burst whose last address
-// wraps past the top of the 18 bit space covers nothing
-wire [ 18:  0] vdp1vram_off = {1'b0, vdp1vram_addr} - {1'b0, vdp1vram_rcache_addr};
-wire           vdp1vram_bwrap = (&vdp1vram_rcache_addr[18:10]) && ({1'b0, vdp1vram_rcache_addr[9:1]} + {1'b0, vdp1vram_rcache_blen} > 10'd512);
-wire           vdp1vram_in_burst = !vdp1vram_off[18] && !(|vdp1vram_off[17:9]) && vdp1vram_off[8:0] < vdp1vram_rcache_blen && !vdp1vram_bwrap;
+// wraps past the top of the 18 bit space covers nothing. end = start + blen and the wrap flag are registered with the
+// burst, so the hit test is two parallel compares (timing: this feeds the clk_ram request decision)
+reg  [ 18:  0] vdp1vram_rcache_end = '0;
+reg            vdp1vram_bwrap = 1'b0;
+wire [ 18:  0] vdp1vram_fill_end = {1'b0, vdp1vram_addr} + {10'd0, vdp1vram_blen};
+// both bounds as kept subtractions (sign bit = below), so they map to carry chains: a plain compare maps to a
+// 7-LUT cascade here under AGGRESSIVE AREA (docs/fit-status.md, v0.1.4 timing)
+(* keep *) wire [ 19:  0] vdp1vram_d_start = {2'b00, vdp1vram_addr} - {2'b00, vdp1vram_rcache_addr};
+(* keep *) wire [ 19:  0] vdp1vram_d_end   = {2'b00, vdp1vram_addr} - {1'b0, vdp1vram_rcache_end};
+wire           vdp1vram_in_burst = !vdp1vram_d_start[19] && vdp1vram_d_end[19] && !vdp1vram_bwrap;
 reg            vdp1vram_rcache_dirty;
 reg            vdp1vram_rcache_busy;
 reg            vdp1vram_read_busy;
@@ -552,6 +558,8 @@ always @(posedge clk) begin
 					v_rb = 1'b1;
 					vdp1vram_rcache_addr <= vdp1vram_addr;
 					vdp1vram_rcache_blen <= vdp1vram_blen;
+					vdp1vram_rcache_end <= vdp1vram_fill_end;
+					vdp1vram_bwrap <= vdp1vram_fill_end[18] && |vdp1vram_fill_end[17:0];
 				end
 			end else if (vdp1vram_rcache_blen) begin
 				if (!vdp1vram_in_burst || vdp1vram_rcache_dirty) begin
@@ -652,6 +660,22 @@ always @(posedge clk) begin
 					b_chan  <= 3'd0;
 					b_state <= 2'd2;
 				end
+				// the ring ahead of VDP1: bridge words cannot wait, and cd_stream drops them on a full FIFO (docs/memory.md section 5)
+				else if (ringw_write_busy) begin
+					ringw_write_busy <= 0;
+					b_addr  <= {4'b0001, 1'b1, ringw_addr, 1'b0};
+					b_wd    <= ringw_data;
+					b_be    <= 4'hF;
+					b_write <= 1;
+					b_chan  <= 3'd5;
+					b_state <= 2'd1;
+				end
+				else if (ring_read_busy) begin
+					b_addr  <= {4'b0001, 1'b1, ring_rcache_addr[17:4], 4'b0000};
+					b_read  <= 1;
+					b_chan  <= 3'd4;
+					b_state <= 2'd2;
+				end
 				else if (!vdp1vram_fifo_empty) begin
 					b_addr  <= {5'b00000, vdp1vram_write_addr};
 					b_wd    <= {vdp1vram_write_data, 16'h0000};
@@ -672,21 +696,6 @@ always @(posedge clk) begin
 					b_read  <= 1;
 					b_chan  <= 3'd2;
 					b_state <= 2'd2;
-				end
-				else if (ring_read_busy) begin
-					b_addr  <= {4'b0001, 1'b1, ring_rcache_addr[17:4], 4'b0000};
-					b_read  <= 1;
-					b_chan  <= 3'd4;
-					b_state <= 2'd2;
-				end
-				else if (ringw_write_busy) begin
-					ringw_write_busy <= 0;
-					b_addr  <= {4'b0001, 1'b1, ringw_addr, 1'b0};
-					b_wd    <= ringw_data;
-					b_be    <= 4'hF;
-					b_write <= 1;
-					b_chan  <= 3'd5;
-					b_state <= 2'd1;
 				end
 				else if (cdbuf_wwrite_busy) begin
 					cdbuf_wwrite_busy <= 0;

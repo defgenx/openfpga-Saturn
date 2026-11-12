@@ -704,6 +704,8 @@ module SH7604P
 	
 `ifdef POCKET_CUT_SH2_WDT
 	SH7604P_WDT #(1) wdt
+`elsif POCKET_SH2_WDT_LITE
+	SH7604P_WDT #(WDT_DISABLE, 1) wdt
 `else
 	SH7604P_WDT #(WDT_DISABLE) wdt
 `endif

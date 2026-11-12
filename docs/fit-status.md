@@ -787,3 +787,65 @@ audio glue). Map: 17,781 ALMs needed. Same map, fitted at several seeds:
 
 The failing groups at the other seeds are outside the VDP2: MSH -> WRAM-H write data, VDP1 frame-buffer `sr_a`, SSH
 `SLV_BUS_RLS` -> ddram. They move with the placement, as in the earlier rounds.
+
+## v0.1.4 timing (2026-11-11)
+
+v0.1.3 with the master SH-2 interval timer back (`POCKET_SH2_WDT_LITE`, slave WDT cut: `docs/cuts.md`). The lite WDT
+entity is 25.6 ALMs and shares the SH7604P `CLK*_CE` prescaler.
+
+First map (`1f61555`), 30 seeds: 20 need 1,849 LABs (of 1,848), 10 fit, none closes. Seed 8: 18,227 ALMs needed,
+1,848 / 1,848 LABs, setup -0.147. The worst groups, by seed:
+
+| Group | Worst slack (seed) |
+|---|---|
+| VDP1 `VRAM_A` -> ddram `vdp1vram_rcache_blen` / `_addr` / `read_busy` | -0.333 (s20), -0.264 (s25), -0.112 (s30) |
+| MSH `bsc.MST_BUS_RLS` / `A` -> ddram `ramh_read_busy` / `ramh_alloc` / `ramh_plru` (counter[0] -> counter[1]) | -0.147 (s8) |
+| SSH `bsc.WE_N` -> `ramh_din` (the MiSTer `dezaemon2_hack` compare) | -0.118 (s30) |
+| VDP2 `VTIM` -> frame buffer `sr_a` | -0.074 (s8) |
+
+The VDP1 group runs through the lower bound of the VRAM burst hit test (`vdp1vram_addr >= vdp1vram_rcache_addr`), which
+the map builds as a cascade of seven LUTs on the `dataf` inputs, not as a carry chain. Both bounds are now kept 20 bit
+subtractions whose sign bit gives the compare (`ddram_pocket.sv`, `vdp1vram_d_start` / `vdp1vram_d_end`); they map to
+carry chains. `sim/mem` (`make ddram`) passes with no data errors.
+
+The WRAM-H lookup stays single cycle: the SCU's CBUS DMA read is a one-clk_sys `CBUS_RD` pulse that samples
+`ECWAIT_N_FF` on the next clk_sys, so the cache must raise busy at the first clk_ram edge on a miss.
+
+Second map (`a55347f`, 17,912 ALMs estimated), seeds 30, 8, 25, 20, 12, 1 to 6 in that order:
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 8 | 18,210 | 1,847 / 1,848 | -0.083 (slow 85C, counter[1]) | +0.072 |
+| 6 | 18,237 | 1,848 / 1,848 | +0.097 (slow 85C, counter[0]) | +0.118 |
+| 30, 25, 20, 12, 1 to 5 | 18,215 .. 18,276 | 1,849: no fit | | |
+
+Third map (`0b99cde`: the CD FIFOs' one-clock hold of a just-written entry, `docs/cdb-hle.md` "Data path"; 17,915 ALMs
+estimated), seeds 6, 8, 30, 25, 20, 12, 1, 2, 3:
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 30 | 18,198 | 1,848 / 1,848 | -0.575 (slow 85C) | +0.060 |
+| 25 | 18,235 | 1,848 / 1,848 | -0.364 (slow 85C) | +0.030 |
+| 1 | 18,210 | 1,848 / 1,848 | -0.085 (slow 85C) | +0.037 |
+| 3 | 18,187 | 1,847 / 1,848 | +0.150 (slow 85C, counter[1]) | +0.083 |
+| 6, 8, 20, 12, 2 | 18,229 .. 18,314 | 1,849: no fit | | |
+
+Fourth map (`d9fbc98`: the CD drive keeps two sectors in flight, `docs/cdb-hle.md` "Drive pace"; 17,894 ALMs
+estimated), seeds 3, 1, 6, 8, 25, 30 in that order:
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 3 | 18,219 | 1,848 / 1,848 | -0.240 (slow 85C, counter[1]) | +0.066 |
+| 1 | 18,215 | 1,848 / 1,848 | -0.288 (slow 85C, counter[1]) | +0.040 |
+| 6 | 18,188 | 1,848 / 1,848 | -0.799 (slow 85C, counter[1]) | -0.014 |
+| 8 | 18,219 | 1,848 / 1,848 | -0.452 (slow 85C, counter[1]) | +0.043 |
+| 25 | 18,194 | 1,848 / 1,848 | -0.133 (slow 85C, counter[1]) | +0.063 |
+| 30 | 18,190 | 1,847 / 1,848 | +0.283 (slow 85C, counter[1]) | +0.005 (fast 0C, clk_74a) |
+
+Fifth map (`20d1fc7`: CD ring write and read ahead of VDP1 on the PSRAM1 chip B arbiter, `docs/memory.md` section 5;
+17,880 ALMs estimated), seeds 30, 3 in that order:
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 30 | 18,217 | 1,848 / 1,848 | -0.528 (slow 85C, counter[1]) | +0.042 |
+| **3 (release)** | **18,185** | **1,847 / 1,848** | **+0.008** (slow 85C, counter[1]) | **+0.120** (fast 0C, counter[0]) |

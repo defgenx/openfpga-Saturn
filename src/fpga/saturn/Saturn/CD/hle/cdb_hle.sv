@@ -127,7 +127,9 @@ end
 // ------------------------------------------------------------------ host registers
 reg [15:0] HIRQ = 16'd0, HMASK = 16'd0;
 reg        ev_cmd = 1'b0, ev_rrd = 1'b1;
-reg        ev_sec = 1'b0, ev_dchg = 1'b0, ev_to = 1'b0;
+reg        ev_dchg = 1'b0, ev_to = 1'b0;
+reg  [1:0] sec_n = 2'd0;            // completed sectors not yet cleared: two can be in flight (docs/cdb-hle.md, "Data path")
+wire       ev_sec = sec_n != 2'd0;
 
 wire        scu_sel = (AA[14:12] == 3'b000) && !ACS2_N;
 reg         awr_old = 1'b1, ard_old = 1'b1;
@@ -149,6 +151,7 @@ reg  [31:0] cpu_wd = 32'd0;
 reg  [7:0]  mm_a = 8'd0;
 reg         mm_wr = 1'b0;
 wire        hirq_set = mm_wr && mm_a == 8'h00;
+wire        sec_clr  = mm_wr && mm_a == 8'h0B && cpu_wd[1];
 
 // CR / RR: four words each (SH-2 word 0x18, 0x1C, 0x20, 0x24 and MMIO 0x02..0x05 / 0x06..0x09 map to index 0..3 as x + 2).
 // Not cleared by reset: the firmware reads CR only after a command (ev_cmd) and writes RR before the host reads it.
@@ -217,7 +220,6 @@ always @(posedge CLK) begin
 			8'h09: ev_rrd <= 1'b0;
 			8'h0B: begin
 				if (cpu_wd[0]) ev_cmd <= 1'b0;
-				if (cpu_wd[1]) ev_sec <= 1'b0;
 				if (cpu_wd[2]) ev_dchg <= 1'b0;
 				if (cpu_wd[3]) ev_to <= 1'b0;
 			end
@@ -225,7 +227,8 @@ always @(posedge CLK) begin
 			endcase
 		end
 		if (disc_new) ev_dchg <= 1'b1;
-		if (sk_done) ev_sec <= 1'b1;
+		if (sk_done && !sec_clr && sec_n != 2'd3) sec_n <= sec_n + 2'd1;
+		else if (!sk_done && sec_clr && sec_n != 2'd0) sec_n <= sec_n - 2'd1;
 	end
 end
 
@@ -233,7 +236,6 @@ assign AWAIT_N = ~(abus_wait & scu_sel);
 
 // ------------------------------------------------------------------ datapath
 wire        sk_done, sk_overrun, sk_rq, xf_rq, xf_rq_we, dr_rq;
-wire [31:0] hdr_a, hdr_b;
 wire [17:0] sk_a, xf_a;
 wire [15:0] sk_d, xf_d, dram_q;
 wire [2:0]  dram_done;
@@ -251,7 +253,7 @@ reg  [11:0] xf_cnt = 12'd0;
 
 cdb_sink sink (
 	.clk(CLK), .rst_n(RST_N && RES_N), .start(sk_start), .kind_audio(sd_kind == 2'd1), .base_d(a_base),
-	.cd_data(cd_data), .cd_ck(cd_ck), .done(sk_done), .overrun(sk_overrun), .hdr_a(hdr_a), .hdr_b(hdr_b),
+	.cd_data(cd_data), .cd_ck(cd_ck), .done(sk_done), .overrun(sk_overrun),
 	.rq(sk_rq), .rq_a(sk_a), .rq_d(sk_d), .dn(dram_done[0]), .cd_sl(CD_SL), .cd_sr(CD_SR));
 
 cdb_xfer xfer (
@@ -293,7 +295,6 @@ wire [31:0] rd_q =
 	({32{rs[14]}} & rom_d) | ({32{rs[13]}} & ram_d) |
 	({32{rs[12]}} & {16'd0, HIRQ}) | ({32{rs[11]}} & {16'd0, HMASK}) | ({32{rs[10]}} & {16'd0, cr_q}) |
 	({32{rs[9]}} & ev_word) | ({32{rs[8]}} & ticks) | ({32{rs[7]}} & hostcnt) | ({32{rs[6]}} & {16'd0, dram_q}) |
-	({32{rs[5]}} & hdr_a) | ({32{rs[4]}} & hdr_b) |
 	({32{rs[3]}} & {7'd0, lk_data, lk_s2048, lk_track[6:0], lk_tbcd, lk_idx1}) | ({32{rs[2]}} & {8'd0, lk_start}) |
 	({32{rs[1]}} & {16'd0, ntbcd, 1'b0, ntracks}) | ({32{rs[0]}} & {8'd0, toc_end});
 

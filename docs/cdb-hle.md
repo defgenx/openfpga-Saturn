@@ -45,7 +45,7 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 +--------------------------- cdb_hle -----------------------------------------------------------+
 | host regs  <-- MMIO -->  SERV (RV32I) + ROM 16 KB + RAM 4 KB    (firmware/cdb/cdb.c)           |
 | data port FIFO <--> cdb_xfer (read / write / copy / zero-fill segments, 2 queued)              |
-| cdb_sink: stream words -> DRAM buffer slot, header latch, CD-DA to CD_SL/CD_SR                 |
+| cdb_sink: stream words -> DRAM buffer slot, CD-DA to CD_SL/CD_SR                               |
 | cdb_dram: three clients (sink, xfer, CPU window) -> CD_RAM_* (ddram_pocket cdram port)          |
 +------------------------------------------------------------------------------------------------+
 ```
@@ -69,10 +69,24 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
   an access after the last segment has drained completes at once (read value 0). The wait gives up after 4,095
   `CDD_CE` (23 ms), returns 0 and sets `EV_TO`. The longest firmware main-loop period measured over `script_cmds.txt`
   is 2.8 ms (section 8), about four segments of host reads. Copy and zero-fill use the same
-  engine. The 8-word FIFO between engine and data port is the only host-facing buffer.
+  engine. The 8-word FIFO between engine and data port is the only host-facing buffer. Both FIFOs are M10K with the read address
+  taken on the falling edge (`CDB_FERAM`), so the first read of an entry written at a rising edge falls half a clock
+  after the write, in the same cycle; for a read and a write of one address in read/write clock mode the Cyclone V
+  handbook gives unknown read data, and no timing check covers it (the simulation model returns the new word). The
+  head entry is therefore hidden for one clock after its write (`n == 1 && pushed` counts as empty): it is taken from
+  the next falling-edge read. Cost: one clock of latency on a word that arrives into an empty FIFO.
 * **CD-DA**: audio sectors are consumed by the sink from the same stream, left on even words and right on odd words,
-  to `CD_SL/CD_SR`, which is what the YGR019 did. One sector can be armed in `cdb_hle` while the previous one is
-  still streaming (`sd_*` arm registers), so playback has no gap at sector boundaries.
+  to `CD_SL/CD_SR`, which is what the YGR019 did.
+* **Drive pace**: one sector, data or audio, can be armed in `cdb_hle` while the previous one is still streaming
+  (`sd_*` arm registers), so the drive delivers back to back at 150 sectors/s (2x) like the real drive and MiSTer's
+  ARM side, whatever the firmware is doing. With one data sector at a time (the earlier header latch held one
+  sector's header), each sector also waited for the firmware's main loop to see it done: under a host that polls
+  continuously (DoDonPachi's movie player) the drive ran at 118-132 sectors/s and the game left its intro movie after
+  1.2-1.5 s (`sim/sys` replays with `+DSLAT_US`; Mednafen keeps 147/s). The firmware reads each data sector's
+  header from DRAM (`hdr_dram`), and `EV` bit 2 counts completed sectors up to 3 (each `EVCLR` bit 1 write takes one
+  off), so a second completion before the firmware has handled the first is not lost. CD bench
+  (`script_rate.txt` on DoDonPachi's image, movie range): 137.8 -> 150.1 sectors/s with one status poll per 100 ms,
+  132.8 -> 148-151 sectors/s with back-to-back status / Get Sector Number polls.
 * **DRAM** (CD block DRAM at PSRAM1 `0x080000`, 512 KB, the port the SH-1 build uses): 200 buffers of 1,280 words
   (2,560 bytes; a buffer holds the raw 2,352-byte sector), word address `n*1280`; the 6,144 words after them hold
   the TOC (204 words), Q subcode, the file info table (256 x 12 bytes, big-endian) and the root directory record.
@@ -93,12 +107,12 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 | 00 | HIRQ | R / W = set bits | |
 | 01-05 | HMASK, CR1-4 | R | host written |
 | 06-09 | RR1-4 | W | RR4 write clears `EV_RRD` |
-| 0A | EV | R | bit0 cmd, 1 results read, 2 sector done, 3 disc change, 4 FIFO empty, 5 seg1 free, 6 xfer idle, 7 lk busy, 8 disc ok, 9 pf ready, 10 feed busy, 11 engine busy, 12 sink overrun, 13 host timeout, 14 armed |
-| 0B | EVCLR | W | bit0 cmd, 1 sector, 2 disc change, 3 timeout |
+| 0A | EV | R | bit0 cmd, 1 results read, 2 sector done (count != 0), 3 disc change, 4 FIFO empty, 5 seg1 free, 6 xfer idle, 7 lk busy, 8 disc ok, 9 pf ready, 10 feed busy, 11 engine busy, 12 sink overrun, 13 host timeout, 14 armed |
+| 0B | EVCLR | W | bit0 cmd, 1 sector (count - 1), 2 disc change, 3 timeout |
 | 0C | TICKS | R | counts `CDD_CE` (176.4 kHz) |
 | 10-14 | XF_MODE, A, B, CNT, HCNT | W, W, W, W (commit), R | mode 0 stop/flush, 1 read, 2 write, 3 copy, 4 zero-fill; CNT bit 12: another segment follows |
 | 18-19 | DR_A, DR_D | W, R/W | DRAM window |
-| 1C-1E | SK_BASE (arm), HDR_A, HDR_B | | sector base, latched header |
+| 1C | SK_BASE (arm) | W | sector base |
 | 20-26 | LK_X, LK_IDX, LK_CTL, LK_R0, LK_START, NTR, TOCEND | | `cd_stream` lookup |
 | 28-2C | PF_FAD, PF_CTL, SD_CTL, SD_HDR, OVR_CLR | | prefetch, sector issue (arm; bit 5 disarms) |
 
@@ -203,6 +217,8 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   delivering sectors; data compared word for word with the image, End Data Transfer counts, and a read 6 words past the
   end of a 1-sector transfer (zeros, count 1024). **8 checks, 0 failed**; the RTL before the "more" bit fails 4 (a
   zero-filled sector each in the stalled transfers, counts 3072 and 38,359).
+* `script_rate.txt` (`+IMG=` / `+TOCBIN=` of a real disc; it plays FAD 0x3A0..0xB06): the drive position from a Get CD
+  Status after each `time` line (the script op that logs the simulation time), sparse then back-to-back host polling.
 * `+DSTALL=<clocks> +DSTALL_PCT=<n>`: n percent of the `cdram` model's accesses take that many clocks longer.
   `script_bulk.txt` with `+DSTALL=250 +DSTALL_PCT=20` (4.4 us on one access in five): 8 checks, 0 failed; with the
   single-register sink 2 failed (one word each, `SINK OVERRUN`). At `+DSTALL=600 +DSTALL_PCT=30` the mean DRAM
