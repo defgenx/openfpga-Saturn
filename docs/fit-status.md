@@ -849,3 +849,17 @@ Fifth map (`20d1fc7`: CD ring write and read ahead of VDP1 on the PSRAM1 chip B 
 |---|---|---|---|---|
 | 30 | 18,217 | 1,848 / 1,848 | -0.528 (slow 85C, counter[1]) | +0.042 |
 | **3 (release)** | **18,185** | **1,847 / 1,848** | **+0.008** (slow 85C, counter[1]) | **+0.120** (fast 0C, counter[0]) |
+
+## v0.1.5 timing (2026-11-13)
+
+v0.1.4 with the SCU request address copies in SCSPP (`SCU_RA` / `SCU_WA`, docs/scsp-rewrite.md section 3a). One map,
+three seeds (`raetro/quartus:21.1`, area profile):
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 1 | 18,200 | 1,848 / 1,848 | -0.041 (slow 85C, counter[1]) | +0.086 |
+| 2 | 18,176 | 1,847 / 1,848 | -0.116 (slow 85C, counter[1]) | +0.063 |
+| **3 (release)** | **18,252** | **1,848 / 1,848** | **+0.265** (slow 0C, counter[0]) | **+0.006** (fast 0C, counter[1]) |
+
+Seed 3 meets setup, hold, recovery and removal at every corner; its hold margin on counter[1] is the smallest of the
+releases so far.
