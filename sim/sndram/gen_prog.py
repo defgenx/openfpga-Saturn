@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """tb_sndram SH-2 program: word/byte writes with read-back at sound RAM 0x25A00000.., a BIOS-style read loop,
-and a 64-word fill + verify. Results (32 bit each) go to WRAM-H 0x06000100..; argv: prog.hex exp.hex"""
+a 64-word fill + verify, and SCU DMAs from the A-bus into sound RAM. Results (32 bit each) go to WRAM-H 0x06000100..; argv: prog.hex exp.hex"""
 import sys
 rom = [0] * 0x1000
 a = [0x200]
@@ -73,6 +73,32 @@ lp = a[0]; st(2, 1, 4); addi(1, 4); addr(4, 10); dt(6); br(0x8B00, lp)
 ldi(1, BASE + 0x200); ldi(6, 64); ldi(4, 0x01010101); ldi(9, 0)
 lp = a[0]; ld(2, 5, 1); cmpeq(5, 4); br(0x8900, a[0] + 4); addi(9, 1); addi(1, 4); addr(4, 10); dt(6); br(0x8B00, lp)
 st(2, 8, 9); addi(8, 4); exp.append(0)
+# SCU DMA from the A-bus (the bench answers AA[16:1] ^ 0xA000) into sound RAM. A DMA starts its B-bus address phase while
+# the previous write is still posted in the SCSP: that write and every DMA word must land at their own address.
+SCU = 0x25FE0000
+def reg(off, v): ldi(0, v); ldi(7, SCU + off); st(2, 7, 0)
+def dma_setup(lv, src, dst, nbytes):
+    b = lv * 0x20
+    reg(b + 0x00, src); reg(b + 0x04, dst); reg(b + 0x08, nbytes); reg(b + 0x0C, 0x101); reg(b + 0x14, 0x7)
+def delay(n):
+    ldi(6, n); lp = a[0]; dt(6); br(0x8B00, lp)
+def rdw(addr, e):
+    ldi(11, addr); ld(1, 5, 11); extuw(5, 5); st(2, 8, 5); addi(8, 4); exp.append(e)
+# CPU word write, then at once a DMA kick: 8 words to 0x00400
+dma_setup(0, 0x02000000, BASE + 0x400, 16)
+ldi(10, SCU + 0x10); ldi(11, 0x101); ldi(12, BASE + 0x10); ldi(13, 0xBEEF)
+st(1, 12, 13); st(2, 10, 11)
+delay(400)
+rdw(BASE + 0x10, 0xBEEF)
+for i in range(8): rdw(BASE + 0x400 + 2 * i, 0xA000 + i)
+# two DMAs back to back: level 1 to 0x00600, then level 0 to 0x00500, 4 words each
+dma_setup(0, 0x02000100, BASE + 0x500, 8)
+dma_setup(1, 0x02000200, BASE + 0x600, 8)
+ldi(10, SCU + 0x10); ldi(12, SCU + 0x30); ldi(11, 0x101)
+st(2, 12, 11); st(2, 10, 11)
+delay(400)
+for i in range(4): rdw(BASE + 0x500 + 2 * i, 0xA080 + i)
+for i in range(4): rdw(BASE + 0x600 + 2 * i, 0xA100 + i)
 ldi(0, 0x0D0E); ldi(7, 0x0600000C); st(2, 7, 0)
 emit(0xAFFE); emit(9)
 flush()

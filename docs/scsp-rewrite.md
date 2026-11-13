@@ -76,8 +76,11 @@ M10K: 30 blocks, the same as `SCSP`; DSP blocks: 10 (5 more than `SCSP`).
 - `SOUND_L/R` lag `SUM_L/SUM_R` and `CR0` by up to two clk_sys (one master-volume unit, outputs registered). WAV identical.
 - `SND_EN[1:0]` gate each slot's contribution when it is added instead of gating the two sums; identical while `SND_EN` is constant
   (tied to 3'b111 in `saturn_pocket.sv`). The bench changes `SND_EN[1:0]` only between the sum latch and the first slot's direct contribution.
-- The SCU must not issue a request or a configuration cycle while `RDY_N` is high (the SCU request address stays in `A` until the
-  request completes), and the 68K must hold `SCA` while a read is pending (no `SCPU_RA` copy).
+- The 68K must hold `SCA` while a read is pending (no `SCPU_RA` copy). The SCU request addresses are copied at the request
+  (`SCU_RA`, `SCU_WA`), as in the reference: the SCU does not wait for `RDY_N` before its next configuration cycle (a DMA to the SCSP
+  sends its address while the previous write is still posted), so without the copies that write lands at the DMA's address and the
+  DMA's first word is lost. `sim/scsp`'s SCU agent always waits for `RDY_N` and cannot see this; `make -C sim sndram` (SCU DMAs from
+  the A-bus into sound RAM right after a CPU write, and back to back) does.
 - First sample periods after `RES_N`: the stage-staggered sweeps are kept so the transients (the records that flow through the pipeline
   right after `RES_N`) are identical; register accesses within 3 sample periods after `RES_N` are not tested, as before. `RST_N` low must come
   with `RES_N` low. MIDI registers CR2/CR3 read 0 as in the shrunk core.

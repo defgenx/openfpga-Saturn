@@ -1,6 +1,6 @@
 // SH7604P + DCC + SCUP2 + SCSPP + sdram_pocket + SDRAM model: the SH-2 path to sound RAM at 0x25A00000, wired as in Saturn.sv and
 // mem_pocket (ch2wr = RAM_WE & CS, ch2rd = RAM_RD & CS). clk_sys 57.27 MHz, clk_ram = 2 x clk_sys. gen_prog.py's program
-// writes and reads back words and bytes; results land in WRAM-H 0x06000100.. and are compared with exp.hex.
+// writes and reads back words and bytes, then runs SCU DMAs from the A-bus into sound RAM; results land in WRAM-H 0x06000100.. and are compared with exp.hex.
 `timescale 1ps/1ps
 module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   // NEXP: lines of exp.hex (Makefile)
 	integer T_RAM = 8730;                   // clk_ram period (ps); +T_RAM=9303 +IN_CLK=53748200 is the 320 pixel mode (DOTSEL = 0)
@@ -70,6 +70,7 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 	// B-bus and SCSP
 	wire [15:0] BDI, BDO, SCSP_DO;
 	wire BADDT_N, BDTEN_N, BREQ_N, BCSS_N, BRDYS_N, BCS1_N, BCS2_N;
+	wire [25:0] AA_w;                                // A-bus: DMA source data is a function of the address
 	assign BDI = !BCSS_N ? SCSP_DO : 16'h0000;
 `ifdef USE_SCU
 `define SCU_MOD SCU
@@ -82,7 +83,7 @@ module tb_sndram #(parameter bit RAMH_SLOW = 1, parameter int NEXP = 1) ();   //
 		.CRD_WR_N(MSHRD_WR_N), .CDQM_N(MSHDQM_N), .CRD_N(MSHRD_N), .CWAIT_N(CWATIN_N),
 		.CIVECF_N(MSHIVECF_N), .CIRL_N(CIRL_N), .CBREQ_N(), .CBACK_N(1'b1),
 		.ECA(), .ECDI(32'd0), .ECDO(), .ECDQM_N(), .ECRD_WR_N(), .ECCS3_N(), .ECRD_N(), .ECBURST(), .ECRFS(), .ECWAIT_N(1'b1),
-		.AA(), .ADI(16'hFFFF), .ADO(), .AFC(), .AAS_N(), .ACS0_N(), .ACS1_N(), .ACS2_N(), .AWAIT_N(1'b1), .AIRQ_N(1'b1),
+		.AA(AA_w), .ADI(AA_w[16:1] ^ 16'hA000), .ADO(), .AFC(), .AAS_N(), .ACS0_N(), .ACS1_N(), .ACS2_N(), .AWAIT_N(1'b1), .AIRQ_N(1'b1),
 		.ARD_N(), .AWRL_N(), .AWRU_N(), .ATIM0_N(), .ATIM1_N(), .ATIM2_N(),
 		.BDI(BDI), .BDO(BDO), .BADDT_N(BADDT_N), .BDTEN_N(BDTEN_N), .BREQ_N(BREQ_N), .BCS1_N(BCS1_N), .BRDY1_N(1'b1), .IRQ1_N(1'b1),
 		.BCS2_N(BCS2_N), .BRDY2_N(1'b1), .IRQV_N(1'b1), .IRQH_N(1'b1), .IRQL_N(1'b1), .BCSS_N(BCSS_N), .BRDYS_N(BRDYS_N), .IRQS_N(1'b1),

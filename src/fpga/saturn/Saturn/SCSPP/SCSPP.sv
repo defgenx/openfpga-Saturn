@@ -1533,6 +1533,9 @@ module SCSPP #(
 //	bit         BURST;
 	
 	wire SCU_REQ = ~AD_N & ~CS_N & ~REQ_N;	//25A00000-25BFFFFF
+	//Request addresses copied at the request, as SCSP.sv: the SCU starts its next address phase (a DMA) without waiting for RDY_N.
+	bit [20: 1] SCU_RA;
+	bit [20: 1] SCU_WA;
 		bit         SCU_RPEND;
 	bit         SCU_RRDY;
 		bit [15: 0] SCU_D;
@@ -1593,29 +1596,31 @@ module SCSPP #(
 			
 			//SCU read
 			if (SCU_REQ && WE_N) begin
+				SCU_RA <= A;
 				SCU_RPEND <= 1;
 				SCU_RRDY <= 0;
+				A <= A + 20'd1;
 			end
 			
 			if ((MEM_DEV_LATCH == 3'd4 && CYCLE0_CE) || (REG_ST == MS_SCU_WAIT && REG_RD && CYCLE1_CE)) begin
 				SCU_RRDY <= 1;
 				SCU_RPEND <= 0;
 				SCU_REG_RPEND <= 0;
-				A <= A + 20'd1;
 			end
 			
 			//SCU write
 			if (SCU_REQ && !WE_N && !DTEN_N) begin
+				SCU_WA <= A;
 				SCU_D <= DI;
 				SCU_WE <= ~{2{WE_N}} & ~DQM;
 				SCU_WPEND <= 1;
 				SCU_WRDY <= 0;
+				A <= A + 20'd1;
 			end
 			
 			if ((MEM_ST == MS_SCU_WAIT && MEM_WE && CYCLE1_CE) || (REG_ST == MS_SCU_WAIT && REG_WE && CYCLE1_CE)) begin
 				SCU_WRDY <= 1;
 				SCU_WPEND <= 0;
-				A <= A + 20'd1;
 			end
 			
 			//SCPU read
@@ -1667,21 +1672,21 @@ module SCSPP #(
 						MEM_CS <= 1;
 						MEM_DEV <= 3'd3;
 						MEM_ST <= MS_DMA_WAIT;
-					end else if (!A[20] && SCU_RPEND && MEM_DEV_LATCH != 3'd4) begin
-						MEM_A <= A[18:1];
+					end else if (!SCU_RA[20] && SCU_RPEND && MEM_DEV_LATCH != 3'd4) begin
+						MEM_A <= SCU_RA[18:1];
 						MEM_WE <= 2'b00;
 						MEM_RD <= 1;
-						MEM_CS <= ~A[19];
+						MEM_CS <= ~SCU_RA[19];
 						MEM_DEV <= 3'd4;
 						MEM_ST <= MS_SCU_WAIT;
-					end else if (!A[20] && SCU_MEM_WPEND) begin
+					end else if (!SCU_WA[20] && SCU_MEM_WPEND) begin
 						SCU_WPEND <= 0;
 						SCU_MEM_WPEND <= 0;
-						MEM_A <= A[18:1];
+						MEM_A <= SCU_WA[18:1];
 						MEM_D <= SCU_D;
 						MEM_WE <= SCU_WE;
 						MEM_RD <= 0;
-						MEM_CS <= ~A[19];
+						MEM_CS <= ~SCU_WA[19];
 						MEM_DEV <= 3'd0;
 						MEM_ST <= MS_SCU_WAIT;
 					end else if (SCPU_WA[23:20] == 4'h0 && SCPU_WPEND) begin
@@ -1781,14 +1786,14 @@ module SCSPP #(
 						REG_WE <= ~{2{DMA_DIR}};
 						REG_RD <= DMA_DIR;
 						REG_ST <= MS_DMA_WAIT;
-					end else if (A[20] && SCU_REG_RPEND) begin
-						REG_A <= A[11:1];
+					end else if (SCU_RA[20] && SCU_REG_RPEND) begin
+						REG_A <= SCU_RA[11:1];
 						REG_WE <= 2'b00;
 						REG_RD <= 1;
 						REG_ST <= MS_SCU_WAIT;
-					end else if (A[20] && SCU_REG_WPEND) begin
+					end else if (SCU_WA[20] && SCU_REG_WPEND) begin
 						SCU_REG_WPEND <= 0;
-						REG_A <= A[11:1];
+						REG_A <= SCU_WA[11:1];
 						REG_D <= SCU_D;
 						REG_WE <= SCU_WE;
 						REG_RD <= 0;

@@ -6,6 +6,8 @@ SH   := $(SRC)/SH/sh2p
 SCU  := $(SRC)/Saturn/SCUP2
 MEM  := $(ROOT)/src/fpga/core/mem
 B    ?= build
+# sdram_pocket's write/read-back self-check is compiled out (POCKET_NEVER): chk_done never rises, so it is not waited for
+NOCHK ?= 1
 SHF  := SH2P_pkg SH2P_mem SH2P_regfile SH2P_dec SH2P_alu SH2P_core SH7604P_pkg SH7604P_mem SH7604P_CACHE SH7604P_BSC SH7604P_DMAC SH7604P_UBC SH7604P_INTC SH7604P_FRT SH7604P_WDT SH7604P_SCI SH7604P_DIVU SH7604P_MULT SH7604P_MSBY SH7604P
 ifdef USE_SCU
 SCUF := $(addprefix $(ROOT)/ref/Saturn_MiSTer/rtl/Saturn/SCU/,DSP_PKG.sv SCU_PKG.sv RAM.sv DSP.sv SCU.sv)
