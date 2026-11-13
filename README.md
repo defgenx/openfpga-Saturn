@@ -3,17 +3,11 @@
 An openFPGA port of [Saturn_MiSTer](https://github.com/MiSTer-devel/Saturn_MiSTer), the MiSTer project's
 Sega Saturn core, to the Analogue Pocket.
 
-> **Status: v0.1.4.** Games boot from the SD card and run on the Pocket with picture, CD audio, sound effects and
-> controls (Hyper Duel plays on a Pocket, and Panzer Dragoon gets past "Episode 1" since v0.1.1). Downloads:
-> [releases](https://github.com/defgenx/openfpga-Saturn/releases). Bugs and test reports:
-> [issues](https://github.com/defgenx/openfpga-Saturn/issues).
-
 ## What works
 
 Tested on a Pocket:
 
-* Booting a disc from the SD card (Hyper Duel, Panzer Dragoon): the BIOS checks the disc, the game loads and
-  reaches its title screen.
+* Booting a disc from the SD card: the BIOS checks the disc, the game loads and reaches its title screen.
 * CD audio (the games' music tracks) and sound effects.
 * Controls (A, B, C, X, Y, Z, L, R, Start, d-pad).
 * Video at 320 and 352 pixels wide, with the clock switch games make between them; VDP1 sprites and polygons, VDP2
@@ -22,12 +16,6 @@ Tested on a Pocket:
 In simulation, with the same output as MiSTer's: all VDP2 effects (extended colour calculation, shadow, back screen per
 line, special priority and colour calculation, line colour screen, rotation zoom, rotation parameter B, mosaic, sprite
 window, line window; [docs/vdp2.md](docs/vdp2.md)).
-
-## Planned for the next releases
-
-* Saves checked on a Pocket.
-* Picking a `.cue` directly: it works in simulation and needs room on the FPGA first.
-* More games tested.
 
 ## Install
 
