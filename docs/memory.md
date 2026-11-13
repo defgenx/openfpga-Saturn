@@ -588,11 +588,11 @@ during boot wait there (docs/integration.md, "Host handshake"). A bridge word is
 |---|---|---|
 | [0] BIOS 512 KB | PSRAM0 0x000000 | two image words per write, as the file reads (big endian words: word = {byte0, byte1}) |
 | [1] backup RAM 64 KB | PSRAM0 0x100000 | none: the file is MiSTer's image (byte 2n+1 = backup byte n, byte 2n the unused high byte) |
-| [2] backup cart 1 MB | PSRAM0 0x800000 (cartridge window base) | none, same layout |
+| [2] backup cart 1 MB (data slot 4) or cartridge ROM up to 2 MB (data slot 5) | PSRAM0 0x800000 (cartridge window base) | none, same layout |
 
 `LD_LITTLE` (default 1) says whether `ld_data[7:0]` is the first file byte. `loading` (clk_ram) is high while words are
-in flight or the blank images below are unfinished: hold the Saturn in reset with it. A cartridge ROM slot is not
-implemented; the loader port is address-agnostic, so a cart slot needs only a `ld_sel` code.
+in flight or the blank images below are unfinished: hold the Saturn in reset with it. The cartridge ROM (data slot 5,
+bridge 0x70000000) shares `ld_sel[2]` with the backup cart; Cartridge = ROM 2 MB maps it (docs/integration.md).
 
 **Backup RAM (data slots 3 and 4).** As on MiSTer, the save file is the 64 KB image the SH-2 sees at 0x00180000 (data on
 the odd bytes), so a MiSTer `.sav` of a game without a backup cart loads as is. The backup cart is a separate 1 MB file
@@ -714,7 +714,7 @@ gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
 9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
-10. Cartridge ROM loading is not implemented. The backup save depends on host behaviour the APF docs do not state: the
+10. The backup save depends on host behaviour the APF docs do not state: the
     read timing above (taken from `io_bridge_peripheral.v`), a table entry for a slot whose file does not exist, and the
     save name when slot 0 (the game `.json`) is empty.
 11. SDC: the pin paths are constrained (sections 3, 4, 5 and `core_constraints.sdc`) against clocks defined on the pins;
