@@ -31,7 +31,7 @@ module sram_pocket #(
 	input  wire [16:0] fb_a,
 	input  wire [15:0] fb_d,
 	input  wire  [1:0] fb_be,
-	output wire        fb_ready,
+	output reg         fb_ready,
 	output wire [15:0] fb_q,                // valid in the cycle fb_done is high (don't-care otherwise)
 	output reg         fb_done              // pulse at the end of a read (writes are posted: no pulse)
 );
@@ -47,11 +47,13 @@ reg           e_ub_n = 1'b1, e_lb_n = 1'b1;   // byte strobes, registered; both 
 
 wire [CW-1:0] n_last = e_we ? WR_CYC - 1 : RD_CYC - 1;
 wire finishing = busy && cnt == n_last;
-// ready one cycle before the access ends, so that the next request follows back to back
-assign fb_ready = !busy || (busy && cnt == n_last - 1);
+// ready one cycle before the access ends, so that the next request follows back to back: !busy || cnt == n_last - 1,
+// registered (RD_CYC, WR_CYC > 2)
+wire accept = fb_req && (!busy || finishing);
 
 always @(posedge clk) begin
 	fb_done <= 1'b0;
+	fb_ready <= accept ? 1'b0 : !busy || finishing || cnt == n_last - 2'd2;
 	if (busy) begin
 		cnt <= cnt + 1'd1;
 		if (e_we) begin
@@ -63,13 +65,13 @@ always @(posedge clk) begin
 			if (cnt == RD_CYC - 1) begin busy <= 1'b0; e_oe_n <= 1'b1; fb_done <= 1'b1; end
 		end
 	end
-	if (fb_req && (!busy || finishing)) begin
+	if (accept) begin
 		busy <= 1'b1; cnt <= '0; e_we <= fb_we; e_a <= fb_a; e_d <= fb_d; e_be <= fb_be;
 		e_ub_n <= fb_we ? ~fb_be[1] : 1'b0; e_lb_n <= fb_we ? ~fb_be[0] : 1'b0;
 		e_oe_n <= fb_we; e_we_n <= 1'b1; e_dq_oe <= fb_we;
 	end
 end
-initial fb_done = 1'b0;
+initial begin fb_done = 1'b0; fb_ready = 1'b1; end
 
 // read data: the I/O cell input register (FAST_INPUT_REGISTER, ap_core.qsf) samples DQ at every edge; at the edge
 // that sets fb_done it takes the word, OE# and the address still unchanged at the pins

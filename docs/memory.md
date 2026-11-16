@@ -138,10 +138,42 @@ engine (`vdp1_fb_pocket`) therefore:
   address moves at dot rate (a parked address holds nothing), and FB0 while VDP1P's `FB_DISP_SOON` is high (the 8 dots
   before `OUT_X` returns to 0, `HTIM_PIPE[8:7]`) plus 4 clk_ram.
 
-Drawing into SRAM pixels thus runs while the M10K columns are displayed (FB1 columns 0-191, when FB0 is drawn) and in
-blanking; drawing into the FB1 tail while FB0 is displayed runs in blanking only. MiSTer's DDR3 has no such limit. The
-FIFO (192 entries) absorbs a line's worth of draw writes, then FB_RDY holds VDP1P. The address compares are registered
-(one more clk_ram), which puts the display latency at 7 clk_sys, the limit.
+Without more, drawing into SRAM pixels would run only while the M10K columns are displayed (FB1 columns 0-191, when
+FB0 is drawn) and in blanking, and drawing into the FB1 tail while FB0 is displayed in blanking only: about 100 tail
+pixels per line. MiSTer's DDR3 has no such limit. The FIFO (192 entries) absorbs a line's worth of draw writes, then
+FB_RDY holds VDP1P. The address compares are registered (one more clk_ram), which puts the display latency at 7
+clk_sys, the limit.
+
+### Display read-ahead
+
+Outside FB_MODE3 the display walks a line left to right, and with index x*256 + y the next pixel is the index + 256.
+After each SRAM display read the engine reads the following words back to back (8 clk_ram each, no turnaround) into
+2 registers (`pf_d`); a display address equal to the next expected one (`pf_head`) is served from there, its word and
+erase flag applied a clk_ram later as for a read. While both words are ahead (2 dots, 32 clk_ram), writes, fills and
+draw reads may run during the display: a write (8 clk_ram) then cannot delay a pixel past its dot. With one word or
+none the read-ahead goes before anything but a display read. Admitting writes with one word ahead is not enough: a
+write let in just before that word is served delays the refill past the next dot (`tb_fb_al`, 8 clk_sys).
+Past a column end the read-ahead reads 2 words nobody asks for. A display address that is not the expected one (a line start, a
+jump) is an ordinary display read and restarts the read-ahead after it; the line-start and column 190-191 holds stay.
+
+The read-ahead is dropped when FB_SEL flips, in FB_MODE3, and on any SRAM write into the displayed buffer (a FIFO entry
+queued before the swap, a fill of the block left open at the swap), so it never serves a word older than the SRAM.
+Stale words are otherwise impossible: draw and CPU accesses go to the other buffer, erase writes to the displayed one
+never reach the SRAM.
+
+Timing (the design runs at the LAB cap, so these paths decide whether a seed closes): nothing combinational from
+outside the engine reaches the output registers FB0_Q / `fb1_sq` through the write gate. FB_DISP_SOON and FB_MODE3 are
+taken a clk_ram late (`sn`, `m3q`; the line-start hold covers 8 dots, one clk_ram later costs nothing), `sram_pocket`'s
+`fb_ready` is a register (same value every cycle as `!busy || cnt == n_last - 1`), and a CPU read of an erased or
+out-of-range pixel sets its value in es 1, a clk_ram after the decision, instead of in the es 0 priority chain.
+
+Read to write turnaround: the engine's states put at least 3 clk_ram (26 ns) between OE# rising and DQ driven, more
+than tOHZ (20 ns); `tb_fb` checks it on every write.
+
+Why: games that redraw the whole screen every frame with VBlank erase and a frame change per frame (Duke Nukem 3D's
+title: TVMR 8, FBCR 3, about 128,000 pixels per frame) need the draw into either buffer to finish inside one frame;
+the frame change cuts an unfinished draw, and the rest of the picture is missing below the row it reached (row 109 in
+the FB1 draw of that title without the read-ahead).
 
 Up to v0.2.19 the engine served queued writes first: while a game drew, SRAM pixels on display were read late or not
 at all and showed stale colours (FB1 right of column 192 on hardware). `tb_fb` G reproduces it: 1,623 errors before,
@@ -165,6 +197,7 @@ Measured in `sim/mem/tb_fb` with the 55 ns model and RD_CYC = WR_CYC = 8:
 | draws into erased blocks: random words, byte lanes, two blocks interleaved, reads in between; every word of 16 rows of both buffers read back; display of erased, drawn and untouched blocks; the same in FB_MODE3 (E) | 0 errors, display valid within 7 clk_sys |
 | VDP1P's draw side (FBD_ST + FB_ST model, FB_RDY honoured, F): 4 rows of 352 writes, 2 read-modify-write passes over them, 3,000 random mixed pixels, both buffers, every pixel read back | 0 drops, 0 errors; FB0 60 ns per write, 231 per read-modify-write; FB1 M10K span 2 / 5 clk_sys per pixel (MiSTer's). Ignoring FB_RDY (`-DFBD_NOWAIT`, `make negative`): 255 drops, 1,245 errors |
 | FB1 tail (rows 200-207 from column 184) displayed every dot while the draw side model fills FB0 with 6,000 pixels (G); FB0 displayed line by line with blanking and `FB_DISP_SOON` while the FB1 tail is drawn (G2); every drawn pixel read back | 0 errors, display valid within 7 clk_sys. With writes served first (v0.2.19 engine): 1,623 errors in G |
+| draw throughput under continuous display (352-dot lines, 60 dots of blanking): sprite rows of plain writes into the FB1 tail while FB0 is displayed (H), into FB0 while FB1 is displayed (H2) | H 388 tail pixels per line (99 without the read-ahead), H2 641 per line (513); display valid within 7 clk_sys, 0 errors |
 | the whole bench with the clocks' PLL phase (`-DCLK_ALIGNED`) and random SRAM power-up contents (`+MEMRAND`) | pass (display within 7 clk_sys, 7 also before the lazy erase) |
 | SRAM model timing checks | 0 errors |
 

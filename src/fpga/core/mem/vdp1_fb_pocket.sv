@@ -286,38 +286,79 @@ reg  [2:0] es = 3'd0;
 reg        e_b, trk, e_c = 1'b0, e_fl = 1'b0, e_ret = 1'b0;
 reg  [2:0] fk;                             // fill: word in the block
 reg  [4:0] dph = 5'd31;                    // clk_ram since the last display read of the SRAM (saturates)
-reg  [3:0] sn = 4'd0;                      // FB_DISP_SOON, held 4 clk_ram longer: the first pixel's read is 3 later
+reg  [3:0] sn = 4'd0;                      // FB_DISP_SOON over the last 4 clk_ram: the first pixel's read is 3 later
 reg  [4:0] age1 = 5'd31;                   // clk_ram since FB1's display address changed (saturates)
 reg        g1 = 1'b0;                      // FB1 displayed at columns 190-191 and moving at dot rate (16 clk_ram)
+// display read-ahead (docs/memory.md section 2, "Display read-ahead"): outside FB_MODE3 the displayed buffer's next
+// pixel is the index + 256. After an SRAM display read, up to 2 following words are read into pf_d; a display
+// address equal to pf_head is served from there. Other accesses may run while both words are ahead.
+reg        pf_on = 1'b0, pf_b = 1'b0;      // stream valid, for buffer pf_b
+reg [16:0] pf_head, pf_sa;                 // index served next; SRAM word read next
+reg  [1:0] pf_cnt = 2'd0;                  // words in pf_d
+reg        pf_rp = 1'b0;
+reg [15:0] pf_d [0:1];
+reg        hq0 = 1'b0, hq1 = 1'b0;         // i0q / i1q == pf_head (registered with them)
+reg        m3q = 1'b0;                     // FB_MODE3 a clk_ram late: TVMR off the paths into FB0_Q / fb1_sq
+reg        h_c = 1'b0, h_b = 1'b0;         // a hit last clk_ram: its word (pf_d[!pf_rp]) and flag are applied now
 always @(posedge clk_ram) begin
 	i0q <= i0r; i1q <= i1r; sa0q <= sa0r; sa1q <= sa1r; in0q <= in0r; t1q <= t1r;
+	hq0 <= i0r == pf_head; hq1 <= i1r == pf_head;
 	d0 <= !have0 || i0r != last0;
 	d1 <= t1r && (!have1 || i1r != last1);
 	eq0 <= w0r || i0r == sup0; eq1 <= w1r || i1r == sup1;
-	sn <= {sn[2:0], FB_DISP_SOON};
+	sn <= {sn[2:0], FB_DISP_SOON}; m3q <= FB_MODE3;
 	age1 <= i1r != i1q ? 5'd0 : age1 + {4'd0, age1 != 5'd31};
 	g1 <= i1r[16:9] == 8'd95 && (i1r != i1q || age1 < 5'd18);   // a parked address does not hold writes
 end
-wire       need0 = sr_ready && d0;
-wire       need1 = sr_ready && d1;
-wire       dn1 = need1 && FB_DRAW0, dn0 = need0 && !FB_DRAW0;   // the displayed buffer
-wire       aok = !(FB_DRAW0 ? FB_MODE3 ? 1'b0 : g1 : (FB_DISP_SOON || |sn))   // columns 190-191 / line start
-                 && (!(FB_DRAW0 ? t1q : in0q) || dph >= DFREE);
+wire       pf_live = pf_on && pf_b == FB_DRAW0 && !m3q;
+wire       hit1 = FB_DRAW0 && d1 && !h_c && !eq1 && hq1 && pf_live && pf_cnt != 2'd0;
+wire       hit0 = !FB_DRAW0 && d0 && !h_c && !eq0 && in0q && hq0 && pf_live && pf_cnt != 2'd0;
+wire       phit = hit0 || hit1;
+wire       need0 = sr_ready && d0 && !h_c && !hit0;
+wire       need1 = sr_ready && d1 && !h_c && !hit1;
+wire       dn1 = need1 && FB_DRAW0, dn0 = need0 && !FB_DRAW0;   // the displayed buffer, not read ahead
+wire       pf_cov = pf_live && pf_cnt[1];
+// FB_DISP_SOON and FB_MODE3 registered: VDP2's timing and TVMR reach FB0_Q / fb1_sq through aok
+wire       aok = !(FB_DRAW0 ? m3q ? 1'b0 : g1 : |sn)                   // columns 190-191 / line start
+                 && (!(FB_DRAW0 ? t1q : in0q) || dph >= DFREE || pf_cov);
+wire       pf_go = pf_live && dph != 5'd31 && sr_ready && !pf_cnt[1];   // past the column end: 2 unused reads
 wire [16:0] fill_a = FB_MODE3 ? {wq[38:25], fk} : {wq[38:33], fk, wq[32:25]};
+// a write into the displayed buffer (a FIFO entry queued before the swap, a fill) makes the read-ahead stale
+function automatic disp_w(input [16:0] a, input draw0);
+	disp_w = (a >= FB_BASE[16:0]) == !draw0;
+endfunction
 
+wire       pf_done = es == 3'd7 && sr_done;   // a read-ahead word arrives
 always @(posedge clk_ram) begin
 	sr_req <= 1'b0;
 	ne <= rst ? |wptr : (wptr != rptr);
 	if (dph != 5'd31) dph <= dph + 5'd1;
-	if (rst) begin rptr <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; e_ret <= 1'b0; end
+	// read-ahead hit: the word leaves pf_d a clk_ram later with the block's flag (as e_fl for a read). Its slot is
+	// not rewritten before: a read-ahead word arrives with at most one word in pf_d, into the other slot.
+	h_c <= phit;
+	if (phit) begin
+		h_b <= hit1; pf_rp <= !pf_rp; pf_head <= pf_head + 17'd256; dph <= 5'd0;
+		if (hit1) begin last1 <= i1q; have1 <= 1'b1; end else begin last0 <= i0q; have0 <= 1'b1; end
+	end
+	if (h_c) begin
+		if (h_b) fb1_sq <= (lk1 && fq1) ? ev1 : pf_d[!pf_rp]; else FB0_Q <= (lk0 && fq0) ? ev0 : pf_d[!pf_rp];
+	end
+	pf_cnt <= pf_cnt + {1'b0, pf_done && pf_live} - {1'b0, phit};
+	if (pf_done && pf_live) pf_d[pf_rp ^ pf_cnt[0]] <= sr_q;
+	if (pf_done) pf_sa <= pf_sa + 17'd256;
+	if (dr_q != FB_DRAW0 || FB_MODE3) pf_on <= 1'b0;
+	if (rst) begin rptr <= 9'd0; rd_ack <= rd_t; es <= 3'd0; have0 <= 1'b0; have1 <= 1'b0; e_ret <= 1'b0; pf_on <= 1'b0; end
 	else if ((es == 3'd0 || es == 3'd5) && (dn0 || dn1)) begin
-		// display read; from a fill (es 5) it returns there, the fill's progress (fk) kept
+		// display read; from a fill (es 5) it returns there, the fill's progress (fk) kept. A read restarts the
+		// read-ahead after it.
 		e_ret <= es == 3'd5;
 		if (dn1) begin
 			last1 <= i1q; have1 <= 1'b1;
 			if (!eq1) begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa1q; sr_be <= 2'b11; e_b <= 1'b1; e_c <= 1'b1; es <= 3'd3;
 				dph <= 5'd0;
+				pf_on <= !FB_MODE3; pf_b <= 1'b1; pf_head <= i1q + 17'd256; pf_sa <= sa1q + 17'd256;
+				pf_cnt <= 2'd0;
 			end
 		end else begin
 			last0 <= i0q; have0 <= 1'b1;
@@ -326,28 +367,31 @@ always @(posedge clk_ram) begin
 			else begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= sa0q; sr_be <= 2'b11; e_b <= 1'b0; e_c <= 1'b1; es <= 3'd3;
 				dph <= 5'd0;
+				pf_on <= !FB_MODE3; pf_b <= 1'b0; pf_head <= i0q + 17'd256; pf_sa <= sa0q + 17'd256;
+				pf_cnt <= 2'd0;
 			end
 		end
 	end else case (es)
 	3'd0: begin
 		e_ret <= 1'b0;
-		if (ne) begin
-			if (sr_ready && aok) begin
-				if (wq[39]) begin fk <= 3'd0; es <= 3'd5; end   // fill: popped after its last word
-				else begin
-					sr_req <= 1'b1; sr_we <= 1'b1;
-					sr_a <= wq[38:22]; sr_be <= wq[21:20]; sr_d <= wq[15:0];
-					rptr <= rptr + 1'd1;
-					es <= 3'd4;                                // posted: the next write may follow right away
-				end
+		if (pf_go) begin
+			// read-ahead below 2 words: ahead of everything else
+			sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= pf_sa; sr_be <= 2'b11; es <= 3'd7;
+		end else if (ne && sr_ready && aok) begin
+			if (wq[39]) begin fk <= 3'd0; es <= 3'd5; end   // fill: popped after its last word
+			else begin
+				sr_req <= 1'b1; sr_we <= 1'b1;
+				sr_a <= wq[38:22]; sr_be <= wq[21:20]; sr_d <= wq[15:0];
+				rptr <= rptr + 1'd1;
+				if (disp_w(wq[38:22], FB_DRAW0)) pf_on <= 1'b0;
+				es <= 3'd4;                                // posted: the next write may follow right away
 			end
+		end else if (ne) begin
 		end else if (!aok) begin
 		end else if (rd_busy && sr_ready) begin
 			if (rd_b) begin last1 <= rd_idx; have1 <= 1'b1; end else begin last0 <= rd_idx; have0 <= 1'b1; end
-			if (rd_oor || rd_ev) begin
-				if (rd_b) fb1_sq <= ev1; else FB0_Q <= rd_oor ? 16'h0000 : ev0;
-				rd_ack <= rd_t;
-			end else begin
+			if (rd_oor || rd_ev) es <= 3'd1;   // no SRAM read: the value is set in es 1
+			else begin
 				sr_req <= 1'b1; sr_we <= 1'b0; sr_a <= rd_b ? sram_a1(rd_idx) : sram_a0(rd_idx); sr_be <= 2'b11; es <= 3'd2;
 				e_b <= rd_b;
 			end
@@ -369,6 +413,8 @@ always @(posedge clk_ram) begin
 		end
 	end
 	3'd4: es <= 3'd0;
+	// rd_* hold until rd_ack; set a clk_ram after the decision, off the es 0 priority chain
+	3'd1: begin if (rd_b) fb1_sq <= ev1; else FB0_Q <= rd_oor ? 16'h0000 : ev0; rd_ack <= rd_t; es <= 3'd0; end
 	3'd2: if (sr_done) begin if (e_b) fb1_sq <= sr_q; else FB0_Q <= sr_q; rd_ack <= rd_t; es <= 3'd0; end
 	// display read: one clk_ram after the issue the flag RAM output is the bit of this block (both edge phases)
 	3'd3: begin
@@ -377,13 +423,17 @@ always @(posedge clk_ram) begin
 	end
 	3'd5: begin
 		if (wq[16 + fk] || (sr_ready && aok)) begin
-			if (!wq[16 + fk]) begin sr_req <= 1'b1; sr_we <= 1'b1; sr_a <= fill_a; sr_be <= 2'b11; sr_d <= wq[15:0]; end
+			if (!wq[16 + fk]) begin
+				sr_req <= 1'b1; sr_we <= 1'b1; sr_a <= fill_a; sr_be <= 2'b11; sr_d <= wq[15:0];
+				if (disp_w(fill_a, FB_DRAW0)) pf_on <= 1'b0;
+			end
 			fk <= fk + 1'd1;
 			if (&fk) begin rptr <= rptr + 1'd1; es <= 3'd4; end
 			else if (!wq[16 + fk]) es <= 3'd6;
 		end
 	end
 	3'd6: es <= 3'd5;
+	3'd7: if (sr_done) es <= 3'd0;               // read-ahead word (taken above)
 	default: es <= 3'd0;
 	endcase
 end

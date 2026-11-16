@@ -93,6 +93,17 @@ wire [31:0] s_err, s_rd, s_wr;
 `endif
 sram_model #(.T_AA(`SRAMAA_PS)) smem (.a(a_d), .dq(dq), .oe_n(oen_d), .we_n(wen_d), .ub_n(ub_d), .lb_n(lb_d), .errors(s_err), .n_rd(s_rd), .n_wr(s_wr));
 
+// bus turnaround: after OE# rises the chip may drive DQ for tOHZ (20 ns, AS6C2016-55); the core must not drive before
+integer oz_err = 0;
+realtime t_oer = 0;
+always @(posedge oen_d) t_oer = $realtime;
+realtime oz_min = 1.0e9;
+always @(posedge oe_d) if ($realtime > 1000000 && $realtime - t_oer < oz_min) oz_min = $realtime - t_oer;
+always @(posedge oe_d) if ($realtime > 1000000 && $realtime - t_oer < 20000) begin
+	oz_err = oz_err + 1;
+	if (oz_err < 5) $display("%0t DQ driven %0t ps after OE# rose (tOHZ 20 ns)", $time, $realtime - t_oer);
+end
+
 // ---------------------------------------------------------------- shadows, lazy erase reference, helpers
 reg [15:0] sh0 [0:90111];
 reg [15:0] sh1 [0:90111];
@@ -265,9 +276,9 @@ reg  [17:1] v_pa = 0;                        // DRAW_X / DRAW_Y
 reg  [15:0] v_d = 0, v_back = 0;             // pixel colour, DRAW_BACK_C
 reg   [1:0] v_we = 0;
 integer     v_n = 0, v_i = 0, v_cyc = 0;
-reg  [17:1] f_a [0:8191];
-reg  [15:0] f_d [0:8191];
-reg         f_m [0:8191];                    // 1: read-modify-write (new = old + d, as half-transparency reads), 0: write
+reg  [17:1] f_a [0:32767];
+reg  [15:0] f_d [0:32767];
+reg         f_m [0:32767];                    // 1: read-modify-write (new = old + d, as half-transparency reads), 0: write
 wire        v_wait = v_fst || !v_rdy;        // FB_DRAW_WAIT (no CPU access here)
 wire [15:0] v_wd = v_rmw ? v_back + v_d : v_d;   // FB_DRAW_D
 always @(posedge clk_sys) if (v_on) begin
@@ -318,7 +329,7 @@ task automatic frun(output integer cyc);
 endtask
 
 // ---------------------------------------------------------------- stimulus
-integer t, bx, by, px, py, k2, pass, n, w0, cy, f_bad;
+integer t, bx, by, px, py, k2, pass, n, w0, cy, f_bad, h_lines, h_run;
 reg [15:0] rd16;
 reg [15:0] expq;
 integer t_a0;
@@ -586,8 +597,35 @@ initial begin
 	if (lat_max > 7) begin errs = errs + 1; $display("G2 display latency %0d clk_sys (more than 7)", lat_max); end
 	$display("tb_fb: G2 FB0 display with line starts while the FB1 tail is drawn: valid within %0d clk_sys (worst of %0d), draw %0d clk_sys, drops %0d, errors %0d", lat_max, lat_n, cy, fb_drop - w0, errs - pass);
 
-	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes), FIFO drops %0d", s_err, s_rd, s_wr, fb_drop);
-	if (errs == 0 && fb_drop == 0 && s_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");
+	// ---- H, H2: draw throughput under continuous display (lines of 352 dots + 60 of blanking, FB_DISP_SOON in its
+	// last 8): sprite-like rows of plain writes into the FB1 tail while FB0 is displayed (H), into FB0 while FB1 is (H2)
+	for (k2 = 0; k2 < 2; k2 = k2 + 1) begin
+		pass = errs; lat_max = 0; lat_n = 0; w0 = fb_drop;
+		@(posedge clk_sys) fsel <= (k2 == 1);
+		drain;
+		for (by = 0; by < 64; by = by + 1) for (bx = 0; bx < 352; bx = bx + 1) preload(k2 == 0 ? 0 : 1, idx_of(bx, by), $urandom);
+		for (by = 100; by < 160; by = by + 1)
+			for (bx = (k2 == 0 ? 192 : 0); bx < 320; bx = bx + 1) fpush(k2 == 0 ? 1 : 0, bx, by, $urandom, 0);
+		h_lines = 0; h_run = 1;
+		fork
+			begin frun(cy); h_run = 0; end
+			while (h_run) begin
+				repeat (52 * 8) @(posedge clk_sys);
+				soon <= 1; repeat (8 * 8) @(posedge clk_sys); soon <= 0;
+				for (bx = 0; bx < 352; bx = bx + 1) disp(k2 == 0 ? 0 : 1, vaddr(bx, h_lines % 64));
+				h_lines = h_lines + 1;
+			end
+		join
+		for (by = 100; by < 160; by = by + 1)
+			for (bx = (k2 == 0 ? 192 : 0); bx < 320; bx = bx + 1) draw_r(k2 == 0 ? 1 : 0, bx, by);
+		if (lat_max > 7) begin errs = errs + 1; $display("H display latency %0d clk_sys (more than 7)", lat_max); end
+		$display("tb_fb: %s draw %0d pixels in %0d clk_sys (%0d lines displayed): %0d pixels per line, display valid within %0d clk_sys, drops %0d, errors %0d",
+			k2 == 0 ? "H  FB1 tail while FB0 displayed:" : "H2 FB0 while FB1 displayed:",
+			(k2 == 0 ? 128 : 320) * 60, cy, h_lines, (k2 == 0 ? 128 : 320) * 60 * 3360 / cy, lat_max, fb_drop - w0, errs - pass);
+	end
+
+	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes), DQ driven inside tOHZ %0d (closest %0t ps after OE#), FIFO drops %0d", s_err, s_rd, s_wr, oz_err, oz_min, fb_drop);
+	if (errs == 0 && fb_drop == 0 && s_err == 0 && oz_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");
 	$finish;
 end
 
