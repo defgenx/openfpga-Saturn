@@ -863,3 +863,20 @@ three seeds (`raetro/quartus:21.1`, area profile):
 
 Seed 3 meets setup, hold, recovery and removal at every corner; its hold margin on counter[1] is the smallest of the
 releases so far.
+
+## v0.1.6 timing (2026-11-16)
+
+v0.1.5 with the display read-ahead in `vdp1_fb_pocket` (docs/memory.md section 2, "Display read-ahead") and a
+registered `fb_ready` in `sram_pocket`. One map, eight seeds (`raetro/quartus:21.1`, area profile); seeds 2, 5, 11 and
+30 do not fit (1,849-1,853 LABs needed):
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 1 | 18,253 | 1,848 / 1,848 | -0.589 | +0.091 |
+| 3 | 18,227 | 1,847 / 1,848 | -0.041 | +0.054 |
+| 7 | 18,206 | 1,848 / 1,848 | -0.091 | +0.036 |
+| **6 (release)** | **18,203** | **1,847 / 1,848** | **+0.061** (slow 85C, counter[0]) | **+0.118** (fast 0C, counter[0]) |
+
+Seed 6 meets setup, hold, recovery and removal at every corner. Without the registered `sn` / `m3q` / `fb_ready` the
+read-ahead fit on 3 of 6 seeds and missed setup by 0.35-0.74 ns on paths from VDP2's timing and the SRAM controller's
+counter into FB0_Q / `fb1_sq`.
