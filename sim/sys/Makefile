@@ -6,7 +6,8 @@
 #   +CKPT_US=<n> on the binary        fork checkpoint, replays with replay.sh (docs/sim.md "Checkpoints"); J=<n> build jobs
 ROOT   := $(abspath ../..)
 B      ?= build
-CYCLES ?= 20000000
+# the default also when CYCLES arrives empty, as it does from `make -C sim sys` when none is given
+override CYCLES := $(or $(CYCLES),20000000)
 GAP    ?= 86
 MACROS ?= macros_qsf.f
 MODELS := ../mem/models/psram_model.sv ../mem/models/sdram_model.sv ../mem/models/sram_model.sv
