@@ -625,7 +625,7 @@ end
 
 // Pocket pad -> Saturn pad, in MiSTer's joystick_0 bit order:
 //   [0] right [1] left [2] down [3] up [4] A [5] B [6] C [7] Start
-//   [8] R [9] X [10] Y [11] Z [12] L [13] unused
+//   [8] R [9] X [10] Y [11] Z [12] L [13] connected (key type 1-3: Pocket or Dock pad; 0 = none)
 // Pocket B/A -> Saturn A/B, R1 -> C, Y/X -> X/Y, L1 -> Z. Holding Select turns L1/R1 into Saturn
 // L/R; Dock L2/R2 are always Saturn L/R.
 function [13:0] pad2saturn(input [31:0] k);
@@ -633,7 +633,7 @@ function [13:0] pad2saturn(input [31:0] k);
     begin
         sel = k[14];
         pad2saturn = {
-            1'b0,                       // [13]
+            (k[31:28] >= 4'h1) & (k[31:28] <= 4'h3),   // [13] connected
             k[8] & sel | k[10],         // [12] L
             k[8] & ~sel,                // [11] Z
             k[6],                       // [10] Y

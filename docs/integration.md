@@ -30,7 +30,7 @@ Files (all under `src/fpga/core/` unless noted):
 | `sdram1`, `sdram2`, `ddram`, `vdp1_fb` (+ FB glue) | `mem_pocket` (docs/memory.md): SDRAM, 2 PSRAM, SRAM, M10K |
 | `HPS2CDD`, `hps_ext`, `cdd_download`/`cdboot_download` | `cdd_pocket` (docs/cd.md); the disc header replay (`BOOT_*`) drives the same game-id / area / cartridge-request capture block |
 | `hps_io` BIOS/cart download, `ioctl_wait` | `bridge_loader` -> `load_pocket` FIFO; `mem_pocket.loading` holds the Saturn in reset |
-| `HPS2PAD` | `pad_pocket`: Digital pad only; same `joy1`/`joy2` word as the MiSTer top builds from `joystick_0/1` |
+| `HPS2PAD` | `pad_pocket`: Digital pad only; same `joy1`/`joy2` word as the MiSTer top builds from `joystick_0/1`; port 2 is `PAD_OFF` (empty) while there is no controller 2 |
 | `RTC` from `hps_io` | APF `rtc_date_bcd`/`rtc_time_bcd`, MSM6242B layout, toggle bit synchronised |
 | OSD `status[]` | `interact.json`: Reset, Region (Auto/Japan/USA/Europe), Cartridge (Auto/ROM 2M/None/RAM 1M/RAM 4M/Backup) |
 | `video_mixer`, `cofi`, `video_freak`, light guns | `pocket_video` (the APF scaler does the rest) |
@@ -409,6 +409,7 @@ The figures predate the cuts: the sibling branches (VDP2, VDP1, SCSP, SCU, SH-1,
   simulation only. The cartridge ROM (slot 5, bridge 0x70000000, up to 2 MB, user-reloadable with a core reset) loads
   into the cart window like MiSTer's "Load cartridge"; Cartridge = ROM 2M selects it (Auto never does, as on MiSTer).
 * Pads: Digital only. No 3D/analog pad, mouse, or six-button remap beyond core_top's `pad2saturn`; player 2 uses `cont2`.
+  Without a second game controller (`cont2_key` type not 1-3) port 2 is an empty port: the SMPC reports nothing (F0).
 * `cfg_cart` Backup selects the backup cart type and gives its save file (slot 4) 1 MB. No "CD speed" setting
   (the old interact entry was replaced by Cartridge): with the HLE CD block data is always read at 2x and CD-DA at 1x,
   the speed bit of Init is ignored (docs/cdb-hle.md section 7).

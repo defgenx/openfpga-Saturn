@@ -627,6 +627,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 
 // ---------------------------------------------------------------------------------- pads
 // MiSTer joystick bits: [0] right [1] left [2] down [3] up [4] A [5] B [6] C [7] Start [8] R [9] X [10] Y [11] Z [12] L
+// [13] the controller is connected (port 2 is an empty port without it)
 function automatic [15:0] joy_word(input [13:0] j);
 	joy_word = {~j[0]|j[1], ~j[1]|j[0], ~j[2]|j[3], ~j[3]|j[2], ~j[7], ~j[4], ~j[6], ~j[5],
 	            ~j[8], ~j[9], ~j[10], ~j[11], ~j[12], 3'b111};
@@ -635,7 +636,7 @@ endfunction
 `ifndef POCKET_CUT_SMPC
 pad_pocket pads (
 	.PDR1O(SMPC_PDR1O), .DDR1(SMPC_DDR1), .PDR2O(SMPC_PDR2O), .DDR2(SMPC_DDR2),
-	.JOY1(joy_word(pad_s2[13:0])), .JOY2(joy_word(pad_s2[27:14])),
+	.JOY1(joy_word(pad_s2[13:0])), .JOY2(joy_word(pad_s2[27:14])), .JOY2_ON(pad_s2[27]),
 	.PDR1I(SMPC_PDR1I), .PDR2I(SMPC_PDR2I)
 );
 `endif

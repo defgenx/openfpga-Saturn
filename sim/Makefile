@@ -2,7 +2,7 @@
 #   make -C sim cd         CD drive: synthetic discs, SH-1 host model, APF bridge model (about 5 minutes)
 #   make -C sim mem        memory subsystem (sdram, psram, ddram_pocket, framebuffer, loader), several minutes
 #   make -C sim mem-long   64 ms SDRAM retention run (about 10 minutes)
-#   make -C sim platform   resampler and video path (seconds)
+#   make -C sim platform   resampler, video path and pads (seconds)
 #   make -C sim pll        pll_lite vs the Altera PLL reconfiguration core on a DPRIO model (seconds)
 #   make -C sim cdb        HLE CD block against the synthetic ISO disc (SERV firmware in Verilator, about 12 minutes)
 #   make -C sim cdb-compare  the same script on the SH-1 LLE and the HLE (needs ../ref)
