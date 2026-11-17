@@ -39,6 +39,10 @@ Breakdown (s2): SERV 194, MLABs 60 (5 byte RAMs of 10 ALMs), shell about 160.
 ## Deviations
 Pad polls start 100-250 ticks later than the HLE; calendar ignores leap years (as the HLE); SRES soft reset not handled;
 frame length is the NTSC constant (PAL not handled yet); SETTIME applies at once.
+INTBACK status bytes: written into OREG0-15 about 85 us before SR changes, not from 40 us after the COMREG write as the SMPC
+program (and the HLE) does. Until then OREG keeps the last peripheral data, which a late handler of the previous peripheral
+interrupt still reads as pad data while SR says so (seen with Baku Baku, which then left for the BIOS CD player). Check:
+`make -C sim/smpc hold HLE=SMPC_SERV B=build-serv` (status bytes from +684 CE, SR +1033; the program: +160, +1055).
 
 ## Area round (branch `area-hunt`)
 

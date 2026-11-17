@@ -6,6 +6,7 @@
 enum { MSHRES = 1, MSHNMI = 2, SSHRES = 4, SSHNMI = 8, SYSRES = 16, SNDRES = 32, CDRES = 64, DOTSEL = 128, MIRQ = 256 };
 #define TS0 45                       /* INTBACK status: ticks from the COMREG write to the start of the 996-tick sequence (calibrated) */
 #define IB_BRK 2                     /* INTBACK: BREAK seen -> SF clear (calibrated: the SMPC program takes 86 ticks from its read) */
+#define IB_OREG 330                  /* INTBACK status: the 16 status bytes go into OREG this many ticks before SR changes (they take ~300) */
 
 static u8  rtc[7], smem[4], ir[3];   /* year hi/lo, day|month, days, hour, min, sec (BCD, month binary) */
 static u8  ste, pmd, oc, vbcnt, st;
@@ -81,6 +82,9 @@ static inline __attribute__((always_inline)) void ib_cb(void) {
 }
 static void ib_status(u32 t) {
 	u32 opt = ib_optim ? 30 : 0, nop = (ir[1] & 8) ? 0 : 24, p = MM(R_PINS), i;
+	/* the status bytes go in shortly before SR changes: until then OREG keeps the last peripheral data, which a late handler
+	 * of the previous peripheral interrupt still reads as pad data while SR says so (the SMPC program writes them earlier) */
+	wait_until(t + 933 - opt - nop - IB_OREG);
 	oreg(0, (ste << 7) | ((MM(R_IN) >> 4) & 0x40));
 	for (i = 0; i < 7; i++) oreg(1 + i, rtc[i]);
 	oreg(8, 1);

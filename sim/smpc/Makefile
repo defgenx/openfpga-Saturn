@@ -18,9 +18,13 @@ FILES := $(SRC)/SMPC/HMCS400_pkg.sv $(SRC)/SMPC/HMCS400_core.sv $(SRC)/SMPC/HMCS
 VFLAGS := --binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-UNOPTFLAT \
           -Wno-MULTIDRIVEN -Wno-INITIALDLY -Wno-PINMISSING -Wno-DEFPARAM --x-assign 0 --x-initial 0 -DSIM $(EXTRA_V) -DPOCKET_CUT_SMPC_HLE -DHLE_MOD=$(HLE) $(HLE_DEFS) -j 4
 
-.PHONY: run clean
+.PHONY: run hold clean
 run: $(B)/log.txt
 	python3 tools/cmp.py $(B)/log.txt $(TOL)
+# HLE=SMPC_SERV only: the INTBACK status bytes reach OREG shortly before SR changes (tb_smpc.sv +hold)
+hold: $(B)/Vtb $(B)/smpc.hex $(wildcard $(FWHEX))
+	cp $(FWHEX) $(B)/smpc_fw.hex 2>/dev/null || true
+	cd $(B) && ./Vtb +hold > hold.txt && grep '^HOLD ' hold.txt && grep -q '^HOLD PASS' hold.txt
 
 $(B)/smpc.hex: $(MIF) tools/mif2hex.py
 	mkdir -p $(B) && python3 tools/mif2hex.py $< $@

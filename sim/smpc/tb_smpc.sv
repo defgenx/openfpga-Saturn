@@ -242,6 +242,36 @@ module tb_smpc;
 			end
 			$finish;
 		end
+		if ($test$plusargs("hold")) begin
+			// when do the INTBACK status bytes replace the peripheral data in OREG0-15, against the SR change? A handler of
+			// the previous peripheral interrupt that runs late reads OREG as pad data while SR still says so. The SMPC program
+			// writes the status bytes from about 40 us after the COMREG write; SMPC_SERV writes them shortly before SR changes.
+			// PASS: H's first status byte at most 100 us (400 CE) before its SR change (SMPC_SERV only: make hold).
+			reg [7:0] pl [16], ph [16], sr0l, sr0h;
+			int t0, ol, oh, sl, sh;
+			intback("WARMUP_PERI", 8'h00, 8'h08, 8'hF0, 4);
+			intback("HOLD_PERI", 8'h00, 8'h08, 8'hF0, 4);
+			rd(7'h61, sr0l, sr0h);
+			for (int i = 0; i < 16; i++) rd(7'h21 + 2*i, pl[i], ph[i]);
+			while (fr != 20000) @(posedge CLK);
+			wr(7'h01, 8'h01); wr(7'h03, 8'h08); wr(7'h05, 8'hF0); wr(7'h63, 8'h01);
+			t0 = ce; wr(7'h1F, 8'h10);
+			ol = -1; oh = -1; sl = -1; sh = -1;
+			while ((sl < 0 || sh < 0) && ce < t0 + 4000) begin
+				rd(7'h61, ra, rb);
+				if (sl < 0 && ra != sr0l) sl = ce - t0;
+				if (sh < 0 && rb != sr0h) sh = ce - t0;
+				for (int i = 0; i < 16; i++) begin
+					rd(7'h21 + 2*i, ra, rb);
+					if (ol < 0 && ra != pl[i]) ol = ce - t0;
+					if (oh < 0 && rb != ph[i]) oh = ce - t0;
+				end
+			end
+			$display("HOLD L status bytes from +%0d CE, SR changes at +%0d CE (the SMPC program)", ol, sl);
+			$display("HOLD H status bytes from +%0d CE, SR changes at +%0d CE", oh, sh);
+			$display("HOLD %s", (oh >= 0 && sh >= 0 && oh <= sh && sh - oh <= 400) ? "PASS" : "FAIL");
+			$finish;
+		end
 		miq_l = 0; miq_h = 0;
 		cmd("INTBACK_STAT", 8'h10, 8'h01, 8'h00, 8'hF0, 0, 0, 0, 0, 3);
 		mirq_dump("INTBACK_STAT", 2000);
