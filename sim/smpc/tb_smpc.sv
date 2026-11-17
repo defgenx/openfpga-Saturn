@@ -156,6 +156,19 @@ module tb_smpc;
 		wait_sf((c == 8'h0D || c == 8'h0E || c == 8'h0F) ? 600000 : 30000);
 		idle(200);
 	endtask
+	// back to back: the host polls SF and writes the next command as soon as it reads SF clear (games such as Power
+	// Drift do); the second command must be taken and SF must clear again. gap: clk from the SF clear to the SF write
+	task automatic cmd2(input string tag, input [7:0] c1, input [7:0] c2, input int gap);
+		wr(7'h63, 8'h01);
+		$display("CMD %s.1 %02h t=%0d", tag, c1, ce);
+		wr(7'h1F, c1);
+		wait_sf(30000);
+		idle(gap); wr(7'h63, 8'h01);
+		$display("CMD %s.2 %02h t=%0d", tag, c2, ce);
+		wr(7'h1F, c2);
+		wait_sf(2000);
+		idle(200);
+	endtask
 	// MIRQ falls per model; each model is dumped when its own MIRQ fires
 	reg miq_l, miq_h;
 	always @(posedge CLK) begin
@@ -229,6 +242,8 @@ module tb_smpc;
 		cmd("NMIREQ", 8'h18, 0, 0, 0, 0, 0, 0, 0, 0);
 		cmd("SSHON2", 8'h02, 0, 0, 0, 0, 0, 0, 0, 0);
 		cmd("SNDON2", 8'h06, 0, 0, 0, 0, 0, 0, 0, 0);
+		while (fr != 20000) @(posedge CLK);       // away from the vertical blank, like intback
+		for (int g = 0; g < 24; g += 4) cmd2($sformatf("BACK2BACK%0d", g), 8'h1A, g % 8 ? 8'h02 : 8'h03, g);
 		cmd("CKCHG352", 8'h0E, 0, 0, 0, 0, 0, 0, 0, 0);
 		waitce(3 * 66860);   // the firmware needs a few frames after a clock change before it times the pad poll
 		cmd("SSHON3", 8'h02, 0, 0, 0, 0, 0, 0, 0, 0);

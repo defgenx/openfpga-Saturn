@@ -13,6 +13,9 @@ timestamp.
 identical in every dump; timing violations 0 at the harness tolerances (60 ticks commands, 800 ticks pad polls).
 Largest offsets H-L: commands pins +45 / SF +31; INTBACK status MIRQ +23; pad polls +171..+641 (1-pad +641).
 `make -C sim smpc` (HLE) still passes. Single stimulus, one frame phase: not a sweep.
+`BACK2BACK*`: the host writes the next command 60 to 80 clk (1.1-1.5 us at 53.7 MHz) after it sees SF clear (a polling
+host can be that fast); the firmware acknowledges the command event before it clears SF, so that command is taken and SF
+clears again.
 
 ## Measured (standalone `quartus_fit`, area profile, virtual pins; `sizing/smpc-serv/`)
 | Variant | ALMs | regs | M10K |

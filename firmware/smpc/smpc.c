@@ -114,16 +114,19 @@ static const u32 ctab[32] = {
 #define AGE() ((MM(R_TICKS) - MM(R_TS)) << 16)           /* ticks since the COMREG write, in the top 16 bits */
 #define DUE(e) ((e) >> 1 & 0x1FFE0000u)                  /* the table's delay in the same scale */
 
+/* the command event is acknowledged before SF clears: a host that polls SF can write its next command about a
+ * microsecond after the clear, and an acknowledge after the clear would drop that command (SF would then stay set) */
 static inline __attribute__((always_inline)) void do_command(void) {
 	u32 c = MM(R_COM), e, t0;
-	if (c >= 32) { while (AGE() < 82u << 16) ; sf0(); MM(R_EV) = EV_CMD; return; }
+	if (c >= 32) { MM(R_EV) = EV_CMD; while (AGE() < 82u << 16) ; sf0(); return; }
 	e = ctab[c];
 	if (!(e & SLOWF)) {                  /* pins at the LLE time, SF clears right after */
+		MM(R_EV) = EV_CMD;
 		while (AGE() < DUE(e)) ;
 		MM(R_PINS) = e; MM(R_PCLR) = e >> 9;
 		if (e & PULSE) MM(R_PINS) = MSHNMI;
 		MM(R_SF) = 0;
-		MM(R_EV) = EV_CMD; vbcnt = 0;
+		vbcnt = 0;
 		return;
 	}
 	if (c == 0x0D || c == 0x0E || c == 0x0F) while (AGE() < DUE(e)) ;
