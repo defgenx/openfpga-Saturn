@@ -122,7 +122,9 @@ VDP1P's `FB_DRAW_RDY` is FB_RDY: a draw strobe is not issued while it is low (`F
 `FBDS_READBACK` takes `FB_DRAW_Q` only once it is high again. Without the define it is 1, MiSTer's logic (`sim/vdp1`
 compares against that). While FB_RDY stays high the timing is MiSTer's: an M10K pixel takes 2 clk_sys per write and 5
 per read-modify-write. A draw read waits for the write FIFO to drain (the engine serves writes first), so a
-read-modify-write right after a long write span can wait up to about 190 SRAM writes.
+read-modify-write right after a long write span can wait up to about 190 SRAM writes. The command FSM does not wait
+for the last pixel of a command: the next command's words are read while it waits, so its write enable, colour and
+mode are held from the first of those words until it is written (`DRAW_HOLD`).
 
 A CPU read waits the same way, with VDP1P holding `FB_RD` until FB_RDY. A frame change in that time moves the held
 strobe and the address to the other buffer (`FB_SEL`), a new read there; it is posted only once the first read is

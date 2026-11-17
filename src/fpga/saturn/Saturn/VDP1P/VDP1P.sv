@@ -1274,6 +1274,16 @@ module VDP1P (
 	
 	bit  [15: 0] FB_DRAW_D;
 	bit          FB_DRAW_WE;
+	// CMDS_END does not wait for FBD_ST: while the last pixel of a command waits for the frame buffer, the next command's
+	// words land (CMD, then the clip registers and the CLT) and would change that pixel's write enable, colour and mode.
+	// From the first of those words until FBD_ST is idle the pixel uses the values held here (DRAW_HOLD).
+	bit          DRAW_HOLD;
+	bit          HOLD_WE;
+	bit  [15: 0] HOLD_ORIG_C;
+	bit          HOLD_MON;
+	bit  [ 2: 0] HOLD_CCB;
+	bit          LIVE_WE;
+	wire         DRAW_MON = DRAW_HOLD ? HOLD_MON : CMD.CMDPMOD.MON;
 	bit          SCLIP;
 	bit          UCLIP;
 		bit [15: 0] ORIG_C;
@@ -1300,14 +1310,16 @@ module VDP1P (
 			TP = 0;
 			EC = 0;
 		end
-		CALC_C = CMD.CMDPMOD.MON ? DRAW_BACK_C : !TVMR.TVM[0] ? ColorCalc(ORIG_C, DRAW_BACK_C, DRAW_GHCOLOR, CMD.CMDPMOD.CCB) : ORIG_C;
+		CALC_C = DRAW_MON ? DRAW_BACK_C : !TVMR.TVM[0] ? ColorCalc(DRAW_HOLD ? HOLD_ORIG_C : ORIG_C, DRAW_BACK_C, DRAW_GHCOLOR,
+		         DRAW_HOLD ? HOLD_CCB : CMD.CMDPMOD.CCB) : DRAW_HOLD ? HOLD_ORIG_C : ORIG_C;
 			
 		SCLIP = !DRAW_X[11:10]                                    && DRAW_X[9:0] <= SYS_CLIP.X2[9:0] && !DRAW_Y[11:10]                                    && DRAW_Y[9:0] <= SYS_CLIP.Y2[9:0];
 		UCLIP = !DRAW_X[11:10] && DRAW_X[9:0] >= USR_CLIP.X1[9:0] && DRAW_X[9:0] <= USR_CLIP.X2[9:0] && !DRAW_Y[11:10] && DRAW_Y[9:0] >= USR_CLIP.Y1[9:0] && DRAW_Y[9:0] <= USR_CLIP.Y2[9:0];
 		MESH = ~(DRAW_X[0] ^ DRAW_Y[0]) ^ (FRAME_ODD&BLUR_MESH);
 		IDRAW = ~(DIL ^ DRAW_Y[0]);
 		FB_DRAW_D = CALC_C;
-		FB_DRAW_WE = (~TP | CMD.CMDPMOD.SPD) & (~EC | CMD.CMDPMOD.ECD) & SCLIP & ((UCLIP^CMD.CMDPMOD.CMOD) | ~CMD.CMDPMOD.CLIP) & (MESH | ~CMD.CMDPMOD.MESH) & (IDRAW | ~DIE);
+		LIVE_WE = (~TP | CMD.CMDPMOD.SPD) & (~EC | CMD.CMDPMOD.ECD) & SCLIP & ((UCLIP^CMD.CMDPMOD.CMOD) | ~CMD.CMDPMOD.CLIP) & (MESH | ~CMD.CMDPMOD.MESH) & (IDRAW | ~DIE);
+		FB_DRAW_WE = DRAW_HOLD ? HOLD_WE : LIVE_WE;
 	end
 `ifdef DEBUG
 	assign ORIG_C_DBG = ORIG_C;
@@ -1850,20 +1862,20 @@ module VDP1P (
 						casex (TVMR.TVM[1:0]) 
 							2'bx0: begin
 								FB_A <= {FB_Y[7:0],DRAW_X[8:0]};
-								FB_D <= FB_DRAW_D | {CMD.CMDPMOD.MON,15'h0000};
+								FB_D <= FB_DRAW_D | {DRAW_MON,15'h0000};
 								FB_WE <= {2{FB_DRAW_PEND}};
 								FB_RD <= FB_READ_PEND;
 							end
 							2'b01: begin
 								FB_A <= {FB_Y[7:0],DRAW_X[9:1]};
-								FB_D <= {FB_DRAW_D[7:0],FB_DRAW_D[7:0]} | {CMD.CMDPMOD.MON,15'h0000};
-								FB_WE <= ({~DRAW_X[0],DRAW_X[0]} | {2{CMD.CMDPMOD.MON}}) & {2{FB_DRAW_PEND}};
+								FB_D <= {FB_DRAW_D[7:0],FB_DRAW_D[7:0]} | {DRAW_MON,15'h0000};
+								FB_WE <= ({~DRAW_X[0],DRAW_X[0]} | {2{DRAW_MON}}) & {2{FB_DRAW_PEND}};
 								FB_RD <= FB_READ_PEND;
 							end
 							2'b11: begin
 								FB_A <= {FB_Y[8:0],DRAW_X[8:1]};
-								FB_D <= {FB_DRAW_D[7:0],FB_DRAW_D[7:0]} | {CMD.CMDPMOD.MON,15'h0000};
-								FB_WE <= ({~DRAW_X[0],DRAW_X[0]} | {2{CMD.CMDPMOD.MON}}) & {2{FB_DRAW_PEND}};
+								FB_D <= {FB_DRAW_D[7:0],FB_DRAW_D[7:0]} | {DRAW_MON,15'h0000};
+								FB_WE <= ({~DRAW_X[0],DRAW_X[0]} | {2{DRAW_MON}}) & {2{FB_DRAW_PEND}};
 								FB_RD <= FB_READ_PEND;
 							end
 						endcase
@@ -2190,6 +2202,19 @@ module VDP1P (
 		end
 	end
 	assign CMD_READ_DONE = (VRAM_ST == VS_CMD_READ) && VRAM_RDY && (VRAM_READ_POS == 4'd15);
+	// held on the clock a word of the next command is read (the CMD registers change two clocks later); never while
+	// FBD_ST is idle
+	always @(posedge CLK or negedge RST_N) begin
+		if (!RST_N) DRAW_HOLD <= 0;
+		else if (FBD_ST == FBDS_IDLE) DRAW_HOLD <= 0;
+		else if (VRAM_ST == VS_CMD_READ && VRAM_RDY && !DRAW_HOLD) begin
+			DRAW_HOLD <= 1;
+			HOLD_WE <= LIVE_WE;
+			HOLD_ORIG_C <= ORIG_C;
+			HOLD_MON <= CMD.CMDPMOD.MON;
+			HOLD_CCB <= CMD.CMDPMOD.CCB;
+		end
+	end
 	always_comb begin
 		RD_NEXT = '{CMDS_END, 9'd0, 1'b0, 1'b0, 1'b0};
 		if (!CMD.CMDCTRL.JP[2] && !CMD.CMDCTRL.END

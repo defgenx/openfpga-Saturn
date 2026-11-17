@@ -180,6 +180,14 @@ clocks. Verilator line coverage over the two designs: 97.0 % lines, 99.2 % branc
 `COMM C-F` defaults (golden hangs), a frame start landing in the middle of a colour-table/gouraud-table read, and
 `BOTTOM_VERT` (unused).
 
+`make -C sim/vdp1 fbwait` (part of `make -C sim vdp1`) runs the same scenarios with VDP1P built with `POCKET_VDP1P`, so
+its draw waits for `FB_RDY` (memory.md section 2, "Draw handshake"), and `FB_RDY` held low in stretches of up to 40
+clocks. The golden never waits, so the two draw at different speeds and only VRAM and the framebuffers are compared;
+those scenarios have no CPU traffic while drawing, no soft reset, draw terminate, automatic frame change or blur mesh.
+The hold of a command's last pixel (`DRAW_HOLD`) is not tied to `POCKET_VDP1P`. Without the define a pixel waits past
+the next command's first word only behind a CPU frame-buffer access or burst; the golden then draws it with the next
+command's mode and VDP1P with its own. That is a deliberate difference, which the strict run does not reach.
+
 Assumptions, collected: SCU bus-master protocol (item 7), `EN` pacing (item 10), command words are written only
 while the command FSM is in `READ` (item 10, true by construction). No change depends on display timing.
 

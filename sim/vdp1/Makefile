@@ -12,7 +12,7 @@ VFLAGS = --cc --exe --build -j 4 --top-module diff_top -Mdir obj -Wno-fatal -Wno
          -CFLAGS "-O2 -std=c++17" $(VEXTRA)
 SRC = gen/REF_VDP1_pkg.sv gen/REF_VDP1.sv $(DUT)/VDP1P_pkg.sv $(DUT)/VDP1P.sv altdpram.v gen/diff_top.sv
 
-all: run divtest
+all: run divtest fbwait
 
 # ROWFLOOR=1 (default): the golden copy gets the same timing changes as VDP1P under POCKET_VDP1P_ROWFLOOR (see docs/vdp1-rewrite.md)
 ROWFLOOR ?= 1
@@ -47,8 +47,19 @@ run: obj/Vdiff_top
 ppm:
 	$(MAKE) run PPM=100000
 
+# Pocket draw handshake (docs/memory.md section 2): VDP1P built with POCKET_VDP1P waits for FB_RDY when drawing, the
+# golden never does. FB_RDY is low in stretches, as vdp1_fb_pocket holds it, so only VRAM and the framebuffers are
+# compared (draw end, end of scenario), with no CPU traffic or events whose effect depends on how far the draw has got.
+fbwait: obj_fbw/Vdiff_top
+	@mkdir -p out
+	./obj_fbw/Vdiff_top --n $(N) --seed $(SEED) --ppm 0 --fbwait --out out
+obj_fbw/Vdiff_top: $(SRC) tb.cpp
+	verilator $(filter-out -Mdir obj,$(VFLAGS)) -Mdir obj_fbw -DPOCKET_VDP1P $(SRC) tb.cpp
+	@mv obj_fbw/Vdiff_top obj_fbw/Vdiff_top.bin 2>/dev/null; mv obj_fbw/Vdiff_top.bin obj_fbw/Vdiff_top
+.PHONY: fbwait
+
 clean:
-	rm -rf gen obj out
+	rm -rf gen obj obj_fbw out
 .PHONY: all run ppm clean
 
 # Line coverage of both designs under the regression: make cov N=40

@@ -39,7 +39,7 @@ struct Cfg {
 	u16 ewdr = 0, ewlr = 0, ewrr = 0;
 	int fast = 0, blur = 0;
 	int vlat = 1;          // 0: no latency, 1: 0..3, 2: 0..10 with rare long
-	int fbrdy = 0;         // 1: FB_RDY randomly low
+	int fbrdy = 0;         // 1: FB_RDY randomly low, 2: low in stretches of up to 40 clocks
 	int dce_p = 4;         // pixel enable period in clocks
 	int bus_upload = 0;    // command table uploaded through the CPU bus
 	int ncmd = 12;
@@ -51,6 +51,7 @@ struct Cfg {
 	int fbinit = 1;
 	int relaxed = 0;       // outputs not compared per clock (VDP1P may stall in FAST mode); memories are
 	int noinit = 0;        // leave the clip/local-coordinate registers at their reset values
+	int fbwait = 0;        // VDP1P built with POCKET_VDP1P: its draw waits for FB_RDY, the golden's does not (--fbwait)
 };
 
 struct Cov {
@@ -93,6 +94,7 @@ struct Side {
 	int vlat = 1;
 	int fbrdy_mode = 0;
 	int fbrdy = 1;
+	int fbhold = 0;
 	Side() : vram(VRAM_WORDS), rng(77) { fb[0].resize(FB_WORDS); fb[1].resize(FB_WORDS); }
 	int latency() {
 		switch (vlat) {
@@ -132,7 +134,8 @@ struct Side {
 				cov.fbw++;
 			}
 		}
-		fbrdy = fbrdy_mode ? (rng.chance(70) ? 1 : 0) : 1;
+		if (fbrdy_mode == 2) { if (fbhold) fbhold--; else if (rng.chance(5)) fbhold = 1 + (int)rng.u(40); fbrdy = !fbhold; }
+		else fbrdy = fbrdy_mode ? (rng.chance(70) ? 1 : 0) : 1;
 	}
 	void drive_regs() {
 		vram_q.set(q); fb0_q.set(fbq[0]); fb1_q.set(fbq[1]); fb_rdy.set(fbrdy);
@@ -415,7 +418,7 @@ struct Top {
 	S.fb_mode3 = SG(t->FB_MODE3_##sfx);
 
 static Top* T;
-static int g_nz = 0, g_show = 0, g_strict_fast = 1;
+static int g_nz = 0, g_show = 0, g_strict_fast = 1, g_fbwait = 0;
 static int g_dbg = 0, g_dbg_cnt = 0, g_dbgfb = 0, g_dbgfb_cnt = 0;
 
 static bool compare_outputs(const char* phase) {
@@ -563,7 +566,7 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 		if (c.bus_upload) std::fill(s->vram.begin() + W_CMD, s->vram.begin() + W_CMD + (c.ncmd + 2) * 16, 0);
 		for (int k = 0; k < 2; k++) for (int i = 0; i < FB_WORDS; i++) { int x = i & 511, y = i >> 9; s->fb[k][i] = c.fbinit ? (u16)(0x8000 | (((x >> 4) & 31) << 0) | (((y >> 3) & 31) << 5) | ((((x + y) >> 5) & 31) << 10) | (fbr.next() & 0x0421)) : 0; }
 		s->rng = Rng(c.seed + 99); s->vlat = c.vlat; s->fbrdy_mode = c.fbrdy; s->busy = 0; s->rd_old = s->we_old = false; s->q = 0; s->pend = 0; s->fbq[0] = s->fbq[1] = 0;
-		s->fbrdy = 1;
+		s->fbrdy = 1; s->fbhold = 0;
 	}
 	if (c.bus_upload) {  // random initial FB content is not used; command words go through the bus
 		for (int i = 0; i < (c.ncmd + 2); i++) {
@@ -600,13 +603,13 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 
 	// run until draw end (IRQ_N low) with background traffic
 	u64 frame0 = (u64)(T->H_ACT + T->H_BLK) * (T->V_ACT + T->V_BLK) * c.dce_p;
-	u64 limit = c.ptm == 2 ? frame0 * 5 : (c.big ? 3000000 : 1500000);
+	u64 limit = c.ptm == 2 ? frame0 * 5 : (c.big ? 3000000 : 1500000) * (c.fbwait ? 4 : 1);
 	u64 ran = 0;
 	bool done = false;
-	bool term = (c.id % 7 == 3);
+	bool term = (c.id % 7 == 3) && !c.fbwait;
 	u64 bg_next = 200;
 	while (ran < limit) {
-		if (!cycle(true, !(c.id % 11 == 5 && ran >= 6000 && ran < 6004))) return false;   // soft reset pulse
+		if (!cycle(true, !(c.id % 11 == 5 && !c.fbwait && ran >= 6000 && ran < 6004))) return false;   // soft reset pulse
 		ran++;
 		if (c.bg && T->m.q.empty() && T->m.st == Master::IDLE && ran > bg_next) {
 			bg_next = ran + 50 + sr.u(500);
@@ -626,8 +629,13 @@ static bool run_scenario(const Cfg& c, int ppm_n, const std::string& outdir) {
 		}
 		if (term && ran == 3000) T->m.q.push_back(wr16(REG + 0x0C, 2, 0));
 		if (term && ran > 20000) { done = true; break; }
-		if (!a.irq_n.get() && T->m.idle() && ran > 400) { done = true; break; }
+		if (!a.irq_n.get() && (!c.fbwait || !b.irq_n.get()) && T->m.idle() && ran > 400) { done = true; break; }
 	}
+	if (c.fbwait && !done) {
+		if (!a.irq_n.get()) { printf("MISMATCH scenario %d: the golden's draw ended, VDP1P's did not within the limit\n", c.id); return false; }
+		printf("note: scenario %d: no draw end within limit, not compared\n", c.id); return true;   // a looping list
+	}
+	if (c.fbwait && !run_cycles(2000)) return false;   // the last pixel may still wait for FB_RDY after the draw end
 #ifdef DBGST
 	printf("  end: master st=%d cs_n=%d q=%zu rdy_n=%d VRAM_ST=%d CPU_VRAM_BUSY=%d VRAM_SEL=%d\n", (int)T->m.st, T->m.cs_n, T->m.q.size(), a.rdy_n.get(), (int)T->t->rootp->diff_top__DOT__u_r__DOT__VRAM_ST, (int)T->t->rootp->diff_top__DOT__u_r__DOT__CPU_VRAM_BUSY, (int)T->t->rootp->diff_top__DOT__u_r__DOT__VRAM_SEL);
 #endif
@@ -696,6 +704,9 @@ static Cfg make_cfg(int id, u64 seed_base) {
 	c.frames_after = 2;
 	c.noinit = (id % 16 == 15);
 	c.fbinit = (id % 5 != 4);
+	if (g_fbwait) {   // the two sides draw at different speeds: nothing whose effect depends on how far the draw has got
+		c.fbwait = 1; c.relaxed = 1; c.fbrdy = 2; c.ptm = 1; c.fcm = 1; c.fct = 0; c.vbe = 0; c.bg = 0; c.blur = 0;
+	}
 	return c;
 }
 
@@ -711,6 +722,7 @@ int main(int argc, char** argv) {
 		else if (!strcmp(argv[i], "--first") && i + 1 < argc) first = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--show")) g_show = 1;
 		else if (!strcmp(argv[i], "--relax-fast")) g_strict_fast = 0;
+		else if (!strcmp(argv[i], "--fbwait")) g_fbwait = 1;
 		else if (!strcmp(argv[i], "--dbg") && i + 1 < argc) g_dbg = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--dbgfb") && i + 1 < argc) g_dbgfb = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--out") && i + 1 < argc) outdir = argv[++i];
