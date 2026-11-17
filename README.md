@@ -125,7 +125,10 @@ make -C sim sys       full-system simulation (Verilator), sim/sys/tb_sys.sv for 
 ```
 
 `python3 tools/check_json.py --no-bitstream` checks the definition files. The design fills the FPGA (about 99% of
-the LABs), so the fit depends on the seed: a release uses the first seed that meets timing at every corner.
+the LABs), so the fit depends on the seed: a release uses the first seed that meets timing at every corner. It
+also depends on the number of processors the fitter may use, so `tools/qflow.sh` fits on one unless `QFLOW_PROCS`
+says otherwise: the seed of a release then gives the released bitstream on any host that runs the same Quartus
+build.
 
 ## Layout
 

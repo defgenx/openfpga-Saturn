@@ -13,7 +13,7 @@ compile() {
 	if command -v quartus_sh >/dev/null; then
 		(cd src/fpga && sh ../../tools/qflow.sh)
 	else
-		docker run --rm --platform linux/amd64 --name saturn-build -v "$PWD":/build -w /build/src/fpga \
+		docker run --rm --platform linux/amd64 --name saturn-build -e QFLOW_PROCS -v "$PWD":/build -w /build/src/fpga \
 			"$QUARTUS_IMAGE" sh ../../tools/qflow.sh
 	fi
 }
