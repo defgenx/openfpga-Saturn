@@ -61,7 +61,9 @@ reg [1:0]  ph = 2'd0;
 
 assign seg1_free = !v1;
 assign idle = (c0 == 12'd0) && !v1 && !rq;
-assign fin  = idle && !more;
+// not in the clock after a push: that word is still hidden from the port (f_empty), and a read waiting for the last
+// word of a transfer would see an empty FIFO and the end together and answer 0 in its place
+assign fin  = idle && !more && !pushed;
 assign rq_d = (mode == 3'd2) ? hold : (mode == 3'd3) ? hold : 16'd0;
 
 wire push_eng = rq && dn && !rq_we && mode == 3'd1;

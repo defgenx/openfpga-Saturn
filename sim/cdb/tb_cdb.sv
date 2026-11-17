@@ -145,6 +145,7 @@ generate if (LLE) begin : g
 	end
 	final $display("LLE stats: cd_ck=%0d cdirqu4=%0d dreq0=%0d mask=%h reg1a=%h", ckcnt, irqu_cnt, dreq_cnt, ygr.CDMASKU, ygr.REG1A);
 	wire [15:0] audio_l = CD_SL, audio_r = CD_SR;
+	integer dstall = 0, dstall_pct = 0;     // set by the script op of the same name, used by the HLE DRAM model only
 	function [15:0] dram_word(input integer a); dram_word = ram[a]; endfunction
 	function [31:0] dbg_state(input integer d); dbg_state = 0; endfunction
 	task fw_stall(input integer us); endtask
@@ -455,6 +456,10 @@ initial begin
 				$fwrite(lf, "PUTDATA %0d %04h\n", a1, a2);
 			end
 			else if (op == "time") $fwrite(lf, "TIME %0d us\n", $time / 1000);
+			else if (op == "dstall") begin       // dstall <clocks> <percent>: from here on, as +DSTALL / +DSTALL_PCT
+				n = $sscanf(line, " %s %d %d", op, a1, a2); g.dstall = a1; g.dstall_pct = a2;
+				$fwrite(lf, "DSTALL %0d %0d\n", a1, a2);
+			end
 			else if (op == "mark") begin n = $sscanf(line, " %s %s", op, op); $fwrite(lf, "MARK %0s\n", op); end
 			else if (op == "dram") begin
 				n = $sscanf(line, " %s %h %d", op, a1, a2);

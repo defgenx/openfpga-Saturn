@@ -79,6 +79,11 @@ if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host r
     ok("past end: 1024 words then zeros", d[:1024] == user(40) and all(x == 0 for x in d[1024:]), d[1020:1030])
     r = find_cmd("past_end", "0600")
     ok("past end: count 1024", r is not None and r[1] == 1024, r)
+    marks = ["t%02d" % (k + 1) for k in range(16)]
+    bad = [m for i, m in enumerate(marks) if datas(m)[0] != user(40 + i)]
+    ok("tail: 16 one-sector transfers with slow DRAM, word for word with the last word", not bad, bad)
+    bad = [m for m in marks if (find_cmd(m, "0600") or [0, 0])[1] != 1024]
+    ok("tail: end data transfer counts 1024", not bad, bad)
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if NPC:   # script_npc.txt: a Play with "no pickup change" after the drive paused at the end of the previous range

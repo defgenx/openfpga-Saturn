@@ -74,7 +74,9 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
   after the write, in the same cycle; for a read and a write of one address in read/write clock mode the Cyclone V
   handbook gives unknown read data, and no timing check covers it (the simulation model returns the new word). The
   head entry is therefore hidden for one clock after its write (`n == 1 && pushed` counts as empty): it is taken from
-  the next falling-edge read. Cost: one clock of latency on a word that arrives into an empty FIFO.
+  the next falling-edge read. Cost: one clock of latency on a word that arrives into an empty FIFO. The end of a
+  transfer (`fin`, after which a read answers 0 at once) waits for that clock too: a read waiting for the last word
+  of a transfer otherwise saw the hidden word and the end in the same clock and answered 0 in its place.
 * **CD-DA**: audio sectors are consumed by the sink from the same stream, left on even words and right on odd words,
   to `CD_SL/CD_SR`, which is what the YGR019 did.
 * **Drive pace**: one sector, data or audio, can be armed in `cdb_hle` while the previous one is still streaming
@@ -220,8 +222,12 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   stopped for 3 ms mid-transfer (`fdata <n> <word> <us>` holds SERV's instruction bus), Get+Delete of 40 sectors with a
   2.5 ms stop, all read with `host_rd_fast` (one A-bus read per wait release, 0.63 us per word) while the drive keeps
   delivering sectors; data compared word for word with the image, End Data Transfer counts, and a read 6 words past the
-  end of a 1-sector transfer (zeros, count 1024). **8 checks, 0 failed**; the RTL before the "more" bit fails 4 (a
-  zero-filled sector each in the stalled transfers, counts 3072 and 38,359).
+  end of a 1-sector transfer (zeros, count 1024). Then 16 one-sector Get+Delete transfers after `dstall 250 50`
+  (the `+DSTALL` model below, switched on by the script: half the DRAM accesses 4.4 us late), so the FIFO is empty
+  when each transfer's last word arrives. **10 checks, 0 failed**; the RTL before the "more" bit failed 4 of the
+  first 8 (a zero-filled sector each in the stalled transfers, counts 3072 and 38,359); the RTL whose `fin` did not
+  wait for the hidden word fails 2 (with the firmware of v0.1.6, 4 of the 16 transfers end with 0 in place of their
+  last word, count 1023; which ones depends on the firmware's timing).
 * `script_rate.txt` (`+IMG=` / `+TOCBIN=` of a real disc; it plays FAD 0x3A0..0xB06): the drive position from a Get CD
   Status after each `time` line (the script op that logs the simulation time), sparse then back-to-back host polling.
 * `+DSTALL=<clocks> +DSTALL_PCT=<n>`: n percent of the `cdram` model's accesses take that many clocks longer.
