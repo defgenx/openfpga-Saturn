@@ -806,14 +806,17 @@ static void cmd_exec(void)
 		break;
 	case 0x10: {
 		u32 psp = cd_fad(), pep = ((u32)(CD[2] & 0xFF) << 16) | CD[3];
-		u8 pm = CD[2] >> 8;
+		u8 pm = CD[2] >> 8, held;
 		if (psp == 0xFFFFFF) psp = play_cmd_start;
 		if (pep == 0xFFFFFF) pep = play_cmd_end;
 		else if ((psp & 0x800000) && (pep & 0x800000)) pep = 0x800000 | ((psp + pep) & 0x7FFFFF);
 		if (((psp ^ pep) & 0x800000) && pep != 0) { cdstatus(1, 0); break; }
 		play_cmd_start = psp; play_cmd_end = pep;
-		/* "no pickup change" keeps reading only while the drive plays; paused, it seeks (Mednafen's StartSeek) */
-		if (at_end || pos.status == S_PAUSE) pm &= 0x7F;
+		/* "no pickup change" keeps reading while the drive plays. A paused drive (end of the range, buffers full, Seek
+		   pause) seeks again where its pickup is and reads on from there while that is inside the new range: Mednafen's
+		   StartSeek enters SEEK_START2, which skips the SeekStart1 that takes the new start. A seek to the start would
+		   give the game sectors it already has a second time */
+		held = (pm & 0x80) && dphase == D_PLAY && (at_end || pos.status == S_PAUSE);
 		pos.status = S_BUSY;
 		cdstatus(0, 0);
 		if (!(pm & 0x80)) clear_pending_sec();
@@ -822,7 +825,8 @@ static void cmd_exec(void)
 		if (!(pm & 0x70)) play_cmd_rep = pm & 0xF;
 		play_rep = play_cmd_rep; play_rep_ctr = 0;
 		at_end = 0;
-		start_seek(play_cmd_start, pm & 0x80);
+		if (held) { pause_drop(); start_seek(0x800000 | cur_sector, 0); play_start = play_cmd_start; }
+		else start_seek(play_cmd_start, pm & 0x80);
 		break; }
 	case 0x11: {
 		u32 sp = cd_fad();

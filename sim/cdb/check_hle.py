@@ -82,11 +82,22 @@ if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host r
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if NPC:   # script_npc.txt: a Play with "no pickup change" after the drive paused at the end of the previous range
+    # (also after a Seek pause and with the buffers full): the drive reads on from where the pickup stopped
+    def fad(r):
+        return None if r is None else (r[0] & 0xFF) << 16 | r[1]
     r = find_cmd("second", "5100")
-    ok("npc: the paused drive seeks and reads 8 more sectors", r is not None and r[3] == 16, r)
+    ok("npc end: the paused drive reads on from where it stopped (16 sectors)", r is not None and r[3] == 16, r)
+    r = find_cmd("ahead", "5100")
+    ok("npc end: a range ahead of the pickup is not read, the Play ends (PEND)",
+       r is not None and r[3] == 16 and any(l.startswith("WAIT 0010 ok") for l in cmds("ahead")), r)
     d = datas("read")[0]
-    ok("npc: sectors 0..7 then 20..27 word for word",
-       d == [w for l in list(range(8)) + list(range(20, 28)) for w in user(l)], "len %d" % len(d))
+    ok("npc end: sectors 0..15 word for word", d == [w for l in range(16) for w in user(l)], "len %d" % len(d))
+    r, s = find_cmd("pause", "5100"), find_cmd("pause", "5400")
+    ok("npc pause: reads on after a Seek pause (32 sectors, the last at FAD 0xB5)",
+       r is not None and r[3] == 32 and fad(s) == 0xB5, (r, s))
+    r, s, t = find_cmd("full", "5100"), find_cmd("full", "5400"), find_cmd("full", "5400", 1)
+    ok("npc full: reads on after the buffers were full (32 sectors, FAD 0xAA at 20, the last 0xB5)",
+       r is not None and r[3] == 32 and fad(s) == 0xAA and fad(t) == 0xB5, (r, s, t))
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if PAUSE:   # script_pause.txt: Reset Selector, Pause, Reset Selector while streaming, then Play elsewhere
