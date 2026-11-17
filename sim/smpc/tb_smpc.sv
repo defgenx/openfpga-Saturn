@@ -201,6 +201,26 @@ module tb_smpc;
 		wait_sf(66860 * 2);
 		idle(200);
 	endtask
+	// INTBACK status + peripheral data with IREG0 written while the status part runs: pre at pre_t CE after the COMREG write
+	// (before the status interrupt), post at post_t CE after the interrupt (-1: none). The SMPC program reads the IREG0 level
+	// 18.5 us after the interrupt and then every 20 us: CONTINUE (bit 7) first, BREAK (bit 6) second.
+	task automatic intback_ir0(input string tag, input [7:0] pre, input int pre_t, input [7:0] post, input int post_t);
+		int t;
+		miq_l = 0; miq_h = 0;
+		while (fr != 20000) @(posedge CLK);
+		wr(7'h01, 8'h01); wr(7'h03, 8'h08); wr(7'h05, 8'hF0); wr(7'h63, 8'h01);
+		$display("CMD %s 10 t=%0d", tag, ce);
+		t = ce; wr(7'h1F, 8'h10);
+		if (pre_t >= 0) begin while (ce < t + pre_t) @(posedge CLK); wr(7'h01, pre); end
+		while (!miq_l && !miq_h) @(posedge CLK);
+		t = ce;
+		if (post_t >= 0) begin while (ce < t + post_t) @(posedge CLK); wr(7'h01, post); end
+		mirq_dump({tag, ".0"}, 2000);
+		miq_l = 0; miq_h = 0;
+		mirq_dump({tag, ".1"}, 2 * 66860);
+		wait_sf(66860 * 2);
+		idle(200);
+	endtask
 
 	reg [7:0] ra, rb;
 	initial begin
@@ -255,6 +275,13 @@ module tb_smpc;
 		intback("INTBACK_PERI_OPT", 8'h01, 8'h08, 8'hF0, 4);
 		intback("INTBACK_PERI_NOOPT", 8'h01, 8'h0A, 8'hF0, 4);
 		intback("INTBACK_PERI_ONLY", 8'h00, 8'h08, 8'hF0, 4);
+		// CONTINUE / BREAK by the IREG0 level: a BREAK left in IREG0 by a late handler, then a CONTINUE 229 us after the
+		// interrupt (the program has already taken the BREAK); a CONTINUE 4 us after it; C0 (CONTINUE wins); a late BREAK.
+		// The cases with a peripheral part are named INTBACK_P* (cmp.py gives those groups the pad-poll tolerance).
+		intback_ir0("INTBACK_BREAK_CONT", 8'h40, 500, 8'h80, 916);
+		intback_ir0("INTBACK_PERI_CONT4US", 8'h00, -1, 8'h80, 16);
+		intback_ir0("INTBACK_PERI_C0", 8'h00, -1, 8'hC0, 52);
+		intback_ir0("INTBACK_BREAK100US", 8'h00, -1, 8'h40, 400);
 		pad2 = 0;
 		intback("INTBACK_PONLY_NOOPT", 8'h00, 8'h0A, 8'hF0, 4);
 		intback("INTBACK_PERI_1PAD", 8'h00, 8'h08, 8'hF0, 4);

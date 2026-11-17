@@ -16,6 +16,10 @@ Largest offsets H-L: commands pins +45 / SF +31; INTBACK status MIRQ +23; pad po
 `BACK2BACK*`: the host writes the next command 60 to 80 clk (1.1-1.5 us at 53.7 MHz) after it sees SF clear (a polling
 host can be that fast); the firmware acknowledges the command event before it clears SF, so that command is taken and SF
 clears again.
+`INTBACK_BREAK_CONT`, `INTBACK_PERI_CONT4US`, `INTBACK_PERI_C0`, `INTBACK_BREAK100US`: IREG0 written around the status
+interrupt. Like the SMPC program the firmware follows the IREG0 level after the status part (a value written before the
+interrupt counts, so does one written 4 us after it; CONTINUE is checked before BREAK; a BREAK clears SF about 22 us after it
+is seen), so a BREAK left by a late handler ends the INTBACK even if a CONTINUE follows later.
 
 ## Measured (standalone `quartus_fit`, area profile, virtual pins; `sizing/smpc-serv/`)
 | Variant | ALMs | regs | M10K |

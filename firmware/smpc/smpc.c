@@ -5,9 +5,10 @@
 
 enum { MSHRES = 1, MSHNMI = 2, SSHRES = 4, SSHNMI = 8, SYSRES = 16, SNDRES = 32, CDRES = 64, DOTSEL = 128, MIRQ = 256 };
 #define TS0 45                       /* INTBACK status: ticks from the COMREG write to the start of the 996-tick sequence (calibrated) */
+#define IB_BRK 2                     /* INTBACK: BREAK seen -> SF clear (calibrated: the SMPC program takes 86 ticks from its read) */
 
 static u8  rtc[7], smem[4], ir[3];   /* year hi/lo, day|month, days, hour, min, sec (BCD, month binary) */
-static u8  ste, pmd, oc, vbcnt, st, contv, brk, cont_prev;
+static u8  ste, pmd, oc, vbcnt, st;
 static u8  clean, ib_exec, ib_peri, ib_imm, ib_optim, vbpend, optim_t, notopt_t;
 static u32 t_rtc, t_optim, t_imm, t_vbin, t_pl, t_vbtime;
 
@@ -69,8 +70,17 @@ static void poll_port(u32 p, u32 *t) {
 
 /* INTBACK */
 static void ib_end(void) { ib_exec = ib_peri = ib_imm = st = 0; sf0(); }
+/* after the status part (st 2) the SMPC program (ROM addresses 615-637) reads the IREG0 level 18.5 us after the interrupt and then every
+ * 20 us: bit 7 set = CONTINUE (checked first, so C0 continues; one peripheral part only, so the expected bit is always 1),
+ * else bit 6 set = BREAK, which clears SF 21.5 us after that read. A value written before the interrupt counts too.
+ * main() looks at the level about 20 us after the interrupt and again after every IREG0 write. */
+static inline __attribute__((always_inline)) void ib_cb(void) {
+	u32 i0 = MM(R_IREG);
+	if (i0 & 0x80) { dly(381); ib_peri = 1; st = 0; }
+	else if (i0 & 0x40) { dly(IB_BRK); ib_end(); }
+}
 static void ib_status(u32 t) {
-	u32 i0, opt = ib_optim ? 30 : 0, nop = (ir[1] & 8) ? 0 : 24, p = MM(R_PINS), i;
+	u32 opt = ib_optim ? 30 : 0, nop = (ir[1] & 8) ? 0 : 24, p = MM(R_PINS), i;
 	oreg(0, (ste << 7) | ((MM(R_IN) >> 4) & 0x40));
 	for (i = 0; i < 7; i++) oreg(1 + i, rtc[i]);
 	oreg(8, 1);
@@ -79,11 +89,11 @@ static void ib_status(u32 t) {
 	oreg(11, (p & CDRES) | 2);
 	for (i = 0; i < 4; i++) oreg(12 + i, smem[i]);
 	wait_until(t + 933 - opt - nop);
-	if (ir[1] & 8) { ib_exec = 1; ib_optim = !(ir[1] & 2); cont_prev = 0; }
+	if (ir[1] & 8) { ib_exec = 1; ib_optim = !(ir[1] & 2); MM(R_SF) = 3; }   /* IREG0 event on before the interrupt (SF stays set) */
 	setsr(0x4F | sres() | ((ir[1] & 8) ? 0x20 : 0));
 	wait_until(t + 962 - opt - nop);
 	mirq();
-	if (ir[1] & 8) { st = 2; MM(R_SF) = 3; i0 = MM(R_IREG); contv = (i0 >> 7) & 1; brk = (i0 >> 6) & 1; return; }          /* SF stays set */
+	if (ir[1] & 8) { st = 2; return; }          /* SF stays set; main() follows the IREG0 level (ib_cb) */
 	wait_until(t + 996 - opt - nop);
 	sf0();
 }
@@ -152,7 +162,7 @@ static inline __attribute__((always_inline)) void do_command(void) {
 		}
 		if (ir[1] & 8) {
 			ib_optim = !(ir[1] & 2);
-			ib_exec = ib_peri = ib_imm = 1; t_imm = t0 + 87 + ((ir[1] & 2) ? 413 : 964); cont_prev = 0;
+			ib_exec = ib_peri = ib_imm = 1; t_imm = t0 + 87 + ((ir[1] & 2) ? 413 : 964);
 			if (ir[2] & 15) st = 1;
 			return;
 		}
@@ -188,7 +198,7 @@ void main(void) {
 	ste = (MM(R_IN) >> 7) & 1;
 	for (;;) {
 		ev = MM(R_EV);
-		if (!ev || (st && ev == EV_CMD)) {
+		if ((!ev || (st && ev == EV_CMD)) && !(st == 2 && (MM(R_IREG) & 0xC0))) {   /* st 2: a CONTINUE / BREAK level needs no event */
 			if (!clean) { rearm(); clean = 1; }
 			if (!st) while (!(ev = MM(R_EV))) ;
 			else do ev = MM(R_EV) & ~(u32)EV_CMD; while (!ev);
@@ -197,8 +207,8 @@ void main(void) {
 		if (ev & EV_I0) {                                            /* IREG0 written: CONTINUE/BREAK only matter in state 2 */
 			MM(R_EV) = EV_I0;
 			if (st != 2) continue;
-			t = MM(R_IREG); contv = (t >> 7) & 1; brk = (t >> 6) & 1;
 		}
+		if (st == 2) ib_cb();
 		clean = 0;
 		if (ev & EV_RTC) { MM(R_EV) = EV_RTC; rtc_load(); }
 		if (ev & EV_VBIN) {
@@ -214,10 +224,6 @@ void main(void) {
 			if (t_optim && due(t_optim & 0xFFFFFF) && (MM(R_IN) & 0x20)) { optim_t = 1; t_pl = t_optim & 0xFFFFFF; t_optim = 0; }
 		}
 		if (ib_exec && vbpend) { vbpend = 0; dly(125); ib_end(); continue; }
-		if (st == 2) {
-			if (brk) { brk = 0; dly(155); ib_end(); continue; }
-			if (contv != cont_prev) { cont_prev = contv; dly(381); ib_peri = 1; st = 0; }
-		}
 		if (st == 1 && vbcnt == (ir[2] & 15)) st = 0;
 		if (ib_peri && (ib_imm ? due(t_imm) : (ib_optim ? optim_t : notopt_t)) && (MM(R_IN) & 0x20)) { do_poll(ib_imm ? t_imm : t_pl); continue; }
 		if (!st && due(t_rtc)) { t_rtc += 4000000; rtc_tick(); }
