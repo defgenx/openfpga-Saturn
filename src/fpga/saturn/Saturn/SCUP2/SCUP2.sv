@@ -609,7 +609,9 @@ module SCUP2
 	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
 	
 	//DMA buffer: 8 bytes as 4 lanes (byte position p is lane p[1:0], row p[2]) in MLAB RAM.
-	//A push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS, in the CE_F cycle.
+	//A read push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS, in the CE_F cycle.
+	//A DSP push writes all four bytes, as in the golden: DMA_RBA is not always 0 in a DSP transfer (after a DSTP
+	//stop, or when a stale bus read acknowledge skipped the DSP address load), and the word would lose bytes.
 	bit         ABUS_READ_DONE, BBUS_READ_DONE;
 	wire        CBUS_READ_DONE = CE_F && RES_N && CBUS_ST == CBUS_READ && CCACHE_FULL[CCACHE_RADDR[2]] && !DMA_BUF_SIZE[2];
 	wire        DSP_PUSH = CE_F && RES_N && (DMA_ST == DMA_DSP_BBUS || DMA_ST == DMA_DSP_CBUS) && DSP_DMA_REQ && !DMA_BUF_SIZE;
@@ -625,7 +627,7 @@ module SCUP2
 	genvar gl;
 	generate for (gl=0; gl<4; gl++) begin : LANE
 		wire [1:0] j = 2'(gl) - DMA_BUF_WPOS[1:0];
-		wire [3:0] kk = {2'b00,j} + {2'b00,DMA_RBA};
+		wire [3:0] kk = {2'b00,j} + {2'b00,DSP_PUSH ? 2'b00 : DMA_RBA};
 		wire [2:0] pp = DMA_BUF_WPOS + {1'b0,j};
 		wire       rrow = DMA_BUF_RPOS[2] ^ (2'(gl) < DMA_BUF_RPOS[1:0]);
 		wire       wen = PUSH_ANY && (PUSH_OVR || !kk[3] && !kk[2]);
