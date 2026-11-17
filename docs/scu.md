@@ -86,7 +86,8 @@ muxes saved), M10K decode ROM (COND input breaks it), sharing the +4 incrementer
   (tables in B-bus and C-bus memory), RUP/WUP, address add modes, unaligned counts, all start factors, simultaneous
   levels, DSTP abort. Timers 0/1, IMS/IST. DSP: random programs (all instruction classes, loops, JMP, END/ENDI, DMA
   instructions), pause/step, data RAM read-back. A/B/C bus memory models with random wait states; `RAMH_SLOW` 0 and 1;
-  three CE patterns; `FAST` 0/1. A stall watchdog resets the SCU when a protocol-illegal script hangs it.
+  three CE patterns; `FAST` 0/1. A stall watchdog resets the SCU when a protocol-illegal script hangs it. After the
+  random part a directed tail writes single bytes and words of DR/DW/DC of levels 0 and 1 and reads them back.
 - `tb_dsp`: REF_SCU_DSP vs SCU_DSP alone, all outputs including the debug taps (`DMA_DO` only in CE_F cycles).
 - `mutate.sh`: single-line mutations of the golden RTL must be caught; 10 of 12 are. The survivors are
   a dead refresh branch (`CBUS_RFS_PEND` is never set) and the level-0xB (timer 1) interrupt acknowledge, which the

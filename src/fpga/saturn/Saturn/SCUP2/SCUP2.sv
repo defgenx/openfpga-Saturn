@@ -401,20 +401,22 @@ module SCUP2
 	
 	bit         DMA_PEND[4];
 	bit [ 7: 2] REG_A;
+	//Pending CPU write to DR/DW/DC (captured in the CE_R cycle of REG_WWAIT, performed in the next clk)
+	bit         CW_DR, CW_DW, CW_DC;
+	bit  [ 3:0] CW_BE;
 	
 	//DMA channel registers read through one set of channel muxes: the idle-state load happens in a
 	//CE_R cycle (lowest pending channel), the register-file read in a CE_F cycle (channel from REG_A).
+	//The clk of a pending CPU write reads the channel it writes, whose other bytes a byte or word write keeps.
+	//In the system that clk is a CE_F one anyway; with the benches' other CE patterns it is not.
 	wire [ 1:0] DMA_PEND_CH = DMA_PEND[3] ? 2'd3 : DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;	//3: DSP
-	wire [ 1:0] DREG_CH = CE_F ? REG_A[6:5] : DMA_PEND_CH;
+	wire [ 1:0] DREG_CH = (CE_F || CW_DR || CW_DW || CW_DC) ? REG_A[6:5] : DMA_PEND_CH;
 	wire [26:0] DRQ, DWQ;
 	wire [19:0] DCQ;
 	wire [26:0] DRSEL = DREG_CH == 2'd3 ? {DSP_DR,2'b00} : DRQ;
 	wire [26:0] DWSEL = DREG_CH == 2'd3 ? DSP_DW : DWQ;
 	wire [19:0] DCSEL = DCQ;
 	
-	//Pending CPU write to DR/DW/DC (captured in the CE_R cycle of REG_WWAIT, performed in the next clk)
-	bit         CW_DR, CW_DW, CW_DC;
-	bit  [ 3:0] CW_BE;
 	bit         CH_INIT;
 	bit  [ 1:0] CH_INIT_CNT;
 	//DMA write-back (CE_R cycle)

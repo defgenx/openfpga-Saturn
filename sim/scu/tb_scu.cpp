@@ -418,6 +418,14 @@ static void scen_misc() {
 	}
 }
 
+static void scen_chwrite() {
+	// byte and word writes to DR/DW/DC of levels 0 and 1, each read back: the bytes a write leaves out must keep
+	// that level's value, not take another level's (all three levels hold different values first)
+	for (int l = 0; l < 3; l++) for (int r = 0; r < 3; r++) wreg(0x20 * l + 4 * r, rng.next());
+	static const uint8_t dq[] = {0xE, 0xD, 0xB, 0x7, 0xC, 0x3};
+	for (int l = 0; l < 2; l++) for (int r = 0; r < 3; r++) { wreg(0x20 * l + 4 * r, rng.next(), dq[rng.below(6)]); rreg(0x20 * l + 4 * r); }
+}
+
 static void gen_scenario(uint64_t cycles_left) {
 	(void)cycles_left;
 	int k = rng.below(100);
@@ -461,7 +469,8 @@ int main(int argc, char** argv) {
 	if (rng.pct(70)) wreg(0xA0, 0);                          // unmask all interrupts
 	if (rng.pct(50)) { wreg(0x94, rng.below(30)); wreg(0x98, rng.pct(50) ? 0x101 : 1); wreg(0x90, rng.below(30)); }
 	uint64_t idle_cycles = 0;
-	for (cyc = 0; cyc < ncyc; cyc++) {
+	bool tail_done = false;   // after the random part: scen_chwrite once, then stop (the random part is unchanged by it)
+	for (cyc = 0; cyc < ncyc + 200000; cyc++) {
 		// clock enables
 		bool ce_r, ce_f;
 		switch (ce_mode) {
@@ -475,7 +484,10 @@ int main(int argc, char** argv) {
 			cpu_tick(d->CWAIT_N, d->CDO);
 			if (cpu_state == 0 && opq.empty()) {
 				uint32_t lvl = (~d->CIRL_N) & 15;
-				if (lvl && rng.pct(60)) ivec(lvl);
+				if (cyc >= ncyc) {
+					if (tail_done) break;
+					scen_chwrite(); tail_done = true;
+				} else if (lvl && rng.pct(60)) ivec(lvl);
 				else gen_scenario(ncyc - cyc);
 			}
 		}
@@ -486,6 +498,7 @@ int main(int argc, char** argv) {
 		d->CLK = 1; d->eval(); check("clk1");
 		if (rng.below(1000) == 0 && 0) idle_cycles++;
 	}
+	if (cyc == ncyc + 200000) { printf("the channel register tail did not finish within 200000 cycles after the random part\nFAIL\n"); exit(1); }
 	printf("PASS seed=%llu cycles=%llu ce_mode=%d fast=%d cpu_ops=%llu ivec=%llu resets=%d stalls=%llu rdlog=%zu\n",
 	       (unsigned long long)seed, (unsigned long long)ncyc, ce_mode, fast,
 	       (unsigned long long)ops_done, (unsigned long long)ivec_done, res_cnt, (unsigned long long)stall_resets, rdlog.size());
