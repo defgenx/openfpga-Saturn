@@ -594,16 +594,16 @@ The old limit (a VBlank erase at full rate plus a sector burst lost erase writes
 
 SRAM pin timing. The chip has no clock; the reference is the OE# pin (`sram_ref_pin`, a generated clock on the
 `sram_oe_n` port sourced from the `e_oe_n` register), every other pin is held within `SRAM_SKEW` = 2 ns of it, and read
-data is valid `SRAM_SKEW` + tAA + 1 ns of board after it (tAA 10 ns assumed: the part is not known). Up to v0.2.4 the
+data is valid `SRAM_SKEW` + tAA + 1 ns of board after it (tAA 55 ns: the AS6C2016-55 of section 2). Up to v0.2.4 the
 reference was the `e_oe_n` register (5.8 ns of route and 3.3 V buffer dropped from the read check, which read +1.8 ns and
 is -2.70 at slow 85C with the corrected SDC) and `fb_q` was a fabric register 4.6 ns from its pad, sampled 3 clk_ram after
 the address edge. Now every SRAM pin register and the read register `dq_r` are I/O cell registers (`ap_core.qsf`), and
 `dq_r` samples at every edge: `fb_q` is `dq_r`, so in the `fb_done` cycle it holds the word sampled at the edge that sets
-`fb_done`, 4 clk_ram (34.9 ns) after the address edge. The pins of the next access change at that edge too and reach the
+`fb_done`, 8 clk_ram (69.8 ns) after the address edge. The pins of the next access change at that edge too and reach the
 chip 3 to 8 ns later, so the sample still sees the word (hold check at that edge, input minimum -`SRAM_SKEW`). `fb_q` is
 don't-care outside `fb_done` (`vdp1_fb_pocket` reads it only then). In `tb_fb` (pin delays 3.5 ns out, 1 ns in) a read
-passed up to tAA 30 ns (was 21 ns). With RD_CYC = 8 a read passes up to tAA 62 ns; the negative run uses 66 ns. Seed 3 fit: read setup +15.0 ns at slow 85C with tAA
-10 ns (so tAA up to about 25 ns), hold +0.23 at fast 0C, pin window +1.28 / +1.27.
+passed up to tAA 30 ns (was 21 ns). With RD_CYC = 8 a read passes up to tAA 62 ns; the negative run uses 66 ns. v0.1.6 fit
+(seed 6): read setup +0.47 ns at slow 85C with tAA 55 ns, hold +2.13 at fast 0C, pin window +1.27 / +1.43.
 
 ## 6. Bandwidth budget
 
