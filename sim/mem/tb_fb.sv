@@ -12,6 +12,8 @@
 //               both buffers, every pixel read back; M10K spans keep 2 / 5 clk_sys per pixel
 //   G, G2       FB1 tail (from column 184) / FB0 lines (after blanking, FB_DISP_SOON) displayed every dot while test F's
 //               draw side fills the other buffer's SRAM part: every pixel valid within 7 clk_sys (VDP2 takes it at the 8th)
+//   I           CPU reads (FB_RD held until FB_RDY) with a frame change while they wait behind queued draw writes: the
+//               word is that of the buffer the read started in or of the one it ends in, never a stale FBn_Q
 //   -DFBD_NOWAIT   test F's VDP1P model ignores FB_RDY (MiSTer's draw timing): must FAIL
 //   -DSRAMAA_PS=n  SRAM access time in the model (default 55000, the Pocket's AS6C2016-55)
 //   -DCLK_ALIGNED  clk_sys rising with every other clk_ram rising edge (the PLL's phase); default half a clk_ram off
@@ -328,6 +330,47 @@ task automatic frun(output integer cyc);
 	end
 endtask
 
+// ---------------------------------------------------------------- CPU read across a frame change (test I)
+// VDP1P's FS_CPU_WAIT: FB_RD and the CPU address go to the drawn buffer and are held until FB_RDY; the bus takes
+// FB_DRAW_Q a clk_sys later. A frame change (FB_SEL) while the read waits moves FB_RD and the address to the other
+// buffer, drawn from then on, and gives the one it left the display address. Buffer b is drawn first; (x, y) holds
+// vo there and vn in the other buffer, whose Q shows vd (a displayed pixel) before the change.
+integer i_bad = 0, i_old = 0, i_new = 0;
+task automatic cpu_rd_swap(input integer b, input [8:0] x, input [7:0] y, input integer dly);
+	reg [15:0] vo, vn, vd, got; integer c, sw;
+	begin
+		@(posedge clk_sys) fsel <= (b == 0);
+		drain;
+		vo = $urandom; vn = vo ^ 16'h0FF0; vd = vo ^ 16'hF00F;
+		preload(b, idx_of(x, y), vo);
+		preload(1 - b, idx_of(x, y), vn);
+		preload(1 - b, idx_of(x, y + 1), vd);
+		disp(1 - b, vaddr(x, y + 1));
+		for (c = 0; c < 100; c = c + 1) draw_w(b, 192 + c, 10, $urandom, 2'b11);   // queued writes the read waits behind
+		wait_rdy;
+		if (b == 0) begin fb0_a <= vaddr(x, y); fb0_rd <= 1; end else begin fb1_a <= vaddr(x, y); fb1_rd <= 1; end
+		sw = 0;
+		for (c = 1; !(c > 1 && fb_rdy); c = c + 1) begin
+			@(posedge clk_sys);
+			if (c == dly && !fb_rdy) begin
+				sw = 1; fsel <= !fsel;
+				if (b == 0) begin fb0_rd <= 0; fb0_a <= vaddr(x, y + 1); fb1_rd <= 1; fb1_a <= vaddr(x, y); end
+				else        begin fb1_rd <= 0; fb1_a <= vaddr(x, y + 1); fb0_rd <= 1; fb0_a <= vaddr(x, y); end
+			end
+		end
+		@(posedge clk_sys);
+		got = fsel ? fb0_q : fb1_q;
+		fb0_rd <= 0; fb1_rd <= 0;
+		if (got === vo) i_old = i_old + 1;
+		else if (got === vn && sw) i_new = i_new + 1;
+		else begin
+			i_bad = i_bad + 1; errs = errs + 1;
+			if (i_bad < 10) $display("%0t CPU read FB%0d (%0d,%0d), frame change %0d clk_sys after the strobe: got %h, old %h new %h (%h displayed)",
+				$time, b, x, y, dly, got, vo, vn, vd);
+		end
+	end
+endtask
+
 // ---------------------------------------------------------------- stimulus
 integer t, bx, by, px, py, k2, pass, n, w0, cy, f_bad, h_lines, h_run;
 reg [15:0] rd16;
@@ -623,6 +666,17 @@ initial begin
 			k2 == 0 ? "H  FB1 tail while FB0 displayed:" : "H2 FB0 while FB1 displayed:",
 			(k2 == 0 ? 128 : 320) * 60, cy, h_lines, (k2 == 0 ? 128 : 320) * 60 * 3360 / cy, lat_max, fb_drop - w0, errs - pass);
 	end
+
+	// ---- I: CPU reads with a frame change 1 to 40 clk_sys after the strobe: FB0 to FB1 and FB1 to FB0 at tail columns,
+	// FB0 to FB1 at an M10K column
+	for (n = 1; n <= 40; n = n + 1) begin
+		cpu_rd_swap(0, 200 + n, 220, n);
+		cpu_rd_swap(1, 200 + n, 230, n);
+		cpu_rd_swap(0, 100 + n, 240, n);
+	end
+	$display("tb_fb: I CPU read across a frame change: %0d reads, the old buffer's word %0d, the new buffer's word %0d, wrong %0d",
+		i_old + i_new + i_bad, i_old, i_new, i_bad);
+	if (i_old != 0) begin errs = errs + 1; $display("tb_fb: I %0d reads did not end in the buffer the frame change moved them to", i_old); end
 
 	$display("tb_fb: SRAM model errors %0d (%0d reads, %0d writes), DQ driven inside tOHZ %0d (closest %0t ps after OE#), FIFO drops %0d", s_err, s_rd, s_wr, oz_err, oz_min, fb_drop);
 	if (errs == 0 && fb_drop == 0 && s_err == 0 && oz_err == 0) $display("tb_fb: PASS"); else $display("tb_fb: FAIL");

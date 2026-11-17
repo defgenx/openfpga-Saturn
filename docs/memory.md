@@ -124,6 +124,12 @@ compares against that). While FB_RDY stays high the timing is MiSTer's: an M10K 
 per read-modify-write. A draw read waits for the write FIFO to drain (the engine serves writes first), so a
 read-modify-write right after a long write span can wait up to about 190 SRAM writes.
 
+A CPU read waits the same way, with VDP1P holding `FB_RD` until FB_RDY. A frame change in that time moves the held
+strobe and the address to the other buffer (`FB_SEL`), a new read there; it is posted only once the first read is
+done, so FB_RDY rises with the word of the buffer the read ends in. Posting both at once lets the two toggles of the
+`rd_t` / `rd_ack` handshake cancel: FB_RDY then rises while that buffer's Q still holds a displayed pixel (`tb_fb` I:
+80 of its 120 reads wrong without this wait, 0 with it).
+
 ### Display read first
 
 VDP2 takes the displayed pixel (`FBDI`, VDP1P's `VOUTO`) at `DOT_CE_R`, 7 clk_sys after the display address changes,
@@ -707,7 +713,7 @@ for the measured slack.
 | `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
 | `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
-| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, display of SRAM pixels while the other buffer is drawn, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3); again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
+| `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, display of SRAM pixels while the other buffer is drawn, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3), CPU reads across a frame change; again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
 | `tb_load` | BIOS 4 KB, both blank backup images (all 64 KB + 1 MB checked), 1 KB backup and cart files over them, 8 read-back requests (address and one `r_rd` each) | pass |
 | `tb_boot` (backup part) | after the BIOS load: 80 words of both blank images through `ld_rd`, 80 words of the internal one through the SH-2's `raml` port (`SRAM_CS_N` mapping) | 0 mismatches |
 | `tb_sys` `+BRAM` / `+BRAM_OUT` (test ROM; BIOS + Hyper Duel 1.5 s) | no file: the table entry becomes 65536 and the save is MiSTer's blank; a 64 KB file pushed at boot and saved at the end with the bridge peripheral's read timing (86 clk_74a per read, Saturn running) | blank saved formatted; round trip byte-identical. The BIOS makes no backup RAM access in its first 1.5 s; Hyper Duel's check (about 13 s in) was not simulated |

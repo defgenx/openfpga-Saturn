@@ -191,12 +191,15 @@ wire       s0_w0 = |FB0_WE && FB_DRAW0 && in0, s0_w1 = |FB1_WE && !FB_DRAW0 && t
 wire       s0_r0 = FB0_RD && !rdd0, s0_r1 = FB1_RD && !rdd1 && t1;   // CPU reads hold FBn_RD until FB_RDY
 wire       s0_b  = !(s0_w0 || s0_r0);
 reg        p_w = 1'b0, p_r = 1'b0, p_def = 1'b0, p_b, p_oor;
+reg        rd_t = 1'b0, rd_ack = 1'b0;    // read strobe handshake: toggle on clk_sys, ack on clk_ram
 reg [16:0] p_i;
 reg  [1:0] p_be;
 reg [15:0] p_d;
 always @(posedge clk_sys) begin
 	p_w <= !rst && (s0_w0 || s0_w1);
-	p_r <= !rst && (s0_r0 || s0_r1);
+	// a frame change while VDP1P holds a CPU read strobe moves it to the other buffer (a new rising edge there): that read
+	// waits for the one still out, as a second toggle of rd_t would cancel both and FB_RDY would rise over a stale FBn_Q
+	p_r <= !rst && (s0_r0 || s0_r1 || (p_r && rd_t != rd_ack));
 	if (s0_w0 || s0_w1 || s0_r0 || s0_r1) begin
 		p_b <= s0_b; p_i <= s0_b ? i1 : i0; p_be <= s0_b ? FB1_WE : FB0_WE; p_d <= s0_b ? FB1_D : FB0_D; p_oor <= !s0_b && !in0;
 	end
@@ -249,7 +252,6 @@ wire [39:0] wd = close ? {1'b1, ob_s, 1'b0, ob_m, ob_ev}
 reg  [7:0] wf_drop = 8'd0;
 assign dbg_drop = wf_drop;
 
-reg        rd_t = 1'b0, rd_ack = 1'b0;    // read strobe handshake: toggle on clk_sys, ack on clk_ram
 reg        rd_b = 1'b0, rd_oor = 1'b0, rd_ev = 1'b0;
 reg [16:0] rd_idx;
 reg [16:0] sup0 = 17'h1FFFF, sup1 = 17'h1FFFF;   // index of the last write strobe per buffer, cleared at a buffer swap
@@ -270,7 +272,7 @@ always @(posedge clk_sys) begin
 	dr_q <= FB_DRAW0;
 	if (|FB0_WE) sup0 <= i0; else if (dr_q != FB_DRAW0) sup0 <= 17'h1FFFF;   // or the display would skip the last drawn pixel
 	if (|FB1_WE) sup1 <= i1; else if (dr_q != FB_DRAW0) sup1 <= 17'h1FFFF;
-	if (p_r) begin rd_t <= ~rd_t; rd_b <= p_b; rd_oor <= p_oor; rd_idx <= p_i; rd_ev <= p_fl || (hit && !hitw); end
+	if (p_r && rd_t == rd_ack) begin rd_t <= ~rd_t; rd_b <= p_b; rd_oor <= p_oor; rd_idx <= p_i; rd_ev <= p_fl || (hit && !hitw); end
 end
 wire rd_busy = (rd_t != rd_ack);
 assign FB_RDY = !(stall || rd_busy || p_r || (FB0_RD && !rdd0) || (FB1_RD && !rdd1));
