@@ -1,0 +1,12 @@
+wait 0001 3000000
+mark race
+hirq
+hirqrace 0000 0400 0
+hirq
+mark neg
+cmd 0401 0000 0000 0000 200000
+delay 5000
+hirq
+hirqrace 0000 0400 1
+hirq
+mark end

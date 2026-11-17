@@ -149,6 +149,7 @@ generate if (LLE) begin : g
 	function [15:0] dram_word(input integer a); dram_word = ram[a]; endfunction
 	function [31:0] dbg_state(input integer d); dbg_state = 0; endfunction
 	task fw_stall(input integer us); endtask
+	task fw_hirq(input [15:0] bits, input integer late); endtask
 end else begin : g
 	// ------------------------------------------------------------ HLE: cdb_hle + cd_stream
 	wire [18:1] RAM_A; wire [15:0] RAM_D; wire [1:0] RAM_WE; wire RAM_RD, RAM_CS; reg [15:0] RAM_Q = 0; reg RAM_RDY = 1;
@@ -226,6 +227,16 @@ end else begin : g
 	final if (feed_pc >= 0) $display("dt_feed: longest gap %0d us (at %0d us)", feed_max / 57, feed_max_t / 57);
 	// fault injection: the firmware CPU gets no instruction for us microseconds (a long firmware operation)
 	task fw_stall(input integer us); begin force hle.iack = 1'b0; repeat (us * 57) @(posedge clk); release hle.iack; end endtask
+	// fault injection: a firmware write that sets HIRQ bits lands `late` clocks after the clock that takes the host's next
+	// HIRQ write (0: the same clock)
+	task fw_hirq(input [15:0] bits, input integer late); begin
+		@(negedge clk);
+		while (!(hle.scu_sel && (!AWRL_N || !AWRU_N) && hle.awr_old && SYS_CE_F && AA[5:2] == 4'd2)) @(negedge clk);
+		repeat (late) @(negedge clk);
+		force hle.mm_a = 8'h00; force hle.cpu_wd = {16'd0, bits}; force hle.mm_wr = 1'b1;
+		@(negedge clk); force hle.mm_wr = 1'b0;
+		@(negedge clk); release hle.mm_wr; release hle.mm_a; release hle.cpu_wd;
+	end endtask
 	always @(posedge clk) if ($test$plusargs("XFMON") && hle.xf_mode_we) $display("[%0t] XF_MODE <= %0d", $time, hle.cpu_wd[2:0]);
 	wire [31:0] dbgw = {hle.xf_mode, hle.xf_idle, hle.f_empty, hle.seg1_free, hle.dp_wr, hle.abus_wait};
 	function [31:0] dbg_state(input integer d); dbg_state = dbgw; endfunction
@@ -424,6 +435,12 @@ initial begin
 			else if (op == "delay") begin n = $sscanf(line, " %s %d", op, a1); delay_us(a1); end
 			else if (op == "hirq") begin host_rd(8'h08); $fwrite(lf, "HIRQ %04h\n", rd_data); end
 			else if (op == "clr")  begin n = $sscanf(line, " %s %h", op, a1); host_wr(8'h08, ~a1[15:0]); end
+			else if (op == "hirqrace") begin       // hirqrace <host value> <firmware set bits> <clocks later>: two HIRQ writes
+				n = $sscanf(line, " %s %h %h %d", op, a1, a2, a3);
+				fork g.fw_hirq(a2, a3); join_none
+				host_wr(8'h08, a1);
+				$fwrite(lf, "HIRQRACE %04h %04h %0d\n", a1, a2, a3);
+			end
 			else if (op == "mask") begin n = $sscanf(line, " %s %h", op, a1); host_wr(8'h0C, a1); end
 			else if (op == "wait") begin
 				n = $sscanf(line, " %s %h %d", op, a1, a2);

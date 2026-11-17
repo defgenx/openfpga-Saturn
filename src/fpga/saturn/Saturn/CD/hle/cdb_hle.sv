@@ -151,6 +151,7 @@ reg  [31:0] cpu_wd = 32'd0;
 reg  [7:0]  mm_a = 8'd0;
 reg         mm_wr = 1'b0;
 wire        hirq_set = mm_wr && mm_a == 8'h00;
+wire        hirq_clr = scu_sel && (!AWRL_N || !AWRU_N) && awr_old && CE_F && AA[5:2] == 4'd2;   // host AND-write
 wire        sec_clr  = mm_wr && mm_a == 8'h0B && cpu_wd[1];
 
 // CR / RR: four words each (SH-2 word 0x18, 0x1C, 0x20, 0x24 and MMIO 0x02..0x05 / 0x06..0x09 map to index 0..3 as x + 2).
@@ -216,7 +217,9 @@ always @(posedge CLK) begin
 		// CPU side
 		if (mm_wr) begin
 			case (mm_a)
-			8'h00: HIRQ <= HIRQ | cpu_wd[15:0];
+			// the host's AND-write in the same clock still applies, as in the YGR019 (bit by bit): without it every bit
+			// the host has just cleared comes back, e.g. CMOK cleared before a command, and the host reads old results
+			8'h00: HIRQ <= (hirq_clr ? HIRQ & ADI : HIRQ) | cpu_wd[15:0];
 			8'h09: ev_rrd <= 1'b0;
 			8'h0B: begin
 				if (cpu_wd[0]) ev_cmd <= 1'b0;

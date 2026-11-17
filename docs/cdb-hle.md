@@ -51,8 +51,9 @@ SCU A-bus (CS2)                                   cd_stream (unchanged)
 ```
 
 * **Host side** (`cdb_hle.sv`): same register offsets, `AWAIT_N` wait states and edge handling as `YGR019.sv`
-  (the SCU part is derived from it, GPL-3.0). HIRQ is set by the CPU and cleared by the host's AND-write; CR1-4 are
-  host-written, RR1-4 CPU-written. A host write to CR4 raises `EV_CMD`; a host read of RR4 raises `EV_RRD`
+  (the SCU part is derived from it, GPL-3.0). HIRQ is set by the CPU and cleared by the host's AND-write; when both
+  land in one clock, the clear applies and the CPU's bits are set on top (the YGR019 writes HIRQ bit by bit). CR1-4
+  are host-written, RR1-4 CPU-written. A host write to CR4 raises `EV_CMD`; a host read of RR4 raises `EV_RRD`
   (Mednafen's `ResultsRead`, used to decide whether the periodic report may overwrite the results).
 * **Data path**: bulk sector data never passes through the CPU. `cdb_sink` writes each arriving sector into a DRAM
   slot (byte order as the YGR019 delivers to the SH-1, so a DRAM word is the host-order halfword) and latches
@@ -240,6 +241,10 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   5,000, 8,000 and 20,000 us; starved 0 ms in the first three (the host frees buffers slower than 123 sectors/s, so the
   ring never empties), 765 ms by 4.0 s at 20,000 us (50 sectors/s), equal to the time the armed sector waited with the
   ring empty.
+* `script_hirq.txt` (`check_hle.py <log> hirq`): the host clears every HIRQ bit while a firmware write that sets SCDQ
+  is injected into the same clock (`hirqrace`), then one clock later as the control: the boot bit MPED must be
+  cleared both times. **4 checks, 0 failed**; the RTL that took only the firmware's write in that clock fails 1
+  (MPED still set, the host's clear lost).
 * `script_pause.txt` (`check_hle.py <log> pause`): Play of 64 sectors, then while it streams Reset Selector, Pause,
   Reset Selector, and a Play of 20 sectors elsewhere: the partition is empty after the pause and holds exactly the
   20 new sectors, compared word for word. **3 checks, 0 failed**; the firmware without `pause_drop` fails 2 (one

@@ -18,6 +18,7 @@ def words(b):
 def user(lba):
     return words(sector(lba)[16:2064])
 
+HIRQ = len(sys.argv) > 2 and sys.argv[2] == "hirq"
 COOKED = len(sys.argv) > 2 and sys.argv[2] == "cooked"
 BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
 PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
@@ -65,6 +66,13 @@ def find_cmd(sec, prefix, nth=0):
 def datas(sec):
     return [[int(x, 16) for x in l.split()[2:] if not x.startswith("us=")] for l in cmds(sec) if l.startswith("DATA ")]
 
+if HIRQ:   # script_hirq.txt: the host clears every HIRQ bit while the firmware sets SCDQ, in the same clock and one later
+    for sec, name in (("race", "same clock"), ("neg", "one clock later")):
+        h = [int(l.split()[1], 16) for l in cmds(sec) if l.startswith("HIRQ ")]
+        ok("hirq %s: MPED set before the clear" % name, len(h) == 2 and h[0] & 0x0800, h)
+        ok("hirq %s: MPED cleared, SCDQ set" % name, len(h) == 2 and not h[1] & 0x0800 and h[1] & 0x0400, h)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
 if BULK:   # script_bulk.txt: multi-sector Get Sector Data at the fastest host rate, with and without a firmware stall
     def run(n, first):
         return [w for i in range(n) for w in user(first + i)]
