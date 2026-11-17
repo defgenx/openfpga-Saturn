@@ -128,7 +128,8 @@ Details of each technique:
 
 ## Differential simulation
 
-The REF copy gets VDP2P's VRAM lane drain (`lane_patch.py`) and register write timing (`regwr_patch.py`); `GOLD` is
+The REF copy gets VDP2P's VRAM lane drain (`lane_patch.py`), register write timing (`regwr_patch.py`) and, while the
+golden is older than Saturn_MiSTer `2dace57`, that commit's display enable in the priority pick (`prep.sh`); `GOLD` is
 upstream unchanged and only checks VRAM contents.
 
 `make -C sim vdp2` (Verilator): the golden VDP2 (copied to `sim/vdp2/build`, modules and package renamed `REF_*`,

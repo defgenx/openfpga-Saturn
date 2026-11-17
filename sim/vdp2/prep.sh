@@ -43,3 +43,6 @@ rm -rf $OUT/gold; mkdir -p $OUT/gold
 for f in VDP2.sv VDP2_pkg.sv VDP2_mem.sv; do sed 's/REF_/GOLD_/g' $OUT/ref/$f > $OUT/gold/$f; done
 [ "$LANEPATCH" = 0 ] || python3 lane_patch.py $OUT/ref/VDP2.sv
 [ "$REGWRPATCH" = 0 ] || python3 regwr_patch.py $OUT/ref/VDP2.sv
+# Saturn_MiSTer 2dace57 (newer than the pinned golden): the priority pick waits for DISP_INT, the display enable as taken
+# in at V-Blank, as VDP2P does. Nothing to replace once the reference is at or past that commit.
+perl -pi -e 's/^(\t+)if \(DISP\) begin$/$1if (DISP_INT) begin/' $OUT/ref/VDP2.sv

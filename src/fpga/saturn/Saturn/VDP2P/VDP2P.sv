@@ -3135,7 +3135,9 @@ module VDP2P import VDP2P_PKG::*; (
 			LAY[3] = {N1CAOS,N1CCEN,N1CCM3,N1CCRT,N1COEN,N1COSL,N1SDEN,N1BOKEN,N1LCEN,N1DOT.P,N1DOT.DC}; LPRI[3] = N1PRIN; LON[3] = N1ON && |N1PRIN;
 			LAY[4] = {N2CAOS,N2CCEN,N2CCM3,N2CCRT,N2COEN,N2COSL,N2SDEN,N2BOKEN,N2LCEN,N2DOT.P,N2DOT.DC}; LPRI[4] = N2PRIN; LON[4] = N2ON && |N2PRIN;
 			LAY[5] = {N3CAOS,N3CCEN,N3CCM3,N3CCRT,N3COEN,N3COSL,N3SDEN,N3BOKEN,N3LCEN,N3DOT.P,N3DOT.DC}; LPRI[5] = N3PRIN; LON[5] = N3ON && |N3PRIN;
-			if (DISP) begin
+			//Layers take part only once the V-Blank has taken in the display enable (DISP_INT, which also starts the
+			//fetches): until then, in the frame in which TVMD.DISP is set, the back screen is shown, not unfetched data
+			if (DISP_INT) begin
 				for (int i=0; i<6; i++) begin
 					RK = 0;
 					for (int j=0; j<6; j++) begin
