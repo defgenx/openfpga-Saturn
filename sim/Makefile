@@ -13,7 +13,7 @@
 #   make -C sim sh2        SH-2 pair golden vs shrunk (Verilator)
 #   make -C sim scu        SCU and DSP golden vs shrunk (Verilator)
 #   make -C sim smpc      SMPC LLE (firmware from ../ref) vs SMPC_HLE: data and command timing (Verilator)
-#   make -C sim irq        SH7604P + DCC + SMPC_SERV + SCUP2 as in Saturn.sv: SNDON handshake, VBLANK interrupt and vector fetch; duplicate-port check (seconds)
+#   make -C sim irq        SH7604P + DCC + SMPC_SERV + SCUP2 as in Saturn.sv: SNDON handshake, VBLANK interrupt and vector fetch, also with the stack in WRAM-L; duplicate-port check (seconds)
 #   make -C sim sndram     SH-2 write/read-back of sound RAM through SCUP2, SCSPP, sdram_pocket and the SDRAM model (EXTRA=-DUSE_SCSP etc. swap in the MiSTer blocks)
 #   make -C sim vdp2       VDP2 golden vs shrunk (Verilator; CUT=<name> for a cut, vdp2-ppm dumps frames)
 #   make -C sim sys        full system (core_top, build macros, Pocket memory models) running a boot test ROM; BIOS=<file> for a real BIOS (Verilator, 30+ minutes first build)
@@ -70,7 +70,7 @@ sys:
 	$(MAKE) -C sys run BIOS=$(BIOS) CYCLES=$(CYCLES) FRAMES=$(FRAMES) TRACE=$(TRACE)
 
 irq:
-	$(MAKE) -C irq run neg
+	$(MAKE) -C irq run neg raml
 
 sndram:
 	$(MAKE) -C sndram run

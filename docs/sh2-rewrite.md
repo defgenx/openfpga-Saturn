@@ -285,6 +285,15 @@ Deviations from the golden (none is visible to software running on the Saturn; e
 4. INTC reproduces the golden simulation behaviour for an `ICR.NMIE` write in the same clock as an NMI edge.
 5. The M10K count rises by 4 per CPU (2 decode ROM, 2 cache tags).
 
+One difference is a fix of the golden: the BSC also takes a vector request in T2 of the first half of a split access
+(`SH7604P_BSC.sv`, and the same line in `SH/SH7604/BSC.sv`). The golden takes it there only when no access is running,
+and the INTC withdraws a request the BSC does not take at its first CE_R, so a request that first arrives in that T2
+gets no IVECF cycle: the CPU takes the vector of the previous fetch and the SCU, never acknowledged, raises the
+interrupt again. It needs the SR push of the interrupt entry to be a split write that runs T1, TW, T2: the stack in
+WRAM-L while DCC holds 4 or more credit cycles from a WRAM-L line fill. `make -C sim irq` (WRAM-L run) checks it. The
+lock-step can differ from the golden only where the golden loses a request; the 76 `ptest` runs do not reach that case
+(same results and counts with and without the change).
+
 ## 10. Remaining gap
 
 In-system the pair is 5,642 ALMs (measured before the M10K removal, about 5,900 now) against a target of 4,400. The

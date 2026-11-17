@@ -521,7 +521,10 @@ module SH7604_BSC
 					if (DBUS_REQ && !BUS_RLS && !BUSY && (BURST_CNT[1] || !BURST_EN)) begin
 						DBUSY <= 1;
 					end
-					if (VBUS_REQ && !BUS_RLS && !BUSY) begin
+					//Take a vector request in T2 of a split access too: the INTC withdraws one not taken at its first
+					//CE_R, so the CPU would take a stale vector and the SCU, never acknowledged by an IVECF cycle,
+					//would raise the same interrupt again
+					if (VBUS_REQ && !BUS_RLS) begin
 						VBUSY <= 1;
 					end
 					if ((BUS_STATE == T2 || BUS_STATE == TWCAS || BUS_STATE == TWNOP || BUS_STATE == TRD || BUS_STATE == TRFS2 || BUS_STATE == TV2) && BUSY && !RD_WR_N && !BUS_RLS) begin

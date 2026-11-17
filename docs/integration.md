@@ -313,7 +313,7 @@ multiplier, shared by both channels.
 |---|---|
 | `make -C sim platform` | audio (1 kHz, -65 dB residual) and four video modes pass |
 | `make -C sim mem` | passes with the two `vdp1_fb_pocket` changes of this branch (section 7) |
-| `make -C sim irq` | `sh2p`+`DCC`+`SMPC_SERV`+`SCUP2` wired as in `Saturn.sv`, build macros: SNDON through SF/COMREG on the real bus, then VBLANK-IN/OUT interrupts (IMS, ICR.VECMD, vector fetch) delivered; negative control with IVECF# stuck low fails; `Saturn.sv` has no port connected twice |
+| `make -C sim irq` | `sh2p`+`DCC`+`SMPC_SERV`+`SCUP2` wired as in `Saturn.sv`, build macros: SNDON through SF/COMREG on the real bus, then VBLANK-IN/OUT interrupts (IMS, ICR.VECMD, vector fetch) delivered; negative control with IVECF# stuck low fails; with the stack in WRAM-L (Pocket WRAM-L timing, cache on) every vector request gets its IVECF cycle; `Saturn.sv` has no port connected twice |
 | `quartus_sh --flow compile ap_core` (21.1, 5CEBA4F23C8) | analysis and synthesis succeed, 159 warnings, no error; the fitter fails on capacity |
 | `quartus_sta` post-map with the SDC | PLL clocks, generated clocks and groups resolve |
 

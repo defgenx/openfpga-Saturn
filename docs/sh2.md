@@ -153,6 +153,10 @@ Not covered by the tests: DREQ/DACK external requests (tied off in Saturn), SCI 
 SDRAM command protocol, so SDRAM-mode writes never reach it; the states are exercised but data is not checked),
 the external-master port of the SSH (`EA/ED*`, idle in the test bench).
 
+`SH/SH7604/BSC.sv` takes a vector request also in T2 of a split access, where the golden drops it (a fault of the
+golden; see docs/sh2-rewrite.md, section 9). The suite does not reach that case: every run gives the same result
+and the same bus and vector-fetch counts with and without that line.
+
 ## 6. Risks
 
 * **Timing**: `SH_core` is a 19.6 ns path (51 MHz) in a C8 part. It works at `clk_sys`/2 only with a multicycle

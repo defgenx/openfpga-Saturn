@@ -1,6 +1,7 @@
-// SH7604P + DCC + SMPC_SERV + SCUP2 wired as in Saturn.sv (Pocket build macros), with ROM and WRAM-H models.
+// SH7604P + DCC + SMPC_SERV + SCUP2 wired as in Saturn.sv (Pocket build macros), with ROM, WRAM-H and WRAM-L models.
 // The SH-2 runs gen_prog.py's program: SMPC SNDON with the SF handshake over the real bus, then SCU interrupts
-// (IMS unmask, ICR.VECMD=1 as the BIOS, SR.I = 0) from a VBLANK source; the handler counts in WRAM-H.
+// (IMS unmask, ICR.VECMD=1 as the BIOS, SR.I = 0) from a VBLANK source; the handler counts in WRAM-H. With
+// gen_prog.py raml the stack is in WRAM-L, the cache is on and the handler reads WRAM-L.
 module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 	reg CLK = 0, RST_N = 0;
 	always #5 CLK = ~CLK;
@@ -29,7 +30,8 @@ module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 	wire SMPCCE_N, ROMCE_N, SRAMCE_N, DRAMCE_N, MWR_N;
 	wire MSHRES_N, MSHNMI_N, SSHRES_N, SSHNMI_N, SYSRES_N, SNDRES_N, CDRES_N, MIRQ_N, EXL_N;
 	wire [6:0] PDR1O, DDR1, PDR2O, DDR2;
-	wire MSH_WAIT_N = CWAIT_N;
+	wire MEM_WAIT_N;
+	wire MSH_WAIT_N = CWAIT_N & (MEM_WAIT_N | (MSHCS3_N & DRAMCE_N & ROMCE_N & SRAMCE_N));
 
 	// VDP2 vertical blank: IRQV_N low for 3000 clk every 20000 clk
 	wire IRQV_N = !((cyc % 20000) < 3000 && cyc > 2000);
@@ -59,7 +61,7 @@ module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 		.RD_WR_N(MSHRD_WR_N), .WE_N(MSHDQM_N[1:0]), .RD_N(MSHRD_N), .WAIT_N(CWAIT_N),
 		.BRLS_N(), .BGR_N(1'b1), .BREQ_N(1'b1), .BACK_N(), .EXBREQ_N(1'b1), .EXBACK_N(),
 		.WTIN_N(CWATIN_N), .IVECF_N(1'b1), .HINT_N(1'b1), .VINT_N(IRQV_N), .IREQ_N(),
-		.MFTI(), .SFTI(), .DCE_N(DRAMCE_N), .DOE_N(), .DWE_N(), .DWAIT_N(1'b1),
+		.MFTI(), .SFTI(), .DCE_N(DRAMCE_N), .DOE_N(), .DWE_N(), .DWAIT_N(MEM_WAIT_N),
 		.ROMCE_N(ROMCE_N), .SRAMCE_N(SRAMCE_N), .SMPCCE_N(SMPCCE_N), .MOE_N(), .MWR_N(MWR_N), .FAST(1'b0));
 
 	SMPC_SERV SMPC (
@@ -91,6 +93,7 @@ module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 	wire [31:0] cs0w = rom[MSHA[11:2]];
 	wire [15:0] cs0h = MSHA[1] ? cs0w[15:0] : cs0w[31:16];
 	assign MSHDI = !MSHCS3_N ? wramh[MSHA[17:2]] :
+	               !DRAMCE_N ? {16'h0, wraml[MSHA[19:1]]} :
 	               !ROMCE_N ? {16'h0, cs0h} :
 	               !SMPCCE_N ? {16'h0000, 8'hFF, SMPC_DO} :
 	               !IVECF_SCU || !MSHCS1_N || !MSHCS2_N ? SCU_DO : 32'hFFFFFFFF;
@@ -98,6 +101,33 @@ module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 		merge = {n[3] ? old[31:24] : d[31:24], n[2] ? old[23:16] : d[23:16], n[1] ? old[15:8] : d[15:8], n[0] ? old[7:0] : d[7:0]};
 	endfunction
 	always @(posedge CLK) if (!MSHRD_WR_N && !MSHCS3_N && !(&MSHDQM_N)) wramh[MSHA[17:2]] <= merge(wramh[MSHA[17:2]], MSHDO, MSHDQM_N);
+
+	// WRAM-L (16 bit) timed as on the Pocket (ddram_pocket raml port, psram_sync, PSRAM0): one 32-byte read line; a read
+	// outside it, or after a write into it, is a line fill that holds MEM_WAIT_N low 23 clk; a write waits for the chip,
+	// then keeps it 8 clk. A fill outlasts DCC's own WRAM-L count, so DCC holds credit (FAULT_CNT) after it. The 23 and the
+	// 8 clk are ddram_pocket's raml timing on psram_sync with sim/mem/models/psram_model.
+	reg [15:0] wraml [0:524287];
+	reg [19:5] raml_line = 0;
+	reg raml_valid = 0, raml_rd_o = 0, raml_wr_o = 0, raml_wpend = 0;
+	int raml_occ = 0, raml_fill = 0;
+	always @(posedge CLK) begin
+		int occ, fill;
+		bit wp;
+		occ = raml_occ ? raml_occ - 1 : 0; fill = raml_fill ? raml_fill - 1 : 0; wp = raml_wpend;
+		raml_rd_o <= !DRAMCE_N && !MSHRD_N; raml_wr_o <= !DRAMCE_N && !(&MSHDQM_N[1:0]);
+		if (!DRAMCE_N && !(&MSHDQM_N[1:0])) begin
+			if (!MSHDQM_N[1]) wraml[MSHA[19:1]][15:8] <= MSHDO[15:8];
+			if (!MSHDQM_N[0]) wraml[MSHA[19:1]][7:0] <= MSHDO[7:0];
+			if (!raml_wr_o) begin wp = 1; if (MSHA[19:5] == raml_line) raml_valid <= 0; end
+		end
+		if (wp && !occ) begin wp = 0; occ = 8; end
+		if (!DRAMCE_N && !MSHRD_N && !raml_rd_o) begin
+			if (!raml_valid || MSHA[19:5] != raml_line) begin fill = occ + 23; occ = fill; end
+			raml_line <= MSHA[19:5]; raml_valid <= 1;
+		end
+		raml_occ <= occ; raml_fill <= fill; raml_wpend <= wp;
+	end
+	assign MEM_WAIT_N = !raml_wpend && !raml_fill;
 
 	reg snd_o = 0; int snd_t = 0;
 	always @(posedge CLK) begin snd_o <= SNDRES_N; if (SNDRES_N && !snd_o) begin snd_t = cyc; $display("%0d SNDRES_N released", cyc); end end
@@ -110,10 +140,37 @@ module tb_irq #(parameter bit RAMH_SLOW = 1) ();
 		if (CIRL_N != irl_o) begin irl_changes++; if (irl_changes < 12) $display("%0d IRL_N=%h", cyc, CIRL_N); end
 		if (!MSHIVECF_N && vecf_o) begin vecf++; if (vecf < 6) $display("%0d IVECF A=%h IRL_N=%h", cyc, MSHA, CIRL_N); end
 	end
+
+	// a vector request the INTC withdraws without an IVECF cycle: the CPU takes the vector of the previous fetch and the
+	// SCU never sees the acknowledge. Count them and show the bus cycles (CE_R samples) up to the first one.
+	string bst [0:12] = '{"T0", "T1", "T2", "TW", "TRAS", "TWCAS", "TRCAS", "TRD", "TWNOP", "TRFS1", "TRFS2", "TV1", "TV2"};
+	string tr [0:4];
+	int tp = 0, lost = 0;
+	reg vreq_o = 0, vreq_vecf = 0;
+	always @(posedge CLK) begin
+		vreq_o <= MSH.VBUS_REQ;
+		if (MSH.VBUS_REQ && !vreq_o) vreq_vecf <= 0;
+		if (!MSHIVECF_N) vreq_vecf <= 1;
+		if (CE_R) begin
+			tr[tp] <= $sformatf("%0d %-2s A=%h RD_WR_N=%0d WAIT_N=%0d BUSY=%0d VBUS_REQ=%0d VBUSY=%0d", cyc, bst[MSH.bsc.BUS_STATE],
+			                    MSHA, MSHRD_WR_N, MSH_WAIT_N, MSH.bsc.BUSY, MSH.VBUS_REQ, MSH.bsc.VBUSY);
+			tp <= (tp + 1) % 5;
+		end
+		if (!MSH.VBUS_REQ && vreq_o && !vreq_vecf) begin
+			lost++;
+			if (lost == 1) begin
+				$display("%0d vector request dropped without an IVECF cycle (the CPU takes vector %02h of the previous fetch):",
+				         cyc, MSH.bsc.VEC_BUF);
+				for (int i = 0; i < 5; i++) $display("  %s", tr[(tp + i) % 5]);
+			end
+		end
+	end
+
 	initial begin
 		#3000000;   // 300000 clk
 		$display("sndon_flag=%0d snd_released=%0d irl_changes=%0d vector_fetches=%0d handler_count=%0d", wramh[4], snd_o, irl_changes, vecf, wramh[0]);
-		if (wramh[4] == 1 && snd_o && wramh[0] >= 8) $display("PASS"); else $display("FAIL");
+		if (lost) $display("vector requests without IVECF cycle: %0d", lost);
+		if (wramh[4] == 1 && snd_o && wramh[0] >= 8 && !lost && wramh[0] <= vecf) $display("PASS"); else $display("FAIL");
 		$finish;
 	end
 endmodule

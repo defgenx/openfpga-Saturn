@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Assemble the tb_irq SH-2 program into prog.hex (32 bit big-endian words, word 0 = ROM address 0)."""
+"""Assemble the tb_irq SH-2 program into prog.hex (32 bit big-endian words, word 0 = ROM address 0).
+gen_prog.py <prog.hex> [raml]: raml puts the stack in WRAM-L, sets the Saturn's WCR and turns the cache on as the BIOS
+does, and has the handler read two words of WRAM-L."""
 import sys
+raml = sys.argv[2:3] == ['raml']
 rom = [0] * 0x1000
 def h(a, v): rom[a // 2] = v & 0xFFFF
 def w32(a, v): h(a, v >> 16); h(a + 2, v)
@@ -12,7 +15,7 @@ def ldl(a, n, m): h(a, 0x6002 | n << 8 | m << 4)                # mov.l @Rm,Rn
 def addi(a, n, i): h(a, 0x7000 | n << 8 | i & 0xFF)
 NOP, RTE = 0x0009, 0x002B
 
-w32(0x00, 0x200); w32(0x04, 0x06010000)                           # power-on PC, SP
+w32(0x00, 0x200); w32(0x04, 0x00210000 if raml else 0x06010000)  # power-on PC, SP
 for v in range(0x40, 0x60): w32(v * 4, 0x300)                     # interrupt vectors -> handler
 
 # ---- main: SMPC SNDON (SF handshake over the real bus), then SCU interrupts on
@@ -37,12 +40,22 @@ st(a, 2, 1, 2); a += 2
 movl_pc(a, 3, 0x274); a += 2                                      # r3 = ICR
 mov_i(a, 0, 1); a += 2
 st(a, 1, 3, 0); a += 2                                            # ICR.VECMD = 1 (external vector, as the BIOS)
+if raml:
+    movl_pc(a, 1, 0x278); a += 2                                  # r1 = WCR
+    movl_pc(a, 2, 0x27C); a += 2
+    st(a, 2, 1, 2); a += 2                                        # WCR = 0x0A55 as for the Saturn
+    movl_pc(a, 1, 0x280); a += 2                                  # r1 = CCR
+    mov_i(a, 2, 0x10); a += 2
+    st(a, 0, 1, 2); a += 2                                        # purge
+    mov_i(a, 2, 0x01); a += 2
+    st(a, 0, 1, 2); a += 2                                        # cache on (the BIOS runs cached)
 mov_i(a, 0, 0); a += 2
 h(a, 0x400E); a += 2                                              # ldc r0,SR (I = 0)
 h(a, 0xAFFE); a += 2; h(a, NOP); a += 2                           # bra .
 assert a < 0x260
 w32(0x260, 0x20100063); w32(0x264, 0x2010001F); w32(0x268, 0x06000010)
 w32(0x26C, 0x25FE00A0); w32(0x270, 0x0000BFFC); w32(0x274, 0xFFFFFEE0)
+if raml: w32(0x278, 0xFFFFFFE8); w32(0x27C, 0xA55A0A55); w32(0x280, 0xFFFFFE92)
 
 # ---- interrupt handler: count in WRAM-H, restore the IMS the SCU cleared at the vector fetch
 a = 0x300
@@ -53,8 +66,15 @@ st(a, 2, 2, 4); a += 2
 movl_pc(a, 1, 0x324); a += 2
 movl_pc(a, 5, 0x328); a += 2
 st(a, 2, 1, 5); a += 2
+if raml:                                                          # data in two 32-byte lines of WRAM-L, read past
+    movl_pc(a, 12, 0x32C); a += 2                                 # the cache (cache-through addresses)
+    ldl(a, 13, 12); a += 2
+    movl_pc(a, 12, 0x330); a += 2
+    ldl(a, 13, 12); a += 2
 h(a, RTE); a += 2; h(a, NOP); a += 2
+assert a <= 0x320
 w32(0x320, 0x06000000); w32(0x324, 0x25FE00A0); w32(0x328, 0x0000BFFC)
+if raml: w32(0x32C, 0x20240000); w32(0x330, 0x20240040)
 
 with open(sys.argv[1], 'w') as f:
     for i in range(0, len(rom), 2): f.write('%04x%04x\n' % (rom[i], rom[i + 1]))
