@@ -351,30 +351,43 @@ static void pause_drop(void)
 	cur_sector -= n;
 }
 
+/* a seek start shows BUSY at once but keeps the old position and CD-ROM bit for SEEK_HOLD ticks: Mednafen's StartSeek
+   changes only the status, and SeekStart1/2 take the target SeekCPIUpdateDelay (44 us) later. Magical Drop III sends
+   one Get CD Status right after the Play of its intro music and starts the intro only if it still shows the CD-ROM bit
+   of the data read before. The firmware answers that command one main loop pass after the Play's own processing, so
+   the hold is counted from there and longer (204 us); the seek that follows takes at least 7056 ticks */
+#define SEEK_HOLD 36u
+static posinfo seek_to;
+
+static void seek_target(void)
+{
+	pos.fad = seek_to.fad; pos.rel = seek_to.rel; pos.tno = seek_to.tno; pos.idx = seek_to.idx; pos.ctrl = seek_to.ctrl;
+	pos.is_cdrom = 0; pos.repcount = play_rep_ctr & 0xF;
+}
+
 static void start_seek(u32 target, int no_pickup_change)
 {
-	posinfo p;
+	posinfo *p = &seek_to;
 	play_start = target;
 	if (no_pickup_change && dphase == D_PLAY) return;
+	if (dphase == D_SEEKSTART) seek_target();   /* a seek start still on hold takes its target first, as in Mednafen */
 	if (target & 0x800000) {
 		u32 f = target & 0x7FFFFF;
 		if (f < 150) f = 150; else if (f >= toc_end) f = toc_end;
-		pos_of(f, &p);
-		p.rel = p.rel;
+		pos_of(f, p);
 	} else {
 		u32 t = (target >> 8) & 0xFF, ix = target & 0xFF;
 		if (t > ntr) t = ntr; else if (t < 1) t = 1;
 		if (ix < 1) ix = 1;
 		lk_run(1, t - 1);
-		p.fad = lk_start + LK_IDX1();
-		p.tno = t; p.idx = ix; p.rel = 0; p.ctrl = LK_DATA() ? 0x41 : 0x01;
+		p->fad = lk_start + LK_IDX1();
+		p->tno = t; p->idx = ix; p->rel = 0; p->ctrl = LK_DATA() ? 0x41 : 0x01;
 	}
-	pos.fad = p.fad; pos.rel = p.rel; pos.tno = p.tno; pos.idx = p.idx; pos.ctrl = p.ctrl;
-	pos.status = S_BUSY; pos.is_cdrom = 0; pos.repcount = play_rep_ctr & 0xF;
+	pos.status = S_BUSY;
 	pipe_flush();
-	dphase = D_SEEKSTART; at_end = 0;
+	dphase = D_SEEKSTART; ddue = now() + SEEK_HOLD; at_end = 0;
 	period_due = now() + PERIOD_TICKS;
-	MM(R_PF_FAD) = pos.fad; MM(R_PF_CTL) = 1;
+	MM(R_PF_FAD) = p->fad; MM(R_PF_CTL) = 1;
 }
 
 /* is the sector `cur_sector` (described by p) outside the play range? */
@@ -497,8 +510,12 @@ static void drive_step(void)
 		pos.status = S_STANDBY;
 		break;
 	case D_SEEKSTART: {
-		s32 d = (s32)(pos.fad - cur_sector);
-		u32 t = 7056u + (d < 0 ? ((u32)(-d) * 7) >> 4 : ((u32)d * 13) >> 5);
+		s32 d;
+		u32 t;
+		if (!due(ddue)) break;
+		seek_target();
+		d = (s32)(pos.fad - cur_sector);
+		t = 7056u + (d < 0 ? ((u32)(-d) * 7) >> 4 : ((u32)d * 13) >> 5);
 		if (d < 0 || d >= 150) t += 1176;
 		pos.status = S_SEEK; dphase = D_SEEK; ddue = now() + t;
 		cur_sector = pos.fad;

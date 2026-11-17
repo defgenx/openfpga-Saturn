@@ -35,6 +35,8 @@ test: hle gen
 	python3 check_hle.py build/hle_npc.log npc
 	./build/hle/Vtb_cdb +SCRIPT=script_fls.txt +LOG=build/hle_fls.log > build/hle_fls.out
 	python3 check_hle.py build/hle_fls.log fls
+	./build/hle/Vtb_cdb +SCRIPT=script_seekhold.txt +LOG=build/hle_seekhold.log > build/hle_seekhold.out
+	python3 check_hle.py build/hle_seekhold.log hold
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test

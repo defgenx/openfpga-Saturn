@@ -23,6 +23,7 @@ BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
 PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
 NPC = len(sys.argv) > 2 and sys.argv[2] == "npc"
 FLS = len(sys.argv) > 2 and sys.argv[2] == "fls"
+HOLD = len(sys.argv) > 2 and sys.argv[2] == "hold"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -101,6 +102,15 @@ if FLS:   # script_fls.txt: a filter connected 0..9 ms after a Change Directory'
     for sec in ("d0", "d3", "d6", "d9"):
         r = find_cmd(sec, "5100")
         ok("fls %s: no sector in the partition connected after EFLS" % sec, r is not None and r[3] == 0, r)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if HOLD:   # script_seekhold.txt: a Get CD Status right after a Play still shows the old position (Magical Drop III)
+    r = find_cmd("data", "0000")
+    ok("hold: paused after a one-sector read (PAUSE, CD-ROM, track 1, FAD 0xA1)", r == [0x0180, 0x4101, 0x0100, 0x00A1], r)
+    r = find_cmd("play", "0000")
+    ok("hold: right after the Play: BUSY, CD-ROM bit and the old position", r == [0x0080, 0x4101, 0x0100, 0x00A1], r)
+    r = find_cmd("play", "0000", 1)
+    ok("hold: 20 ms later: SEEK to track 2", r == [0x0400, 0x0102, 0x0100, 0x0190], r)
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if COOKED:

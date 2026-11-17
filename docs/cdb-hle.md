@@ -165,6 +165,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 | behaviour | titles | HLE |
 |---|---|---|
 | realistic seek time, two Play commands back to back (the first must be dropped) | Digital Dance Mix Vol. 1 | Mednafen's seek formula (about 40 ms base plus distance); a new Play flushes the pipeline and restarts the seek. Not played on a game |
+| Get CD Status right after a Play still shows the old position, track and CD-ROM bit | Magical Drop III (the intro waits forever) | as Mednafen, whose `StartSeek` changes only the status and takes the target `SeekCPIUpdateDelay` (44 us) later: `start_seek` reports BUSY at once and the target after `SEEK_HOLD` (36 ticks, 204 us, counted from the end of the command, because this firmware answers the next command only after the Play's own processing). Test: `script_seekhold.txt` |
 | chained filters, pass/fail outputs, file-number split | NiGHTS, Digital Dance Mix, Ultraman Zukan | done; the connection logic is a port, the disconnect side effects included |
 | Mode 2 Form 2, get length < 2324, actual size | Chisato Moritaka, Digital Dance Mix | done (tested: 2048/2336/2340/2352 reads) |
 | Put Sector Data | Virtual On, Sega Ages | done and tested with 2048- and 2352-byte puts; see deviation 9 |
@@ -197,6 +198,9 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
    "wait" (it dropped the buffer). Cause not determined.
 10. Disc change: `disc_new` runs eject (OPEN, DCHG, EFLS) then the startup sequence. Not exercised in simulation.
 11. Scan (12) and Open (05) have no effect.
+12. After a Play or Seek the old position stays visible for `SEEK_HOLD` (204 us) from the end of the command, so a
+    Get CD Status sent up to about 0.3 ms after the reply still shows it; Mednafen shows it for 44 us. The seek back
+    at a repeat holds the same way; Mednafen's does not.
 
 ## 8. Tests
 
@@ -241,6 +245,10 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   or 9 ms after its EFLS a filter for the 16 sectors after the directory is set up and connected to the CD device,
   and 30 ms later (no Play) its partition must be empty. **4 checks, 0 failed**; the firmware that ended the operation
   with the sectors under way fails 4 (2, 1, 1 and 1 sectors read ahead in the partition).
+* `script_seekhold.txt` (`check_hle.py <log> hold`): a one-sector read (the drive pauses on the data track),
+  then a Play of track 2 and at once a Get CD Status: BUSY with the CD-ROM bit and the old position, 20 ms
+  later SEEK to track 2. **3 checks, 0 failed**; the firmware that took the target at once fails 1
+  (`0400 0102 0100 0190`: SEEK on track 2 already).
 * `+FEEDPC=<dt_feed address from firmware/cdb/build/cdb.lst>` reports the longest firmware main-loop period:
   2,765 us over `script_cmds.txt`.
 * **LLE comparison** (`make -C sim cdb-compare`, same script on pruned SH-1 + cdb105m + YGR019 + `cdd_pocket`):
