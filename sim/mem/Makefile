@@ -3,6 +3,8 @@ IVL ?= iverilog
 VVP ?= vvp
 SRC := ../../src/fpga/core/mem
 FLAGS := -g2012 -Wall -Wno-timescale
+# the elab recipe reads PIPESTATUS, which /bin/sh lacks where it is dash (Debian, Ubuntu)
+SHELL := /bin/bash
 
 all: elab sdram sdram-scsp psram ddram fb load boot
 
