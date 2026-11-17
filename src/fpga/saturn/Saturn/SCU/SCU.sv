@@ -413,8 +413,10 @@ module SCU
 	bit         DMA_IND;
 	bit         DMA_DSP;
 	
-	//A push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS; byte i takes
-	//source byte DMA_PUSH_K[i] when DMA_PUSH_V[i]. DMA_RBA and DMA_BUF_WPOS are 0 for DSP transfers.
+	//A read push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS; byte i takes
+	//source byte DMA_PUSH_K[i] when DMA_PUSH_V[i]. A DSP push writes all four bytes, as in the golden:
+	//DMA_RBA is not always 0 in a DSP transfer (after a DSTP stop, or when a stale bus read acknowledge
+	//skipped the DSP address load).
 	bit  [ 1:0] DMA_PUSH_K[8];
 	bit         DMA_PUSH_V[8];
 	always_comb begin
@@ -422,7 +424,7 @@ module SCU
 		bit [2:0] ii;
 		for (int i=0; i<8; i++) begin
 			ii = i;
-			k = {1'b0,ii - DMA_BUF_WPOS} + {2'b00,DMA_RBA};
+			k = {1'b0,ii - DMA_BUF_WPOS} + {2'b00,DMA_DSP ? 2'b00 : DMA_RBA};
 			DMA_PUSH_K[i] = k[1:0];
 			DMA_PUSH_V[i] = ~k[3] & ~k[2];
 		end
@@ -2230,7 +2232,7 @@ module SCU
 					for (int i=0; i<8; i++) begin
 						if (i < 4 && PUSH_RDD)
 							DMA_BUF[i] <= RD_DATA[8*(3-i) +: 8];
-						else if (DMA_PUSH_V[i])
+						else if (DMA_PUSH_V[i] && (PUSH_RD || DSP_PUSH))	//a DSP read word goes to bytes 0-3 only
 							DMA_BUF[i] <= PUSH_DATA[8*(3-DMA_PUSH_K[i]) +: 8];
 					end
 				end

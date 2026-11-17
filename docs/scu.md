@@ -54,7 +54,8 @@ Facts established from the code that limit what sharing can do:
 
 SCU.sv
 - DMA buffer push: byte i takes source byte `((i - WPOS) mod 8) + RBA` when that is < 4 (explicit index math instead
-  of four dynamic-offset concatenation writes); DSP read pushes keep their override of bytes 0-3. -138 ALUTs.
+  of four dynamic-offset concatenation writes; RBA counts as 0 in a DSP transfer, where a push writes all four bytes);
+  a DSP read word writes bytes 0-3 only and overrides a DSP push there. -138 ALUTs.
 - A-bus wait count: one field select (`AW_NW`) plus one add instead of up to ten adders. DW write-back: one shared
   value (table pointer or write address) per channel update. The two indirect-table read states are one state body
   fed by one source mux (`IND_D`). -422 ALUTs together.

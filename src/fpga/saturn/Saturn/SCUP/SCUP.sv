@@ -394,20 +394,22 @@ module SCUP
 	
 	bit         DMA_PEND[4];
 	bit [ 7: 2] REG_A;
+	//Pending CPU write to DR/DW/DC (captured in the CE_R cycle of REG_WWAIT, performed in the next clk)
+	bit         CW_DR, CW_DW, CW_DC;
+	bit  [ 3:0] CW_BE;
 	
 	//DMA channel registers read through one set of channel muxes: the idle-state load happens in a
 	//CE_R cycle (lowest pending channel), the register-file read in a CE_F cycle (channel from REG_A).
+	//The clk of a pending CPU write reads the channel it writes, whose other bytes a byte or word write keeps.
+	//In the system that clk is a CE_F one anyway; with the benches' other CE patterns it is not.
 	wire [ 1:0] DMA_PEND_CH = DMA_PEND[3] ? 2'd3 : DMA_PEND[0] ? 2'd0 : DMA_PEND[1] ? 2'd1 : 2'd2;	//3: DSP
-	wire [ 1:0] DREG_CH = CE_F ? REG_A[6:5] : DMA_PEND_CH;
+	wire [ 1:0] DREG_CH = (CE_F || CW_DR || CW_DW || CW_DC) ? REG_A[6:5] : DMA_PEND_CH;
 	wire [26:0] DRQ, DWQ;
 	wire [19:0] DCQ;
 	wire [26:0] DRSEL = DREG_CH == 2'd3 ? {DSP_DR,2'b00} : DRQ;
 	wire [26:0] DWSEL = DREG_CH == 2'd3 ? DSP_DW : DWQ;
 	wire [19:0] DCSEL = DCQ;
 	
-	//Pending CPU write to DR/DW/DC (captured in the CE_R cycle of REG_WWAIT, performed in the next clk)
-	bit         CW_DR, CW_DW, CW_DC;
-	bit  [ 3:0] CW_BE;
 	bit         CH_INIT;
 	bit  [ 1:0] CH_INIT_CNT;
 	//DMA write-back (CE_R cycle)
@@ -585,7 +587,9 @@ module SCUP
 	wire [31:0] IND_D = DMA_ST == DMA_IND_READ_BBUS ? BBUS_BUF : ECDI;
 	
 	//DMA buffer: 8 bytes as 4 lanes (byte position p is lane p[1:0], row p[2]) in MLAB RAM.
-	//A push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS, in the CE_F cycle.
+	//A read push writes the low (4-DMA_RBA) bytes of the source word at DMA_BUF_WPOS, in the CE_F cycle.
+	//A DSP push writes all four bytes, as in the golden: DMA_RBA is not always 0 in a DSP transfer (after a DSTP
+	//stop, or when a stale bus read acknowledge skipped the DSP address load), and the word would lose bytes.
 	bit         ABUS_READ_DONE, BBUS_READ_DONE;
 	wire        CBUS_READ_DONE = CE_F && RES_N && CBUS_ST == CBUS_READ && CCACHE_FULL[CCACHE_RADDR[2]] && !DMA_BUF_SIZE[2];
 	wire        DSP_PUSH = CE_F && RES_N && (DMA_ST == DMA_DSP_BBUS || DMA_ST == DMA_DSP_CBUS) && DSP_DMA_REQ && !DMA_BUF_SIZE;
@@ -594,14 +598,17 @@ module SCUP
 	wire [31:0] RD_DATA = ABUS_READ_DONE ? ABUS_BUF : BBUS_READ_DONE ? BBUS_BUF : CCACHE_Q;
 	wire [31:0] PUSH_DATA = DSP_PUSH ? DSP_DMA_DO : RD_DATA;
 	wire        PUSH_ANY = PUSH_RD || PUSH_RDD || DSP_PUSH;
-	wire        PUSH_OVR = PUSH_RDD && !DSP_PUSH;	//DSP read: bytes 0-3 in row 0
+	//A stale read-done word in a DSP-to-bus transfer (after a same-bus DMA error or a DSTP stop) can meet a DSP
+	//push: in row 0 the read-done word wins, as in the golden; a lane takes one write per edge, so against a push
+	//to row 1 it is dropped (no transfer uses it before the next push writes row 0 again).
+	wire        PUSH_OVR = PUSH_RDD && !(DSP_PUSH && DMA_BUF_WPOS[2]);	//DSP read: bytes 0-3 in row 0
 	wire [ 2:0] LN_POS[4];
 	wire [ 1:0] LN_K[4];
 	wire        LN_V[4];
 	genvar gl;
 	generate for (gl=0; gl<4; gl++) begin : LANE
 		wire [1:0] j = 2'(gl) - DMA_BUF_WPOS[1:0];
-		wire [3:0] kk = {2'b00,j} + {2'b00,DMA_RBA};
+		wire [3:0] kk = {2'b00,j} + {2'b00,DSP_PUSH ? 2'b00 : DMA_RBA};
 		wire [2:0] pp = DMA_BUF_WPOS + {1'b0,j};
 		wire       rrow = DMA_BUF_RPOS[2] ^ (2'(gl) < DMA_BUF_RPOS[1:0]);
 		wire       wen = PUSH_ANY && (PUSH_OVR || !kk[3] && !kk[2]);

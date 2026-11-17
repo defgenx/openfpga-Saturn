@@ -78,9 +78,12 @@ half clock, two `RAMH_SLOW` settings, three CE patterns): 24 seeds x (2 SCU + 1 
 
 ## 6. Deviations
 
-- DSP read pushes (`PUSH_RDD`) that coincide with a DSP-to-bus push (`DSP_PUSH`, only possible after a DSTP abort leaves a
-  stale read-done pulse) no longer overwrite bytes 0 to 3 of the buffer; the DSP push wins. Not reached by any of the 24 seeds
-  in a way that changes an output.
+- DSP read pushes (`PUSH_RDD`) that coincide with a DSP-to-bus push (`DSP_PUSH`, only possible after a DSTP abort or a
+  same-bus DMA error leaves a stale read-done pulse) win in bytes 0 to 3 when the push also writes them, as in the golden;
+  against a push to bytes 4 to 7 they are dropped (a lane takes one write per clock; the next push writes bytes 0 to 3
+  before any transfer uses them).
 - `DMA_BUF` bytes 0 to 3 for the DSP are read at the buffer head; this is the same as bytes 0 to 3 because RPOS is 0 in every
   transfer that loads the DSP.
-- DR/DW/DC reset by a 4-clock zeroing walk after RST_N is released instead of an asynchronous clear.
+- DR/DW/DC reset by a 4-clock zeroing walk after RST_N is released instead of an asynchronous clear. A CPU write to
+  them is performed one clk after it is captured; that clk reads the written channel, whose other bytes a byte or
+  word write keeps.
