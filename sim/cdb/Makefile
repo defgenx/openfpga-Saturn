@@ -45,11 +45,15 @@ build/C_f0.hex: gen_iso.py
 	cd ../cd && python3 gen_disc.py
 	cp ../cd/build/B_f0.hex ../cd/build/B_f1.hex ../cd/build/B_toc.hex build/
 
-build/hle/Vtb_cdb: $(ALL) $(FWHEX)
+# verilator creates only the last directory of -Mdir
+build:
+	mkdir -p build
+
+build/hle/Vtb_cdb: $(ALL) $(FWHEX) | build
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=0 -DFWPATH='"$(FWHEX)"' -Mdir build/hle $(ALL)
-build/hle_small/Vtb_cdb: $(ALL) $(FWHEX)
+build/hle_small/Vtb_cdb: $(ALL) $(FWHEX) | build
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=0 -DRING_SMALL -DFWPATH='"$(FWHEX)"' -Mdir build/hle_small $(ALL)
-build/lle/Vtb_cdb: $(ALL)
+build/lle/Vtb_cdb: $(ALL) | build
 	verilator $(VFLAGS) --top-module tb_cdb -GLLE=1 -DFWPATH='"$(FWHEX)"' -Mdir build/lle $(ALL)
 
 hle: build/hle/Vtb_cdb
