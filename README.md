@@ -124,11 +124,12 @@ The core follows MiSTer's Saturn implementation as closely as possible and devia
 make -C sim sys       full-system simulation (Verilator), sim/sys/tb_sys.sv for the options
 ```
 
-`python3 tools/check_json.py --no-bitstream` checks the definition files. The design fills the FPGA (about 99% of
-the LABs), so the fit depends on the seed: a release uses the first seed that meets timing at every corner. It
-also depends on the number of processors the fitter may use, so `tools/qflow.sh` fits on one unless `QFLOW_PROCS`
-says otherwise: the seed of a release then gives the released bitstream on any host that runs the same Quartus
-build.
+`python3 tools/check_json.py --no-bitstream` checks the definition files. `python3 tools/check_port_init.py` (run by
+`./build.sh` before the compile) fails on an initial value written on a port declaration, which Quartus ignores. The
+design fills the FPGA (about 99% of the LABs), so the fit depends on the seed: a release uses the first seed that
+meets timing at every corner. It also depends on the number of processors the fitter may use, so `tools/qflow.sh`
+fits on one unless `QFLOW_PROCS` says otherwise: the seed of a release then gives the released bitstream on any host
+that runs the same Quartus build.
 
 ## Layout
 
@@ -140,7 +141,7 @@ sim/                 simulations (make -C sim <target>)
 firmware/cdb/        HLE CD block firmware (RV32, runs on SERV)
 dist/                Cores/defgenx.Saturn (definition files), Platforms/saturn.json and _images/saturn.bin, Assets/
 tools/               prepare-card/ (Saturn-prepare-card: disc TOC, merged image, card check; Go), reverse_bits.py,
-                     check_json.py, pllplan.py
+                     check_json.py, check_port_init.py, pllplan.py
 build.sh             compile and package
 install.sh/.bat/.ps1 copy the core to the SD card and prepare the discs
 ```

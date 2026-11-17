@@ -10,6 +10,8 @@ QUARTUS_IMAGE=${QUARTUS_IMAGE:-raetro/quartus:21.1}
 CORE=defgenx.Saturn
 
 compile() {
+	# Quartus ignores an initial value written on a port declaration, the simulators do not
+	python3 tools/check_port_init.py
 	if command -v quartus_sh >/dev/null; then
 		(cd src/fpga && sh ../../tools/qflow.sh)
 	else

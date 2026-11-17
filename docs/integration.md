@@ -329,6 +329,13 @@ that, while Quartus 21.1 builds a signed product (gate-level check in [scsp-rewr
 both factors signed (`$signed(a) * $signed({1'b0,b})`) so that simulation shows what the FPGA does. The SCSP had three such
 products (fixed); the other modules have not been audited for it.
 
+An initial value written on a port declaration (`output reg x = 1'b0,` in a module header) is honoured by Verilator and
+Icarus but ignored by Quartus 21.1: the register powers up as "don't care". The synthesis report then shows what no
+simulation can: `overrun` of `cdb_sink`, which is only ever set, was removed as stuck at 1; `disc_ok` of `cd_stream`
+was merged with `ld_run` as its inverse, so it read 1 from power-up until the first TOC load; the SDRAM command pins
+did not power up as NOP. The power-up values of output registers are written in an `initial` block in the module body,
+and `tools/check_port_init.py` (run by `build.sh`) fails on any initial value on a port declaration.
+
 The Verilator lint of the glue modules (`verilator --lint-only -Wall`) is clean apart from unused-bit notes. The full
 tree is checked by Quartus, not Verilator (it needs the Altera RAM/PLL primitives).
 
