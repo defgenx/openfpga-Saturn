@@ -172,6 +172,7 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 | commands rejected while authenticating | Gremlin demo disc | done (E1 is rejected while E0 runs) |
 | status BUSY during seek, pause when buffers are full, resume | Panzer Dragoon Zwei, Gunbird, Steam-Heart's | reproduced as Mednafen does (status PAUSE while the buffers are full, resume when space is freed). Whether this is enough for Panzer Dragoon Zwei is not known |
 | Pause (Seek `0xFFFFFF`) while streaming, then Reset Selector and a Play elsewhere: the sector already issued to the drive must not reach the cleared partition | Panzer Dragoon (every file load after a streamed one) | as Mednafen (its Pause negates `SecPreBuf_In`): the sectors issued but not delivered are dropped and the drive parks on the first of them (`pause_drop`). Before, that sector was filtered into the partition after the clear and the next file came in one sector late (Panzer Dragoon: the stage data in WRAM-L shifted by 2 KB, the crash after EPISODE 1). Test: `script_pause.txt` |
+| End of a file system operation (Change Directory, Read Directory, Authenticate, Abort File), then the game's own filter and Set CD Device Connection: the sectors the operation read ahead must not reach the partition | Sega Touring Car Championship (black screen at start), Duke Nukem 3D (logos) | as Mednafen (the operation ends with a pause that comes before its read-ahead sector is buffered): `fls_finish` pauses with `pause_drop`. Before, the drive read on past the directory with no end, and the up to two sectors issued to it landed after EFLS: one that came after the game's Set CD Device Connection was the first sector of its partition (Sega Touring Car: its directory table began with a stale sector, the last entries fell off and a file lookup failed). Test: `script_fls.txt` |
 | Play with "no pickup change" (mode bit 7) while the drive is paused (end of the play range, or buffers full) | games that wait on a screen and then read on, e.g. DoDonPachi (reported to hang when waiting at the ship select; not yet checked on that disc) | as Mednafen's `StartSeek`: the flag keeps reading only while the drive plays; paused, the Play seeks to its start. Before, the drive stayed paused with the prefetch stopped and no sector came. Test: `script_npc.txt` |
 | seek to index 2 and above | NBA Action, Taito Chase H.Q. | **not possible**: the TOC format has INDEX 01 only |
 | BIOS CD player, Tactics Ogre, DJ Wars, World Cup France '98, ... | | not tested, depend on exact status timing; the status values and the flow follow Mednafen, which runs them |
@@ -236,6 +237,10 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
 * `script_npc.txt` (`check_hle.py <log> npc`): Play of 8 sectors to the end (the drive pauses), then a Play of 8
   sectors elsewhere with mode bit 7 (no pickup change): 16 sectors, 0..7 then 20..27, compared word for word.
   **2 checks, 0 failed**; the firmware before the fix delivers nothing after the pause.
+* `script_fls.txt` (`check_hle.py <log> fls`): Authenticate, then four times a Change Directory to the root; 0, 3, 6
+  or 9 ms after its EFLS a filter for the 16 sectors after the directory is set up and connected to the CD device,
+  and 30 ms later (no Play) its partition must be empty. **4 checks, 0 failed**; the firmware that ended the operation
+  with the sectors under way fails 4 (2, 1, 1 and 1 sectors read ahead in the partition).
 * `+FEEDPC=<dt_feed address from firmware/cdb/build/cdb.lst>` reports the longest firmware main-loop period:
   2,765 us over `script_cmds.txt`.
 * **LLE comparison** (`make -C sim cdb-compare`, same script on pruned SH-1 + cdb105m + YGR019 + `cdd_pocket`):

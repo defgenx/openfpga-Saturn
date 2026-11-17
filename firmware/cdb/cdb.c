@@ -592,6 +592,9 @@ static u8 fi_fnum(u32 a) { return dr_get(a + 5) >> 8; }
 
 static void fls_release(void) { if (fls.have) { buf_free(fls.cur_buf); fls.have = 0; } }
 
+/* the drive pauses at the end of a file system operation. The sectors it read ahead are dropped as on a Pause: a
+   game's next filter set-up comes within milliseconds of EFLS, and a sector landing after its Set CD Device
+   Connection would be the first in its partition (Mednafen pauses before the read-ahead sector is buffered) */
 static void fls_finish(void)
 {
 	fls_release();
@@ -599,6 +602,7 @@ static void fls_finish(void)
 	fls.active = fls.doauth = fls.abort = 0;
 	play_end_irq = 0; play_start = 0x800000; play_end = 0x800000; play_rep = 0;
 	at_end = 0;
+	if (dphase == D_PLAY) pause_drop();
 }
 
 static u8 fls_byte(u32 i)

@@ -22,6 +22,7 @@ COOKED = len(sys.argv) > 2 and sys.argv[2] == "cooked"
 BULK = len(sys.argv) > 2 and sys.argv[2] == "bulk"
 PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
 NPC = len(sys.argv) > 2 and sys.argv[2] == "npc"
+FLS = len(sys.argv) > 2 and sys.argv[2] == "fls"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -94,6 +95,12 @@ if PAUSE:   # script_pause.txt: Reset Selector, Pause, Reset Selector while stre
     ok("pause: 20 sectors after the new play", r is not None and r[3] == 20, r)
     d = datas("read")[0]
     ok("pause: sectors 70..89 word for word", d == [w for i in range(20) for w in user(70 + i)], "len %d" % len(d))
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if FLS:   # script_fls.txt: a filter connected 0..9 ms after a Change Directory's EFLS gets no sector read ahead by it
+    for sec in ("d0", "d3", "d6", "d9"):
+        r = find_cmd(sec, "5100")
+        ok("fls %s: no sector in the partition connected after EFLS" % sec, r is not None and r[3] == 0, r)
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if COOKED:

@@ -33,6 +33,8 @@ test: hle gen
 	python3 check_hle.py build/hle_pause.log pause
 	./build/hle/Vtb_cdb +SCRIPT=script_npc.txt +LOG=build/hle_npc.log > build/hle_npc.out
 	python3 check_hle.py build/hle_npc.log npc
+	./build/hle/Vtb_cdb +SCRIPT=script_fls.txt +LOG=build/hle_fls.log > build/hle_fls.out
+	python3 check_hle.py build/hle_fls.log fls
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test
