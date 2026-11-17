@@ -22,9 +22,11 @@ VFLAGS_RF = -DPOCKET_VDP1P_ROWFLOOR
 else
 VFLAGS_RF = -DPOCKET_VDP1P_NO_ROWFLOOR
 endif
-gen/REF_VDP1.sv: $(REF)/VDP1.sv $(ROWFLOOR_PATCH) gen/rf_$(ROWFLOOR).stamp
+# The golden copy also gets VDP1P's write-buffer empty flags (wbuf_patch.pl, docs/vdp1.md section 3 item 7). It is
+# made again when this Makefile changes, where its recipe is.
+gen/REF_VDP1.sv: $(REF)/VDP1.sv $(ROWFLOOR_PATCH) wbuf_patch.pl Makefile gen/rf_$(ROWFLOOR).stamp
 	@mkdir -p gen
-	perl -pe 's/\bVDP1/REF_VDP1/g' $< | ROWFLOOR=$(ROWFLOOR) perl $(ROWFLOOR_PATCH) > $@
+	perl -pe 's/\bVDP1/REF_VDP1/g' $< | ROWFLOOR=$(ROWFLOOR) perl $(ROWFLOOR_PATCH) | perl wbuf_patch.pl > $@
 gen/rf_$(ROWFLOOR).stamp:
 	@mkdir -p gen; rm -f gen/rf_*.stamp gen/REF_VDP1.sv; rm -rf obj; touch $@
 

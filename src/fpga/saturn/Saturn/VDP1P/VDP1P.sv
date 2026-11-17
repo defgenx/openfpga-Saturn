@@ -1645,7 +1645,9 @@ module VDP1P (
 				VRAM_FIFO_EMPTY <= 0;
 				VRAM_FIFO_FULL <= 0;
 			end
-			if (CPU_VRAM_WRDY && !CPU_VRAM_WPEND && !VRAM_FIFO_EMPTY) begin
+			// not on the clock a new beat is taken: READY would let the next transaction in while that write still waits in
+			// the write buffer, and a read request puts its address into the same entry (the write is lost)
+			if (CPU_VRAM_WRDY && !CPU_VRAM_WPEND && !VRAM_FIFO_EMPTY && !WB_VBEAT) begin
 				VRAM_FIFO_EMPTY <= 1;
 			end
 			
@@ -1666,7 +1668,7 @@ module VDP1P (
 				FB_FIFO_EMPTY <= 0;
 				FB_FIFO_FULL <= 0;
 			end
-			if (CPU_FB_WRDY && !CPU_FB_WPEND && !FB_FIFO_EMPTY) begin
+			if (CPU_FB_WRDY && !CPU_FB_WPEND && !FB_FIFO_EMPTY && !WB_FBEAT) begin
 				FB_FIFO_EMPTY <= 1;
 			end
 			

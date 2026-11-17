@@ -118,6 +118,9 @@ trade 62 ALUTs for 85 registers.
    of a new transaction is issued only when `RDY_N` is low; `RDY_N` includes `READY`, which is cleared when `CS_N`
    falls and set again only after both write FIFOs are empty (`CPU_*_WPEND` clear), and the read path
    needs `CPU_*_RRDY`. So write data of two regions, or a read address and write data, are never pending together.
+   For that the empty flags are not set on the clock a new beat is taken: the golden sets them there, so its `READY`
+   can return while the last beat of a burst still waits (harmless with its own read address register; here a read
+   request would overwrite that beat). `RDY_N` then stays high until the waiting beats are written, longer than there.
    Assumption: the bus master samples `RDY_N` at least two clocks after it asserts `CS_N` (the SCU does it on `CE_R`,
    which is every second clock at most) and does not present a beat while `RDY_N` is high.
 8. **Vertex load adders.** X words (even `CMD_POS`) and Y words (odd) are never loaded in the same cycle, so the
@@ -157,6 +160,8 @@ rare 20+ stalls, `RDY` combinational on a request edge) and framebuffer models (
 `FB_RDY`). The CPU is the SCU B-bus protocol master (address words, `RDY_N` waits, single/burst writes, reads).
 At the draw end and at the end of each scenario VRAM and both framebuffers of the two sides are compared; the
 framebuffers of the first scenarios are written as PPM (`out/sNNN_fbK_{golden,new}.ppm`, `make vdp1-ppm` for all).
+The golden copy gets the write-buffer empty flags of section 3, item 7 (`sim/vdp1/wbuf_patch.pl`), so `RDY_N` stays
+comparable clock for clock.
 
 Stimulus per scenario (seeded, `--n`, `--seed`): command tables in VRAM (preloaded or uploaded through the bus with
 single and burst writes) with normal/scaled/distorted sprites, polygons, polylines, lines, all colour modes (CM 0-7),
