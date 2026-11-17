@@ -573,12 +573,16 @@ int main(int argc, char** argv) {
 	// bus driver: run the slot logic with the golden RDY_N is handled in the loop below
 	if (g_nostop && mism_total) failed = true;
 	if (!cutmode && !g_nowr) {
-		long bad = 0, chk = 0;
+		long bad = 0, chk = 0, cut = 0;
+		const bool sres = (seed & 7) == 5 && !g_legal;   // these seeds hold RES_N low from clock 700001
 		const Bank* bm[2] = {&md.a0, &md.b0}; const Bank* bg[2] = {&mg.a0, &mg.b0};
 		for (int b = 0; b < 2; b++) for (size_t i = 0; i < bm[b]->h.size(); i++) if (wr_t[b][i] < t - 6000) {
+			// the soft reset drops write lanes that are still queued: a halfword last written in the 6000 clocks before it is not compared
+			if (sres && wr_t[b][i] >= 700001 - 6000 && wr_t[b][i] < 700001) { cut++; continue; }
 			chk++;
 			if (bm[b]->h[i] != bg[b]->h[i]) { if (bad++ < 5) printf("VRAM CONTENT MISMATCH bank=%c halfword=%05zx dut=%04x golden=%04x\n", 'A' + b, i, bm[b]->h[i], bg[b]->h[i]); }
 		}
+		if (cut) printf("VRAM contents: %ld halfwords last written in the 6000 clocks before the soft reset left out\n", cut);
 		if (bad) { printf("VRAM contents: %ld of %ld halfwords differ from the upstream golden\n", bad, chk); failed = true; }
 	}
 	printf("seed=%llu scene=%d dens=%d pal=%d clks=%ld frames=%d ops=%d timeouts=%d mism=%ld %s\n", (unsigned long long)seed, scene, dens, pal, t, frame, bus.done, bus.timeouts, mism_total, failed ? "FAIL" : "PASS");
