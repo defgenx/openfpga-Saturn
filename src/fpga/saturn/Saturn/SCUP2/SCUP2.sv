@@ -620,7 +620,10 @@ module SCUP2
 	wire [31:0] RD_DATA = ABUS_READ_DONE ? ABUS_BUF : BBUS_READ_DONE ? BBUS_BUF : CCACHE_Q;
 	wire [31:0] PUSH_DATA = DSP_PUSH ? DSP_DMA_DO : RD_DATA;
 	wire        PUSH_ANY = PUSH_RD || PUSH_RDD || DSP_PUSH;
-	wire        PUSH_OVR = PUSH_RDD && !DSP_PUSH;	//DSP read: bytes 0-3 in row 0
+	//A stale read-done word in a DSP-to-bus transfer (after a same-bus DMA error or a DSTP stop) can meet a DSP
+	//push: in row 0 the read-done word wins, as in the golden; a lane takes one write per edge, so against a push
+	//to row 1 it is dropped (no transfer uses it before the next push writes row 0 again).
+	wire        PUSH_OVR = PUSH_RDD && !(DSP_PUSH && DMA_BUF_WPOS[2]);	//DSP read: bytes 0-3 in row 0
 	wire [ 2:0] LN_POS[4];
 	wire [ 1:0] LN_K[4];
 	wire        LN_V[4];

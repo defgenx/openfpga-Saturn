@@ -36,6 +36,9 @@ with the CPU write slot would need 25 staging flops; estimated -35).
   that clk returns the old word (`do_skip` in the DSP bench); `DMA_DO` is compared only in DSP-to-bus transfers (the SCU samples
   it only then).
 - `DSO` is compared only with RA0W/WA0W (DMA control bits are on `DMAC`); the debug taps of the DSP are gone.
+- DMA buffer: the four byte lanes take one write per clock. A stale read-done word in a DSP-to-bus transfer (only after a
+  same-bus DMA error or a DSTP stop) that meets a DSP push to row 1 is dropped; the golden writes it to row 0, which the
+  next push writes again before any transfer uses it. Against a push to row 0 the read-done word wins, as in the golden.
 - DMA channel registers are zeroed by a 4-clk walk after reset (as SCUP); CPU writes land one clk after the golden's.
 - Assumption: CE_R never occurs in two consecutive clks (true in `Saturn.sv`); the benches' random CE pattern now respects it.
 - `tb_dsp` applies the DMA data one clk after the ACK (as the SCU buffer push does).
