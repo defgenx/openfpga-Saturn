@@ -19,7 +19,7 @@ module cdb_xfer (
 	output wire        seg1_free,
 	output wire        idle,
 	output wire        fin,               // transfer complete: host reads past this point return 0
-	output reg  [2:0]  mode = 3'd0,
+	output reg  [2:0]  mode,
 	output wire [31:0] hostcnt,           // 18 bits are counted: a transfer is at most 200 sectors of 1176 words (235,200 < 2^18)
 
 	// host side FIFO
@@ -31,13 +31,21 @@ module cdb_xfer (
 	input  wire [15:0] f_wd,
 
 	// DRAM client
-	output reg         rq = 1'b0,
-	output reg         rq_we = 1'b0,
-	output reg  [17:0] rq_a = 18'd0,
+	output reg         rq,
+	output reg         rq_we,
+	output reg  [17:0] rq_a,
 	output wire [15:0] rq_d,
 	input  wire        dn,
 	input  wire [15:0] dq
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	mode  = 3'd0;
+	rq    = 1'b0;
+	rq_we = 1'b0;
+	rq_a  = 18'd0;
+end
 
 reg [2:0]  wp = 3'd0, rp = 3'd0;
 reg [3:0]  n = 4'd0;

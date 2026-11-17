@@ -15,17 +15,25 @@ module cdb_sink (
 	input  wire [17:0] cd_data,
 	input  wire        cd_ck,
 
-	output reg         done = 1'b0,    // pulses once the last word is in DRAM (data) or output (audio)
-	output reg         overrun = 1'b0,
+	output reg         done,           // pulses once the last word is in DRAM (data) or output (audio)
+	output reg         overrun,
 
 	output reg         rq,
 	output reg  [17:0] rq_a,
 	output reg  [15:0] rq_d,
 	input  wire        dn,
 
-	output reg  [15:0] cd_sl = 16'd0,
-	output reg  [15:0] cd_sr = 16'd0
+	output reg  [15:0] cd_sl,
+	output reg  [15:0] cd_sr
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	done    = 1'b0;
+	overrun = 1'b0;
+	cd_sl   = 16'd0;
+	cd_sr   = 16'd0;
+end
 
 reg        audio = 1'b0;
 reg [17:0] base = 18'd0;

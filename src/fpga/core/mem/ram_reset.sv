@@ -11,9 +11,15 @@ module ram_reset (
 	input  wire clk,
 	input  wire reset,
 	input  wire loading,
-	output reg  rst_ram = 1'b0,
-	output reg  download = 1'b0
+	output reg  rst_ram,
+	output reg  download
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	rst_ram  = 1'b0;
+	download = 1'b0;
+end
 
 reg       reset_q = 1'b0, busy_q = 1'b0;
 reg [7:0] delay_cnt = 8'd0;

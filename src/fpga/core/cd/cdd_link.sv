@@ -11,11 +11,11 @@ module cdd_link (
 	input  wire        clk,
 	input  wire        rst_n,
 
-	output reg         CD_CDATA = 1'b0,
+	output reg         CD_CDATA,
 	input  wire        CD_HDATA,
 	input  wire        CD_COMCLK,
-	output reg         CD_COMREQ_N = 1'b1,
-	output reg         CD_COMSYNC_N = 1'b1,
+	output reg         CD_COMREQ_N,
+	output reg         CD_COMSYNC_N,
 
 	// packet side (cdd_ctl)
 	input  wire        pk_we,
@@ -23,10 +23,19 @@ module cdd_link (
 	input  wire [7:0]  pk_wd,
 	input  wire        pk_send,
 	input  wire [3:0]  pk_ha,
-	output reg  [7:0]  pk_hq = 8'd0,
-	output reg         pk_cmd_new = 1'b0,
+	output reg  [7:0]  pk_hq,
+	output reg         pk_cmd_new,
 	input  wire        pk_cmd_ack
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	CD_CDATA     = 1'b0;
+	CD_COMREQ_N  = 1'b1;
+	CD_COMSYNC_N = 1'b1;
+	pk_hq        = 8'd0;
+	pk_cmd_new   = 1'b0;
+end
 
 reg [7:0] stat_mem [0:15];
 reg [7:0] host_mem [0:15];

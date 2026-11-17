@@ -21,19 +21,30 @@ module cd_feed #(parameter SB = 3) (   // SB: slot bits of the ring
 	input  wire        spd2,
 	input  wire [23:0] hdr,         // BCD m,s,f of the sector's FAD; stable while busy
 
-	output reg         busy = 1'b0,
-	output reg         held = 1'b0, // a ring slot is in use
-	output reg         done = 1'b0, // one-clock pulse
+	output reg         busy,
+	output reg         held,        // a ring slot is in use
+	output reg         done,        // one-clock pulse
 
-	output reg         sr_rq = 1'b0,
+	output reg         sr_rq,
 	output wire [SB+10:0] sr_a,
 	input  wire        sr_rv,
 	input  wire [15:0] sr_d,
 
-	output reg  [17:0] cd_data = 18'd0,
-	output reg         cd_ck = 1'b0,
-	output reg         cd_audio = 1'b0
+	output reg  [17:0] cd_data,
+	output reg         cd_ck,
+	output reg         cd_audio
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	busy     = 1'b0;
+	held     = 1'b0;
+	done     = 1'b0;
+	sr_rq    = 1'b0;
+	cd_data  = 18'd0;
+	cd_ck    = 1'b0;
+	cd_audio = 1'b0;
+end
 
 localparam [31:0] POLY = 32'hD8018001;
 localparam [2:0] F_IDLE = 0, F_PREP = 1, F_RD = 2, F_HAVE = 3, F_STEP = 4, F_RDY = 5;

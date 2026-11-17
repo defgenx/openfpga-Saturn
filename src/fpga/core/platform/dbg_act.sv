@@ -5,8 +5,9 @@ module dbg_act (
 	input  wire clk,
 	input  wire tick,
 	input  wire s,
-	output reg  y = 1'b0
+	output reg  y
 );
+initial y = 1'b0;   // Quartus ignores an initial value written on the port declaration
 reg q = 1'b0, f = 1'b0;
 always @(posedge clk) begin
 	q <= s;

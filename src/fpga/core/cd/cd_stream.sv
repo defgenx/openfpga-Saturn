@@ -44,7 +44,7 @@ module cd_stream #(
 	input  wire [31:0] bridge_addr,
 	input  wire [31:0] bridge_wr_data,
 	input  wire        toc_rd,               // rising edge: read the TOC from slot TRACK_SLOT_BASE, offset 0
-	output reg         t_read = 1'b0,
+	output reg         t_read,
 	output wire [15:0] t_id,
 	output wire [31:0] t_off,
 	output wire [31:0] t_baddr,
@@ -56,27 +56,27 @@ module cd_stream #(
 	// sector ring memory, 16384 x 16 (ddram_pocket handshake: a write of two words (one bridge word) is a one clock
 	// pulse taken when !rg_wbusy; a read keeps rg_rd high, waits two clocks, then for !rg_rbusy, and rg_q is valid
 	// in that clock)
-	output reg         rg_wr = 1'b0,
+	output reg         rg_wr,
 	output wire [RING_SB+9:0] rg_wa,         // word pair (the FIFO head: stays until rg_wbusy has fallen)
 	output wire [31:0] rg_wd,                // {first word, second word}
 	input  wire        rg_wbusy,
-	output reg         rg_rd = 1'b0,
+	output reg         rg_rd,
 	output wire [RING_SB+10:0] rg_ra,
 	input  wire [15:0] rg_q,
 	input  wire        rg_rbusy,
 
 	// disc
-	output reg         disc_ok = 1'b0,
-	output reg         disc_new = 1'b0,      // pulse: a TOC was loaded and the boot header replayed
+	output reg         disc_ok,
+	output reg         disc_new,             // pulse: a TOC was loaded and the boot header replayed
 	output wire        boot_busy,
-	output reg         boot_wr = 1'b0,
-	output reg  [8:0]  boot_addr = 9'd0,
-	output reg  [15:0] boot_data = 16'd0,
-	output reg  [6:0]  ntracks = 7'd0,
-	output reg  [7:0]  ntbcd = 8'd0,
-	output reg  [23:0] toc_end = 24'd0,      // lead-out FAD
-	output reg         hack_wwf = 1'b0,
-	output reg         hack_rr = 1'b0,
+	output reg         boot_wr,
+	output reg  [8:0]  boot_addr,
+	output reg  [15:0] boot_data,
+	output reg  [6:0]  ntracks,
+	output reg  [7:0]  ntbcd,
+	output reg  [23:0] toc_end,              // lead-out FAD
+	output reg         hack_wwf,
+	output reg         hack_rr,
 
 	// TOC lookup (results valid when lk_busy is low; hold lk_hold while using them)
 	input  wire        lk_go,
@@ -86,12 +86,12 @@ module cd_stream #(
 	input  wire        lk_hold,              // keeps the prefetcher out of the lookup engine
 	output wire        lk_busy,
 	output wire        eng_idle,             // TOC engine idle; wait for it after raising lk_hold
-	output reg  [6:0]  lk_track = 7'd0,
-	output reg  [7:0]  lk_tbcd = 8'd1,       // BCD of track + 1
-	output reg  [23:0] lk_start = 24'd0,     // start FAD
-	output reg  [7:0]  lk_idx1 = 8'd0,
-	output reg         lk_data = 1'b0,
-	output reg         lk_s2048 = 1'b0,
+	output reg  [6:0]  lk_track,
+	output reg  [7:0]  lk_tbcd,              // BCD of track + 1
+	output reg  [23:0] lk_start,             // start FAD
+	output reg  [7:0]  lk_idx1,
+	output reg         lk_data,
+	output reg         lk_s2048,
 
 	// prefetch
 	input  wire        pf_flush,             // restart: drop ready sectors, next fetch is FAD pf_fad
@@ -110,13 +110,41 @@ module cd_stream #(
 	output wire        cd_ck,
 	output wire        cd_audio,
 
-	output reg  [7:0]  err_cnt = 8'd0,       // bridge reads that ended with an error
-	output reg  [7:0]  ovf_cnt = 8'd0,       // bridge words lost to a full ring FIFO (saturating)
-	output reg  [7:0]  rd_cnt = 8'd0,        // bridge reads completed, with or without error (saturating)
+	output reg  [7:0]  err_cnt,              // bridge reads that ended with an error
+	output reg  [7:0]  ovf_cnt,              // bridge words lost to a full ring FIFO (saturating)
+	output reg  [7:0]  rd_cnt,               // bridge reads completed, with or without error (saturating)
 	// debug overlay CD row (docs/debug-overlay.md), 4 BCD digits each, saturating at 9999
-	output reg  [15:0] lat_bcd = 16'd0,      // clk_74a: round trip of the last ring sector read, 0.1 ms units
-	output reg  [15:0] stv_bcd = 16'd0       // ms the drive waited on an empty ring during play (never cleared)
+	output reg  [15:0] lat_bcd,              // clk_74a: round trip of the last ring sector read, 0.1 ms units
+	output reg  [15:0] stv_bcd               // ms the drive waited on an empty ring during play (never cleared)
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	t_read    = 1'b0;
+	rg_wr     = 1'b0;
+	rg_rd     = 1'b0;
+	disc_ok   = 1'b0;
+	disc_new  = 1'b0;
+	boot_wr   = 1'b0;
+	boot_addr = 9'd0;
+	boot_data = 16'd0;
+	ntracks   = 7'd0;
+	ntbcd     = 8'd0;
+	toc_end   = 24'd0;
+	hack_wwf  = 1'b0;
+	hack_rr   = 1'b0;
+	lk_track  = 7'd0;
+	lk_tbcd   = 8'd1;
+	lk_start  = 24'd0;
+	lk_idx1   = 8'd0;
+	lk_data   = 1'b0;
+	lk_s2048  = 1'b0;
+	err_cnt   = 8'd0;
+	ovf_cnt   = 8'd0;
+	rd_cnt    = 8'd0;
+	lat_bcd   = 16'd0;
+	stv_bcd   = 16'd0;
+end
 
 function automatic [15:0] bcd4_inc(input [15:0] v);
 	reg [15:0] r;

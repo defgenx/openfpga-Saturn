@@ -34,10 +34,11 @@ module load_pocket #(
 	output reg         o_wr,
 	input  wire        o_busy,
 	output wire [23:2] r_addr,             // read-back: one 32 bit read (ddram_pocket ld_rd), held until the next request
-	output reg         r_rd = 1'b0,
+	output reg         r_rd,
 	output wire        loading,
 	output wire  [7:0] dbg_overflow
 );
+initial r_rd = 1'b0;   // Quartus ignores an initial value written on the port declaration
 
 // ---------------------------------------------------------------- async FIFO, gray pointers
 localparam int AW = 8;

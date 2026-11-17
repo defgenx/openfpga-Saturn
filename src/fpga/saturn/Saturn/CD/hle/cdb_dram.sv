@@ -9,17 +9,26 @@ module cdb_dram (
 	input  wire [2:0]  rq_we,
 	input  wire [17:0] rq_a0, rq_a1, rq_a2,
 	input  wire [15:0] rq_d0, rq_d1, rq_d2,
-	output reg  [2:0]  done = 3'd0,
-	output reg  [15:0] q = 16'd0,
+	output reg  [2:0]  done,
+	output reg  [15:0] q,
 
 	output wire [18:1] RAM_A,          // the granted client's request (it holds it until done)
 	output wire [15:0] RAM_D,
-	output reg  [1:0]  RAM_WE = 2'd0,
-	output reg         RAM_RD = 1'b0,
-	output reg         RAM_CS = 1'b0,
+	output reg  [1:0]  RAM_WE,
+	output reg         RAM_RD,
+	output reg         RAM_CS,
 	input  wire [15:0] RAM_Q,
 	input  wire        RAM_RDY
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	done   = 3'd0;
+	q      = 16'd0;
+	RAM_WE = 2'd0;
+	RAM_RD = 1'b0;
+	RAM_CS = 1'b0;
+end
 
 reg [2:0] st = 3'd0;
 reg [1:0] who = 2'd0;

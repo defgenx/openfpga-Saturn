@@ -32,9 +32,15 @@ module sync_fifo #(
 
     input wire write_en,
     input wire [WIDTH - 1:0] data,
-    output reg [WIDTH - 1:0] data_s = 0,
-    output reg write_en_s = 0
+    output reg [WIDTH - 1:0] data_s,
+    output reg write_en_s
 );
+
+  // power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+  initial begin
+    data_s     = 0;
+    write_en_s = 0;
+  end
 
   reg read_req = 0;
   wire empty;

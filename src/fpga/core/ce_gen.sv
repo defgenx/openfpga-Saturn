@@ -9,9 +9,10 @@ module ce_gen #(
 	input  wire [W-1:0] in_clk,
 	input  wire [W-1:0] out_clk,
 	input  wire         in_ce,
-	output reg          ce = 1'b0,
+	output reg          ce,
 	output wire         ev
 );
+initial ce = 1'b0;   // Quartus ignores an initial value written on the port declaration
 reg  [W-1:0] sum = '0;
 wire [W:0]   nxt = {1'b0, sum} + {1'b0, out_clk};
 wire [W+1:0] dif = {1'b0, nxt} - {2'b0, in_clk};   // nxt >= in_clk is "no borrow": the compare shares the subtractor
@@ -33,9 +34,10 @@ module ce_gent #(
 	input  wire [W-1:0] nstep,
 	input  wire [W-1:0] out_clk,
 	input  wire         in_ce,
-	output reg          ce = 1'b0,
+	output reg          ce,
 	output wire         ev
 );
+initial ce = 1'b0;   // Quartus ignores an initial value written on the port declaration
 reg  [W-1:0] sum = '0;
 wire         ge = sum >= thr;
 assign ev = in_ce & ge;
@@ -51,8 +53,9 @@ module ce_div #(
 ) (
 	input  wire clk,
 	input  wire ev,
-	output reg  ce = 1'b0
+	output reg  ce
 );
+initial ce = 1'b0;   // Quartus ignores an initial value written on the port declaration
 reg [$clog2(N)-1:0] cnt = '0;
 wire last = (cnt == N - 1);
 always @(posedge clk) begin

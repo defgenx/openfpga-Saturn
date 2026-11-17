@@ -28,10 +28,17 @@ module bridge_loader (
 
 	// read-back: each bridge_rd in 0x4/0x5 toggles rd_t; rd_cart / rd_off hold the word until the next read
 	input  wire        bridge_rd,
-	output reg         rd_t = 1'b0,
-	output reg         rd_cart = 1'b0,
-	output reg  [19:2] rd_off = '0
+	output reg         rd_t,
+	output reg         rd_cart,
+	output reg  [19:2] rd_off
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	rd_t    = 1'b0;
+	rd_cart = 1'b0;
+	rd_off  = '0;
+end
 
 assign ld_addr = bridge_addr[23:0];
 assign ld_data = bridge_wr_data;

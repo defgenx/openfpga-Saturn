@@ -40,9 +40,9 @@ module sdram_pocket #(
 	input  wire [15:0] dram_dq_i,
 	output reg   [1:0] dram_dqm,
 	output wire        dram_cke,
-	output reg         dram_ras_n = 1'b1,   // power-up NOP: zero would be an MRS before the init wait
-	output reg         dram_cas_n = 1'b1,
-	output reg         dram_we_n  = 1'b1,
+	output reg         dram_ras_n,
+	output reg         dram_cas_n,
+	output reg         dram_we_n,
 	output wire        dram_clk,
 
 	// VDP2 (as sdram1)
@@ -76,6 +76,14 @@ module sdram_pocket #(
 	output reg   [7:0] dbg_scrub_wrap,  // wraps of the row-scrub counters, saturating
 	output reg   [7:0] dbg_scsp_drop    // SCSP requests that arrived while one was still pending
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration):
+// NOP, as zero would be an MRS before the init wait
+initial begin
+	dram_ras_n = 1'b1;
+	dram_cas_n = 1'b1;
+	dram_we_n  = 1'b1;
+end
 
 localparam bit [2:0] CMD_NOP = 3'b111, CMD_ACT = 3'b011, CMD_RD = 3'b101, CMD_WR = 3'b100,
                      CMD_PRE = 3'b010, CMD_REF = 3'b001, CMD_MRS = 3'b000;

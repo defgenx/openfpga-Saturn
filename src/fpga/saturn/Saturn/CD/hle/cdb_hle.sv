@@ -53,11 +53,11 @@ module cdb_hle #(
 	input  wire [6:0]  ntracks,
 	input  wire [7:0]  ntbcd,
 	input  wire [23:0] toc_end,
-	output reg         lk_go = 1'b0,
-	output reg         lk_byidx = 1'b0,
-	output reg  [23:0] lk_x = 24'd0,
-	output reg  [6:0]  lk_idx = 7'd0,
-	output reg         lk_hold = 1'b0,
+	output reg         lk_go,
+	output reg         lk_byidx,
+	output reg  [23:0] lk_x,
+	output reg  [6:0]  lk_idx,
+	output reg         lk_hold,
 	input  wire        lk_busy,
 	input  wire        eng_idle,
 	input  wire [6:0]  lk_track,
@@ -66,19 +66,36 @@ module cdb_hle #(
 	input  wire [7:0]  lk_idx1,
 	input  wire        lk_data,
 	input  wire        lk_s2048,
-	output reg         pf_flush = 1'b0,
-	output reg  [23:0] pf_fad = 24'd0,
-	output reg         pf_en = 1'b0,
+	output reg         pf_flush,
+	output reg  [23:0] pf_fad,
+	output reg         pf_en,
 	input  wire        pf_ready,
-	output reg         sd_go = 1'b0,
-	output reg  [1:0]  sd_kind = 2'd0,
-	output reg         sd_synth = 1'b0,
-	output reg         sd_spd2 = 1'b0,
-	output reg  [23:0] sd_hdr = 24'd0,
+	output reg         sd_go,
+	output reg  [1:0]  sd_kind,
+	output reg         sd_synth,
+	output reg         sd_spd2,
+	output reg  [23:0] sd_hdr,
 	input  wire        fd_busy,
 	input  wire [17:0] cd_data,
 	input  wire        cd_ck
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	lk_go    = 1'b0;
+	lk_byidx = 1'b0;
+	lk_x     = 24'd0;
+	lk_idx   = 7'd0;
+	lk_hold  = 1'b0;
+	pf_flush = 1'b0;
+	pf_fad   = 24'd0;
+	pf_en    = 1'b0;
+	sd_go    = 1'b0;
+	sd_kind  = 2'd0;
+	sd_synth = 1'b0;
+	sd_spd2  = 1'b0;
+	sd_hdr   = 24'd0;
+end
 
 assign ARQT_N = 1'b1;
 

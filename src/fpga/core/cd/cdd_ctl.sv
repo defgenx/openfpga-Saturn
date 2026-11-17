@@ -17,14 +17,14 @@ module cdd_ctl (
 	input  wire        ce,
 
 	// packet layer
-	output reg  [3:0]  pk_ha = 4'd0,
+	output reg  [3:0]  pk_ha,
 	input  wire [7:0]  pk_hq,
 	input  wire        pk_cmd_new,
-	output reg         pk_cmd_ack = 1'b0,
-	output reg         pk_we = 1'b0,
-	output reg  [3:0]  pk_wa = 4'd0,
-	output reg  [7:0]  pk_wd = 8'd0,
-	output reg         pk_send = 1'b0,
+	output reg         pk_cmd_ack,
+	output reg         pk_we,
+	output reg  [3:0]  pk_wa,
+	output reg  [7:0]  pk_wd,
+	output reg         pk_send,
 
 	// cd_stream
 	input  wire [6:0]  ntracks,
@@ -33,11 +33,11 @@ module cdd_ctl (
 	input  wire        hack_wwf,
 	input  wire        hack_rr,
 	input  wire        disc_new,
-	output reg         lk_go = 1'b0,
-	output reg         lk_byidx = 1'b0,
-	output reg  [23:0] lk_x = 24'd0,
-	output reg  [6:0]  lk_idx = 7'd0,
-	output reg         lk_hold = 1'b0,
+	output reg         lk_go,
+	output reg         lk_byidx,
+	output reg  [23:0] lk_x,
+	output reg  [6:0]  lk_idx,
+	output reg         lk_hold,
 	input  wire        lk_busy,
 	input  wire        eng_idle,
 	input  wire [6:0]  lk_track,
@@ -46,20 +46,43 @@ module cdd_ctl (
 	input  wire [7:0]  lk_idx1,
 	input  wire        lk_data,
 	input  wire        lk_s2048,
-	output reg         pf_flush = 1'b0,
-	output reg  [23:0] pf_fad = 24'd0,
-	output reg         pf_en = 1'b0,
+	output reg         pf_flush,
+	output reg  [23:0] pf_fad,
+	output reg         pf_en,
 	input  wire        pf_ready,
-	output reg         sd_go = 1'b0,
-	output reg  [1:0]  sd_kind = 2'd0,
-	output reg         sd_synth = 1'b0,
-	output reg         sd_spd2 = 1'b0,
+	output reg         sd_go,
+	output reg  [1:0]  sd_kind,
+	output reg         sd_synth,
+	output reg         sd_spd2,
 	output wire [23:0] sd_hdr,
 	input  wire        fd_busy,
 
 	output wire [15:0] dbg,
-	output reg         stall_tick = 1'b0    // the last read tick was a stall
+	output reg         stall_tick           // the last read tick was a stall
 );
+
+// power-up values of the output registers (Quartus ignores an initial value written on a port declaration)
+initial begin
+	pk_ha      = 4'd0;
+	pk_cmd_ack = 1'b0;
+	pk_we      = 1'b0;
+	pk_wa      = 4'd0;
+	pk_wd      = 8'd0;
+	pk_send    = 1'b0;
+	lk_go      = 1'b0;
+	lk_byidx   = 1'b0;
+	lk_x       = 24'd0;
+	lk_idx     = 7'd0;
+	lk_hold    = 1'b0;
+	pf_flush   = 1'b0;
+	pf_fad     = 24'd0;
+	pf_en      = 1'b0;
+	sd_go      = 1'b0;
+	sd_kind    = 2'd0;
+	sd_synth   = 1'b0;
+	sd_spd2    = 1'b0;
+	stall_tick = 1'b0;
+end
 
 localparam [5:0]
 	S_IDLE = 0, S_LD = 1, S_LK0 = 2, S_LK1 = 3, S_LK2 = 4,
