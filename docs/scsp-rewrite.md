@@ -73,6 +73,16 @@ M10K: 30 blocks, the same as `SCSP`; DSP blocks: 10 (5 more than `SCSP`).
 
 ## 3a. Deviations from the reference
 
+- Signed factors in `Interpolate`, `VolCalc` and `PhaseCalc` (`SCSPP_pkg.sv`; the same in `SCSP_pkg.sv`). The reference multiplies
+  a signed value by an unsigned one (the phase, `{2'b01,~LEVEL[5:0]}`, `F[10:4]`). By the language rules the product is then unsigned
+  and the signed value is zero-extended, which is what Verilator and Icarus compute. Quartus 21.1 builds it signed: a gate-level
+  netlist of the unmodified functions, simulated with the Cyclone V models, returns the signed results, and the netlist of the
+  rewritten functions returns the same values. Both factors are now signed, so simulation matches the FPGA; the FPGA behaviour
+  is unchanged. Before, the simulated SCSP was wrong on every negative sample (`VolCalc`, about `-512*(LEVEL[5:0]+1)` before the
+  shift), between samples of opposite sign at a fractional phase (`Interpolate`, up to 32768) and on the negative half of the pitch
+  LFO. Grandia's movie audio shows it: the stream slots (pitch 0.5) feed ADX residuals to a DSP program that runs the ADX prediction
+  filter (gain about 25 at DC), so the simulated output saturated, on the MiSTer SCSP as well; the FPGA never did this. The bench
+  golden gets the same signed factors (`sim/scsp/Makefile`); `+interpcheck` (section 4) checks them without the golden.
 - `SOUND_L/R` lag `SUM_L/SUM_R` and `CR0` by up to two clk_sys (one master-volume unit, outputs registered). WAV identical.
 - `SND_EN[1:0]` gate each slot's contribution when it is added instead of gating the two sums; identical while `SND_EN` is constant
   (tied to 3'b111 in `saturn_pocket.sv`). The bench changes `SND_EN[1:0]` only between the sum latch and the first slot's direct contribution.
@@ -92,6 +102,9 @@ M10K: 30 blocks, the same as `SCSP`; DSP blocks: 10 (5 more than `SCSP`).
 (MIDI 0 and 1) plus the single-build runs used during development. Stimulus as in [scsp.md](scsp.md) section 5 (random 68K/SCU traffic,
 key on/off, DSP programs, DMA, timers, ESL/ESR, SND_EN, RES_N pulses and hard resets with sound playing). `DBGINT` builds expose
 internals and report the first differing RAM (`sim/scsp/tb.cpp`); `sim/scsp/run_rev.sh <rev>` runs the bench on a past commit.
+`+interpcheck` (run by `make run` and `make compact`) does not rely on the golden: slot 0 plays 16-bit samples of alternating sign
+(-4, 6) at pitch 0.5 to the direct output, and the output must stay within 16 of zero. Before the signed factors of section 3a both
+cores agreed and gave 32,512; now 5.
 
 ## 5. MLAB to M10K
 

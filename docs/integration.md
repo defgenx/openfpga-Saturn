@@ -323,6 +323,12 @@ the SCU then sees a vector fetch on every read and resets IMS to its masked valu
 raised (`make -C sim irq neg`), as with the black screen where the BIOS never unmasks an interrupt. The empty connection
 is removed; `sim/irq/dup_ports.py` fails on any such duplicate.
 
+The tools also differ on a signed operand multiplied by an unsigned one (a part-select, a concatenation, an unsigned
+variable). By the language rules the product is unsigned and the signed operand is zero-extended; Verilator and Icarus do
+that, while Quartus 21.1 builds a signed product (gate-level check in [scsp-rewrite.md](scsp-rewrite.md) section 3a). Write
+both factors signed (`$signed(a) * $signed({1'b0,b})`) so that simulation shows what the FPGA does. The SCSP had three such
+products (fixed); the other modules have not been audited for it.
+
 The Verilator lint of the glue modules (`verilator --lint-only -Wall`) is clean apart from unused-bit notes. The full
 tree is checked by Quartus, not Verilator (it needs the Altera RAM/PLL primitives).
 

@@ -24,8 +24,11 @@ $(B)/REF_SCSP.sv: $(GOLD)/SCSP.sv | $(B)
 # (MIDI_REGS=0) shrunk SCSP is compared against.
 $(B)/REF_SCSP_nm.sv: $(B)/REF_SCSP.sv
 	perl -pe 's/if \(REG_WE\[\d\]\) CR[23]\[[0-9: ]+\] <= [^;]*;//' $< > $@
+# The golden gets the signed factors of SCSPP_pkg.sv in Interpolate, VolCalc and PhaseCalc, so it simulates as Quartus
+# builds it (docs/scsp-rewrite.md section 3a); the build stops if a pattern no longer matches.
 $(B)/REF_SCSP_pkg.sv: $(GOLD)/SCSP_pkg.sv | $(B)
-	perl -pe 's/\bSCSP_PKG\b/REF_SCSP_PKG/g' $< > $@
+	perl -pe 's/\bSCSP_PKG\b/REF_SCSP_PKG/g; s/\$$signed\((WAVE[01])\) \* (PHASE(_NEG)?);/\$$signed($$1) * \$$signed({1\x27b0,$$2});/; s/\$$signed\(WAVE\) \* \((\{2\x27b01,~LEVEL\[5:0\]\})\);/\$$signed(WAVE) * \$$signed($$1);/; s/\$$signed\(PLFO_WAVE\) \* (F\[10:4\]);/\$$signed(PLFO_WAVE) * \$$signed({1\x27b0,$$1});/' $< > $@
+	@test $$(grep -cE "signed\(\{1'b0,(PHASE|F\[10:4\])|signed\(\{2'b01,~LEVEL" $@) -eq 4 || { echo "$@: signed-factor patch did not apply"; rm -f $@; exit 1; }
 $(B)/NEW_SCSPP.sv: $(NEW)/SCSPP.sv | $(B)
 	$(FILTER) $< > $@
 $(B)/NEW_SCSPP_pkg.sv: $(NEW)/SCSPP_pkg.sv | $(B)
@@ -51,6 +54,7 @@ run: $(B)/obj/Vtb_top $(B)/objm/Vtb_top
 	@set -e; for s in $(SEEDS); do $(B)/obj/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seed$$s; done
 	@set -e; for s in $(SEEDS); do $(B)/objm/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedm$$s; done
 	@cmp $(B)/seed1_ref.wav $(B)/seed1_new.wav && echo "WAV files identical"
+	@$(B)/obj/Vtb_top +interpcheck +wav=$(B)/interp
 
 clean:
 	rm -rf $(B)
@@ -83,6 +87,7 @@ compact: $(B)/objc/Vtb_top $(B)/objcm/Vtb_top
 	@set -e; for s in $(CSEEDS); do $(B)/objc/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedc$$s; done
 	@set -e; for s in $(CSEEDS); do $(B)/objcm/Vtb_top +seed=$$s +rounds=$(ROUNDS) +wav=$(B)/seedcm$$s; done
 	@cmp $(B)/seedc1_ref.wav $(B)/seedc1_new.wav && echo "WAV files identical (compact DSP)"
+	@$(B)/objc/Vtb_top +interpcheck +wav=$(B)/interpc
 
 # Used by mutate.sh: build only, into $(B).
 .PHONY: build_mut_exe

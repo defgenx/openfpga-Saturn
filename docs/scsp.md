@@ -111,6 +111,9 @@ arrays (+7 memory ALUTs) are not M10K.
    `altdpram` with asynchronous read. Where Quartus may return new data (undefined in the megafunction), the
    design never reads an address in the cycle it is written (writes are at CYCLE1_CE, reads are sampled at
    other edges).
+6. `Interpolate`, `VolCalc` and `PhaseCalc` (`SCSP_pkg.sv`) take both factors signed, so that simulators compute what
+   Quartus builds from the golden's signed-by-unsigned products; the FPGA behaviour is unchanged
+   ([scsp-rewrite.md](scsp-rewrite.md) section 3a).
 
 Unchanged: port list, all bus timing, `SND_EN` handling, DSP effects, audio.
 

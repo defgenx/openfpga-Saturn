@@ -579,6 +579,7 @@ int main(int argc, char **argv) {
 	uint32_t seed = 1, nrand = 300;
 	const char *wavp = "scsp";
 	const char *replayp = nullptr; bool zeroram = false; const char *ramfile = nullptr; uint32_t replay_samples = 40000;
+	bool interpchk = false;
 	for (int i = 1; i < argc; i++) {
 		if (!strncmp(argv[i], "+seed=", 6)) seed = atoi(argv[i] + 6);
 		if (!strncmp(argv[i], "+rounds=", 8)) nrand = atoi(argv[i] + 8);
@@ -588,6 +589,7 @@ int main(int argc, char **argv) {
 		if (!strcmp(argv[i], "+zeroram")) zeroram = true;
 		if (!strncmp(argv[i], "+ramfile=", 9)) ramfile = argv[i] + 9;
 		if (!strncmp(argv[i], "+replaysamples=", 15)) replay_samples = atoi(argv[i] + 15);
+		if (!strcmp(argv[i], "+interpcheck")) interpchk = true;
 	}
 	Rng rng(seed); R = &rng;
 	top = new T;
@@ -601,6 +603,32 @@ int main(int argc, char **argv) {
 	top->R_RAM_Q = 0; top->N_RAM_Q = 0;
 	run_clks(20); top->RST_N = 1; run_clks(20); top->RES_N = 1;
 	wait_reset_done();
+
+	// ---- +interpcheck, independent of the golden: slot 0 plays 16-bit samples of alternating sign (-4, 6) at pitch 0.5 to the
+	// direct output; interpolation between them must stay in their range (docs/scsp-rewrite.md section 3a) ----
+	if (interpchk) {
+		const uint32_t W0 = 0x1000;  // word address of the 64-sample loop; the pattern runs on past LEA, which is read ahead
+		for (uint32_t i = 0; i < 80; i++) ram_r.mem[W0 + i] = ram_n.mem[W0 + i] = (i & 1) ? 0x0006 : 0xFFFC;
+		wr_reg(0x400, 0x000F);                                   // MVOL 15
+		wr_reg(SA, (W0 << 1) & 0xFFFF); wr_reg(LSA, 0); wr_reg(LEA, 64);
+		wr_reg(SCR1, 0x001F);                                    // AR 31, no decay
+		wr_reg(SCR2, 0x0000); wr_reg(SCR3, 0x0000); wr_reg(SCR4, 0x0000);  // TL 0, no FM
+		wr_reg(SCR5, 0x7800);                                    // OCT -1, FNS 0
+		wr_reg(SCR6, 0x0000); wr_reg(SCR7, 0x0000);
+		wr_reg(SCR8, 0xE000);                                    // DISDL 7, DIPAN 0
+		wr_reg(SCR0, (1 << 12) | (1 << 11) | (1 << 5) | ((W0 << 1) >> 16));  // KX, KB, normal loop
+		drain(); run_samples(400); drain();
+		char fn[256];
+		snprintf(fn, sizeof fn, "%s_ref.wav", wavp); wav_r.save(fn);
+		snprintf(fn, sizeof fn, "%s_new.wav", wavp); wav_n.save(fn);
+		int mn = 0, mr = 0;
+		for (auto x : wav_n.s) mn = std::max(mn, abs((int)x));
+		for (auto x : wav_r.s) mr = std::max(mr, abs((int)x));
+		printf("interpcheck: max |SOUND| new=%d ref=%d over %zu samples (input -4..6)\n", mn, mr, wav_n.s.size() / 2);
+		if (mismatches || mn > 16 || mr > 16 || mn == 0) { printf("FAIL\n"); return 1; }
+		printf("PASS\n");
+		return 0;
+	}
 
 	// ---- replay mode: the register writes of a real system log (lines "... a=XXX we=NN d=DDDD"), then run ----
 	if (replayp) {

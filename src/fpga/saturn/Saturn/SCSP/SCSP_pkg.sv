@@ -424,8 +424,9 @@ package SCSP_PKG;
 		bit [21:0] SUM;
 		
 		PHASE_NEG = 7'h40 - PHASE;
-		TEMP0 = $signed(WAVE0) * PHASE_NEG;
-		TEMP1 = $signed(WAVE1) * PHASE;
+		//Both factors signed, so simulators compute what Quartus builds (docs/scsp.md 4); same in VolCalc and PhaseCalc.
+		TEMP0 = $signed(WAVE0) * $signed({1'b0,PHASE_NEG});
+		TEMP1 = $signed(WAVE1) * $signed({1'b0,PHASE});
 		SUM = $signed(TEMP0) + $signed(TEMP1);
 	
 		return SUM[21:6];
@@ -503,7 +504,7 @@ package SCSP_PKG;
 		
 		S = SCR5.OCT^4'h8;
 		F = 11'h400 + SCR5.FNS;
-		TEMP = $signed(PLFO_WAVE) * F[10:4];
+		TEMP = $signed(PLFO_WAVE) * $signed({1'b0,F[10:4]});
 		FM = {{3{TEMP[14]}},TEMP[14:6]};
 		P = {15'b000000000000000,{1'b0,F}+FM}<<S;
 		
@@ -569,7 +570,7 @@ package SCSP_PKG;
 		bit [22:0] MULT;
 		bit [15:0] RES;
 		
-		MULT = $signed(WAVE) * ({2'b01,~LEVEL[5:0]});
+		MULT = $signed(WAVE) * $signed({2'b01,~LEVEL[5:0]});
 		RES = $signed($signed(MULT[22:7])>>>LEVEL[9:6]);
 		
 		return RES;
