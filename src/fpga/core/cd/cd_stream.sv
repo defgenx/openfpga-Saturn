@@ -268,10 +268,10 @@ wire        fd_sr_rq;
 assign rg_ra = fd_sr_a;
 
 // rw_a / rw_d hold still for at least 30 clk_74a cycles after rw_t toggles (one bridge word)
-localparam FW = 6;
+localparam FW = 9;
 reg [FW:0]   wq_w = 0, wq_r = 0;
 wire         wq_empty = (wq_w == wq_r);
-wire         wq_full  = wq_w[FW] && !wq_r[FW] && (wq_w[FW-1:0] == wq_r[FW-1:0]);   // (wq_w - wq_r) == 64 as an integer: no wrap-around case
+wire         wq_full  = (wq_w[FW] != wq_r[FW]) && (wq_w[FW-1:0] == wq_r[FW-1:0]);   // wq_w - wq_r == 2^FW, either pointer phase
 wire [RING_SB+41:0] wq_q;
 cd_fifo_ram #(.W(RING_SB+42), .AW(FW)) wq_ram (.clk(clk), .we(rw_ev && !wq_full), .wa(wq_w[FW-1:0]), .wd({rw_a, rw_d}), .ra(wq_r[FW-1:0]), .q(wq_q));   // the output is the head one clock after wq_r
 always @(posedge clk) begin

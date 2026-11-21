@@ -576,9 +576,12 @@ is in PSRAM1 at byte 0x180000 and reaches it through two `ddram_pocket` channels
 
 * Write: one 32 bit write (two ring words) per bridge word, `ringw_*`, on the chip B arbiter right after the CD RAM
   port and ahead of VDP1. The request is not copied in `ddram_pocket`: `rg_wa`/`rg_wd` stay unchanged until `rg_wbusy`
-  has fallen. `cd_stream` queues the bridge words in a 64 entry FIFO (one M10K pair) because the chip can be busy with
-  a VDP1 burst (up to about 1000 clk_ram) while a bridge word arrives every 25 clk_sys; the bridge cannot be held, so a
-  word that finds the FIFO full is lost (`ovf_cnt`). A sector counts as complete (`ring_add`) only when the FIFO is
+  has fallen. `cd_stream` queues the bridge words in a 512 entry FIFO (three M10K) because the chip can be busy with
+  the CD RAM port and a VDP1 burst (up to about 1000 clk_ram) while the bridge delivers a word about every 32 to 40
+  clk_74a (it shifts in 2 bits per clock); the bridge cannot be held, so a word that finds the FIFO full is lost
+  (`ovf_cnt`). Up to v0.1.6 the FIFO had 64 entries and its full test held in one pointer phase only: in the other,
+  a 65th word overwrote the oldest unread one and `ovf_cnt` did not count it. A 512 entry queue with a full test in
+  both phases is what a fork of this core that plays Grandia's opening movie with clean sound on a Pocket uses. A sector counts as complete (`ring_add`) only when the FIFO is
   empty and the last write has been issued. The feed recomputes the EDC, so a lost word reaches the CD block as a
   valid sector with the slot's old bytes in it.
   With the ring write last in the arbiter (up to v0.1.3), back-to-back VDP1 requests during DoDonPachi's intro movie
