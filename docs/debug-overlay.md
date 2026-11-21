@@ -89,6 +89,9 @@ one row of 8 hex digits: the master SH-2 program counter.
     and the 120-sector ring drains.
   - Use: play the scene that misbehaves and read the row while it runs and right after. `SSSS` that grows during
     the scene means streamed data (movie video and sound) arrived late. `SSSS` at `0000` rules that out.
+  - Fit (v0.1.6 + this row): the overlay with the CD row needs 1,868-1,883 LABs (seeds 6 3 7 1). With
+    `POCKET_CUT_VDP2_RPARAMB`, `POCKET_CUT_VDP2_ZOOM` and `POCKET_CUT_VDP2_SPECIAL` (docs/vdp2.md) all four fit;
+    seed 1: 18,157 ALMs, setup -0.069 ns at slow 85C only (counter[1]), hold +0.029. Sound and CD are not cut.
   - CD bench: `+CDDIAG` prints both counters every 100 ms; `+BRLAT_US=<us>` sets the model's bridge latency
     (docs/cdb-hle.md section 8).
 - `POCKET_DEBUG_EXCROW=1` adds a second row (y 32..47) and latches both at the master SH-2's first arrival at
