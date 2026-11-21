@@ -171,7 +171,7 @@ end else begin : g
 		.lk_track(lk_track), .lk_tbcd(lk_tbcd), .lk_start(lk_start), .lk_idx1(lk_idx1), .lk_data(lk_data), .lk_s2048(lk_s2048),
 		.pf_flush(pf_flush), .pf_fad(pf_fad), .pf_en(pf_en), .pf_ready(pf_ready),
 		.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr), .fd_busy(fd_busy),
-		.cd_data(cd_data), .cd_ck(cd_ck), .cd_audio(cd_audio), .err_cnt());
+		.cd_data(cd_data), .cd_ck(cd_ck), .cd_audio(cd_audio), .err_cnt(), .lat_bcd(), .stv_bcd());
 
 	cdb_hle #(.FW_FILE(`FWPATH)) hle (
 		.CLK(clk), .RST_N(rst_n), .RES_N(cdres_n), .CE_R(SYS_CE_R), .CE_F(SYS_CE_F), .CD_CE(CD_CE), .CDD_CE(CDD_CE),
@@ -249,7 +249,18 @@ end
 endtask
 
 integer BR_LAT = 8000, nwords, k2, nreads = 0, img_fd = 0, br_stall_n = -1, br_stall_ms = 0;
-initial begin void'($value$plusargs("BRSTALL_N=%d", br_stall_n)); void'($value$plusargs("BRSTALL_MS=%d", br_stall_ms)); end
+integer br_lat_us;
+initial begin
+	void'($value$plusargs("BRSTALL_N=%d", br_stall_n)); void'($value$plusargs("BRSTALL_MS=%d", br_stall_ms));
+	if ($value$plusargs("BRLAT_US=%d", br_lat_us)) BR_LAT = br_lat_us * 74;   // +BRLAT_US: bridge latency before the data
+end
+// +CDDIAG: the debug overlay CD row counters (docs/debug-overlay.md) every 100 ms
+generate if (!LLE) begin : cddiag
+	initial if ($test$plusargs("CDDIAG")) forever begin
+		repeat (100) repeat (74250) @(posedge clk74);
+		$display("[%0t] CDDIAG reads=%0d last_rt=%h (0.1 ms) starved=%h ms", $time, nreads, g.stream.lat_bcd, g.stream.stv_bcd);
+	end
+end endgenerate
 function automatic [31:0] img_word(input integer fd);
 	integer b0, b1, b2, b3;
 	b0 = $fgetc(fd); b1 = $fgetc(fd); b2 = $fgetc(fd); b3 = $fgetc(fd);

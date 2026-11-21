@@ -223,6 +223,12 @@ ticks of BUSY, BFUL, CSCT, DRDY, EHST, ECPY, ESEL, EFLS, DCHG, boot values (`HIR
   `script_bulk.txt` with `+DSTALL=250 +DSTALL_PCT=20` (4.4 us on one access in five): 8 checks, 0 failed; with the
   single-register sink 2 failed (one word each, `SINK OVERRUN`). At `+DSTALL=600 +DSTALL_PCT=30` the mean DRAM
   access is slower than the stream and words are lost with any FIFO depth.
+* `+CDDIAG` prints the debug overlay CD row counters (`docs/debug-overlay.md`) every 100 ms; `+BRLAT_US=<us>` sets the
+  bridge model's latency before the data (default 8,000 `clk_74a`, 0.1 ms). On Grandia's image, 1,024 sectors from
+  the opening movie (FAD 0x3CE52) with a Get+Delete every 100 ms: last read 0.2 / 5.1 / 8.1 / 20.1 ms for the default,
+  5,000, 8,000 and 20,000 us; starved 0 ms in the first three (the host frees buffers slower than 123 sectors/s, so the
+  ring never empties), 765 ms by 4.0 s at 20,000 us (50 sectors/s), equal to the time the armed sector waited with the
+  ring empty.
 * `script_pause.txt` (`check_hle.py <log> pause`): Play of 64 sectors, then while it streams Reset Selector, Pause,
   Reset Selector, and a Play of 20 sectors elsewhere: the partition is empty after the pause and holds exactly the
   20 new sectors, compared word for word. **3 checks, 0 failed**; the firmware without `pause_drop` fails 2 (one

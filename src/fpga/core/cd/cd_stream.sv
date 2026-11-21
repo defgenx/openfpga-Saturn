@@ -112,8 +112,26 @@ module cd_stream #(
 
 	output reg  [7:0]  err_cnt = 8'd0,       // bridge reads that ended with an error
 	output reg  [7:0]  ovf_cnt = 8'd0,       // bridge words lost to a full ring FIFO (saturating)
-	output reg  [7:0]  rd_cnt = 8'd0         // bridge reads completed, with or without error (saturating)
+	output reg  [7:0]  rd_cnt = 8'd0,        // bridge reads completed, with or without error (saturating)
+	// debug overlay CD row (docs/debug-overlay.md), 4 BCD digits each, saturating at 9999
+	output reg  [15:0] lat_bcd = 16'd0,      // clk_74a: round trip of the last ring sector read, 0.1 ms units
+	output reg  [15:0] stv_bcd = 16'd0       // ms the drive waited on an empty ring during play (never cleared)
 );
+
+function automatic [15:0] bcd4_inc(input [15:0] v);
+	reg [15:0] r;
+	reg        c;
+	integer    i;
+	begin
+		r = v; c = 1'b1;
+		for (i = 0; i < 4; i = i + 1)
+			if (c) begin
+				if (r[4*i +: 4] == 4'd9) r[4*i +: 4] = 4'd0;
+				else begin r[4*i +: 4] = r[4*i +: 4] + 4'd1; c = 1'b0; end
+			end
+		bcd4_inc = r;
+	end
+endfunction
 
 // ------------------------------------------------------------------ bridge side (clk_74a)
 wire toc_sel  = (bridge_addr[31:28] == 4'h6);
@@ -186,6 +204,19 @@ always @(posedge clk_74a) begin
 	endcase
 	if (toc_rd && !toc_rd_q) toc_pend <= 1'b1;
 	if (bridge_wr && toc_sel && toc_bad) tblk <= 1'b1;
+end
+
+// round trip of each ring sector read, from t_read to done, in 0.1 ms (7,425 clk_74a)
+reg [12:0] lat_pre = 13'd0;
+reg [15:0] lat_cur = 16'd0;
+always @(posedge clk_74a) begin
+	if (hs == 2'd0) begin
+		lat_pre <= 13'd0; lat_cur <= 16'd0;
+	end else begin
+		lat_pre <= (lat_pre == 13'd7424) ? 13'd0 : lat_pre + 13'd1;
+		if (lat_pre == 13'd7424 && lat_cur != 16'h9999) lat_cur <= bcd4_inc(lat_cur);
+	end
+	if (hs == 2'd3 && t_done && !tk) lat_bcd <= lat_cur;
 end
 
 // ------------------------------------------------------------------ crossings to clk
@@ -437,6 +468,19 @@ always @(posedge clk) begin
 	end
 	default: es <= E_IDLE;
 	endcase
+end
+
+// starved play: the feed is idle and the ring empty while prefetch is on, after the first sector taken since the
+// last flush (the first one waits for the seek). 176 ce = 1 ms.
+reg       stv_took = 1'b0;
+reg [7:0] stv_pre = 8'd0;
+always @(posedge clk) begin
+	if (pf_flush) stv_took <= 1'b0;
+	else if (ring_take) stv_took <= 1'b1;
+	if (ce && fetch_en && stv_took && !pf_ready && !fd_busy) begin
+		stv_pre <= (stv_pre == 8'd175) ? 8'd0 : stv_pre + 8'd1;
+		if (stv_pre == 8'd175 && stv_bcd != 16'h9999) stv_bcd <= bcd4_inc(stv_bcd);
+	end
 end
 
 // ------------------------------------------------------------------ feed

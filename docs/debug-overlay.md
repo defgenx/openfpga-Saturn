@@ -77,6 +77,20 @@ one row of 8 hex digits: the master SH-2 program counter.
   with the PC row (seed 4, 1,848 / 1,848 LABs) to find where the disc boot stopped.
 - `POCKET_DEBUG_TGTROW=1` shows `core_bridge_cmd`'s `target_dbg` in the row instead of the PC:
   `{tstate, Ready to Run sent, RTR answered, 0x0180 sent (2 digits), target_0[31:24], reads ended ok}`.
+- `POCKET_DEBUG_CDROW=1` shows two `cd_stream` counters in the row instead of the PC, both in decimal (4 BCD
+  digits each, saturating at 9999): `SSSS RRRR`.
+  - `SSSS`: milliseconds the drive has waited on an empty sector ring during play, since power-up (never cleared, a
+    menu Reset keeps it). It counts while prefetch is on, the ring is empty and the feed is idle, from the second
+    sector taken after a flush (the first one waits for the seek). It stays `0000` when the bridge keeps up with the
+    150 sectors/s the drive delivers at 2x; it grows by about 1,000 per second of play when the bridge delivers
+    nothing. Reaching the end of the disc with a read still running counts too.
+  - `RRRR`: the round trip of the last sector read through the bridge, from the `0x0180` request to its done, in
+    0.1 ms (`0052` = 5.2 ms); the TOC read is not counted. Above `0066` (6.6 ms) the bridge is slower than the drive
+    and the 120-sector ring drains.
+  - Use: play the scene that misbehaves and read the row while it runs and right after. `SSSS` that grows during
+    the scene means streamed data (movie video and sound) arrived late. `SSSS` at `0000` rules that out.
+  - CD bench: `+CDDIAG` prints both counters every 100 ms; `+BRLAT_US=<us>` sets the model's bridge latency
+    (docs/cdb-hle.md section 8).
 - `POCKET_DEBUG_EXCROW=1` adds a second row (y 32..47) and latches both at the master SH-2's first arrival at
   0x06032430, Panzer Dragoon's handler for every exception and unused interrupt (it masks all interrupts and sleeps):
   row 1 = the execute-stage PC just before it, i.e. where the fault happened; row 2 = the master's last exception,

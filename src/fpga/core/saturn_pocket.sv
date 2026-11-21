@@ -419,6 +419,7 @@ wire        pf_flush, pf_en, pf_ready, sd_go, sd_spd2, sd_synth, fd_busy;
 wire  [1:0] sd_kind;
 `ifdef POCKET_DEBUG_OVERLAY
 wire  [7:0] dbg_rd_err, dbg_rd_ovf, dbg_rd_cnt;   // cd_stream: disc reads ended in error, ring words lost, reads completed
+wire [15:0] dbg_cd_lat, dbg_cd_stv;               // cd_stream: last read round trip (clk_74a), starved play ms
 `endif
 `endif
 wire [18: 1] CD_RAM_A;
@@ -667,9 +668,9 @@ cd_stream stream (
 	.sd_go(sd_go), .sd_kind(sd_kind), .sd_synth(sd_synth), .sd_spd2(sd_spd2), .sd_hdr(sd_hdr),
 	.fd_busy(fd_busy), .cd_data(CD_DATA), .cd_ck(CD_CK), .cd_audio(CD_AUDIO),
 `ifdef POCKET_DEBUG_OVERLAY
-	.err_cnt(dbg_rd_err), .ovf_cnt(dbg_rd_ovf), .rd_cnt(dbg_rd_cnt)
+	.err_cnt(dbg_rd_err), .ovf_cnt(dbg_rd_ovf), .rd_cnt(dbg_rd_cnt), .lat_bcd(dbg_cd_lat), .stv_bcd(dbg_cd_stv)
 `else
-	.err_cnt(), .ovf_cnt(), .rd_cnt()
+	.err_cnt(), .ovf_cnt(), .rd_cnt(), .lat_bcd(), .stv_bcd()
 `endif
 );
 `endif
@@ -922,6 +923,8 @@ reg         dbg_wa = 1'b0;
 always @(posedge clk_sys) begin
 `ifdef POCKET_DEBUG_TGTROW
 	if (dbg_tick) dbg_pc <= dbg_tgt;                // display only: a torn sample shows for one window
+`elsif POCKET_DEBUG_CDROW
+	if (dbg_tick) dbg_pc <= {dbg_cd_stv, dbg_cd_lat};   // dbg_cd_lat is clk_74a: a torn sample shows for one window
 `else
 	if (dbg_tick) dbg_pc <= dbg_txt[99:68];
 `endif
