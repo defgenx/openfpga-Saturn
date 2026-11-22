@@ -880,3 +880,21 @@ registered `fb_ready` in `sram_pocket`. One map, eight seeds (`raetro/quartus:21
 Seed 6 meets setup, hold, recovery and removal at every corner. Without the registered `sn` / `m3q` / `fb_ready` the
 read-ahead fit on 3 of 6 seeds and missed setup by 0.35-0.74 ns on paths from VDP2's timing and the SRAM controller's
 counter into FB0_Q / `fb1_sq`.
+
+## v0.1.7 timing (2026-11-22)
+
+v0.1.6 with the SCSP signed factors (ba7bbe8), the 28 patches of issue 4 and the 512-entry ring-write queue in
+`cd_stream`, fitted on one processor (`tools/qflow.sh`). One map per batch (`raetro/quartus:21.1`, area
+profile); 25 of 31 do not fit (1,849-1,861 LABs needed). A variant without the VDP1 last-pixel hold (22 registers) fit on 0
+of 5 seeds. The fits that miss setup fail inside `vdp1_fb_pocket` (from VDP2's `DOTCLK_DIV` and VDP1's `FB_SEL`):
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| 1 | 18,215 | 1,848 / 1,848 | -0.279 (slow 85C, counter[1]) | |
+| 3 | 18,228 | 1,848 / 1,848 | -0.120 (slow 85C, counter[1]) | +0.049 |
+| 18 | 18,229 | 1,848 / 1,848 | -0.930 (slow 0C, counter[1]) | |
+| 22 | 18,231 | 1,848 / 1,848 | -0.317 (slow 85C, counter[0]) | |
+| 28 | 18,233 | 1,848 / 1,848 | -0.256 (slow 0C, counter[0]) | |
+| **32 (release)** | **18,224** | **1,848 / 1,848** | **+0.150** (slow 85C, counter[1]) | **+0.037** (fast 0C, counter[0]) |
+
+Seed 32 meets setup, hold, recovery and removal at every corner. RAM blocks: 305 of 308.
