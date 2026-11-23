@@ -584,20 +584,24 @@ end
 // core-wide reset, active low: host reset, the Reset action, BIOS not yet loaded
 wire sys_reset_n = reset_n && (reset_stretch == 0) && bios_loaded;
 
-// Save sizes. The host writes a nonvolatile slot back at the size in its ID/size table entry, which is 0 when no file
-// existed. Entries are matched by ID (the APF docs give no order); after all slots are loaded each entry is checked every
-// 4 clocks: slot 3 is set to 64 KB, slot 4 to 1 MB while the Cartridge setting is Backup (docs/memory.md section 7).
-reg     [4:0]   dt_i = 5'd0;
-reg     [1:0]   dt_ph = 2'd0;
-wire            dt_bram = datatable_q[15:0] == 16'd3;
-wire            dt_cart = datatable_q[15:0] == 16'd4 && cfg_cart == 3'd5;
-assign datatable_addr = {4'd0, dt_i, &dt_ph};          // ID word, then the size word in the write phase
-assign datatable_wren = bios_loaded && &dt_ph && (dt_bram || dt_cart);
-assign datatable_data = dt_cart ? 32'h00100000 : 32'h00010000;
+// Save sizes: the host writes a nonvolatile slot back at the size in its ID/size table entry. save_size sets them in
+// one pass after all slots are loaded, a Cartridge change or a slot update (docs/memory.md section 7).
+reg     [2:0]   ss_cart_q = 3'd0;
+reg             ss_loaded_q = 1'b0;
 always @(posedge clk_74a) begin
-    if (bios_loaded) dt_ph <= dt_ph + 1'b1;            // q (2 clocks behind the address) shows the ID word in phase 3
-    if (&dt_ph) dt_i <= dt_i + 1'b1;
+    ss_cart_q   <= cfg_cart;
+    ss_loaded_q <= bios_loaded;
 end
+save_size ss (
+    .clk            ( clk_74a ),
+    .start          ( bios_loaded && (!ss_loaded_q || cfg_cart != ss_cart_q || dataslot_update) ),
+    .cart_backup    ( cfg_cart == 3'd5 ),
+    .datatable_addr ( datatable_addr ),
+    .datatable_wren ( datatable_wren ),
+    .datatable_data ( datatable_data ),
+    .datatable_q    ( datatable_q ),
+    .busy           ( )
+);
 
 // for bridge write data, we just broadcast it to all bus devices
 // for bridge read data, we have to mux it

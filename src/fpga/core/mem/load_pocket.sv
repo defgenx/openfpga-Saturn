@@ -35,7 +35,7 @@ module load_pocket #(
 	input  wire        o_busy,
 	output wire [23:2] r_addr,             // read-back: one 32 bit read (ddram_pocket ld_rd), held until the next request
 	output reg         r_rd,
-	output wire        loading,
+	output reg         loading,
 	output wire  [7:0] dbg_overflow
 );
 initial r_rd = 1'b0;   // Quartus ignores an initial value written on the port declaration
@@ -102,7 +102,10 @@ wire        blank  = !init_done && !(icp && no_cart);
 wire        free   = !o_busy && !o_wr;
 wire        do_init = init_go && blank && free && st == 2'd0 && empty;
 
-assign loading = !empty || st != 2'd0 || o_wr || o_busy || blank;   // until the last write has left ddram_pocket
+// until the last write has left ddram_pocket; registered (one clk_ram later): ram_reset in clk_sys reads it. Power-up
+// value in an initial block (Quartus ignores one on a port declaration).
+initial loading = 1'b1;
+always @(posedge clk) loading <= !empty || st != 2'd0 || o_wr || o_busy || blank;
 
 always @(posedge clk) begin
 	o_wr <= 1'b0;

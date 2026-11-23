@@ -544,13 +544,21 @@ WRAM-H line fill seen by the CPU (`ramh_busy`), `tb_ddram`:
 
 | Condition | Fills | Latency |
 |---|---|---|
-| PSRAM0 otherwise idle | 198 | 47-48 cycles = 410-419 ns |
-| WRAM-H/WRAM-L/cart/backup mix on PSRAM0 plus VDP1 VRAM, CD RAM/buffer and the loader running | 148 | 48-120 cycles = 419-1047 ns, mean 593 ns |
+| PSRAM0 otherwise idle | 198 | 19-38 cycles = 165-331 ns, mean 323 ns |
+| WRAM-H/WRAM-L/cart/backup mix on PSRAM0 plus VDP1 VRAM, CD RAM/buffer and the loader running | 198 | 24-116 cycles = 209-1012 ns, mean 471 ns |
+
+These are with early restart (v0.1.8): `ramh_wait` holds the master until its own word of the line is in the cache, and
+the fill goes on behind it (whole line before: 410-419 ns idle, mean 593-611 ns loaded). A read during a fill waits one
+clk_ram, and until its word arrives if it is in that line (`ramh_hf`); a miss during a fill waits on `ramh_read_busy`
+for the next one. The idle row also counts the read of each line's second word, which waits in the filling line (the
+331 ns). The tag compare feeds no wait flag: it went through `ramh_hit[ramh_fway]` into `ramh_wait` at first and failed
+setup by 0.12 ns.
 
 Hits answer in 4 clk_ram. The hit test runs at the clk_ram edge after the request's clk_sys edge; a missed line's tag is
 written one edge later and the fill address is taken from `ramh_addr` as well, which the master holds under WAIT until
-the fill is done, so both are two-clk_ram paths from the SH-2 address registers (`core_constraints.sdc`) and the 15 bit
-compare, the way choice and the busy flag are the only one-clk_ram paths left on that crossing. The loaded maximum is a
+its word is filled (after the fill has started), so both are two-clk_ram paths from the SH-2 address registers
+(`core_constraints.sdc`) and the 15 bit compare, the way choice and the busy flag are the only one-clk_ram paths left
+on that crossing. The loaded maximum is a
 fill queued behind a posted write drain and a long burst on the same
 chip; VDP1 and CD traffic on PSRAM1 does not appear in it. `RAMH_SLOW = 1` (wait on `ramh_busy`) is required; at
 28.6 MHz a fill is 12 bus cycles idle.
@@ -634,7 +642,7 @@ during boot wait there (docs/integration.md, "Host handshake"). A bridge word is
 | [1] backup RAM 64 KB | PSRAM0 0x100000 | none: the file is MiSTer's image (byte 2n+1 = backup byte n, byte 2n the unused high byte) |
 | [2] backup cart 1 MB (data slot 4) or cartridge ROM up to 2 MB (data slot 5) | PSRAM0 0x800000 (cartridge window base) | none, same layout |
 
-`LD_LITTLE` (default 1) says whether `ld_data[7:0]` is the first file byte. `loading` (clk_ram) is high while words are
+`LD_LITTLE` (default 1) says whether `ld_data[7:0]` is the first file byte. `loading` (clk_ram, registered: ram_reset in clk_sys counts on it) is high while words are
 in flight or the blank images below are unfinished: hold the Saturn in reset with it. The cartridge ROM (data slot 5,
 bridge 0x70000000) shares `ld_sel[2]` with the backup cart; Cartridge = ROM 2 MB maps it (docs/integration.md).
 
@@ -658,9 +666,14 @@ the odd bytes), so a MiSTer `.sav` of a game without a backup cart loads as is. 
   between two reads, at least about 60 clk_74a (0.8 us). Worst case here: one 16-word PSRAM0 read in progress, the
   2-word read, and the synchronisers, about 50 clk_ram + 3 clk_74a (0.5 us).
 * Size. The host writes the file back at the size in the slot's ID/size table entry (`0xF8002000`), 0 for a file that
-  did not exist. `core_top` scans the table by ID after all slots are loaded and keeps slot 3 at 64 KB, and slot 4 at
-  1 MB while the Cartridge setting is Backup. Slot 4 without that setting keeps the size it was loaded with (the
-  read-back then returns the cart window, which a RAM cart overwrites).
+  did not exist. An entry is an ID word (ID in bits 15:0, bits 31:16 the upper half of a 48 bit size) and the size
+  word. `save_size` makes one pass over the 32 entries by ID once all slots are loaded, after a change of the
+  Cartridge setting and after a slot update (when the host command ends): slot 3 to 64 KB, slot 4 to 1 MB while the Cartridge setting is
+  Backup, an entry with a non-zero upper half left alone. It writes nothing outside a pass. Up to v0.1.7 the core
+  rewrote the entries every 128 clk_74a for as long as it ran, also while the host saved: on a Pocket the backup cart
+  file came out at 64 KB and `saturn_bram.sav` at 245 GB (the quit never ended and the card had to be repaired).
+  Slot 4 without the Backup setting keeps the size it was loaded with (the read-back then returns the cart window,
+  which a RAM cart overwrites). `make -C sim platform` runs `tb_save_size`.
 
 ## 8. Resources (Quartus 21.1, 5CEBA4F23C8, area profile, `sizing/mem/run.sh`)
 
@@ -757,7 +770,8 @@ gate reads and writes); the SRAM is the AS6C2016-55 (section 2).
     draws a lot into the FB1 tail while FB0 is displayed draws only in blanking.
 12. `sdram_pocket` SCSP slots depend on requests being at least 18 clk_ram apart (four SCSP CE; section 3).
 13. `psram_sync` is held until `sdram_ready`; the PSRAM power-up wait is the 200 us SDRAM one.
-9. WRAM-H fills take 410-1050 ns. The effect on game speed depends on the cache hit rate, which was not measured.
+9. WRAM-H misses take 165-1050 ns (early restart). The cache hit rate was not measured; with the original SH-2 waits
+   Grandia's intro movie ran too slow, which `FAST = 1` and early restart fixed (docs/integration.md).
 10. The backup save depends on host behaviour the APF docs do not state: the
     read timing above (taken from `io_bridge_peripheral.v`), a table entry for a slot whose file does not exist, and the
     save name when slot 0 (the game `.json`) is empty.

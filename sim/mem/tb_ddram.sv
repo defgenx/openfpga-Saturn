@@ -363,7 +363,9 @@ initial begin
 				rac = 18'h400 + ($urandom % 4000);
 				case (rc)
 					0, 1, 2: ramh_write(rac, $urandom, $urandom % 15 + 1);
-					3, 4, 5, 6: ramh_read(rac);
+					3, 4: ramh_read(rac);
+					5: begin ramh_read(rac); ramh_read(rac ^ 1); ramh_read(rac ^ 2); ramh_read(rac ^ 3); end  // SH-2 line fill order
+					6: begin ramh_read(rac); ramh_write(rac ^ 4, $urandom, 4'hF); ramh_read(rac ^ 4); ramh_read(rac ^ 7); end  // write into the line being filled
 					7: begin raml_write(21'h100000 | ($urandom % 4096) , $urandom, 2'b11); raml_read(21'h100000 | ($urandom % 4096)); end
 					8: begin raml_read(($urandom % 2048)); bsram_write($urandom % 4096, $urandom); bsram_read($urandom % 4096); end
 					default: begin cart_write($urandom % 8192, $urandom); cart_read($urandom % 8192); end

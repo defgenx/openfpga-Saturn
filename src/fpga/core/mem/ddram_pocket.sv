@@ -173,7 +173,12 @@ assign p1_din  = b_wd;    assign p1_be = b_be;
 reg  [ 19:  5] ramh_tag[4];
 reg            ramh_dirty[4];
 reg  [  1:  0] ramh_curr;
-reg            ramh_read_busy;
+reg            ramh_read_busy;                // a fill is asked for and has not started
+reg            ramh_filling = 1'b0;           // a fill of way ramh_fway is running
+reg  [  1:  0] ramh_fway;
+reg            ramh_wait = 1'b0;              // the master waits for word ramh_rword of the line being (or to be) filled
+reg  [  2:  0] ramh_rword;
+reg            ramh_hf;                       // the last request is in the line being filled
 reg  [  2:  0] ramh_plru;
 
 reg  [ 21:  1] raml_rcache_addr;
@@ -315,7 +320,7 @@ wire [1:0]     ramh_victim = {ramh_plru[0], ramh_plru[0] ? ramh_plru[2] : ramh_p
 wire [1:0]     ramh_hway  = ramh_hit[0] ? 2'd0 : ramh_hit[1] ? 2'd1 : ramh_hit[2] ? 2'd2 : 2'd3;
 wire [1:0]     ramh_way   = |ramh_hit ? ramh_hway : ramh_victim;
 // A missed line's tag is written at the edge after the request edge (ramh_alloc, one-hot) from ramh_addr, which the
-// master holds under WAIT until the fill is done; the fill address is ramh_addr for the same reason. The request edge
+// master holds under WAIT until its word is filled, after the fill starts; the fill address is ramh_addr for that reason. The request edge
 // follows a clk_sys edge, so both take the address two clk_ram after it was launched (core_constraints.sdc). A write
 // edge at the tag-write edge treats the pending line as matching, as it would with the tag already written.
 reg  [3:0]     ramh_alloc = 4'd0;
@@ -331,6 +336,7 @@ always @(posedge clk) begin
 		for (wi = 0; wi < 4; wi = wi + 1) ramh_dirty[wi] <= 1'b1;
 		{raml_rcache_dirty,cart_rcache_dirty,bsram_rcache_dirty} <= '1;
 		{ramh_read_busy,raml_read_busy,cart_read_busy,bsram_read_busy} <= '0;
+		{ramh_filling,ramh_wait} <= '0;
 		ramh_curr <= 2'd0;
 		ramh_plru <= 3'd0;
 	end
@@ -339,10 +345,15 @@ always @(posedge clk) begin
 			ramh_curr <= ramh_way;
 			ramh_plru[0] <= !ramh_way[1];
 			if (ramh_way[1]) ramh_plru[2] <= !ramh_way[0]; else ramh_plru[1] <= !ramh_way[0];
+			ramh_rword <= ramh_addr[4:2];
+			ramh_hf <= ramh_hit[ramh_fway];
 			if (ramh_miss) begin
 				ramh_alloc[ramh_victim] <= 1'b1;
 				ramh_read_busy <= 1;
 			end
+			// a request during a fill waits one clk_ram, longer if it is in that line and its word has not arrived;
+			// no tag compare on this flag (timing: the SH-2 address to ramh_wait)
+			if (ramh_filling) ramh_wait <= 1;
 		end
 		if (raml_rd && !raml_rd_old) begin
 			if (raml_addr[21:5] != raml_rcache_addr[21:5] || raml_rcache_dirty) begin
@@ -424,6 +435,12 @@ always @(posedge clk) begin
 		a_read  <= 0;
 	end
 	else begin
+		// Early restart: the master goes on once its word is in the cache and the fill finishes behind it. The 16 bit
+		// halves arrive in order and a_cw is the next one; the last word is covered by the end of the fill. A miss
+		// during a fill is held by ramh_read_busy. Before the case: a fill start sets the flag at the same edge.
+		if (ramh_wait && (!ramh_filling || !ramh_hf || a_cw > {ramh_rword, 1'b1} ||
+		                  (a_state == 2'd2 && p0_rvalid && a_cw == {ramh_rword, 1'b1})))
+			ramh_wait <= 0;
 		if (!p0_busy) begin
 			a_write <= 0;
 			a_read  <= 0;
@@ -446,6 +463,11 @@ always @(posedge clk) begin
 					a_state <= 2'd1;
 				end
 				else if (ramh_read_busy) begin
+					ramh_read_busy <= 0;
+					ramh_wait <= 1;
+					ramh_hf <= 1;
+					ramh_filling <= 1;
+					ramh_fway <= ramh_curr;
 					a_addr  <= {4'b0011, ramh_addr[19:5], 4'b0000};
 					a_read  <= 1;
 					a_chan  <= 3'd0;
@@ -519,7 +541,7 @@ always @(posedge clk) begin
 			if (p0_rvalid) a_cw <= a_cw + 4'd1;
 			if (p0_rvalid && a_chan == 3'd5) ld_rdata <= {ld_rdata[15:0], p0_rdata};
 			if (p0_rlast) begin
-				if (a_chan == 3'd0) ramh_read_busy <= 0;
+				if (a_chan == 3'd0) ramh_filling <= 0;
 				if (a_chan == 3'd1) begin raml_read_busy <= 0; raml_rcache_busy <= 1; end
 				if (a_chan == 3'd2) begin cart_read_busy <= 0; cart_rcache_busy <= 1; end
 				if (a_chan == 3'd3) begin bsram_read_busy <= 0; bsram_rcache_busy <= 1; end
@@ -739,7 +761,7 @@ wire [ 31:  0] ramh_cache_q;
 wire [ 15:  0] ring_cache_q, cdram_cache_q,raml_cache_q,vdp1vram_cache_q,cdbuf_cache_q,cart_cache_q,bsram_cache_q;
 
 // 16 bit words are written as they arrive (address = word index inside the line); read as 16 bit words (32 bit for WRAM-H)
-ddp_cache_ram #(6, 32) cache0 (clk, {ramh_curr,a_cw}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:2]}, ramh_cache_q);
+ddp_cache_ram #(6, 32) cache0 (clk, {ramh_fway,a_cw}, p0_rdata, a_cache_wren & a_chan == 3'd0, {ramh_curr,ramh_addr[4:2]}, ramh_cache_q);
 ddp_cache_ram #(4, 16) cache1 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan == 3'd0, cdram_rcache_addr[4:1], cdram_cache_q);
 ddp_cache_ram #(4, 16) cache2 (clk, a_cw, p0_rdata, a_cache_wren & a_chan == 3'd1, raml_rcache_addr[4:1], raml_cache_q);
 // cache3 registers its read address: the lane bits must be vdp1vram_rcache_addr_lsb's next value (docs/memory.md section 4)
@@ -752,7 +774,7 @@ ddp_cache_ram #(4, 16) cache8 (clk, b_cw[3:0], p1_rdata, b_cache_wren & b_chan =
 ddp_cache_ram #(3, 16) cache7 (clk, a_cw[2:0], p0_rdata, a_cache_wren & a_chan == 3'd3, bsram_rcache_addr[3:1], bsram_cache_q);
 
 assign ramh_dout = ramh_ram_sel ? ramh_ram_q : {ramh_cache_q[15:0], ramh_cache_q[31:16]};
-assign ramh_busy = ramh_fifo_full | ramh_read_busy;
+assign ramh_busy = ramh_fifo_full | ramh_read_busy | ramh_wait;
 assign cdram_dout = cdram_cache_q;
 assign cdram_busy = cdram_write_busy | cdram_read_busy | cdram_rcache_busy;
 assign raml_dout = raml_cache_q;

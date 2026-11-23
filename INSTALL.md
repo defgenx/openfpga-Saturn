@@ -97,12 +97,27 @@ From a terminal: `./Saturn-prepare-card --card /Volumes/POCKET` prepares every d
 ## Saves
 
 The Saturn's internal backup RAM is saved when the core is closed, the Pocket sleeps or is turned off, in
-`Saves/saturn/defgenx.Saturn/`. A game started from its `.json` gets its own file, named after the `.json`
-(`Game (USA).sav`). For a disc picked directly as the disc image the Pocket has no `.json` to name the file after;
-it should then use `saturn_bram.sav`, shared by those games (the BIOS keeps each game's saves apart inside it, as on
-a real Saturn). This is not yet checked on a Pocket. A new file starts formatted and empty. The file is
-MiSTer's 64 KB layout, so a MiSTer `.sav` (of a game run without a backup cartridge) can be copied over it. With
-Cartridge set to Backup, the cartridge is saved next to it as a 1 MB `.cart` file.
+`Saves/saturn/common/`, one file per game named after its `.json` (`Game (USA).sav`). A new file starts formatted and
+empty. The file is MiSTer's 64 KB layout, so a MiSTer `.sav` (of a game run without a backup cartridge) can be copied
+over it. With Cartridge set to Backup, the cartridge is saved next to it as a 1 MB `.cart` file. Not yet checked on
+a Pocket.
+
+**Multi-disc games.** Each disc has its own `.json`, so its own save file: a save made on disc 1 is not on disc 2 by
+itself. When the game asks for the next disc:
+
+1. Save in the game, then quit the core (*Quit Core* in the Pocket menu, not the power button).
+2. With the SD card in your computer, open `Saves/saturn/common/`, copy the disc 1 save and give the copy the disc 2
+   name (replace the old one if there is one), for example `Grandia (Japan) (Disc 1) (4M).sav` to
+   `Grandia (Japan) (Disc 2) (4M).sav`.
+3. Start disc 2 from its `.json` and load your save.
+
+Going back to an earlier disc works the same way, copying the other direction.
+
+Up to v0.1.7 the files were `saturn_bram.sav` and `saturn_cart.cart` for all games, and saving could go wrong on
+quit: the Pocket stayed on a black screen, and the card then held a huge `saturn_bram.sav` (hundreds of GB) and a
+64 KB `saturn_cart.cart`, and the core no longer started ("file id 3 too large"). Delete both files, repair the card
+(Disk Utility First Aid, or `chkdsk /f` on Windows) and update the core. A good `saturn_bram.sav` can be renamed after
+a game's `.json` to keep its saves.
 
 **ROM cartridge** (King of Fighters '95, Ultraman: Hikari no Kyojin Densetsu): set *Core Settings -> Cartridge* to
 *ROM 2 MB*, then load your dump of the cartridge (`.bin` or `.rom`, up to 2 MB) with *Core Settings -> Cartridge ROM*,

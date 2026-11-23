@@ -40,7 +40,9 @@ Kept as in MiSTer: the clock enables (`SYS_CE_R/F`, `SCSP_CE`, `SMPC_CE`, `CD_CE
 runtime `in_clk`), the WRAM-H write registers on `clk_ram` with the one-game patch, the region/PAL logic
 (`area_code`, `PAL = area_code >= 0xA`), the `rst_ram` pulse after a load, `rst_sys = reset | download | rst_ram`.
 Dropped: ST-V, DEBUG, light guns, mouse, keyboard, SNAC, 3D pad and the other pad types, `cofi`, crop, scanlines,
-`FAST` and `BLUR_MESH` (tied 0), the HPS save sector state machine.
+`BLUR_MESH` (tied 0), the HPS save sector state machine. `FAST` is tied 1 (MiSTer's "Timing: Fast" for slow WRAM-H):
+with the original waits the core ran Grandia's New Game intro movie about 18% slower than Mednafen, which broke its sound
+and then locked the game (issue 3; measured in `sim/sys` against `ssref`, fixed on a Pocket by v0.1.8).
 
 ### Reset and settings
 

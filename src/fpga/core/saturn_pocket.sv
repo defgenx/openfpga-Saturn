@@ -608,7 +608,7 @@ Saturn #(.RAMH_SLOW(1)) saturn (
 	.SOUND_L(SOUND_L),
 	.SOUND_R(SOUND_R),
 
-	.FAST(1'b0),
+	.FAST(1'b1),
 	.BLUR_MESH(1'b0),
 
 	.SCRN_EN(8'hFF),
