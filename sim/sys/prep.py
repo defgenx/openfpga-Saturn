@@ -11,7 +11,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 lst = subprocess.run([sys.executable, os.path.join(here, 'qip2f.py'),
                       os.path.join(root, 'src/fpga/core/saturn_pocket.qip'), 'pll_sys/'],
                      capture_output=True, text=True, check=True).stdout.split()
-for f in ('core_top.v', 'core_bridge_cmd.v', 'bridge_loader.sv', 'sound_i2s.sv', 'sync_fifo.sv'):
+for f in ('core_top.v', 'core_bridge_cmd.v', 'bridge_loader.sv', 'save_size.sv', 'sound_i2s.sv', 'sync_fifo.sv'):  # same list as ap_core.qsf
     lst.append(os.path.join(root, 'src/fpga/core', f))
 for f in ('common.v', 'mf_datatable.v'):
     lst.append(os.path.join(root, 'src/fpga/apf', f))

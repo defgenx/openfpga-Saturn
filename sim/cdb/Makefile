@@ -39,6 +39,12 @@ test: hle gen
 	python3 check_hle.py build/hle_fls.log fls
 	./build/hle/Vtb_cdb +SCRIPT=script_seekhold.txt +LOG=build/hle_seekhold.log > build/hle_seekhold.out
 	python3 check_hle.py build/hle_seekhold.log hold
+	./build/hle/Vtb_cdb +SCRIPT=script_npcnow.txt +LOG=build/hle_npcnow.log > build/hle_npcnow.out
+	python3 check_hle.py build/hle_npcnow.log npcnow
+	./build/hle/Vtb_cdb +SCRIPT=script_fadahead.txt +LOG=build/hle_fadahead.log > build/hle_fadahead.out
+	python3 check_hle.py build/hle_fadahead.log fadahead
+	./build/hle/Vtb_cdb +SCRIPT=script_swreset.txt +LOG=build/hle_swreset.log > build/hle_swreset.out
+	python3 check_hle.py build/hle_swreset.log swreset
 
 # LLE (needs ../../ref) against the HLE on the no-disc script; about 10 more minutes
 compare: lle test

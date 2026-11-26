@@ -94,6 +94,7 @@ static u32 toc_end;
 /* sector pipeline (drive -> sink): entry 0 is in the feed, entry 1 is armed */
 static u8 inflight;
 static u8 infl_buf[2], infl_audio[2], infl_stale[2];
+static posinfo infl_pos[2];   /* reported position: entry 0's, as Mednafen reports its pre-buffer (docs/cdb-hle.md 6) */
 
 /* file system */
 static struct {
@@ -285,6 +286,12 @@ static void make_subq(void)
 	dr_wr(pos.fad);
 }
 
+static void pos_cp(posinfo *d, const posinfo *p)
+{
+	d->fad = p->fad; d->tno = p->tno; d->idx = p->idx; d->rel = p->rel; d->ctrl = p->ctrl;
+}
+#define pos_set(p) pos_cp(&pos, p)
+
 /* Q-channel position of FAD f */
 static void pos_of(u32 f, posinfo *p)
 {
@@ -326,6 +333,7 @@ static void results(u32 r0, u32 r1, u32 r2, u32 r3)
 
 /* ------------------------------------------------------------------ drive */
 enum { D_STOP, D_PLAY, D_SEEKSTART, D_SEEK, D_EJ0, D_EJ1, D_EJWAIT, D_STARTUP };
+static u8 pf_on;   /* prefetch running: set and cleared with every R_PF_CTL write */
 
 /* drop sectors that were issued but not yet delivered */
 static void pipe_flush(void)
@@ -336,7 +344,7 @@ static void pipe_flush(void)
 		if (inflight) { inflight--; if (!infl_audio[inflight]) buf_free(infl_buf[inflight]); }
 	}
 	for (i = 0; i < inflight; i++) infl_stale[i] = 1;
-	MM(R_PF_CTL) = 0;
+	MM(R_PF_CTL) = 0; pf_on = 0;
 }
 
 static void clear_pending_sec(void) { pipe_flush(); play_end_irq = 0; play_end_cnt = 0; }
@@ -387,7 +395,7 @@ static void start_seek(u32 target, int no_pickup_change)
 	pipe_flush();
 	dphase = D_SEEKSTART; ddue = now() + SEEK_HOLD; at_end = 0;
 	period_due = now() + PERIOD_TICKS;
-	MM(R_PF_FAD) = p->fad; MM(R_PF_CTL) = 1;
+	MM(R_PF_FAD) = p->fad; MM(R_PF_CTL) = 1; pf_on = 1;
 }
 
 /* is the sector `cur_sector` (described by p) outside the play range? */
@@ -432,7 +440,9 @@ static void sector_complete(void)
 				pos.status = S_PLAY;
 			} else { pos.is_cdrom = 0; pos.status = S_PLAY; }
 			infl_buf[0] = infl_buf[1]; infl_audio[0] = infl_audio[1]; infl_stale[0] = infl_stale[1];
+			pos_cp(&infl_pos[0], &infl_pos[1]);
 			inflight--;
+			if (inflight && !infl_stale[0]) pos_set(&infl_pos[0]);
 		}
 	}
 	if (at_end || !(ev & EV_DISC)) return;
@@ -442,10 +452,10 @@ static void sector_complete(void)
 	if (play_end_met(&p)) {
 		if (inflight) return;
 		if (play_rep_ctr >= play_rep) {
-			pos.fad = cur_sector; pos.tno = p.tno; pos.idx = p.idx; pos.rel = p.rel; pos.ctrl = p.ctrl;
+			pos_set(&p);
 			pos.status = play_end_irq ? S_BUSY : S_PAUSE;
 			at_end = 1;
-			MM(R_PF_CTL) = 0;
+			MM(R_PF_CTL) = 0; pf_on = 0;
 		} else {
 			if (play_rep_ctr < 0xE) play_rep_ctr++;
 			play_rep_ctr |= 0x80;
@@ -470,9 +480,10 @@ static void sector_complete(void)
 			infl_audio[inflight] = 1;
 		}
 		infl_stale[inflight] = 0;
+		pos_cp(&infl_pos[inflight], &p);
+		if (!inflight) pos_set(&p);
 		inflight++;
 		cur_sector++;
-		pos.fad = f; pos.tno = p.tno; pos.idx = p.idx; pos.rel = p.rel; pos.ctrl = p.ctrl;
 	}
 }
 
@@ -725,11 +736,12 @@ static void cmd_reset_state(void)
 	get_len = put_len = 0; cd_conn = 0xFF; last_dest = 0xFF;
 	dt.active = 0; MM(R_XF_MODE) = 0;
 	for (i = 0; i < NFILT; i++) { flt[i].tconn = i; flt[i].fconn = 0xFF; filt_reset_cond(i); }
+	pipe_flush();
+	for (i = 0; i < inflight; i++) infl_audio[i] = 1;   /* their buffers go back with reset_buffers: not freed again */
 	reset_buffers();
 	fadsrch.fad = 0; fadsrch.spos = 0; fadsrch.pnum = 0;
 	calc_size = 0;
 	play_end = 0x800000; play_rep = 0;
-	pipe_flush();
 	play_end_irq = 0;
 	fls.active = fls.doauth = fls.abort = fls.have = 0; fls.st = 0;
 	finfo_valid = 0;
@@ -815,8 +827,8 @@ static void cmd_exec(void)
 		/* "no pickup change" keeps reading while the drive plays. A paused drive (end of the range, buffers full, Seek
 		   pause) seeks again where its pickup is and reads on from there while that is inside the new range: Mednafen's
 		   StartSeek enters SEEK_START2, which skips the SeekStart1 that takes the new start. A seek to the start would
-		   give the game sectors it already has a second time */
-		held = (pm & 0x80) && dphase == D_PLAY && (at_end || pos.status == S_PAUSE);
+		   give the game sectors it already has a second time. Stopped prefetch counts as paused (docs/cdb-hle.md 6) */
+		held = (pm & 0x80) && dphase == D_PLAY && (!pf_on || pos.status == S_PAUSE);
 		pos.status = S_BUSY;
 		cdstatus(0, 0);
 		if (!(pm & 0x80)) clear_pending_sec();

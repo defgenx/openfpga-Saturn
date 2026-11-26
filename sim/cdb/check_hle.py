@@ -25,6 +25,9 @@ PAUSE = len(sys.argv) > 2 and sys.argv[2] == "pause"
 NPC = len(sys.argv) > 2 and sys.argv[2] == "npc"
 FLS = len(sys.argv) > 2 and sys.argv[2] == "fls"
 HOLD = len(sys.argv) > 2 and sys.argv[2] == "hold"
+NPCNOW = len(sys.argv) > 2 and sys.argv[2] == "npcnow"
+FADAHEAD = len(sys.argv) > 2 and sys.argv[2] == "fadahead"
+SWRESET = len(sys.argv) > 2 and sys.argv[2] == "swreset"
 if COOKED:
     cook = open(os.path.join(HERE, "..", "cd", "build", "B", "track01.bin"), "rb").read()
     def cuser(lba):
@@ -126,6 +129,37 @@ if FLS:   # script_fls.txt: a filter connected 0..9 ms after a Change Directory'
     for sec in ("d0", "d3", "d6", "d9"):
         r = find_cmd(sec, "5100")
         ok("fls %s: no sector in the partition connected after EFLS" % sec, r is not None and r[3] == 0, r)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if SWRESET:   # script_swreset.txt: Init with software reset while the drive reads; the sectors in flight then land
+    a, b = find_cmd("reset", "5000"), find_cmd("reset", "5000", 1)
+    ok("sw reset: 198..200 buffers free right after", a is not None and 198 <= a[1] <= 200, a)
+    ok("sw reset: 198..200 free 50 ms later, none freed twice", b is not None and 198 <= b[1] <= 200, b)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if FADAHEAD:   # script_fadahead.txt: files at FAD 0xA0+8 and 0xA8+8 (Astal's STM stops a file once the FAD passes it)
+    bad, n, st, part = [], 0, None, {}
+    for l in cmds("poll"):
+        m = re.match(r"CMD (\S+) \S+ (\S+) \S+ -> (\S+) \S+ (\S+) (\S+)", l)
+        if not m: continue
+        c, r = m.group(1), [int(x, 16) for x in m.groups()[1:]]
+        if c == "0000": st = r
+        elif c == "5100":
+            part[r[0] >> 8] = r[3]
+            if r[0] >> 8 == 1 and st and st[1] >> 8 == 3:
+                n += 1
+                f = (st[2] & 0xFF) << 16 | st[3]
+                if part[0] + part[1] < f - 0xA0: bad.append((hex(f), part[0], part[1]))
+    ok("fad ahead: in PLAY every sector below the reported FAD is in a partition (%d polls)" % n, n > 20 and not bad, bad[:4])
+    ok("fad ahead: all 8 sectors of the first file delivered", part.get(0) == 8, part)
+    print("%d checks, %d failed" % (checks, fails))
+    sys.exit(1 if fails else 0)
+if NPCNOW:   # script_npcnow.txt: Seek pause during play, then at once a "no pickup change" Play (Astal's STM)
+    a, b = find_cmd("resume", "0000"), find_cmd("resume", "0000", 1)
+    ok("npc now: 100 ms later the drive plays again from the pickup (PLAY, FAD 0xAF..0xC0)",
+       a is not None and a[0] >> 8 == 3 and 0xAF <= a[3] <= 0xC0, a)
+    ok("npc now: 300 ms later it is still reading (PLAY, FAD past the first sample)",
+       b is not None and a is not None and b[0] >> 8 == 3 and b[3] > a[3], b)
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 if HOLD:   # script_seekhold.txt: a Get CD Status right after a Play still shows the old position (Magical Drop III)

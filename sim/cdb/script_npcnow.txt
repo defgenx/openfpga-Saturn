@@ -1,0 +1,23 @@
+wait 0001 3000000
+clr ffff
+delay 1500000
+cmd 0000 0000 0000 0000 20000
+cmd 0400 0000 0000 0000 200000
+delay 20000
+mark play
+clr 0ffe
+cmd 1080 00A6 0080 0040 20000
+delay 100000
+cmd 0000 0000 0000 0000 20000
+mark pause
+cmd 11FF FFFF 0000 0000 20000
+cmd 10FF FFFF FFFF FFFF 20000
+mark resume
+clr 0ffe
+delay 100000
+cmd 0000 0000 0000 0000 20000
+hirq
+delay 200000
+cmd 0000 0000 0000 0000 20000
+hirq
+mark done
