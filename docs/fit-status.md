@@ -898,3 +898,16 @@ of 5 seeds. The fits that miss setup fail inside `vdp1_fb_pocket` (from VDP2's `
 | **32 (release)** | **18,224** | **1,848 / 1,848** | **+0.150** (slow 85C, counter[1]) | **+0.037** (fast 0C, counter[0]) |
 
 Seed 32 meets setup, hold, recovery and removal at every corner. RAM blocks: 305 of 308.
+
+## v0.1.10 timing (2026-11-28)
+
+v0.1.9 with the VDP1 VRAM write pairs in `ddram_pocket` (docs/memory.md section 4), fitted on one processor
+(`tools/qflow.sh`). The map is 28,583 combinational ALUTs against 28,541 for v0.1.9: +18 in `ddram_pocket`, the rest moves
+in blocks the change does not touch (MSH +28). Equivalent spellings of the pair test give 28,549 to 28,583. Of 28 seeds of
+two spellings, only seed 8 of the final RTL fits; the others need 1,849-1,859 LABs.
+
+| Seed | ALMs needed | LABs | Worst setup | Worst hold |
+|---|---|---|---|---|
+| **8 (pre-release)** | **18,223** | **1,847 / 1,848** | **+0.024** (slow 85C, counter[0]) | **+0.120** (fast 0C, counter[0]) |
+
+Seed 8 meets setup, hold, recovery and removal at every corner. RAM blocks: 305 of 308, DSP 45 of 66.

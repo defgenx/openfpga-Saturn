@@ -14,6 +14,7 @@
 //           +TRACE (every MSH bus cycle in the trace file), +FRAMES=<dir for PPM dumps>,
 //           +KEYFILE / +KEYSCHED (pad 1), +RINGPC=<hex> (dump the PC and bus rings when the MSH reaches it), +DUMPDIR=<dir>
 //           +CKPT_US=<n> (+CKPT_STOP): fork checkpoint at n us, replays from it with sim/sys/replay.sh (docs/sim.md)
+//           +PCSAMPLE=<us> (MSH/SSH PC every n us), +SCUDMA=<n> (first n clk_sys of SCU DMA C-bus to B-bus, per clk)
 // Outputs:  build/trace.log (events), stdout (summary).
 //
 // Progress markers: a test ROM stores to the mailbox 0x06000F00.. (word 0 = step); every store there is logged.
@@ -447,7 +448,9 @@ task automatic log_cycle();
 				cy_a[7:0] == 8'hA0 ? "IMS" : cy_a[7:0] == 8'hA4 ? "IST" : cy_a[7:0] == 8'hA8 ? "AIACK" : "");
 		end else if (r == "VDP2-REGS") begin
 			$fdisplay(ftrace, "%0t VDP2 WR  A=%07h D=%08h %s", $time, cy_a, cy_d, cy_a[8:0] == 9'h000 ? "TVMD" : cy_a[8:0] == 9'h020 ? "BGON" : "");
-		end else if (r == "VDP1-REGS" || r == "SCSP-REGS" || r == "ABUS-CS2/CD") begin
+		end else if (r == "VDP1-REGS") begin
+			$fdisplay(ftrace, "%0t %s WR  A=%07h D=%08h be=%b PC=%08h", $time, r, cy_a, cy_d, cy_be, `SAT.MSH.core.PC);
+		end else if (r == "SCSP-REGS" || r == "ABUS-CS2/CD") begin
 			$fdisplay(ftrace, "%0t %s WR  A=%07h D=%08h", $time, r, cy_a, cy_d);
 		end else if (r == "WRAM-H" && cy_a[19:2] == 18'h0D23B) begin
 			$fdisplay(ftrace, "%0t VAR348EC WR D=%08h PC=%08h", $time, cy_d, `SAT.MSH.core.PC);
@@ -608,6 +611,47 @@ always @(posedge clk_sys) begin
 		$fdisplay(ftrace, "%0t VDP2 TVMD = %04h (DISP=%b)", $time, `SAT.VDP2.REGS.TVMD, `SAT.VDP2.REGS.TVMD.DISP);
 		if (`SAT.VDP2.REGS.TVMD.DISP && t_disp == 0) begin t_disp = $time; $display("%0t ps  *** TVMD.DISP set ***", $time); end
 	end
+end
+
+// ---- VDP2 sprite / priority / colour calculation registers, logged at VBlank start when any of them changed
+reg [16*20-1:0] v2pri_q = '0;
+wire [16*20-1:0] v2pri = {`SAT.VDP2.REGS.TVMD, `SAT.VDP2.REGS.BGON, `SAT.VDP2.REGS.SPCTL, `SAT.VDP2.REGS.SDCTL,
+	`SAT.VDP2.REGS.CRAOFB, `SAT.VDP2.REGS.SFPRMD, `SAT.VDP2.REGS.CCCTL, `SAT.VDP2.REGS.SFCCMD,
+	`SAT.VDP2.REGS.PRISA, `SAT.VDP2.REGS.PRISB, `SAT.VDP2.REGS.PRISC, `SAT.VDP2.REGS.PRISD,
+	`SAT.VDP2.REGS.PRINA, `SAT.VDP2.REGS.PRINB, `SAT.VDP2.REGS.PRIR, `SAT.VDP2.REGS.CCRSA,
+	`SAT.VDP2.REGS.CCRSB, `SAT.VDP2.REGS.CLOFEN, `SAT.VDP2.REGS.CLOFSL, `SAT.VDP2.REGS.WCTLC};
+reg v2vbl_q = 1'b1;
+always @(posedge clk_sys) begin
+	v2vbl_q <= `SAT.VBL_N;
+	if (v2vbl_q && !`SAT.VBL_N && v2pri !== v2pri_q) begin
+		v2pri_q <= v2pri;
+		$fdisplay(ftrace, "%0t V2REGS TVMD BGON SPCTL SDCTL CRAOFB SFPRMD CCCTL SFCCMD PRISA-D PRINA PRINB PRIR CCRSA CCRSB CLOFEN CLOFSL WCTLC = %h",
+			$time, v2pri);
+	end
+end
+
+// ---- +PCSAMPLE=<us>: every n us, MSH and SSH PC, SR.I, SMPC SF and COMREG to trace.log (re-read by a replay)
+longint pcs_ps = 0, pcs_next = 0;
+initial begin : pcs_arg
+	longint us;
+	if ($value$plusargs("PCSAMPLE=%d", us)) pcs_ps = us * 1000000;
+end
+always @(posedge clk_sys) if (pcs_ps != 0 && $time >= pcs_next) begin
+	pcs_next = $time + pcs_ps;
+	$fdisplay(ftrace, "%0t PCS MSH %08h I=%0d SSH %08h SF %b COMREG %02h", $time, `SAT.MSH.core.PC, `SAT.MSH.core.SR.I,
+		`SAT.SSH.core.PC, `SAT.SMPC.SF, `SAT.SMPC.COMREG);
+end
+
+// ---- +SCUDMA=<n>: the first n clk_sys of SCU DMA C-bus to B-bus transfers, one line each (states, waits, WRAM-H busy)
+integer sd_max = 0, sd_n = 0;
+initial if (!$value$plusargs("SCUDMA=%d", sd_max)) sd_max = 0;
+always @(posedge clk_sys) if (sd_n < sd_max && `SAT.SCU.DMA_ST == `SAT.SCU.DMA_CBUS_BBUS) begin
+	sd_n++;
+	$fdisplay(ftrace, "%0t SD ce%b%b C%0d B%0d rd%b cs%b wt%b wff%b cc%b%b buf%0d brdy%b bcs%b%b rb%b rw%b ff%b", $time,
+		`SAT.SCU.CE_R, `SAT.SCU.CE_F, int'(`SAT.SCU.CBUS_ST), int'(`SAT.SCU.BBUS_ST), `SAT.MEM_RD_N, `SAT.RAMH_CS_N,
+		`SAT.MEM_WAIT_N, `SAT.SCU.ECWAIT_N_FF, `SAT.SCU.CCACHE_FULL[1], `SAT.SCU.CCACHE_FULL[0], `SAT.SCU.DMA_BUF_SIZE,
+		`SAT.SCU.BBUS_RDY, `SAT.SCU.BCS1_N, `SAT.SCU.BCS2_N, dut.saturn.mem.ddram.ramh_read_busy, dut.saturn.mem.ddram.ramh_wait,
+		dut.saturn.mem.ddram.ramh_fifo_full);
 end
 
 // ---- SCU interrupt internals
@@ -1466,6 +1510,7 @@ always @(ckpt_reload) begin : reargs
 	if (!$value$plusargs("DUMPAT=%d", dumpat)) dumpat = -1;
 	if (!$value$plusargs("CMDPROBE=%d", cmdprobe)) cmdprobe = -1;
 	v1p = $test$plusargs("V1PROBE");
+	if ($value$plusargs("PCSAMPLE=%d", us)) begin pcs_ps = us * 1000000; pcs_next = $time; end
 	vv_on = $test$plusargs("V1VCHK");
 	$fdisplay(ftrace, "%0t CKPT replay starts", $time);
 	$display("%0t CKPT replay starts", $time);

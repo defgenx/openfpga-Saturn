@@ -573,6 +573,25 @@ Taken from the register itself they are one clk_ram late and VDP1 reads word n-1
 black. That was the case up to v0.2.16 on hardware (clk_sys and clk_ram rise together); the full-system sim shows it
 since its clocks are aligned the same way.
 
+VDP1 VRAM writes (B-bus, from the CPU or SCU DMA) are posted into an 8 entry FIFO and drained on the chip B arbiter.
+An even word whose odd neighbour is the next FIFO entry goes out as one 2 word write (`b_state` 3 pops the even word,
+then looks at the new head; anything else is written alone and the head stays queued), so a sequential run costs a
+2 word write per pair instead of a 1 word write per word. SCU DMA from WRAM-H to VDP1 VRAM, full-system sim
+(`sim/sys/gen_dma_rom.py`, level 0 transfers of 52 KB and 4 KB):
+
+| | 52 KB | 4 KB | per 16 bit word |
+|---|---|---|---|
+| one word per write | 3.97 ms | 308 us | 149 ns (BRDY1 low 5 of every 8 clk_sys) |
+| pairs | 2.73 ms | 213 us | 103 ns |
+| Saturn (Sega FAQ: 256 B in 5.36 us, 2.25 clocks per 4 bytes) | about 1.1 ms | about 86 us | about 42 ns |
+
+The WRAM-H side is not the limit: the SCU's C-bus read buffer stays full during the run. The CPU is held off the C-bus
+for the whole transfer (SCU `CBREQ` until the DMA ends, as on MiSTer), so a game that starts a long upload in VBlank and
+must store something before VBlank-OUT depends on this rate: Sega Rally uploads 52 KB at VBlank-IN every other frame
+and queues the VDP1 frame change for VBlank-OUT afterwards (3.76 ms later in the sim); at one word per write the request
+missed that edge, was overwritten by the next one, and VDP1 never changed frames. SCU DMA to VDP2 VRAM (SDRAM) is still
+about 4.05 ms per 52 KB.
+
 ## 5. SRAM and the CD ring
 
 The SRAM holds framebuffer pixels only (`sram_pocket.sv`, section 2). A read drives UB# and LB# low: an x16
@@ -624,7 +643,7 @@ passed up to tAA 30 ns (was 21 ns). With RD_CYC = 8 a read passes up to tAA 62 n
 |---|---|---|---|
 | SDRAM | VDP2 8 DQ cycles per 16 = 114.5 MB/s, SCSP up to 5.6 M requests/s (11 MB/s useful, 2 DQ cycles each), writes in the gaps | fixed schedule, 229 MB/s raw | command bus 15/16; bank 3 re-activated every 8 cycles (B1 and SCSP), banks 0-2 every 16; the timing table above: tRCD 8.2 ns (SCSP READ), tRAS 1.9 ns (WRITE), tRP -0.5 ns (bank 3, section 3), tRC 9.8 ns, tRRD 5.5 ns |
 | PSRAM0 | WRAM-H and WRAM-L line fills (32 B in 384-488 ns = 66-83 MB/s when streaming), SCU DMA bursts, posted writes at 130-180 ns | one chip, about 70 MB/s for 32 B lines, 10 M random words/s | a fill is 12 SH-2 bus cycles; no hit-rate data (no software run), see risk 9 |
-| PSRAM1 | VDP1 texture bursts 5-30 MB/s, CD RAM 1-3 MB/s, CD buffer 0.4 MB/s, CD ring 0.8 MB/s (588 words in 250 us when a sector arrives) | same | 3-5x |
+| PSRAM1 | VDP1 texture bursts 5-30 MB/s, VDP1 VRAM writes up to 19 MB/s (SCU DMA, pairs, section 4), CD RAM 1-3 MB/s, CD buffer 0.4 MB/s, CD ring 0.8 MB/s (588 words in 250 us when a sector arrives) | same | 3-5x |
 | SRAM | display read 5.1 M/s + draw up to 14 M/s typical (28.6 peak), both buffers; erase none (lazy erase, section 2), a fill of up to 7 words per erased block drawn into partly | 14.3 M accesses/s (8 clk_ram each, read or write) | active line: 8 clk_ram of 16 for the display read; draw takes the rest |
 | M10K FB1 | any | one access per clk_sys | n/a |
 
@@ -730,7 +749,7 @@ for the measured slack.
 | `tb_sdram` (3 profiles x 300 us at 114.5 MHz, 2 at 107.4 MHz, 66 ms retention) | VDP2 reads at the real DOT_CE_F/R pipeline, writes, SCSP at the real CE timing, every SDRAM timing parameter, DQ overlap, retention | 0 errors, no read word cut by a WRITE, no READ-interrupted burst; tRP 17.5 ns in bank 3 counted at 114.5 MHz (about 2,300-2,500 per 300 us, section 3; none at 107.4 MHz); DQ overlap 1.6 ns with the worst-case tHZ on a WRITE right after a burst (limit 1.7 ns, Makefile `SDARGS`) |
 | `tb_sdram -DSCSP_EXACT` (`sdram-scsp`: 320 and 352 enables at NTSC and PAL clocks, 320 enables at 57.27 MHz) | SCSPP request timing, clk_sys and clk_ram rising together, per-read delivery against the SCSP sample edge | no stale read; least margin 1 clk_ram (320 enables), 3 (352); before the landing-edge delivery about 9 % of reads were stale with the 320 enables at either clock |
 | `tb_psram` | 1263 writes of 1-2 words (partial masks), 749 reads of 1-150 words across both dies and rows, `rlast` position | 0 mismatches, 0 model errors |
-| `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
+| `tb_ddram` | WRAM-H/L, BIOS (through the loader port), backup, cart, VDP1 VRAM (posted writes, runs of consecutive words with random byte enables, bursts, 16-word command tables at VDP1P's pace: address and RD for one clk_sys, the word taken at the next clk_sys edge), CD RAM/buffer, loader, concurrently | 0 errors; WRAM-H fill 47-48 cycles idle, 48-137 loaded. With the read address lane bits taken from `vdp1vram_rcache_addr_lsb` itself, 855 command-word errors (word n-1, and n+3 at n = 4, 8, 12) |
 | `tb_fb` | draw (read, partial writes) on FB0, FB1 and the FB1 tail, display + erase of FB0 and of FB1 across the tail boundary, display of SRAM pixels while the other buffer is drawn, VBlank erase, erase of the tail while FB0 draws and the reverse, draws into erased blocks and display of them (normal and FB_MODE3), CPU reads across a frame change; again with aligned clocks and random SRAM contents | pass; the negative run (tAA 66 ns) fails as expected |
 | `tb_load` | BIOS 4 KB, both blank backup images (all 64 KB + 1 MB checked), 1 KB backup and cart files over them, 8 read-back requests (address and one `r_rd` each) | pass |
 | `tb_boot` (backup part) | after the BIOS load: 80 words of both blank images through `ld_rd`, 80 words of the internal one through the SH-2's `raml` port (`SRAM_CS_N` mapping) | 0 mismatches |

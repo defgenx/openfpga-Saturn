@@ -221,6 +221,24 @@ task automatic vram_write(input [18:1] a, input [15:0] d);
 		@(posedge clk);
 	end
 endtask
+// a run of consecutive words as the SCU DMA writes them (even/odd start, random byte enables), then read back
+task automatic vram_run(input [18:1] a, input integer n);
+	integer k;
+	reg [15:0] d;
+	reg [1:0] be;
+	begin
+		for (k = 0; k < n; k = k + 1) begin
+			d = $urandom; be = 2'd1 + ($urandom % 3);
+			@(posedge clk); while (vram_busy) @(posedge clk);
+			vram_addr <= a + k; vram_din <= d; vram_wr <= be;
+			@(posedge clk); vram_wr <= 2'b00;
+			if (be[1]) sh_vram[a + k][15:8] = d[15:8];
+			if (be[0]) sh_vram[a + k][7:0] = d[7:0];
+			if (be == 2'b11) sv_vram[a + k] = 1;      // a partly written word is checked once it was known before
+		end
+		for (k = 0; k < n; k = k + 1) vram_read(a + k);
+	end
+endtask
 task automatic vram_read(input [18:1] a);
 	begin
 		@(posedge clk); vram_addr <= a; vram_blen <= 9'd0; vram_rd <= 1'b1;
@@ -377,7 +395,8 @@ initial begin
 		begin
 			for (kv = 0; kv < n_ops; kv = kv + 1) begin
 				rv = $urandom % 8;
-				if (rv < 3) vram_write($urandom % 65536, $urandom);
+				if (rv < 2) vram_write($urandom % 65536, $urandom);
+				else if (rv < 3) vram_run($urandom % 65536, 1 + $urandom % 20);
 				else if (rv < 6) vram_read($urandom % 65536);
 				else if (rv < 7) vram_burst(($urandom % 1024) * 8, 8 + ($urandom % 24));
 				else vram_cmd(($urandom % 4096) * 16);

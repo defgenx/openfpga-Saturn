@@ -160,7 +160,8 @@ reg  [ 3: 0] a_be, b_be;                    // byte enables of word 0 {hi, lo}, 
 reg          a_read = 0, a_write = 0, b_read = 0, b_write = 0;
 reg  [ 2: 0] a_chan;                        // 0 ramh 1 raml 2 cart 3 bsram 4 loader 5 loader read
 reg  [ 2: 0] b_chan;                        // 0 cdram 1 vdp1vram 2 cdbuf 3 cdbuf write 4 ring read
-reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read words
+reg  [ 1: 0] a_state = 0, b_state = 0;      // 0 idle, 1 write issued, 2 read words, 3 (b) VDP1 write pairing
+reg          b_ph = 0, b_held = 0;          // pairing: head popped / word 0 already popped
 reg  [ 3: 0] a_cw;                          // cache word index of the next read word
 reg  [ 8: 0] b_cw;
 wire [9:0] a_cnt, b_cnt;
@@ -247,9 +248,9 @@ assign ld_busy = ld_write_busy;
 assign cdbuf_wbusy = cdbuf_wwrite_busy;
 assign ringw_busy = ringw_write_busy;
 
-// words of the request: writes 2 (WRAM-H, loader, ring) or 1, reads 8 (backup RAM), 2 (loader) or 16 (a line), VDP1 bursts blen
+// words of the request: writes 2 (WRAM-H, loader; chip B: word 1 has byte enables, the ring or a VDP1 pair) or 1, reads 8 (backup RAM), 2 (loader) or 16 (a line), VDP1 bursts blen
 assign a_cnt = a_write ? ((a_chan == 3'd0 || a_chan == 3'd4) ? 10'd2 : 10'd1) : (a_chan == 3'd3 ? 10'd8 : a_chan == 3'd5 ? 10'd2 : 10'd16);
-assign b_cnt = b_write ? (b_chan == 3'd5 ? 10'd2 : 10'd1) : (b_chan == 3'd1 && vdp1vram_rcache_blen != 0) ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
+assign b_cnt = b_write ? (|b_be[1:0] ? 10'd2 : 10'd1) : (b_chan == 3'd1 && vdp1vram_rcache_blen != 0) ? {1'b0, vdp1vram_rcache_blen} : 10'd16;
 reg            old_rst;
 reg            ramh_rd_old,ramh_wr_old;
 reg            cdram_rd_old,cdram_wr_old;
@@ -280,15 +281,15 @@ wire           vdp1vram_fifo_wrreq,vdp1vram_fifo_rdreq;
 assign ramh_fifo_wrreq = (|ramh_wr && !ramh_wr_old);
 assign ramh_fifo_rdreq = (a_state == 2'd1 && !p0_busy && a_chan == 3'd0);
 assign vdp1vram_fifo_wrreq = (|vdp1vram_wr && !vdp1vram_wr_old);
-assign vdp1vram_fifo_rdreq = (b_state == 2'd1 && !p1_busy && b_chan == 3'd1);
+assign vdp1vram_fifo_rdreq = !p1_busy && ((b_state == 2'd1 && b_chan == 3'd1 && !b_held) || (b_state == 2'd3 && !b_ph));
 
 wire [ 53:  0] ramh_fifo_dout;
 wire           ramh_fifo_empty,ramh_fifo_full,ramh_fifo_fulln;
 wire [ 35:  0] vdp1vram_fifo_dout;
-wire           vdp1vram_fifo_empty,vdp1vram_fifo_full,vdp1vram_fifo_fulln;
+wire           vdp1vram_fifo_empty,vdp1vram_fifo_full,vdp1vram_fifo_fulln,vdp1vram_fifo_two;
 
-ddp_infifo #(3, 54) ramh_fifo (clk, rst_pulse, {ramh_addr,ramh_wr,ramh_din}, ramh_fifo_wrreq, ramh_fifo_rdreq, ramh_fifo_dout, ramh_fifo_empty, ramh_fifo_full, ramh_fifo_fulln);
-ddp_infifo #(3, 36) vdp1vram_fifo (clk, rst_pulse, {vdp1vram_addr,vdp1vram_wr,vdp1vram_din}, vdp1vram_fifo_wrreq, vdp1vram_fifo_rdreq, vdp1vram_fifo_dout, vdp1vram_fifo_empty, vdp1vram_fifo_full, vdp1vram_fifo_fulln);
+ddp_infifo #(3, 54) ramh_fifo (clk, rst_pulse, {ramh_addr,ramh_wr,ramh_din}, ramh_fifo_wrreq, ramh_fifo_rdreq, ramh_fifo_dout, ramh_fifo_empty, ramh_fifo_full, ramh_fifo_fulln, );
+ddp_infifo #(3, 36) vdp1vram_fifo (clk, rst_pulse, {vdp1vram_addr,vdp1vram_wr,vdp1vram_din}, vdp1vram_fifo_wrreq, vdp1vram_fifo_rdreq, vdp1vram_fifo_dout, vdp1vram_fifo_empty, vdp1vram_fifo_full, vdp1vram_fifo_fulln, vdp1vram_fifo_two);
 
 wire [ 19:  2] ramh_write_addr;
 wire [ 31:  0] ramh_write_data;
@@ -670,7 +671,7 @@ always @(posedge clk) begin
 				if (cdram_write_busy) begin
 					cdram_write_busy <= 0;
 					b_addr  <= {4'b0000, 1'b1, cdram_write_addr};
-					b_wd    <= {cdram_write_data, 16'h0000};
+					b_wd[31:16] <= cdram_write_data;           // a one word write leaves word 1 unused
 					b_be    <= {cdram_be, 2'b00};
 					b_write <= 1;
 					b_chan  <= 3'd0;
@@ -700,11 +701,18 @@ always @(posedge clk) begin
 				end
 				else if (!vdp1vram_fifo_empty) begin
 					b_addr  <= {5'b00000, vdp1vram_write_addr};
-					b_wd    <= {vdp1vram_write_data, 16'h0000};
+					b_wd[31:16] <= vdp1vram_write_data;
 					b_be    <= {vdp1vram_write_be, 2'b00};
-					b_write <= 1;
 					b_chan  <= 3'd1;
-					b_state <= 2'd1;
+					b_held  <= 0;
+					// an even word with another one queued: state 3 pairs it with its odd neighbour (docs/memory.md section 4)
+					if (!vdp1vram_write_addr[1] && vdp1vram_fifo_two) begin
+						b_ph    <= 0;
+						b_state <= 2'd3;
+					end else begin
+						b_write <= 1;
+						b_state <= 2'd1;
+					end
 				end
 				else if (vdp1vram_read_busy) begin
 					b_addr  <= vdp1vram_rcache_blen ? {5'b00000, vdp1vram_rcache_addr} : {5'b00000, vdp1vram_rcache_addr[18:5], 4'b0000};
@@ -722,7 +730,7 @@ always @(posedge clk) begin
 				else if (cdbuf_wwrite_busy) begin
 					cdbuf_wwrite_busy <= 0;
 					b_addr  <= {4'b0001, 6'b000000, cdbuf_wwrite_addr};
-					b_wd    <= {cdbuf_wwrite_data, 16'h0000};
+					b_wd[31:16] <= cdbuf_wwrite_data;
 					b_be    <= 4'b1100;
 					b_write <= 1;
 					b_chan  <= 3'd3;
@@ -732,6 +740,18 @@ always @(posedge clk) begin
 
 			2'd1: begin
 				b_state <= 0;
+			end
+
+			// word 0 is popped here (b_ph 0); one free cycle later the FIFO head is the next entry
+			2'd3: if (!b_ph) b_ph <= 1;
+			else begin
+				b_wd[15:0] <= vdp1vram_write_data;
+				if (vdp1vram_write_addr == {b_addr[17:1], 1'b1})             // b_addr is even
+					b_be[1:0]  <= vdp1vram_write_be;
+				else
+					b_held     <= 1;                   // a single write of word 0; the next entry stays queued
+				b_write <= 1;
+				b_state <= 2'd1;
 			end
 
 			default: ;
@@ -866,7 +886,8 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	output wire [W-1: 0] Q,
 	output wire          EMPTY,
 	output wire          FULL,
-	output wire          FULLN               // FULL at the next edge
+	output wire          FULLN,              // FULL at the next edge
+	output wire          TWO                 // two entries or more (both written at an earlier edge)
 );
 	reg [l-1:0] RADDR = '0, WADDR = '0;
 	reg [l:0]   AMOUNT = '0;
@@ -887,6 +908,7 @@ module ddp_infifo #(parameter l = 3, parameter W = 54) (
 	ddp_fifo_ram #(.W(W), .AW(l)) ram (.clk(CLK), .we(WRREQ && !AMOUNT[l] && !RST), .wa(WADDR), .wd(DATA), .ra(rnext), .q(Q));
 	assign EMPTY = ~(|AMOUNT && !stale);
 	assign FULL = AMOUNT[l];
+	assign TWO = |AMOUNT[l:1];
 	// AMOUNT is 2^l at most: the top bit stays unless a pop alone comes, and is set by a push alone from 2^l - 1
 	assign FULLN = !RST && (AMOUNT[l] ? !(RDREQ && !WRREQ) : (&AMOUNT[l-1:0] && WRREQ && !RDREQ));
 endmodule
